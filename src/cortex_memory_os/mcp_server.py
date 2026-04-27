@@ -15,6 +15,7 @@ from cortex_memory_os.contracts import (
     AuditEvent,
     ContextPack,
     MemoryRecord,
+    MemoryStatus,
     RelevantMemory,
     RelevantSelfLesson,
     RetrievalScoreSummary,
@@ -151,6 +152,21 @@ class CortexMCPServer:
                         "change_summary",
                         "confidence",
                     ],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "self_lesson.list",
+                "description": "List stored self-lessons for user inspection without changing context-pack influence.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "enum": [item.value for item in MemoryStatus],
+                        },
+                        "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+                    },
                     "additionalProperties": False,
                 },
             },
@@ -306,6 +322,25 @@ class CortexMCPServer:
             if hasattr(self.store, "add_self_lesson"):
                 self.store.add_self_lesson(proposal.lesson)
             return {"proposal": serialize_self_lesson_proposal(proposal)}
+        if name == "self_lesson.list":
+            status = _optional_memory_status(arguments, "status")
+            limit = _optional_int_range(arguments, "limit", default=50, minimum=1, maximum=100)
+            lessons = _all_self_lessons(
+                self.store,
+                self.self_lessons,
+                status=status,
+            )[:limit]
+            context_eligible_ids = [
+                lesson.lesson_id
+                for lesson in lessons
+                if lesson.status == MemoryStatus.ACTIVE
+            ]
+            return {
+                "lessons": [serialize_self_lesson_list_item(lesson) for lesson in lessons],
+                "count": len(lessons),
+                "status_filter": status.value if status else None,
+                "context_eligible_ids": context_eligible_ids,
+            }
         if name == "self_lesson.promote":
             store = self._require_self_lesson_store()
             lesson_id = _require_string(arguments, "lesson_id")
@@ -654,6 +689,12 @@ def serialize_self_lesson(lesson: SelfLesson) -> dict[str, Any]:
     return lesson.model_dump(mode="json")
 
 
+def serialize_self_lesson_list_item(lesson: SelfLesson) -> dict[str, Any]:
+    item = serialize_self_lesson(lesson)
+    item["context_eligible"] = lesson.status == MemoryStatus.ACTIVE
+    return item
+
+
 def serialize_self_lesson_decision(decision: Any) -> dict[str, Any]:
     return {
         "allowed": decision.allowed,
@@ -697,14 +738,32 @@ def _available_self_lessons(
     store: Any,
     configured_lessons: tuple[SelfLesson, ...],
 ) -> tuple[SelfLesson, ...]:
-    lessons = list(configured_lessons)
-    if hasattr(store, "active_self_lessons"):
-        lessons.extend(store.active_self_lessons())
+    return tuple(
+        lesson
+        for lesson in _all_self_lessons(store, configured_lessons)
+        if lesson.status == MemoryStatus.ACTIVE
+    )
+
+
+def _all_self_lessons(
+    store: Any,
+    configured_lessons: tuple[SelfLesson, ...],
+    *,
+    status: MemoryStatus | None = None,
+) -> list[SelfLesson]:
+    lessons = [
+        lesson for lesson in configured_lessons if status is None or lesson.status == status
+    ]
+    if hasattr(store, "list_self_lessons"):
+        lessons.extend(store.list_self_lessons(status=status))
 
     deduped: dict[str, SelfLesson] = {}
     for lesson in lessons:
         deduped[lesson.lesson_id] = lesson
-    return tuple(deduped.values())
+    return sorted(
+        deduped.values(),
+        key=lambda lesson: (lesson.status.value, -lesson.confidence, lesson.lesson_id),
+    )
 
 
 def serve_stdio(server: CortexMCPServer) -> int:
@@ -786,6 +845,22 @@ def _require_int(payload: dict[str, Any], key: str) -> int:
     return value
 
 
+def _optional_int_range(
+    payload: dict[str, Any],
+    key: str,
+    *,
+    default: int,
+    minimum: int,
+    maximum: int,
+) -> int:
+    if key not in payload:
+        return default
+    value = _require_int(payload, key)
+    if value < minimum or value > maximum:
+        raise JsonRpcError(-32602, f"integer parameter out of range: {key}")
+    return value
+
+
 def _require_bool(payload: dict[str, Any], key: str) -> bool:
     value = payload.get(key)
     if not isinstance(value, bool):
@@ -798,6 +873,15 @@ def _require_number(payload: dict[str, Any], key: str) -> float:
     if not isinstance(value, int | float) or isinstance(value, bool):
         raise JsonRpcError(-32602, f"missing required number parameter: {key}")
     return float(value)
+
+
+def _optional_memory_status(payload: dict[str, Any], key: str) -> MemoryStatus | None:
+    if key not in payload:
+        return None
+    try:
+        return MemoryStatus(_require_string(payload, key))
+    except ValueError as error:
+        raise JsonRpcError(-32602, f"invalid memory status parameter: {key}") from error
 
 
 if __name__ == "__main__":

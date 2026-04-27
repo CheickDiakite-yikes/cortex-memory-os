@@ -194,6 +194,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_self_lesson_proposal_tool,
         case_self_lesson_sqlite_persistence,
         case_gateway_self_lesson_promotion_rollback,
+        case_gateway_self_lesson_list_tool,
         case_repeated_workflow_stays_draft_skill,
         case_high_risk_action_requires_review,
         case_benchmark_plan_quality_gate,
@@ -2486,6 +2487,85 @@ def case_gateway_self_lesson_promotion_rollback() -> BenchmarkCaseResult:
             "lesson_id": lesson_id,
             "audit_actions": [event.action for event in audits],
             "final_status": stored.status.value if stored else None,
+        },
+    )
+
+
+def case_gateway_self_lesson_list_tool() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    active = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+    candidate = active.model_copy(
+        update={
+            "lesson_id": "lesson_candidate_auth",
+            "status": MemoryStatus.CANDIDATE,
+            "last_validated": None,
+        }
+    )
+    revoked = active.model_copy(
+        update={
+            "lesson_id": "lesson_revoked_auth",
+            "status": MemoryStatus.REVOKED,
+        }
+    )
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        store.add_self_lesson(candidate)
+        store.add_self_lesson(active)
+        store.add_self_lesson(revoked)
+        server = CortexMCPServer(store=store)
+        all_response = server.call_tool("self_lesson.list", {})
+        candidate_response = server.call_tool(
+            "self_lesson.list",
+            {"status": MemoryStatus.CANDIDATE.value},
+        )
+        context_response = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug"},
+        )
+
+    listed = all_response.get("lessons", [])
+    context_eligible = {
+        lesson.get("lesson_id"): lesson.get("context_eligible") for lesson in listed
+    }
+    candidate_ids = [
+        lesson.get("lesson_id") for lesson in candidate_response.get("lessons", [])
+    ]
+    context_ids = [
+        lesson.get("lesson_id")
+        for lesson in context_response.get("relevant_self_lessons", [])
+    ]
+    passed = (
+        all_response.get("count") == 3
+        and context_eligible
+        == {
+            "lesson_044": True,
+            "lesson_candidate_auth": False,
+            "lesson_revoked_auth": False,
+        }
+        and candidate_response.get("status_filter") == MemoryStatus.CANDIDATE.value
+        and candidate_ids == ["lesson_candidate_auth"]
+        and candidate_response.get("context_eligible_ids") == []
+        and context_ids == ["lesson_044"]
+        and "GATEWAY-SELF-LESSON-LIST-001" in (
+            REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+        ).read_text(encoding="utf-8")
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-SELF-LESSON-LIST-001/status_filtered_inspection",
+        suite="GATEWAY-SELF-LESSON-LIST-001",
+        passed=passed,
+        summary="Gateway lists self-lessons by status for inspection without widening context influence.",
+        metrics={
+            "listed_count": len(listed),
+            "candidate_list_count": len(candidate_ids),
+            "context_lesson_count": len(context_ids),
+        },
+        evidence={
+            "context_eligible_ids": all_response.get("context_eligible_ids"),
+            "candidate_ids": candidate_ids,
+            "context_ids": context_ids,
         },
     )
 

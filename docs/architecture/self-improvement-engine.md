@@ -114,3 +114,10 @@ self-lessons only, so proposal storage cannot silently become behavior change.
 - confirmed promotion persists an active lesson;
 - rollback revokes an active lesson and removes it from context packs;
 - promotion and rollback decisions persist redacted audit receipts.
+
+`GATEWAY-SELF-LESSON-LIST-001` verifies:
+
+- gateway listing returns candidate, active, and revoked lessons for inspection;
+- status filters preserve the requested lesson lifecycle state;
+- listed lessons expose whether they are context-eligible;
+- candidate and revoked lessons remain inspectable without entering context packs.

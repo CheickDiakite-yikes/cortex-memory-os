@@ -17,6 +17,7 @@ def test_lists_memory_tools():
         "memory.get_context_pack",
         "skill.execute_draft",
         "self_lesson.propose",
+        "self_lesson.list",
         "self_lesson.promote",
         "self_lesson.rollback",
         "memory.explain",
@@ -386,6 +387,78 @@ def test_context_pack_uses_active_self_lessons_from_sqlite_store(tmp_path):
     assert [lesson["lesson_id"] for lesson in response["result"]["relevant_self_lessons"]] == [
         "lesson_044"
     ]
+
+
+def test_self_lesson_list_tool_filters_status_without_context_activation(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    candidate = active.model_copy(
+        update={
+            "lesson_id": "lesson_candidate_auth",
+            "status": MemoryStatus.CANDIDATE,
+            "last_validated": None,
+        }
+    )
+    revoked = active.model_copy(
+        update={
+            "lesson_id": "lesson_revoked_auth",
+            "status": MemoryStatus.REVOKED,
+        }
+    )
+    store.add_self_lesson(candidate)
+    store.add_self_lesson(active)
+    store.add_self_lesson(revoked)
+    server = CortexMCPServer(store=store)
+
+    listed = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 46,
+            "method": "tools/call",
+            "params": {"name": "self_lesson.list", "arguments": {}},
+        }
+    )
+    candidate_listed = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 47,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.list",
+                "arguments": {"status": "candidate"},
+            },
+        }
+    )
+    context_response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 48,
+            "method": "tools/call",
+            "params": {
+                "name": "memory.get_context_pack",
+                "arguments": {"goal": "continue fixing onboarding auth bug"},
+            },
+        }
+    )
+
+    assert listed["result"]["count"] == 3
+    assert {
+        lesson["lesson_id"]: lesson["context_eligible"]
+        for lesson in listed["result"]["lessons"]
+    } == {
+        "lesson_044": True,
+        "lesson_candidate_auth": False,
+        "lesson_revoked_auth": False,
+    }
+    assert candidate_listed["result"]["status_filter"] == "candidate"
+    assert [lesson["lesson_id"] for lesson in candidate_listed["result"]["lessons"]] == [
+        "lesson_candidate_auth"
+    ]
+    assert candidate_listed["result"]["context_eligible_ids"] == []
+    assert [
+        lesson["lesson_id"]
+        for lesson in context_response["result"]["relevant_self_lessons"]
+    ] == ["lesson_044"]
 
 
 def test_self_lesson_promote_tool_requires_confirmation_and_persists_audit(tmp_path):
