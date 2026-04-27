@@ -97,8 +97,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `GATEWAY-SELF-LESSON-001`: Gateway can propose candidate self-lessons without
-  promoting them to active guidance.
+- `SELF-LESSON-STORE-001`: Candidate and active self-lessons persist in SQLite,
+  and gateway proposals remain candidate until confirmation.
 
 Longer-term suites:
 

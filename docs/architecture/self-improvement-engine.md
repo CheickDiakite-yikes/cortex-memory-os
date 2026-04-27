@@ -84,3 +84,10 @@ the audit log into another memory leak.
 - rollback creates a persisted human-visible audit receipt;
 - audit receipts contain reason codes and policy refs;
 - audit receipts omit lesson content, change summaries, and source task IDs.
+
+`GATEWAY-SELF-LESSON-001` verifies:
+
+- gateway proposal tools create candidate lessons only;
+- candidate proposals still require user confirmation;
+- candidate proposals are not routed into context packs as active guidance;
+- hostile or permission-expanding proposal text is rejected.

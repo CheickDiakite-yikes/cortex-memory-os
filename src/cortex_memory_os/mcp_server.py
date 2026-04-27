@@ -11,6 +11,7 @@ from tempfile import TemporaryDirectory
 from typing import Any
 
 from cortex_memory_os.contracts import (
+    ActionRisk,
     AuditEvent,
     ContextPack,
     MemoryRecord,
@@ -35,6 +36,7 @@ from cortex_memory_os.memory_store import InMemoryMemoryStore
 from cortex_memory_os.retrieval import RankedMemory, RetrievalScope
 from cortex_memory_os.skill_audit import record_skill_maturity_audit
 from cortex_memory_os.skill_execution import prepare_draft_skill_execution
+from cortex_memory_os.self_lessons import SelfLessonChangeType, propose_self_lesson
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
 
 
@@ -100,6 +102,47 @@ class CortexMCPServer:
                         },
                     },
                     "required": ["skill_id"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "self_lesson.propose",
+                "description": "Create a candidate self-lesson proposal without activating it.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "content": {"type": "string"},
+                        "learned_from": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "minItems": 1,
+                            "maxItems": 20,
+                        },
+                        "applies_to": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "minItems": 1,
+                            "maxItems": 20,
+                        },
+                        "change_type": {
+                            "type": "string",
+                            "enum": [item.value for item in SelfLessonChangeType],
+                        },
+                        "change_summary": {"type": "string"},
+                        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                        "risk_level": {
+                            "type": "string",
+                            "enum": [ActionRisk.LOW.value, ActionRisk.MEDIUM.value],
+                        },
+                    },
+                    "required": [
+                        "content",
+                        "learned_from",
+                        "applies_to",
+                        "change_type",
+                        "change_summary",
+                        "confidence",
+                    ],
                     "additionalProperties": False,
                 },
             },
@@ -211,6 +254,20 @@ class CortexMCPServer:
                 ),
             )
             return {"execution": result.model_dump(mode="json")}
+        if name == "self_lesson.propose":
+            try:
+                proposal = propose_self_lesson(
+                    content=_require_string(arguments, "content"),
+                    learned_from=_require_string_list(arguments, "learned_from"),
+                    applies_to=_require_string_list(arguments, "applies_to"),
+                    change_type=SelfLessonChangeType(_require_string(arguments, "change_type")),
+                    change_summary=_require_string(arguments, "change_summary"),
+                    confidence=_require_number(arguments, "confidence"),
+                    risk_level=ActionRisk(arguments.get("risk_level", ActionRisk.LOW.value)),
+                )
+            except ValueError as error:
+                raise JsonRpcError(-32602, str(error)) from error
+            return {"proposal": serialize_self_lesson_proposal(proposal)}
         if name == "memory.explain":
             return serialize_explanation(
                 self._require_palace().explain_memory(_require_string(arguments, "memory_id"))
@@ -460,6 +517,17 @@ def serialize_audit_event(event: AuditEvent) -> dict[str, Any]:
     }
 
 
+def serialize_self_lesson_proposal(proposal: Any) -> dict[str, Any]:
+    return {
+        "proposal_id": proposal.proposal_id,
+        "change_type": proposal.change_type.value,
+        "change_summary": proposal.change_summary,
+        "policy_refs": list(proposal.policy_refs),
+        "requires_user_confirmation": proposal.requires_user_confirmation,
+        "lesson": proposal.lesson.model_dump(mode="json"),
+    }
+
+
 def _search_store(
     store: Any,
     query: str,
@@ -573,6 +641,13 @@ def _require_bool(payload: dict[str, Any], key: str) -> bool:
     if not isinstance(value, bool):
         raise JsonRpcError(-32602, f"missing required boolean parameter: {key}")
     return value
+
+
+def _require_number(payload: dict[str, Any], key: str) -> float:
+    value = payload.get(key)
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        raise JsonRpcError(-32602, f"missing required number parameter: {key}")
+    return float(value)
 
 
 if __name__ == "__main__":

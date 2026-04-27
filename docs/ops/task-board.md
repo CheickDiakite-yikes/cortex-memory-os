@@ -6,7 +6,7 @@ Last updated: 2026-04-27
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-SELF-LESSON-001 | Expose self-lesson proposal through gateway tool | Codex | MCP tool contract and benchmark case | Tool should create candidates only, not active lessons. |
+| SELF-LESSON-STORE-001 | Persist candidate and active self-lessons in SQLite | Codex | SQLite schema/test/benchmark | Gateway proposals should be durable only as candidates until confirmation. |
 
 ## Next
 
@@ -71,6 +71,7 @@ Last updated: 2026-04-27
 | GATEWAY-SKILL-EXECUTION-001 | Expose draft-only skill execution through gateway tool | Codex | `src/cortex_memory_os/mcp_server.py`, `docs/architecture/skill-forge-lifecycle.md`, `uv run pytest` focused -> 18 passed, `uv run cortex-bench` -> 42/42 passed | Gateway returns reviewable draft outputs and blocks requested external effects. |
 | SELF-LESSON-AUDIT-001 | Persist self-lesson promotion and rollback audit receipts | Codex | `src/cortex_memory_os/self_lesson_audit.py`, `uv run pytest` -> 122 passed, `uv run cortex-bench` -> 43/43 passed | Audit receipts contain reason codes and policy refs, not lesson content. |
 | CONTEXT-PACK-SELF-LESSON-001 | Route active self-lessons into context packs through templates | Codex | `src/cortex_memory_os/context_templates.py`, `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 124 passed, `uv run cortex-bench` -> 44/44 passed | Active lessons use the template self-lesson lane; revoked lessons are excluded. |
+| GATEWAY-SELF-LESSON-001 | Expose self-lesson proposal through gateway tool | Codex | `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 126 passed, `uv run cortex-bench` -> 45/45 passed | Gateway proposals create candidate lessons only and reject hostile or permission-expanding text. |
 
 ## Dropped
 
