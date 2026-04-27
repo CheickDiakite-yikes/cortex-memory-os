@@ -12,6 +12,7 @@ from cortex_memory_os.contracts import (
     InfluenceLevel,
     MemoryRecord,
     MemoryStatus,
+    SelfLesson,
     TemporalEdge,
 )
 from cortex_memory_os.memory_lifecycle import transition_memory
@@ -159,6 +160,70 @@ class SQLiteMemoryGraphStore:
                 ),
             )
 
+    def add_self_lesson(self, lesson: SelfLesson) -> None:
+        now = datetime.now(UTC).isoformat()
+        with self._connect() as con:
+            con.execute(
+                """
+                INSERT INTO self_lessons (
+                    lesson_id, status, risk_level, confidence, content,
+                    payload_json, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(lesson_id) DO UPDATE SET
+                    status = excluded.status,
+                    risk_level = excluded.risk_level,
+                    confidence = excluded.confidence,
+                    content = excluded.content,
+                    payload_json = excluded.payload_json,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    lesson.lesson_id,
+                    lesson.status.value,
+                    lesson.risk_level.value,
+                    lesson.confidence,
+                    lesson.content,
+                    lesson.model_dump_json(),
+                    now,
+                ),
+            )
+
+    def get_self_lesson(self, lesson_id: str) -> SelfLesson | None:
+        with self._connect() as con:
+            row = con.execute(
+                "SELECT payload_json FROM self_lessons WHERE lesson_id = ?",
+                (lesson_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return SelfLesson.model_validate_json(row["payload_json"])
+
+    def list_self_lessons(self, *, status: MemoryStatus | None = None) -> list[SelfLesson]:
+        with self._connect() as con:
+            if status is None:
+                rows = con.execute(
+                    """
+                    SELECT payload_json
+                    FROM self_lessons
+                    ORDER BY status ASC, confidence DESC, lesson_id ASC
+                    """
+                ).fetchall()
+            else:
+                rows = con.execute(
+                    """
+                    SELECT payload_json
+                    FROM self_lessons
+                    WHERE status = ?
+                    ORDER BY confidence DESC, lesson_id ASC
+                    """,
+                    (status.value,),
+                ).fetchall()
+        return [SelfLesson.model_validate_json(row["payload_json"]) for row in rows]
+
+    def active_self_lessons(self) -> list[SelfLesson]:
+        return self.list_self_lessons(status=MemoryStatus.ACTIVE)
+
     def get_edge(self, edge_id: str) -> TemporalEdge | None:
         with self._connect() as con:
             row = con.execute(
@@ -276,6 +341,25 @@ class SQLiteMemoryGraphStore:
                 """
                 CREATE INDEX IF NOT EXISTS idx_temporal_edges_subject
                 ON temporal_edges(subject, predicate, valid_from)
+                """
+            )
+            con.execute(
+                """
+                CREATE TABLE IF NOT EXISTS self_lessons (
+                    lesson_id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    risk_level TEXT NOT NULL,
+                    confidence REAL NOT NULL,
+                    content TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
+            con.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_self_lessons_status
+                ON self_lessons(status, confidence)
                 """
             )
             con.execute(

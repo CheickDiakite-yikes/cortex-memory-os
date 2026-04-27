@@ -68,6 +68,14 @@ The receipt must not copy lesson content, change summaries, source task IDs, or
 rollback trigger text. These receipts prove governance decisions without turning
 the audit log into another memory leak.
 
+## Persistence
+
+Self-lessons persist separately from ordinary memories.
+
+Candidate lessons can be stored durably after proposal, but they must not enter
+context packs until promotion makes them active. Context packs read active
+self-lessons only, so proposal storage cannot silently become behavior change.
+
 ## Benchmark
 
 `SELF-LESSON-001` verifies:
@@ -91,3 +99,10 @@ the audit log into another memory leak.
 - candidate proposals still require user confirmation;
 - candidate proposals are not routed into context packs as active guidance;
 - hostile or permission-expanding proposal text is rejected.
+
+`SELF-LESSON-STORE-001` verifies:
+
+- candidate and active self-lessons round-trip through SQLite;
+- gateway proposals persist as candidate lessons;
+- candidate lessons stay out of context packs;
+- active lessons from SQLite can enter the self-lesson context lane.

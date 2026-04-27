@@ -192,6 +192,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_methods_only_contract,
         case_self_lesson_audit_events,
         case_gateway_self_lesson_proposal_tool,
+        case_self_lesson_sqlite_persistence,
         case_repeated_workflow_stays_draft_skill,
         case_high_risk_action_requires_review,
         case_benchmark_plan_quality_gate,
@@ -2330,6 +2331,73 @@ def case_gateway_self_lesson_proposal_tool() -> BenchmarkCaseResult:
             "proposal_id": proposal.get("proposal_id"),
             "lesson_status": lesson.get("status"),
             "blocked_reason": blocked_reason,
+        },
+    )
+
+
+def case_self_lesson_sqlite_persistence() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    active = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+    with TemporaryDirectory() as temp_dir:
+        db_path = Path(temp_dir) / "cortex.sqlite3"
+        store = SQLiteMemoryGraphStore(db_path)
+        server = CortexMCPServer(store=store)
+        proposal_response = server.call_tool(
+            "self_lesson.propose",
+            {
+                "content": "Before auth edits, retrieve browser console and terminal errors.",
+                "learned_from": ["task_332_failure", "task_333_success"],
+                "applies_to": ["frontend_debugging", "auth_flows"],
+                "change_type": "failure_checklist",
+                "change_summary": "Add an auth debugging preflight checklist.",
+                "confidence": 0.84,
+            },
+        )
+        proposal = proposal_response.get("proposal", {})
+        proposed_lesson_id = proposal.get("lesson", {}).get("lesson_id")
+
+        reopened = SQLiteMemoryGraphStore(db_path)
+        stored_candidate = (
+            reopened.get_self_lesson(proposed_lesson_id) if proposed_lesson_id else None
+        )
+        context_before_activation = CortexMCPServer(store=reopened).call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug"},
+        )
+        reopened.add_self_lesson(active)
+        context_after_activation = CortexMCPServer(store=reopened).call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug"},
+        )
+
+    candidate_lessons = context_before_activation.get("relevant_self_lessons", [])
+    active_lesson_ids = [
+        lesson.get("lesson_id")
+        for lesson in context_after_activation.get("relevant_self_lessons", [])
+    ]
+    passed = (
+        stored_candidate is not None
+        and stored_candidate.status == MemoryStatus.CANDIDATE
+        and stored_candidate.last_validated is None
+        and candidate_lessons == []
+        and active_lesson_ids == ["lesson_044"]
+        and "SELF-LESSON-STORE-001" in (
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md"
+        ).read_text(encoding="utf-8")
+    )
+    return BenchmarkCaseResult(
+        case_id="SELF-LESSON-STORE-001/candidate_active_sqlite",
+        suite="SELF-LESSON-STORE-001",
+        passed=passed,
+        summary="SQLite persists candidate and active self-lessons while context packs use active lessons only.",
+        metrics={
+            "candidate_context_count": len(candidate_lessons),
+            "active_context_count": len(active_lesson_ids),
+        },
+        evidence={
+            "stored_candidate_id": proposed_lesson_id,
+            "active_lesson_ids": active_lesson_ids,
         },
     )
 

@@ -1,6 +1,12 @@
 from datetime import UTC, datetime
 
-from cortex_memory_os.contracts import AuditEvent, InfluenceLevel, MemoryRecord, MemoryStatus
+from cortex_memory_os.contracts import (
+    AuditEvent,
+    InfluenceLevel,
+    MemoryRecord,
+    MemoryStatus,
+    SelfLesson,
+)
 from cortex_memory_os.fixtures import load_json
 from cortex_memory_os.memory_compiler import compile_scene_memory
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
@@ -86,3 +92,35 @@ def test_sqlite_audit_events_round_trip_by_target(tmp_path):
 
     assert reopened.get_audit_event(event.audit_event_id) == event
     assert reopened.audit_for_target("mem_001") == [event]
+
+
+def test_sqlite_self_lessons_round_trip_and_filter_active(tmp_path):
+    db_path = tmp_path / "cortex.sqlite3"
+    store = SQLiteMemoryGraphStore(db_path)
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    candidate = active.model_copy(
+        update={
+            "lesson_id": "lesson_candidate_auth",
+            "status": MemoryStatus.CANDIDATE,
+            "last_validated": None,
+        }
+    )
+    revoked = active.model_copy(
+        update={
+            "lesson_id": "lesson_revoked_auth",
+            "status": MemoryStatus.REVOKED,
+        }
+    )
+
+    store.add_self_lesson(candidate)
+    store.add_self_lesson(active)
+    store.add_self_lesson(revoked)
+    reopened = SQLiteMemoryGraphStore(db_path)
+
+    assert reopened.get_self_lesson(candidate.lesson_id) == candidate
+    assert [lesson.lesson_id for lesson in reopened.active_self_lessons()] == [active.lesson_id]
+    assert {lesson.lesson_id for lesson in reopened.list_self_lessons()} == {
+        active.lesson_id,
+        candidate.lesson_id,
+        revoked.lesson_id,
+    }

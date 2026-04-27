@@ -3,6 +3,7 @@ from cortex_memory_os.fixtures import load_json
 from cortex_memory_os.mcp_server import CortexMCPServer, default_server
 from cortex_memory_os.memory_store import InMemoryMemoryStore
 from cortex_memory_os.contracts import MemoryRecord
+from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
 
 
 def test_lists_memory_tools():
@@ -309,6 +310,80 @@ def test_self_lesson_propose_tool_returns_candidate_only():
     assert proposal["lesson"]["last_validated"] is None
     assert proposal["lesson"]["risk_level"] == "low"
     assert context_response["result"]["relevant_self_lessons"] == []
+
+
+def test_self_lesson_propose_tool_persists_candidate_without_activation(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    server = CortexMCPServer(store=store)
+
+    response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 38,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.propose",
+                "arguments": {
+                    "content": "Before auth edits, retrieve browser console and terminal errors.",
+                    "learned_from": ["task_332_failure", "task_333_success"],
+                    "applies_to": ["frontend_debugging", "auth_flows"],
+                    "change_type": "failure_checklist",
+                    "change_summary": "Add an auth debugging preflight checklist.",
+                    "confidence": 0.84,
+                },
+            },
+        }
+    )
+    proposal = response["result"]["proposal"]
+    reopened = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    stored = reopened.get_self_lesson(proposal["lesson"]["lesson_id"])
+    context_response = CortexMCPServer(store=reopened).handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 39,
+            "method": "tools/call",
+            "params": {
+                "name": "memory.get_context_pack",
+                "arguments": {"goal": "continue fixing onboarding auth bug"},
+            },
+        }
+    )
+
+    assert stored is not None
+    assert stored.status == MemoryStatus.CANDIDATE
+    assert stored.last_validated is None
+    assert context_response["result"]["relevant_self_lessons"] == []
+
+
+def test_context_pack_uses_active_self_lessons_from_sqlite_store(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    candidate = active.model_copy(
+        update={
+            "lesson_id": "lesson_candidate_auth",
+            "status": MemoryStatus.CANDIDATE,
+            "last_validated": None,
+        }
+    )
+    store.add_self_lesson(candidate)
+    store.add_self_lesson(active)
+    server = CortexMCPServer(store=store)
+
+    response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 40,
+            "method": "tools/call",
+            "params": {
+                "name": "memory.get_context_pack",
+                "arguments": {"goal": "continue fixing onboarding auth bug"},
+            },
+        }
+    )
+
+    assert [lesson["lesson_id"] for lesson in response["result"]["relevant_self_lessons"]] == [
+        "lesson_044"
+    ]
 
 
 def test_self_lesson_propose_tool_rejects_hostile_or_permission_expanding_text():

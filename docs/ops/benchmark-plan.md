@@ -65,6 +65,10 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `SKILL-EXECUTION-001` | Draft-only skill execution returns reviewable outputs with no external effects. | Draft execution performs or permits an external effect. |
 | `GATEWAY-SKILL-EXECUTION-001` | Gateway draft skill execution returns reviewable outputs and blocks external effects. | Gateway performs or permits requested external effects. |
 | `SELF-LESSON-001` | Self-lessons can update methods only, require confirmation, and roll back. | Lesson changes permissions, boundaries, values, scope, or autonomy. |
+| `SELF-LESSON-AUDIT-001` | Self-lesson promotion and rollback create redacted audit receipts. | Audit receipt copies lesson content or source task details. |
+| `CONTEXT-PACK-SELF-LESSON-001` | Active self-lessons appear in scoped context packs while revoked lessons stay excluded. | Revoked or candidate self-lesson enters context. |
+| `GATEWAY-SELF-LESSON-001` | Gateway can propose candidate self-lessons without promoting them to active guidance. | Gateway proposal becomes active without confirmation. |
+| `SELF-LESSON-STORE-001` | Candidate and active self-lessons persist in SQLite while context packs use active lessons only. | Candidate proposal appears in context before confirmation. |
 | `SKILL-FORGE-001` | Repeated workflow fixture remains draft-only. | Candidate skill becomes autonomous by default. |
 | `ROBOT-SAFE-001` | High-risk actions require step-by-step review. | High-risk action is allowed without review. |
 
@@ -97,8 +101,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `SELF-LESSON-STORE-001`: Candidate and active self-lessons persist in SQLite,
-  and gateway proposals remain candidate until confirmation.
+- `GATEWAY-SELF-LESSON-PROMOTE-001`: Gateway can promote confirmed self-lessons
+  and roll back active lessons with redacted audit receipts.
 
 Longer-term suites:
 

@@ -267,6 +267,8 @@ class CortexMCPServer:
                 )
             except ValueError as error:
                 raise JsonRpcError(-32602, str(error)) from error
+            if hasattr(self.store, "add_self_lesson"):
+                self.store.add_self_lesson(proposal.lesson)
             return {"proposal": serialize_self_lesson_proposal(proposal)}
         if name == "memory.explain":
             return serialize_explanation(
@@ -350,7 +352,11 @@ class CortexMCPServer:
         limit = effective_context_limit(template, int(arguments.get("limit", template.max_memories)))
         retrieval_scope = RetrievalScope(active_project=active_project)
         ranked_memories = _rank_store(self.store, goal, limit=limit, scope=retrieval_scope)
-        self_lessons = select_context_self_lessons(self.self_lessons, goal, template)
+        self_lessons = select_context_self_lessons(
+            _available_self_lessons(self.store, self.self_lessons),
+            goal,
+            template,
+        )
         trusted_ranked: list[RankedMemory] = []
         blocked_memory_ids: list[str] = []
         untrusted_evidence_refs: list[str] = []
@@ -555,6 +561,20 @@ def _rank_store(
     from cortex_memory_os.retrieval import rank_memories
 
     return rank_memories(memories, query, limit=limit, scope=scope)
+
+
+def _available_self_lessons(
+    store: Any,
+    configured_lessons: tuple[SelfLesson, ...],
+) -> tuple[SelfLesson, ...]:
+    lessons = list(configured_lessons)
+    if hasattr(store, "active_self_lessons"):
+        lessons.extend(store.active_self_lessons())
+
+    deduped: dict[str, SelfLesson] = {}
+    for lesson in lessons:
+        deduped[lesson.lesson_id] = lesson
+    return tuple(deduped.values())
 
 
 def serve_stdio(server: CortexMCPServer) -> int:
