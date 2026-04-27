@@ -173,6 +173,52 @@ def promote_self_lesson(
     )
 
 
+def evaluate_stored_self_lesson_promotion(
+    lesson: SelfLesson,
+    *,
+    user_confirmed: bool,
+) -> SelfLessonDecision:
+    if lesson.status in {
+        MemoryStatus.DELETED,
+        MemoryStatus.REVOKED,
+        MemoryStatus.QUARANTINED,
+        MemoryStatus.SUPERSEDED,
+    }:
+        return _deny(MemoryStatus.ACTIVE, "terminal_lesson_cannot_promote")
+    if contains_prompt_injection_risk(lesson.content):
+        return _deny(MemoryStatus.QUARANTINED, "prompt_injection_risk")
+    if lesson.confidence < 0.75:
+        return _deny(MemoryStatus.CANDIDATE, "confidence_too_low")
+    if not user_confirmed:
+        return _deny(MemoryStatus.CANDIDATE, "user_confirmation_required")
+    return SelfLessonDecision(
+        allowed=True,
+        target_status=MemoryStatus.ACTIVE,
+        required_behavior="method_update_only",
+        reason="promotion_allowed",
+    )
+
+
+def promote_stored_self_lesson(
+    lesson: SelfLesson,
+    *,
+    user_confirmed: bool,
+    today: date | None = None,
+) -> SelfLesson:
+    decision = evaluate_stored_self_lesson_promotion(
+        lesson,
+        user_confirmed=user_confirmed,
+    )
+    if not decision.allowed:
+        raise ValueError(decision.reason)
+    return lesson.model_copy(
+        update={
+            "status": MemoryStatus.ACTIVE,
+            "last_validated": today or date.today(),
+        }
+    )
+
+
 def evaluate_self_lesson_rollback(
     lesson: SelfLesson,
     *,

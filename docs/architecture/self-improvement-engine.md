@@ -106,3 +106,11 @@ self-lessons only, so proposal storage cannot silently become behavior change.
 - gateway proposals persist as candidate lessons;
 - candidate lessons stay out of context packs;
 - active lessons from SQLite can enter the self-lesson context lane.
+
+`GATEWAY-SELF-LESSON-PROMOTE-001` verifies:
+
+- gateway promotion requires explicit confirmation;
+- denied promotion creates a reason-coded audit receipt without activation;
+- confirmed promotion persists an active lesson;
+- rollback revokes an active lesson and removes it from context packs;
+- promotion and rollback decisions persist redacted audit receipts.

@@ -69,6 +69,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `CONTEXT-PACK-SELF-LESSON-001` | Active self-lessons appear in scoped context packs while revoked lessons stay excluded. | Revoked or candidate self-lesson enters context. |
 | `GATEWAY-SELF-LESSON-001` | Gateway can propose candidate self-lessons without promoting them to active guidance. | Gateway proposal becomes active without confirmation. |
 | `SELF-LESSON-STORE-001` | Candidate and active self-lessons persist in SQLite while context packs use active lessons only. | Candidate proposal appears in context before confirmation. |
+| `GATEWAY-SELF-LESSON-PROMOTE-001` | Gateway can promote confirmed self-lessons and roll back active lessons with audit receipts. | Promotion skips confirmation or rollback leaves lesson active in context. |
 | `SKILL-FORGE-001` | Repeated workflow fixture remains draft-only. | Candidate skill becomes autonomous by default. |
 | `ROBOT-SAFE-001` | High-risk actions require step-by-step review. | High-risk action is allowed without review. |
 
@@ -101,8 +102,9 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `GATEWAY-SELF-LESSON-PROMOTE-001`: Gateway can promote confirmed self-lessons
-  and roll back active lessons with redacted audit receipts.
+- `GATEWAY-SELF-LESSON-LIST-001`: Gateway can list candidate, active, and
+  revoked self-lessons for inspectable Memory Palace flows without widening
+  context-pack influence.
 
 Longer-term suites:
 

@@ -8,7 +8,9 @@ from cortex_memory_os.self_lessons import (
     SelfLessonChangeType,
     evaluate_self_lesson_promotion,
     evaluate_self_lesson_rollback,
+    evaluate_stored_self_lesson_promotion,
     promote_self_lesson,
+    promote_stored_self_lesson,
     propose_self_lesson,
     rollback_self_lesson,
 )
@@ -57,6 +59,30 @@ def test_self_lesson_promotion_requires_confirmation_and_confidence():
     )
     promoted = promote_self_lesson(
         proposal,
+        user_confirmed=True,
+        today=date(2026, 4, 27),
+    )
+
+    assert no_confirmation.reason == "user_confirmation_required"
+    assert too_uncertain.reason == "confidence_too_low"
+    assert promoted.status == MemoryStatus.ACTIVE
+    assert promoted.last_validated == date(2026, 4, 27)
+
+
+def test_stored_self_lesson_promotion_requires_confirmation_and_confidence():
+    proposal = _proposal()
+    low_confidence = proposal.lesson.model_copy(update={"confidence": 0.7})
+
+    no_confirmation = evaluate_stored_self_lesson_promotion(
+        proposal.lesson,
+        user_confirmed=False,
+    )
+    too_uncertain = evaluate_stored_self_lesson_promotion(
+        low_confidence,
+        user_confirmed=True,
+    )
+    promoted = promote_stored_self_lesson(
+        proposal.lesson,
         user_confirmed=True,
         today=date(2026, 4, 27),
     )

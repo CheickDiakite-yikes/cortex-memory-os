@@ -103,7 +103,7 @@ def _self_lesson_audit_event(
     return AuditEvent(
         audit_event_id=(
             f"audit_{action}_{_safe_id_fragment(lesson_id)}_"
-            f"{timestamp.strftime('%Y%m%dT%H%M%SZ')}"
+            f"{timestamp.strftime('%Y%m%dT%H%M%S%fZ')}"
         ),
         timestamp=timestamp,
         actor=actor,

@@ -17,6 +17,8 @@ def test_lists_memory_tools():
         "memory.get_context_pack",
         "skill.execute_draft",
         "self_lesson.propose",
+        "self_lesson.promote",
+        "self_lesson.rollback",
         "memory.explain",
         "memory.correct",
         "memory.forget",
@@ -384,6 +386,106 @@ def test_context_pack_uses_active_self_lessons_from_sqlite_store(tmp_path):
     assert [lesson["lesson_id"] for lesson in response["result"]["relevant_self_lessons"]] == [
         "lesson_044"
     ]
+
+
+def test_self_lesson_promote_tool_requires_confirmation_and_persists_audit(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    server = CortexMCPServer(store=store)
+    proposal_response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 41,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.propose",
+                "arguments": {
+                    "content": "Before auth edits, retrieve browser console and terminal errors.",
+                    "learned_from": ["task_332_failure", "task_333_success"],
+                    "applies_to": ["frontend_debugging", "auth_flows"],
+                    "change_type": "failure_checklist",
+                    "change_summary": "Add an auth debugging preflight checklist.",
+                    "confidence": 0.84,
+                },
+            },
+        }
+    )
+    lesson_id = proposal_response["result"]["proposal"]["lesson"]["lesson_id"]
+
+    denied = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 42,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.promote",
+                "arguments": {"lesson_id": lesson_id, "user_confirmed": False},
+            },
+        }
+    )
+    allowed = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 43,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.promote",
+                "arguments": {"lesson_id": lesson_id, "user_confirmed": True},
+            },
+        }
+    )
+
+    assert denied["result"]["decision"]["allowed"] is False
+    assert denied["result"]["decision"]["reason"] == "user_confirmation_required"
+    assert denied["result"]["lesson"]["status"] == "candidate"
+    assert denied["result"]["audit_event"]["action"] == "promote_self_lesson"
+    assert allowed["result"]["decision"]["allowed"] is True
+    assert allowed["result"]["lesson"]["status"] == "active"
+    assert store.get_self_lesson(lesson_id).status == MemoryStatus.ACTIVE
+    assert [event.action for event in store.audit_for_target(lesson_id)] == [
+        "promote_self_lesson",
+        "promote_self_lesson",
+    ]
+
+
+def test_self_lesson_rollback_tool_revokes_active_lesson_and_persists_audit(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    store.add_self_lesson(active)
+    server = CortexMCPServer(store=store)
+
+    response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 44,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.rollback",
+                "arguments": {
+                    "lesson_id": active.lesson_id,
+                    "failure_count": 1,
+                    "reason_ref": "ctx_pack_noise",
+                },
+            },
+        }
+    )
+    context_response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 45,
+            "method": "tools/call",
+            "params": {
+                "name": "memory.get_context_pack",
+                "arguments": {"goal": "continue fixing onboarding auth bug"},
+            },
+        }
+    )
+
+    assert response["result"]["decision"]["allowed"] is True
+    assert response["result"]["lesson"]["status"] == "revoked"
+    assert "rolled_back:ctx_pack_noise" in response["result"]["lesson"]["rollback_if"]
+    assert store.get_self_lesson(active.lesson_id).status == MemoryStatus.REVOKED
+    assert response["result"]["audit_event"]["action"] == "rollback_self_lesson"
+    assert context_response["result"]["relevant_self_lessons"] == []
 
 
 def test_self_lesson_propose_tool_rejects_hostile_or_permission_expanding_text():

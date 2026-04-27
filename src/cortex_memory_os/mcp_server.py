@@ -34,9 +34,17 @@ from cortex_memory_os.memory_export import export_memories_with_audit
 from cortex_memory_os.memory_palace import MemoryExplanation, MemoryPalaceService
 from cortex_memory_os.memory_store import InMemoryMemoryStore
 from cortex_memory_os.retrieval import RankedMemory, RetrievalScope
+from cortex_memory_os.self_lesson_audit import record_self_lesson_decision_audit
+from cortex_memory_os.self_lessons import (
+    SelfLessonChangeType,
+    evaluate_self_lesson_rollback,
+    evaluate_stored_self_lesson_promotion,
+    promote_stored_self_lesson,
+    propose_self_lesson,
+    rollback_self_lesson,
+)
 from cortex_memory_os.skill_audit import record_skill_maturity_audit
 from cortex_memory_os.skill_execution import prepare_draft_skill_execution
-from cortex_memory_os.self_lessons import SelfLessonChangeType, propose_self_lesson
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
 
 
@@ -143,6 +151,34 @@ class CortexMCPServer:
                         "change_summary",
                         "confidence",
                     ],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "self_lesson.promote",
+                "description": "Promote a stored candidate self-lesson only after explicit user confirmation.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "lesson_id": {"type": "string"},
+                        "user_confirmed": {"type": "boolean"},
+                    },
+                    "required": ["lesson_id", "user_confirmed"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "self_lesson.rollback",
+                "description": "Rollback an active self-lesson to revoked and persist an audit receipt.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "lesson_id": {"type": "string"},
+                        "failure_count": {"type": "integer", "minimum": 0},
+                        "user_requested": {"type": "boolean"},
+                        "reason_ref": {"type": "string"},
+                    },
+                    "required": ["lesson_id", "failure_count"],
                     "additionalProperties": False,
                 },
             },
@@ -270,6 +306,80 @@ class CortexMCPServer:
             if hasattr(self.store, "add_self_lesson"):
                 self.store.add_self_lesson(proposal.lesson)
             return {"proposal": serialize_self_lesson_proposal(proposal)}
+        if name == "self_lesson.promote":
+            store = self._require_self_lesson_store()
+            lesson_id = _require_string(arguments, "lesson_id")
+            lesson = store.get_self_lesson(lesson_id)
+            if lesson is None:
+                raise JsonRpcError(-32602, f"unknown lesson_id: {lesson_id}")
+            decision = evaluate_stored_self_lesson_promotion(
+                lesson,
+                user_confirmed=_require_bool(arguments, "user_confirmed"),
+            )
+            audit_event = record_self_lesson_decision_audit(
+                store,
+                lesson_id=lesson.lesson_id,
+                action="promote_self_lesson",
+                target_status=decision.target_status,
+                allowed=decision.allowed,
+                reason=decision.reason,
+            )
+            updated_lesson = lesson
+            if decision.allowed:
+                updated_lesson = promote_stored_self_lesson(
+                    lesson,
+                    user_confirmed=True,
+                )
+                store.add_self_lesson(updated_lesson)
+            return {
+                "lesson": serialize_self_lesson(updated_lesson),
+                "decision": serialize_self_lesson_decision(decision),
+                "audit_event": serialize_audit_event(audit_event),
+            }
+        if name == "self_lesson.rollback":
+            store = self._require_self_lesson_store()
+            lesson_id = _require_string(arguments, "lesson_id")
+            lesson = store.get_self_lesson(lesson_id)
+            if lesson is None:
+                raise JsonRpcError(-32602, f"unknown lesson_id: {lesson_id}")
+            failure_count = _require_int(arguments, "failure_count")
+            user_requested = (
+                _require_bool(arguments, "user_requested")
+                if "user_requested" in arguments
+                else False
+            )
+            reason_ref = (
+                _require_string(arguments, "reason_ref")
+                if "reason_ref" in arguments
+                else None
+            )
+            decision = evaluate_self_lesson_rollback(
+                lesson,
+                failure_count=failure_count,
+                user_requested=user_requested,
+            )
+            audit_event = record_self_lesson_decision_audit(
+                store,
+                lesson_id=lesson.lesson_id,
+                action="rollback_self_lesson",
+                target_status=decision.target_status,
+                allowed=decision.allowed,
+                reason=decision.reason,
+            )
+            updated_lesson = lesson
+            if decision.allowed:
+                updated_lesson = rollback_self_lesson(
+                    lesson,
+                    failure_count=failure_count,
+                    user_requested=user_requested,
+                    reason_ref=reason_ref,
+                )
+                store.add_self_lesson(updated_lesson)
+            return {
+                "lesson": serialize_self_lesson(updated_lesson),
+                "decision": serialize_self_lesson_decision(decision),
+                "audit_event": serialize_audit_event(audit_event),
+            }
         if name == "memory.explain":
             return serialize_explanation(
                 self._require_palace().explain_memory(_require_string(arguments, "memory_id"))
@@ -464,6 +574,12 @@ class CortexMCPServer:
             raise JsonRpcError(-32601, "memory palace tools are not configured")
         return self.palace
 
+    def _require_self_lesson_store(self) -> Any:
+        required = ("get_self_lesson", "add_self_lesson", "add_audit_event")
+        if not all(hasattr(self.store, name) for name in required):
+            raise JsonRpcError(-32601, "self-lesson persistence tools are not configured")
+        return self.store
+
 
 def default_server() -> CortexMCPServer:
     fixture_path = "tests/fixtures/memory_preference.json"
@@ -531,6 +647,20 @@ def serialize_self_lesson_proposal(proposal: Any) -> dict[str, Any]:
         "policy_refs": list(proposal.policy_refs),
         "requires_user_confirmation": proposal.requires_user_confirmation,
         "lesson": proposal.lesson.model_dump(mode="json"),
+    }
+
+
+def serialize_self_lesson(lesson: SelfLesson) -> dict[str, Any]:
+    return lesson.model_dump(mode="json")
+
+
+def serialize_self_lesson_decision(decision: Any) -> dict[str, Any]:
+    return {
+        "allowed": decision.allowed,
+        "target_status": decision.target_status.value,
+        "required_behavior": decision.required_behavior,
+        "reason": decision.reason,
+        "policy_refs": list(decision.policy_refs),
     }
 
 

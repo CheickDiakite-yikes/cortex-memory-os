@@ -193,6 +193,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_audit_events,
         case_gateway_self_lesson_proposal_tool,
         case_self_lesson_sqlite_persistence,
+        case_gateway_self_lesson_promotion_rollback,
         case_repeated_workflow_stays_draft_skill,
         case_high_risk_action_requires_review,
         case_benchmark_plan_quality_gate,
@@ -2398,6 +2399,93 @@ def case_self_lesson_sqlite_persistence() -> BenchmarkCaseResult:
         evidence={
             "stored_candidate_id": proposed_lesson_id,
             "active_lesson_ids": active_lesson_ids,
+        },
+    )
+
+
+def case_gateway_self_lesson_promotion_rollback() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        db_path = Path(temp_dir) / "cortex.sqlite3"
+        store = SQLiteMemoryGraphStore(db_path)
+        server = CortexMCPServer(store=store)
+        proposal_response = server.call_tool(
+            "self_lesson.propose",
+            {
+                "content": "Before auth edits, retrieve browser console and terminal errors.",
+                "learned_from": ["task_332_failure", "task_333_success"],
+                "applies_to": ["frontend_debugging", "auth_flows"],
+                "change_type": "failure_checklist",
+                "change_summary": "Add an auth debugging preflight checklist.",
+                "confidence": 0.84,
+            },
+        )
+        lesson_id = proposal_response.get("proposal", {}).get("lesson", {}).get("lesson_id")
+        denied = server.call_tool(
+            "self_lesson.promote",
+            {"lesson_id": lesson_id, "user_confirmed": False},
+        )
+        promoted = server.call_tool(
+            "self_lesson.promote",
+            {"lesson_id": lesson_id, "user_confirmed": True},
+        )
+        active_context = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug"},
+        )
+        rolled_back = server.call_tool(
+            "self_lesson.rollback",
+            {
+                "lesson_id": lesson_id,
+                "failure_count": 1,
+                "reason_ref": "ctx_pack_noise",
+            },
+        )
+        revoked_context = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug"},
+        )
+        audits = store.audit_for_target(lesson_id)
+        stored = store.get_self_lesson(lesson_id)
+
+    active_lesson_ids = [
+        lesson.get("lesson_id") for lesson in active_context.get("relevant_self_lessons", [])
+    ]
+    revoked_lesson_ids = [
+        lesson.get("lesson_id") for lesson in revoked_context.get("relevant_self_lessons", [])
+    ]
+    passed = (
+        denied.get("decision", {}).get("allowed") is False
+        and denied.get("decision", {}).get("reason") == "user_confirmation_required"
+        and promoted.get("decision", {}).get("allowed") is True
+        and promoted.get("lesson", {}).get("status") == MemoryStatus.ACTIVE.value
+        and active_lesson_ids == [lesson_id]
+        and rolled_back.get("decision", {}).get("allowed") is True
+        and rolled_back.get("lesson", {}).get("status") == MemoryStatus.REVOKED.value
+        and revoked_lesson_ids == []
+        and stored is not None
+        and stored.status == MemoryStatus.REVOKED
+        and [event.action for event in audits]
+        == ["promote_self_lesson", "promote_self_lesson", "rollback_self_lesson"]
+        and "GATEWAY-SELF-LESSON-PROMOTE-001" in (
+            REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+        ).read_text(encoding="utf-8")
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-SELF-LESSON-PROMOTE-001/promote_rollback_audit",
+        suite="GATEWAY-SELF-LESSON-PROMOTE-001",
+        passed=passed,
+        summary="Gateway promotes confirmed self-lessons, rolls back active lessons, and persists audit receipts.",
+        metrics={
+            "audit_count": len(audits),
+            "active_context_count": len(active_lesson_ids),
+            "revoked_context_count": len(revoked_lesson_ids),
+        },
+        evidence={
+            "lesson_id": lesson_id,
+            "audit_actions": [event.action for event in audits],
+            "final_status": stored.status.value if stored else None,
         },
     )
 

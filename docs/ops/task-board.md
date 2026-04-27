@@ -6,7 +6,7 @@ Last updated: 2026-04-27
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-SELF-LESSON-PROMOTE-001 | Promote and roll back self-lessons through gateway with audit receipts | Codex | MCP tool contract and benchmark case | Promotion must require confirmation; rollback must revoke active lessons. |
+| GATEWAY-SELF-LESSON-LIST-001 | List self-lessons through gateway for inspectable Memory Palace flows | Codex | MCP tool contract and benchmark case | Listing must preserve status filters and avoid turning candidates into context guidance. |
 
 ## Next
 
@@ -73,6 +73,7 @@ Last updated: 2026-04-27
 | CONTEXT-PACK-SELF-LESSON-001 | Route active self-lessons into context packs through templates | Codex | `src/cortex_memory_os/context_templates.py`, `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 124 passed, `uv run cortex-bench` -> 44/44 passed | Active lessons use the template self-lesson lane; revoked lessons are excluded. |
 | GATEWAY-SELF-LESSON-001 | Expose self-lesson proposal through gateway tool | Codex | `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 126 passed, `uv run cortex-bench` -> 45/45 passed | Gateway proposals create candidate lessons only and reject hostile or permission-expanding text. |
 | SELF-LESSON-STORE-001 | Persist candidate and active self-lessons in SQLite | Codex | `src/cortex_memory_os/sqlite_store.py`, `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 129 passed, `uv run cortex-bench` -> 46/46 passed | Gateway proposals persist as candidates; context packs use active persisted lessons only. |
+| GATEWAY-SELF-LESSON-PROMOTE-001 | Promote and roll back self-lessons through gateway with audit receipts | Codex | `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 132 passed, `uv run cortex-bench` -> 47/47 passed | Promotion requires confirmation; rollback revokes active lessons and removes them from context. |
 
 ## Dropped
 
