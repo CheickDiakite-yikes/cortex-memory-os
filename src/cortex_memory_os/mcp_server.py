@@ -171,6 +171,16 @@ class CortexMCPServer:
                 },
             },
             {
+                "name": "self_lesson.explain",
+                "description": "Explain one self-lesson with source refs, status, context eligibility, and audit receipts.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {"lesson_id": {"type": "string"}},
+                    "required": ["lesson_id"],
+                    "additionalProperties": False,
+                },
+            },
+            {
                 "name": "self_lesson.promote",
                 "description": "Promote a stored candidate self-lesson only after explicit user confirmation.",
                 "inputSchema": {
@@ -340,6 +350,22 @@ class CortexMCPServer:
                 "count": len(lessons),
                 "status_filter": status.value if status else None,
                 "context_eligible_ids": context_eligible_ids,
+            }
+        if name == "self_lesson.explain":
+            lesson_id = _require_string(arguments, "lesson_id")
+            lesson = _find_self_lesson(self.store, self.self_lessons, lesson_id)
+            if lesson is None:
+                raise JsonRpcError(-32602, f"unknown lesson_id: {lesson_id}")
+            audit_events = (
+                self.store.audit_for_target(lesson_id)
+                if hasattr(self.store, "audit_for_target")
+                else []
+            )
+            return {
+                "explanation": serialize_self_lesson_explanation(
+                    lesson,
+                    audit_events,
+                )
             }
         if name == "self_lesson.promote":
             store = self._require_self_lesson_store()
@@ -695,6 +721,27 @@ def serialize_self_lesson_list_item(lesson: SelfLesson) -> dict[str, Any]:
     return item
 
 
+def serialize_self_lesson_explanation(
+    lesson: SelfLesson,
+    audit_events: list[AuditEvent],
+) -> dict[str, Any]:
+    return {
+        "lesson_id": lesson.lesson_id,
+        "status": lesson.status.value,
+        "confidence": lesson.confidence,
+        "risk_level": lesson.risk_level.value,
+        "learned_from": list(lesson.learned_from),
+        "applies_to": list(lesson.applies_to),
+        "rollback_if": list(lesson.rollback_if),
+        "last_validated": lesson.last_validated.isoformat()
+        if lesson.last_validated
+        else None,
+        "context_eligible": lesson.status == MemoryStatus.ACTIVE,
+        "available_actions": _self_lesson_available_actions(lesson),
+        "audit_events": [serialize_audit_event(event) for event in audit_events],
+    }
+
+
 def serialize_self_lesson_decision(decision: Any) -> dict[str, Any]:
     return {
         "allowed": decision.allowed,
@@ -764,6 +811,29 @@ def _all_self_lessons(
         deduped.values(),
         key=lambda lesson: (lesson.status.value, -lesson.confidence, lesson.lesson_id),
     )
+
+
+def _find_self_lesson(
+    store: Any,
+    configured_lessons: tuple[SelfLesson, ...],
+    lesson_id: str,
+) -> SelfLesson | None:
+    if hasattr(store, "get_self_lesson"):
+        stored = store.get_self_lesson(lesson_id)
+        if stored is not None:
+            return stored
+    for lesson in configured_lessons:
+        if lesson.lesson_id == lesson_id:
+            return lesson
+    return None
+
+
+def _self_lesson_available_actions(lesson: SelfLesson) -> list[str]:
+    if lesson.status == MemoryStatus.CANDIDATE:
+        return ["promote_with_confirmation"]
+    if lesson.status == MemoryStatus.ACTIVE:
+        return ["rollback_if_failed_or_requested"]
+    return []
 
 
 def serve_stdio(server: CortexMCPServer) -> int:

@@ -121,3 +121,10 @@ self-lessons only, so proposal storage cannot silently become behavior change.
 - status filters preserve the requested lesson lifecycle state;
 - listed lessons expose whether they are context-eligible;
 - candidate and revoked lessons remain inspectable without entering context packs.
+
+`GATEWAY-SELF-LESSON-EXPLAIN-001` verifies:
+
+- gateway explanation returns lesson status, source refs, scope, and rollback rules;
+- explanations include redacted audit receipts for prior decisions;
+- explanation does not copy lesson content into audit receipts;
+- explaining a candidate lesson does not activate it or add it to context packs.

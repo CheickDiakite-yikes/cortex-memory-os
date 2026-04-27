@@ -195,6 +195,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_sqlite_persistence,
         case_gateway_self_lesson_promotion_rollback,
         case_gateway_self_lesson_list_tool,
+        case_gateway_self_lesson_explain_tool,
         case_repeated_workflow_stays_draft_skill,
         case_high_risk_action_requires_review,
         case_benchmark_plan_quality_gate,
@@ -2566,6 +2567,72 @@ def case_gateway_self_lesson_list_tool() -> BenchmarkCaseResult:
             "context_eligible_ids": all_response.get("context_eligible_ids"),
             "candidate_ids": candidate_ids,
             "context_ids": context_ids,
+        },
+    )
+
+
+def case_gateway_self_lesson_explain_tool() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        server = CortexMCPServer(store=store)
+        proposal_response = server.call_tool(
+            "self_lesson.propose",
+            {
+                "content": "Before auth edits, retrieve browser console and terminal errors.",
+                "learned_from": ["task_332_failure", "task_333_success"],
+                "applies_to": ["frontend_debugging", "auth_flows"],
+                "change_type": "failure_checklist",
+                "change_summary": "Add an auth debugging preflight checklist.",
+                "confidence": 0.84,
+            },
+        )
+        lesson_id = proposal_response.get("proposal", {}).get("lesson", {}).get("lesson_id")
+        server.call_tool(
+            "self_lesson.promote",
+            {"lesson_id": lesson_id, "user_confirmed": False},
+        )
+        explain_response = server.call_tool(
+            "self_lesson.explain",
+            {"lesson_id": lesson_id},
+        )
+        context_response = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug"},
+        )
+
+    explanation = explain_response.get("explanation", {})
+    audit_events = explanation.get("audit_events", [])
+    passed = (
+        explanation.get("lesson_id") == lesson_id
+        and explanation.get("status") == MemoryStatus.CANDIDATE.value
+        and explanation.get("context_eligible") is False
+        and explanation.get("learned_from") == ["task_332_failure", "task_333_success"]
+        and explanation.get("available_actions") == ["promote_with_confirmation"]
+        and [event.get("action") for event in audit_events] == ["promote_self_lesson"]
+        and all(
+            "Before auth edits" not in event.get("redacted_summary", "")
+            for event in audit_events
+        )
+        and context_response.get("relevant_self_lessons") == []
+        and "GATEWAY-SELF-LESSON-EXPLAIN-001" in (
+            REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+        ).read_text(encoding="utf-8")
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-SELF-LESSON-EXPLAIN-001/source_audit_explanation",
+        suite="GATEWAY-SELF-LESSON-EXPLAIN-001",
+        passed=passed,
+        summary="Gateway explains a self-lesson with source refs and redacted audit receipts without activating it.",
+        metrics={
+            "audit_count": len(audit_events),
+            "context_lesson_count": len(context_response.get("relevant_self_lessons", [])),
+        },
+        evidence={
+            "lesson_id": lesson_id,
+            "status": explanation.get("status"),
+            "audit_actions": [event.get("action") for event in audit_events],
         },
     )
 

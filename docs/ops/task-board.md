@@ -6,7 +6,7 @@ Last updated: 2026-04-27
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-SELF-LESSON-EXPLAIN-001 | Explain self-lessons through gateway with source refs and audit receipts | Codex | MCP tool contract and benchmark case | Explanation must be inspectable without promoting candidate guidance. |
+| PALACE-SELF-LESSON-FLOWS-001 | Specify Memory Palace self-lesson review and correction flows | Codex | Flow contract and benchmark case | Candidate, active, and revoked lessons need safe visible actions. |
 
 ## Next
 
@@ -75,6 +75,7 @@ Last updated: 2026-04-27
 | SELF-LESSON-STORE-001 | Persist candidate and active self-lessons in SQLite | Codex | `src/cortex_memory_os/sqlite_store.py`, `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 129 passed, `uv run cortex-bench` -> 46/46 passed | Gateway proposals persist as candidates; context packs use active persisted lessons only. |
 | GATEWAY-SELF-LESSON-PROMOTE-001 | Promote and roll back self-lessons through gateway with audit receipts | Codex | `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 132 passed, `uv run cortex-bench` -> 47/47 passed | Promotion requires confirmation; rollback revokes active lessons and removes them from context. |
 | GATEWAY-SELF-LESSON-LIST-001 | List self-lessons through gateway for inspectable Memory Palace flows | Codex | `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 133 passed, `uv run cortex-bench` -> 48/48 passed | Listing preserves status filters and marks context eligibility without activating candidates. |
+| GATEWAY-SELF-LESSON-EXPLAIN-001 | Explain self-lessons through gateway with source refs and audit receipts | Codex | `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 134 passed, `uv run cortex-bench` -> 49/49 passed | Explanation is inspectable and does not promote candidate guidance into context. |
 
 ## Dropped
 

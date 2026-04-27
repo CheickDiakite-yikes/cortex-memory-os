@@ -18,6 +18,7 @@ def test_lists_memory_tools():
         "skill.execute_draft",
         "self_lesson.propose",
         "self_lesson.list",
+        "self_lesson.explain",
         "self_lesson.promote",
         "self_lesson.rollback",
         "memory.explain",
@@ -459,6 +460,76 @@ def test_self_lesson_list_tool_filters_status_without_context_activation(tmp_pat
         lesson["lesson_id"]
         for lesson in context_response["result"]["relevant_self_lessons"]
     ] == ["lesson_044"]
+
+
+def test_self_lesson_explain_tool_returns_sources_and_audits_without_activation(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    server = CortexMCPServer(store=store)
+    proposal_response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 49,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.propose",
+                "arguments": {
+                    "content": "Before auth edits, retrieve browser console and terminal errors.",
+                    "learned_from": ["task_332_failure", "task_333_success"],
+                    "applies_to": ["frontend_debugging", "auth_flows"],
+                    "change_type": "failure_checklist",
+                    "change_summary": "Add an auth debugging preflight checklist.",
+                    "confidence": 0.84,
+                },
+            },
+        }
+    )
+    lesson_id = proposal_response["result"]["proposal"]["lesson"]["lesson_id"]
+    server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 50,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.promote",
+                "arguments": {"lesson_id": lesson_id, "user_confirmed": False},
+            },
+        }
+    )
+
+    explained = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 51,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.explain",
+                "arguments": {"lesson_id": lesson_id},
+            },
+        }
+    )
+    context_response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 52,
+            "method": "tools/call",
+            "params": {
+                "name": "memory.get_context_pack",
+                "arguments": {"goal": "continue fixing onboarding auth bug"},
+            },
+        }
+    )
+
+    explanation = explained["result"]["explanation"]
+    assert explanation["lesson_id"] == lesson_id
+    assert explanation["status"] == "candidate"
+    assert explanation["context_eligible"] is False
+    assert explanation["learned_from"] == ["task_332_failure", "task_333_success"]
+    assert explanation["available_actions"] == ["promote_with_confirmation"]
+    assert [event["action"] for event in explanation["audit_events"]] == [
+        "promote_self_lesson"
+    ]
+    assert "Before auth edits" not in explanation["audit_events"][0]["redacted_summary"]
+    assert context_response["result"]["relevant_self_lessons"] == []
 
 
 def test_self_lesson_promote_tool_requires_confirmation_and_persists_audit(tmp_path):
