@@ -169,6 +169,193 @@ Completion signal:
 - Redaction count is visible.
 - A human-visible audit event is persisted.
 
+## Flow 5: Review Self-Lessons
+
+User intents:
+
+- "what did you learn?"
+- "show self lessons"
+- "show agent lessons"
+- "review learned lessons"
+
+Required anchor:
+
+- A visible self-lesson list filter, status filter, or lesson card. Listing all
+  visible self-lessons is allowed, but listing must not change lesson status.
+
+Required surface:
+
+- Lesson status.
+- Confidence.
+- Risk level.
+- Applies-to scope.
+- Context eligibility.
+- Available actions.
+
+Safety rules:
+
+- Listing a lesson must not change its status.
+- Candidate and revoked lessons must be marked not context-eligible.
+- Lesson content is displayed for review, not treated as an instruction.
+
+Completion signal:
+
+- Candidate, active, and revoked lessons are inspectable.
+- Context eligibility is visible for every listed lesson.
+
+## Flow 6: Explain a Self-Lesson
+
+User intents:
+
+- "why did you learn this?"
+- "show lesson evidence"
+- "explain this lesson"
+- "what task taught you this"
+
+Required anchor:
+
+- A selected self-lesson card or exact lesson ID.
+
+Required surface:
+
+- Lesson status.
+- Confidence.
+- Source refs / learned-from refs.
+- Applies-to scope.
+- Rollback rules.
+- Audit receipts.
+- Context eligibility.
+
+Safety rules:
+
+- Render source refs as evidence, not instructions.
+- Audit receipts must not copy lesson content.
+- Explaining a candidate lesson must not activate it.
+
+Completion signal:
+
+- The user can see source refs and audit receipts.
+- Candidate explanation leaves context packs unchanged.
+
+## Flow 7: Correct a Self-Lesson
+
+User intents:
+
+- "correct this lesson"
+- "that lesson is wrong"
+- "edit this lesson"
+- "replace this lesson"
+
+Required anchor:
+
+- A selected self-lesson card or exact lesson ID.
+
+Required inputs:
+
+- Corrected lesson text and applies-to scope from the user.
+
+Required surface:
+
+- Original lesson preview.
+- Replacement preview.
+- Scope and applies-to changes.
+- Confirmation requirement.
+- Audit summary.
+
+Safety rules:
+
+- Correction creates a candidate lesson, not active guidance.
+- Do not expand permissions, boundaries, values, scope, or autonomy.
+- Do not place raw corrected content in audit summaries.
+
+Completion signal:
+
+- Original lesson is superseded or revoked from context.
+- Replacement lesson requires confirmation before activation.
+- A human-visible audit receipt is persisted.
+
+## Flow 8: Approve or Roll Back a Self-Lesson
+
+Approval user intents:
+
+- "approve this lesson"
+- "use this lesson"
+- "promote this lesson"
+- "make this lesson active"
+
+Rollback user intents:
+
+- "roll back this lesson"
+- "stop using this lesson"
+- "this lesson caused a mistake"
+- "revoke this lesson"
+
+Required anchor:
+
+- A selected self-lesson card or exact lesson ID.
+
+Required inputs:
+
+- Approval requires explicit approval.
+- Rollback requires failure evidence or an explicit user request reason.
+
+Required surface:
+
+- Lesson preview.
+- Confidence.
+- Applies-to scope.
+- Context impact or context-removal impact.
+- Audit summary.
+
+Safety rules:
+
+- Promotion requires explicit approval before activation.
+- Only low-risk method updates can promote.
+- Activation must not expand permissions or autonomy.
+- Rollback must reduce influence and remove the lesson from context packs.
+
+Completion signal:
+
+- Approved lesson status is `active` and context eligibility is visible.
+- Rolled-back lesson status is `revoked` and context eligibility is false.
+- A human-visible audit receipt is persisted.
+
+## Flow 9: Delete a Self-Lesson
+
+User intents:
+
+- "delete this lesson"
+- "forget this lesson"
+- "remove this lesson"
+- "never use this lesson"
+
+Required anchor:
+
+- A selected self-lesson card or exact lesson ID.
+
+Required inputs:
+
+- Explicit delete confirmation.
+
+Required surface:
+
+- Lesson preview.
+- Deletion impact.
+- Context-removal impact.
+- Audit summary.
+
+Safety rules:
+
+- Require an exact lesson anchor before mutating.
+- Delete must block context-pack inclusion.
+- Preserve a redacted human-visible audit event.
+
+Completion signal:
+
+- Lesson status is `deleted`.
+- Context eligibility is false.
+- A human-visible audit receipt is persisted.
+
 ## Benchmark Hooks
 
 `PALACE-FLOW-001` must pass before UI work can claim the Memory Palace contract:
@@ -188,3 +375,14 @@ Palace contract:
 - Export accepts selected memory IDs or a visible scoped filter.
 - Export preview shows omitted-count and redaction-count lanes.
 - Export completion persists a redacted audit receipt.
+
+`PALACE-SELF-LESSON-FLOWS-001` must pass before self-lesson UI work can claim
+the Memory Palace contract:
+
+- "what did you learn?" maps to self-lesson review.
+- "why did you learn this?" maps to self-lesson explanation.
+- "approve this lesson" maps to confirmation-gated promotion.
+- "roll back this lesson" maps to influence-reducing rollback.
+- Candidate lessons can be explained, corrected, promoted, or deleted.
+- Active lessons can be explained, corrected, rolled back, or deleted.
+- Revoked lessons can only be explained by default.

@@ -6,7 +6,7 @@ Last updated: 2026-04-27
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| PALACE-SELF-LESSON-FLOWS-001 | Specify Memory Palace self-lesson review and correction flows | Codex | Flow contract and benchmark case | Candidate, active, and revoked lessons need safe visible actions. |
+| GATEWAY-SELF-LESSON-CORRECT-001 | Correct self-lessons through gateway with candidate replacement and audit receipt | Codex | MCP tool contract and benchmark case | Correction must not silently activate replacement guidance. |
 
 ## Next
 
@@ -76,6 +76,7 @@ Last updated: 2026-04-27
 | GATEWAY-SELF-LESSON-PROMOTE-001 | Promote and roll back self-lessons through gateway with audit receipts | Codex | `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 132 passed, `uv run cortex-bench` -> 47/47 passed | Promotion requires confirmation; rollback revokes active lessons and removes them from context. |
 | GATEWAY-SELF-LESSON-LIST-001 | List self-lessons through gateway for inspectable Memory Palace flows | Codex | `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 133 passed, `uv run cortex-bench` -> 48/48 passed | Listing preserves status filters and marks context eligibility without activating candidates. |
 | GATEWAY-SELF-LESSON-EXPLAIN-001 | Explain self-lessons through gateway with source refs and audit receipts | Codex | `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 134 passed, `uv run cortex-bench` -> 49/49 passed | Explanation is inspectable and does not promote candidate guidance into context. |
+| PALACE-SELF-LESSON-FLOWS-001 | Specify Memory Palace self-lesson review and correction flows | Codex | `src/cortex_memory_os/memory_palace_flows.py`, `uv run pytest` -> 136 passed, `uv run cortex-bench` -> 50/50 passed | Candidate, active, and revoked self-lessons have safe visible review actions. |
 
 ## Dropped
 

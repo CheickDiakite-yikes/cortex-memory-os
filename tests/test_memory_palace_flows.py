@@ -7,7 +7,10 @@ from cortex_memory_os.memory_palace import MemoryPalaceService
 from cortex_memory_os.memory_palace_flows import (
     MemoryPalaceFlowId,
     default_memory_palace_flows,
+    default_self_lesson_palace_flows,
     flow_for_user_text,
+    self_lesson_available_flow_actions,
+    self_lesson_flow_for_user_text,
 )
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
 
@@ -54,6 +57,74 @@ def test_memory_palace_flow_phrase_matching():
         MemoryPalaceFlowId.EXPORT
     )
     assert flow_for_user_text("tell me a joke") is None
+
+
+def test_self_lesson_flow_contract_covers_safe_review_actions():
+    flows = {flow.flow_id: flow for flow in default_self_lesson_palace_flows()}
+
+    assert set(flows) == {
+        MemoryPalaceFlowId.SELF_LESSON_REVIEW,
+        MemoryPalaceFlowId.SELF_LESSON_EXPLAIN,
+        MemoryPalaceFlowId.SELF_LESSON_CORRECT,
+        MemoryPalaceFlowId.SELF_LESSON_PROMOTE,
+        MemoryPalaceFlowId.SELF_LESSON_ROLLBACK,
+        MemoryPalaceFlowId.SELF_LESSON_DELETE,
+    }
+    assert flows[MemoryPalaceFlowId.SELF_LESSON_REVIEW].mutation is False
+    assert "candidate and revoked lessons must be marked not context-eligible" in (
+        flows[MemoryPalaceFlowId.SELF_LESSON_REVIEW].safety_checks
+    )
+    assert flows[MemoryPalaceFlowId.SELF_LESSON_EXPLAIN].mutation is False
+    assert "explaining a candidate lesson must not activate it" in (
+        flows[MemoryPalaceFlowId.SELF_LESSON_EXPLAIN].safety_checks
+    )
+    assert flows[MemoryPalaceFlowId.SELF_LESSON_CORRECT].requires_confirmation is True
+    assert "correction creates a candidate lesson, not active guidance" in (
+        flows[MemoryPalaceFlowId.SELF_LESSON_CORRECT].safety_checks
+    )
+    assert flows[MemoryPalaceFlowId.SELF_LESSON_PROMOTE].requires_confirmation is True
+    assert flows[MemoryPalaceFlowId.SELF_LESSON_PROMOTE].audit_action == (
+        "promote_self_lesson"
+    )
+    assert flows[MemoryPalaceFlowId.SELF_LESSON_ROLLBACK].audit_action == (
+        "rollback_self_lesson"
+    )
+    assert "rollback must reduce influence" in (
+        flows[MemoryPalaceFlowId.SELF_LESSON_ROLLBACK].safety_checks
+    )
+    assert flows[MemoryPalaceFlowId.SELF_LESSON_DELETE].requires_confirmation is True
+
+
+def test_self_lesson_flow_phrase_matching_and_status_actions():
+    assert self_lesson_flow_for_user_text("what did you learn?").flow_id == (
+        MemoryPalaceFlowId.SELF_LESSON_REVIEW
+    )
+    assert self_lesson_flow_for_user_text("why did you learn this?").flow_id == (
+        MemoryPalaceFlowId.SELF_LESSON_EXPLAIN
+    )
+    assert self_lesson_flow_for_user_text("approve this lesson").flow_id == (
+        MemoryPalaceFlowId.SELF_LESSON_PROMOTE
+    )
+    assert self_lesson_flow_for_user_text("roll back this lesson").flow_id == (
+        MemoryPalaceFlowId.SELF_LESSON_ROLLBACK
+    )
+    assert self_lesson_flow_for_user_text("delete this lesson").flow_id == (
+        MemoryPalaceFlowId.SELF_LESSON_DELETE
+    )
+    assert self_lesson_flow_for_user_text("tell me a joke") is None
+
+    assert MemoryPalaceFlowId.SELF_LESSON_PROMOTE.value in (
+        self_lesson_available_flow_actions(MemoryStatus.CANDIDATE)
+    )
+    assert MemoryPalaceFlowId.SELF_LESSON_ROLLBACK.value not in (
+        self_lesson_available_flow_actions(MemoryStatus.CANDIDATE)
+    )
+    assert MemoryPalaceFlowId.SELF_LESSON_ROLLBACK.value in (
+        self_lesson_available_flow_actions(MemoryStatus.ACTIVE)
+    )
+    assert self_lesson_available_flow_actions(MemoryStatus.REVOKED) == (
+        MemoryPalaceFlowId.SELF_LESSON_EXPLAIN.value,
+    )
 
 
 def test_explain_surface_lists_safe_available_actions(tmp_path):

@@ -72,7 +72,10 @@ from cortex_memory_os.memory_palace import MemoryPalaceService
 from cortex_memory_os.memory_palace_flows import (
     MemoryPalaceFlowId,
     default_memory_palace_flows,
+    default_self_lesson_palace_flows,
     flow_for_user_text,
+    self_lesson_available_flow_actions,
+    self_lesson_flow_for_user_text,
 )
 from cortex_memory_os.memory_store import InMemoryMemoryStore
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
@@ -178,6 +181,7 @@ def run_all() -> BenchmarkRunResult:
         case_sqlite_persistence,
         case_memory_palace_correction_delete,
         case_memory_palace_flow_contract,
+        case_memory_palace_self_lesson_flow_contract,
         case_memory_palace_export_ui_flow,
         case_memory_palace_audit_events,
         case_deletion_aware_memory_export,
@@ -1532,6 +1536,75 @@ def case_memory_palace_flow_contract() -> BenchmarkCaseResult:
             "delete_flow_id": delete_flow.flow_id.value if delete_flow else None,
             "export_flow_id": export_flow.flow_id.value if export_flow else None,
             "after_delete_actions": after_delete.available_actions,
+        },
+    )
+
+
+def case_memory_palace_self_lesson_flow_contract() -> BenchmarkCaseResult:
+    flows = {flow.flow_id: flow for flow in default_self_lesson_palace_flows()}
+    review_flow = self_lesson_flow_for_user_text("what did you learn?")
+    explain_flow = self_lesson_flow_for_user_text("why did you learn this?")
+    promote_flow = self_lesson_flow_for_user_text("approve this lesson")
+    rollback_flow = self_lesson_flow_for_user_text("roll back this lesson")
+    delete_flow = self_lesson_flow_for_user_text("delete this lesson")
+    candidate_actions = self_lesson_available_flow_actions(MemoryStatus.CANDIDATE)
+    active_actions = self_lesson_available_flow_actions(MemoryStatus.ACTIVE)
+    revoked_actions = self_lesson_available_flow_actions(MemoryStatus.REVOKED)
+    doc_text = (REPO_ROOT / "docs" / "product" / "memory-palace-flows.md").read_text(
+        encoding="utf-8"
+    )
+
+    passed = (
+        set(flows)
+        == {
+            MemoryPalaceFlowId.SELF_LESSON_REVIEW,
+            MemoryPalaceFlowId.SELF_LESSON_EXPLAIN,
+            MemoryPalaceFlowId.SELF_LESSON_CORRECT,
+            MemoryPalaceFlowId.SELF_LESSON_PROMOTE,
+            MemoryPalaceFlowId.SELF_LESSON_ROLLBACK,
+            MemoryPalaceFlowId.SELF_LESSON_DELETE,
+        }
+        and review_flow is not None
+        and review_flow.flow_id == MemoryPalaceFlowId.SELF_LESSON_REVIEW
+        and not review_flow.mutation
+        and explain_flow is not None
+        and explain_flow.flow_id == MemoryPalaceFlowId.SELF_LESSON_EXPLAIN
+        and not explain_flow.mutation
+        and promote_flow is not None
+        and promote_flow.flow_id == MemoryPalaceFlowId.SELF_LESSON_PROMOTE
+        and promote_flow.requires_confirmation
+        and promote_flow.audit_action == "promote_self_lesson"
+        and rollback_flow is not None
+        and rollback_flow.flow_id == MemoryPalaceFlowId.SELF_LESSON_ROLLBACK
+        and rollback_flow.audit_action == "rollback_self_lesson"
+        and delete_flow is not None
+        and delete_flow.flow_id == MemoryPalaceFlowId.SELF_LESSON_DELETE
+        and delete_flow.requires_confirmation
+        and MemoryPalaceFlowId.SELF_LESSON_PROMOTE.value in candidate_actions
+        and MemoryPalaceFlowId.SELF_LESSON_ROLLBACK.value not in candidate_actions
+        and MemoryPalaceFlowId.SELF_LESSON_ROLLBACK.value in active_actions
+        and revoked_actions == (MemoryPalaceFlowId.SELF_LESSON_EXPLAIN.value,)
+        and "what did you learn?" in doc_text
+        and "approve this lesson" in doc_text
+        and "roll back this lesson" in doc_text
+        and "PALACE-SELF-LESSON-FLOWS-001" in doc_text
+    )
+    return BenchmarkCaseResult(
+        case_id="PALACE-SELF-LESSON-FLOWS-001/review_action_contract",
+        suite="PALACE-SELF-LESSON-FLOWS-001",
+        passed=passed,
+        summary="Memory Palace self-lesson flows map review, explanation, promotion, rollback, correction, and deletion to safe visible actions.",
+        metrics={
+            "flow_count": len(flows),
+            "candidate_action_count": len(candidate_actions),
+            "active_action_count": len(active_actions),
+            "revoked_action_count": len(revoked_actions),
+        },
+        evidence={
+            "review_flow_id": review_flow.flow_id.value if review_flow else None,
+            "promote_flow_id": promote_flow.flow_id.value if promote_flow else None,
+            "rollback_flow_id": rollback_flow.flow_id.value if rollback_flow else None,
+            "revoked_actions": list(revoked_actions),
         },
     )
 

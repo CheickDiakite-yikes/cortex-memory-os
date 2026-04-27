@@ -89,7 +89,10 @@ from cortex_memory_os.memory_palace_flows import (
     MemoryPalaceFlow,
     MemoryPalaceFlowId,
     default_memory_palace_flows,
+    default_self_lesson_palace_flows,
     flow_for_user_text,
+    self_lesson_available_flow_actions,
+    self_lesson_flow_for_user_text,
 )
 from cortex_memory_os.memory_lifecycle import (
     MemoryLifecycleDecision,
@@ -237,7 +240,10 @@ __all__ = [
     "MemoryPalaceFlow",
     "MemoryPalaceFlowId",
     "default_memory_palace_flows",
+    "default_self_lesson_palace_flows",
     "flow_for_user_text",
+    "self_lesson_available_flow_actions",
+    "self_lesson_flow_for_user_text",
     "MemoryLifecycleDecision",
     "evaluate_memory_transition",
     "recall_allowed",

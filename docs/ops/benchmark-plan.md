@@ -53,6 +53,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `SQLITE-STORE-001` | SQLite round-trips memories and temporal edges. | Persistence leaks deleted memory into retrieval. |
 | `MEMORY-PALACE-001` | Memory Palace explains, corrects, and deletes memories. | Correction does not supersede old memory. |
 | `PALACE-FLOW-001` | User phrases map to safe explain/delete flows. | Delete flow lacks anchor, confirmation, or recall blocking. |
+| `PALACE-SELF-LESSON-FLOWS-001` | Self-lesson review phrases map to safe inspect, correct, promote, rollback, and delete flows. | Review or correction silently activates candidate guidance. |
 | `PALACE-EXPORT-UI-001` | Memory Palace export flow is explicit, scoped, confirmation-gated, and audit-backed. | Export can run without visible scope, confirmation, redaction, or audit receipt. |
 | `AUDIT-001` | Memory mutations persist human-visible audits. | Mutation lacks a redacted audit event. |
 | `EXPORT-001` | User memory export is scoped, redacted, and deletion-aware. | Deleted/revoked content appears in export output. |
@@ -104,9 +105,9 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `PALACE-SELF-LESSON-FLOWS-001`: Memory Palace can map self-lesson review,
-  correction, promotion, rollback, and deletion intents to explicit safe
-  actions.
+- `GATEWAY-SELF-LESSON-CORRECT-001`: Gateway can correct one self-lesson by
+  revoking or superseding the old lesson and creating a candidate replacement
+  with a redacted audit receipt.
 
 Longer-term suites:
 
