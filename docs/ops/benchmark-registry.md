@@ -59,6 +59,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-27 | Context pack template registry | `uv run cortex-bench` | 41/41 passed | `benchmarks/runs/bench_20260427T202948Z.json` | Next benchmark: gateway draft-only skill execution. |
 | 2026-04-27 | Gateway draft-only skill execution | `uv run cortex-bench` | 42/42 passed | `benchmarks/runs/bench_20260427T203122Z.json` | Next benchmark: self-lesson audit receipts. |
 | 2026-04-27 | Self-lesson audit receipts | `uv run cortex-bench` | 43/43 passed | `benchmarks/runs/bench_20260427T204815Z.json` | Next benchmark: context-pack self-lesson routing. |
+| 2026-04-27 | Context-pack self-lesson routing | `uv run cortex-bench` | 44/44 passed | `benchmarks/runs/bench_20260427T205117Z.json` | Next benchmark: gateway self-lesson proposal. |
 
 ## First Runnable Harness Requirements
 

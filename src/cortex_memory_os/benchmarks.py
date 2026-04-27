@@ -30,6 +30,7 @@ from cortex_memory_os.contracts import (
     ObservationEvent,
     RetentionPolicy,
     ScopeLevel,
+    SelfLesson,
     SkillRecord,
     SourceTrust,
     Sensitivity,
@@ -41,6 +42,7 @@ from cortex_memory_os.context_templates import (
     ContextTaskType,
     default_context_pack_templates,
     effective_context_limit,
+    select_context_self_lessons,
     select_context_pack_template,
 )
 from cortex_memory_os.firewall import assess_observation_text
@@ -166,6 +168,7 @@ def run_all() -> BenchmarkRunResult:
         case_context_pack_scored_retrieval,
         case_hostile_source_context_pack_policy,
         case_context_template_registry,
+        case_context_pack_self_lesson_routing,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
@@ -1023,6 +1026,56 @@ def case_context_template_registry() -> BenchmarkCaseResult:
             "policy_ref": CONTEXT_TEMPLATE_POLICY_REF,
             "debug_template_id": debugging.template_id,
             "research_template_id": research.template_id,
+        },
+    )
+
+
+def case_context_pack_self_lesson_routing() -> BenchmarkCaseResult:
+    active = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+    revoked = active.model_copy(
+        update={
+            "lesson_id": "lesson_revoked_auth",
+            "status": MemoryStatus.REVOKED,
+        }
+    )
+    template = select_context_pack_template("continue fixing onboarding auth bug")
+    selected = select_context_self_lessons(
+        [revoked, active],
+        "continue fixing onboarding auth bug",
+        template,
+    )
+    server = CortexMCPServer(
+        store=InMemoryMemoryStore([]),
+        self_lessons=(active, revoked),
+    )
+    response = server.call_tool(
+        "memory.get_context_pack",
+        {"goal": "continue fixing onboarding auth bug"},
+    )
+    lessons = response.get("relevant_self_lessons", [])
+    lesson_ids = [lesson.get("lesson_id") for lesson in lessons]
+    evidence_refs = response.get("evidence_refs", [])
+    passed = (
+        [lesson.lesson_id for lesson in selected] == ["lesson_044"]
+        and lesson_ids == ["lesson_044"]
+        and "lesson_revoked_auth" not in lesson_ids
+        and "task_332_failure" in evidence_refs
+        and "CONTEXT-PACK-SELF-LESSON-001" in (
+            REPO_ROOT / "docs" / "architecture" / "context-pack-templates.md"
+        ).read_text(encoding="utf-8")
+    )
+    return BenchmarkCaseResult(
+        case_id="CONTEXT-PACK-SELF-LESSON-001/active_self_lesson_lane",
+        suite="CONTEXT-PACK-SELF-LESSON-001",
+        passed=passed,
+        summary="Context packs route active self-lessons through template lanes while excluding revoked lessons.",
+        metrics={
+            "selected_self_lesson_count": len(lessons),
+            "template_self_lesson_budget": template.max_self_lessons,
+        },
+        evidence={
+            "self_lesson_ids": lesson_ids,
+            "evidence_refs": evidence_refs,
         },
     )
 

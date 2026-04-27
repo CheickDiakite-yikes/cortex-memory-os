@@ -19,6 +19,7 @@ from cortex_memory_os.contracts import (
     ObservationEventType,
     OutcomeRecord,
     OutcomeStatus,
+    RelevantSelfLesson,
     RetentionPolicy,
     RetrievalScoreSummary,
     Scene,
@@ -52,6 +53,7 @@ from cortex_memory_os.context_templates import (
     ContextTaskType,
     default_context_pack_templates,
     effective_context_limit,
+    select_context_self_lessons,
     select_context_pack_template,
 )
 from cortex_memory_os.evidence_vault import (
@@ -178,6 +180,7 @@ __all__ = [
     "ObservationEventType",
     "OutcomeRecord",
     "OutcomeStatus",
+    "RelevantSelfLesson",
     "RetentionPolicy",
     "RetrievalScoreSummary",
     "Scene",
@@ -205,6 +208,7 @@ __all__ = [
     "ContextTaskType",
     "default_context_pack_templates",
     "effective_context_limit",
+    "select_context_self_lessons",
     "select_context_pack_template",
     "EVIDENCE_VAULT_ENCRYPTION_POLICY_REF",
     "EvidenceVault",

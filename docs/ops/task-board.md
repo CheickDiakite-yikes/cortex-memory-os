@@ -6,13 +6,13 @@ Last updated: 2026-04-27
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| CONTEXT-PACK-SELF-LESSON-001 | Route active self-lessons into context packs through templates | Codex | Retrieval/template benchmark case | Revoked lessons must be excluded. |
+| GATEWAY-SELF-LESSON-001 | Expose self-lesson proposal through gateway tool | Codex | MCP tool contract and benchmark case | Tool should create candidates only, not active lessons. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-SELF-LESSON-001 | Expose self-lesson proposal through gateway tool | Codex | MCP tool contract and benchmark case | Tool should create candidates only, not active lessons. |
+| _None_ |  |  |  |  |
 
 ## Backlog
 
@@ -70,6 +70,7 @@ Last updated: 2026-04-27
 | CONTEXT-TEMPLATE-001 | Specify context pack template registry | Codex | `src/cortex_memory_os/context_templates.py`, `docs/architecture/context-pack-templates.md`, `uv run pytest` focused -> 17 passed, `uv run cortex-bench` -> 41/41 passed | Templates select compact coding/research/general lanes without widening retrieval scope. |
 | GATEWAY-SKILL-EXECUTION-001 | Expose draft-only skill execution through gateway tool | Codex | `src/cortex_memory_os/mcp_server.py`, `docs/architecture/skill-forge-lifecycle.md`, `uv run pytest` focused -> 18 passed, `uv run cortex-bench` -> 42/42 passed | Gateway returns reviewable draft outputs and blocks requested external effects. |
 | SELF-LESSON-AUDIT-001 | Persist self-lesson promotion and rollback audit receipts | Codex | `src/cortex_memory_os/self_lesson_audit.py`, `uv run pytest` -> 122 passed, `uv run cortex-bench` -> 43/43 passed | Audit receipts contain reason codes and policy refs, not lesson content. |
+| CONTEXT-PACK-SELF-LESSON-001 | Route active self-lessons into context packs through templates | Codex | `src/cortex_memory_os/context_templates.py`, `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 124 passed, `uv run cortex-bench` -> 44/44 passed | Active lessons use the template self-lesson lane; revoked lessons are excluded. |
 
 ## Dropped
 

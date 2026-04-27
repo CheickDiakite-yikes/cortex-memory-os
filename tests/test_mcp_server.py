@@ -1,4 +1,4 @@
-from cortex_memory_os.contracts import EvidenceType, InfluenceLevel, MemoryStatus
+from cortex_memory_os.contracts import EvidenceType, InfluenceLevel, MemoryStatus, SelfLesson
 from cortex_memory_os.fixtures import load_json
 from cortex_memory_os.mcp_server import CortexMCPServer, default_server
 from cortex_memory_os.memory_store import InMemoryMemoryStore
@@ -97,6 +97,38 @@ def test_context_pack_template_changes_debugging_next_steps():
     assert "skill_frontend_debugging_v2" in pack["relevant_skills"]
     assert any("recent errors" in step for step in pack["recommended_next_steps"])
     assert len(pack["relevant_memories"]) <= 5
+    assert [lesson["lesson_id"] for lesson in pack["relevant_self_lessons"]] == ["lesson_044"]
+    assert "task_332_failure" in pack["evidence_refs"]
+
+
+def test_context_pack_excludes_revoked_self_lessons():
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    revoked = active.model_copy(
+        update={
+            "lesson_id": "lesson_revoked_auth",
+            "status": MemoryStatus.REVOKED,
+        }
+    )
+    server = CortexMCPServer(
+        store=InMemoryMemoryStore([]),
+        self_lessons=(revoked,),
+    )
+
+    response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 34,
+            "method": "tools/call",
+            "params": {
+                "name": "memory.get_context_pack",
+                "arguments": {"goal": "continue fixing onboarding auth bug"},
+            },
+        }
+    )
+
+    pack = response["result"]
+    assert pack["relevant_self_lessons"] == []
+    assert "task_332_failure" not in pack["evidence_refs"]
 
 
 def test_context_pack_warns_without_echoing_prompt_injection():

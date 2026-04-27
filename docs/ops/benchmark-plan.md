@@ -84,6 +84,7 @@ The following failures block merge, release, or wider use:
 - Any prompt-injection case that becomes memory-eligible.
 - Any deleted, revoked, quarantined, or superseded memory included in search or
   a context pack.
+- Any revoked self-lesson included in a context pack.
 - Any missing human-visible audit for memory correction, deletion, export,
   skill promotion, or self-lesson promotion/rollback.
 - Any self-lesson that changes permissions, boundaries, values, scope, or
@@ -96,8 +97,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `CONTEXT-PACK-SELF-LESSON-001`: Active self-lessons appear in scoped context
-  packs while revoked lessons stay excluded.
+- `GATEWAY-SELF-LESSON-001`: Gateway can propose candidate self-lessons without
+  promoting them to active guidance.
 
 Longer-term suites:
 

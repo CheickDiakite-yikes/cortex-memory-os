@@ -6,6 +6,8 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from cortex_memory_os.contracts import MemoryStatus, SelfLesson
+
 CONTEXT_TEMPLATE_POLICY_REF = "policy_context_template_compact_scope_v1"
 
 
@@ -32,6 +34,7 @@ class ContextPackTemplate(BaseModel):
     description: str = Field(min_length=1)
     memory_lanes: tuple[ContextMemoryLane, ...] = Field(min_length=1)
     max_memories: int = Field(ge=1, le=8)
+    max_self_lessons: int = Field(default=2, ge=0, le=3)
     suggested_skills: tuple[str, ...] = ()
     warnings: tuple[str, ...] = Field(min_length=1)
     recommended_next_steps: tuple[str, ...] = Field(min_length=1)
@@ -166,6 +169,34 @@ def effective_context_limit(template: ContextPackTemplate, requested_limit: int)
     return max(1, min(requested_limit, template.max_memories))
 
 
+def select_context_self_lessons(
+    lessons: tuple[SelfLesson, ...] | list[SelfLesson],
+    goal: str,
+    template: ContextPackTemplate,
+) -> tuple[SelfLesson, ...]:
+    if (
+        ContextMemoryLane.SELF_LESSON not in template.memory_lanes
+        or template.max_self_lessons == 0
+    ):
+        return ()
+
+    goal_tokens = _tokens(goal)
+    scored: list[tuple[float, str, SelfLesson]] = []
+    for lesson in lessons:
+        if lesson.status != MemoryStatus.ACTIVE:
+            continue
+        lesson_tokens = _tokens(" ".join([lesson.content, *lesson.applies_to]))
+        overlap = goal_tokens & lesson_tokens
+        if not overlap:
+            continue
+        relevance = len(overlap) / max(len(goal_tokens), 1)
+        score = relevance * 0.6 + lesson.confidence * 0.4
+        scored.append((score, lesson.lesson_id, lesson))
+
+    scored.sort(key=lambda item: (-item[0], item[1]))
+    return tuple(item[2] for item in scored[: template.max_self_lessons])
+
+
 def _template_by_type(task_type: ContextTaskType) -> ContextPackTemplate:
     for template in default_context_pack_templates():
         if template.task_type == task_type:
@@ -177,3 +208,7 @@ def _normalize(value: str) -> str:
     return " ".join(
         "".join(char.lower() if char.isalnum() else " " for char in value).split()
     )
+
+
+def _tokens(value: str) -> set[str]:
+    return set(_normalize(value).split())

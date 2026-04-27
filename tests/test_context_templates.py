@@ -1,5 +1,6 @@
 import pytest
 
+from cortex_memory_os.contracts import MemoryStatus, SelfLesson
 from cortex_memory_os.context_templates import (
     CONTEXT_TEMPLATE_POLICY_REF,
     ContextMemoryLane,
@@ -7,8 +8,10 @@ from cortex_memory_os.context_templates import (
     ContextTaskType,
     default_context_pack_templates,
     effective_context_limit,
+    select_context_self_lessons,
     select_context_pack_template,
 )
+from cortex_memory_os.fixtures import load_json
 
 
 def test_context_template_registry_is_compact_and_policy_backed():
@@ -42,6 +45,25 @@ def test_effective_context_limit_never_expands_template_budget():
     assert effective_context_limit(template, 20) == template.max_memories
     assert effective_context_limit(template, 2) == 2
     assert effective_context_limit(template, 0) == 1
+
+
+def test_context_template_routes_active_self_lessons_and_excludes_revoked():
+    template = select_context_pack_template("continue fixing onboarding auth bug")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    revoked = active.model_copy(
+        update={
+            "lesson_id": "lesson_revoked_auth",
+            "status": MemoryStatus.REVOKED,
+        }
+    )
+
+    selected = select_context_self_lessons(
+        [revoked, active],
+        "continue fixing onboarding auth bug",
+        template,
+    )
+
+    assert [lesson.lesson_id for lesson in selected] == ["lesson_044"]
 
 
 def test_context_template_rejects_scope_widening_or_secret_requests():

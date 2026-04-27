@@ -340,6 +340,13 @@ class RelevantMemory(StrictModel):
     confidence: float = Field(ge=0.0, le=1.0)
 
 
+class RelevantSelfLesson(StrictModel):
+    lesson_id: str = Field(min_length=1)
+    content: str = Field(min_length=1)
+    confidence: float = Field(ge=0.0, le=1.0)
+    applies_to: list[str] = Field(min_length=1)
+
+
 class RetrievalScoreSummary(StrictModel):
     memory_id: str = Field(min_length=1)
     score: float = Field(ge=0.0)
@@ -353,6 +360,7 @@ class ContextPack(StrictModel):
     relevant_files: list[str] = Field(default_factory=list)
     recent_events: list[str] = Field(default_factory=list)
     relevant_memories: list[RelevantMemory] = Field(default_factory=list)
+    relevant_self_lessons: list[RelevantSelfLesson] = Field(default_factory=list)
     retrieval_scores: list[RetrievalScoreSummary] = Field(default_factory=list)
     blocked_memory_ids: list[str] = Field(default_factory=list)
     untrusted_evidence_refs: list[str] = Field(default_factory=list)

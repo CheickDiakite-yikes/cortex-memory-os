@@ -14,6 +14,7 @@ Templates define:
 - task type;
 - memory lanes;
 - maximum memory count;
+- maximum self-lesson count;
 - suggested skills;
 - warnings;
 - recommended next steps;
@@ -43,6 +44,16 @@ Templates must not:
 Templates should keep warnings stable and plain so they can be rendered directly
 to agent context without becoming another prompt-injection channel.
 
+## Self-Lesson Lane
+
+Coding/debugging and research/synthesis templates include a self-lesson lane.
+Only active self-lessons can enter that lane. Revoked, deleted, superseded, or
+quarantined lessons stay out of context packs.
+
+Self-lessons are selected by task relevance against the current goal and the
+lesson's `applies_to` tags. The lane is separately budgeted so self-improvement
+guidance cannot crowd out project evidence.
+
 ## Benchmark
 
 `CONTEXT-TEMPLATE-001` verifies:
@@ -54,3 +65,10 @@ to agent context without becoming another prompt-injection channel.
 - requested limits cannot exceed the template memory budget;
 - template text cannot widen scope or request secrets;
 - gateway context packs include template policy refs and suggested skills.
+
+`CONTEXT-PACK-SELF-LESSON-001` verifies:
+
+- active self-lessons can enter matching context packs;
+- revoked self-lessons are excluded;
+- lesson source refs are attached as evidence refs;
+- self-lesson routing follows the selected template lane and budget.

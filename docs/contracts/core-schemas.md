@@ -212,6 +212,14 @@ retention_policy:
       "confidence": 0.91
     }
   ],
+  "relevant_self_lessons": [
+    {
+      "lesson_id": "lesson_044",
+      "content": "Before editing auth-related code, retrieve recent browser console errors, terminal logs, and route files.",
+      "confidence": 0.84,
+      "applies_to": ["coding", "frontend_debugging", "auth_flows"]
+    }
+  ],
   "relevant_skills": ["skill_frontend_auth_debugging_v2"],
   "warnings": ["Do not use production credentials.", "Ask before changing deployment settings."],
   "evidence_refs": ["ev_terminal_11", "ev_browser_22"],
@@ -268,4 +276,3 @@ retention_policy:
   "redacted_summary": "Masked secret-like terminal output before storage."
 }
 ```
-

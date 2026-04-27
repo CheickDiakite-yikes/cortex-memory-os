@@ -15,13 +15,16 @@ from cortex_memory_os.contracts import (
     ContextPack,
     MemoryRecord,
     RelevantMemory,
+    RelevantSelfLesson,
     RetrievalScoreSummary,
+    SelfLesson,
     SkillRecord,
 )
 from cortex_memory_os.context_policy import CONTEXT_PACK_POLICY_REF, evaluate_context_memory
 from cortex_memory_os.context_templates import (
     CONTEXT_TEMPLATE_POLICY_REF,
     effective_context_limit,
+    select_context_self_lessons,
     select_context_pack_template,
 )
 from cortex_memory_os.firewall import detect_prompt_injection
@@ -50,6 +53,7 @@ class CortexMCPServer:
     store: Any
     palace: MemoryPalaceService | None = None
     skills: dict[str, SkillRecord] = field(default_factory=dict)
+    self_lessons: tuple[SelfLesson, ...] = ()
     _tempdir: TemporaryDirectory[str] | None = field(default=None, repr=False)
 
     def list_tools(self) -> list[dict[str, Any]]:
@@ -289,6 +293,7 @@ class CortexMCPServer:
         limit = effective_context_limit(template, int(arguments.get("limit", template.max_memories)))
         retrieval_scope = RetrievalScope(active_project=active_project)
         ranked_memories = _rank_store(self.store, goal, limit=limit, scope=retrieval_scope)
+        self_lessons = select_context_self_lessons(self.self_lessons, goal, template)
         trusted_ranked: list[RankedMemory] = []
         blocked_memory_ids: list[str] = []
         untrusted_evidence_refs: list[str] = []
@@ -324,6 +329,15 @@ class CortexMCPServer:
                 )
                 for memory in memories
             ],
+            relevant_self_lessons=[
+                RelevantSelfLesson(
+                    lesson_id=lesson.lesson_id,
+                    content=lesson.content,
+                    confidence=lesson.confidence,
+                    applies_to=lesson.applies_to,
+                )
+                for lesson in self_lessons
+            ],
             retrieval_scores=[
                 RetrievalScoreSummary(
                     memory_id=ranked.memory.memory_id,
@@ -341,7 +355,10 @@ class CortexMCPServer:
             ],
             relevant_skills=list(template.suggested_skills),
             warnings=warnings,
-            evidence_refs=[ref for memory in memories for ref in memory.source_refs],
+            evidence_refs=[
+                *[ref for memory in memories for ref in memory.source_refs],
+                *[ref for lesson in self_lessons for ref in lesson.learned_from],
+            ],
             recommended_next_steps=list(template.recommended_next_steps),
         )
 
@@ -388,6 +405,7 @@ class CortexMCPServer:
 def default_server() -> CortexMCPServer:
     fixture_path = "tests/fixtures/memory_preference.json"
     memory = MemoryRecord.model_validate(load_json(fixture_path))
+    self_lesson = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
     skill = SkillRecord.model_validate(load_json("tests/fixtures/skill_draft.json"))
     tempdir = TemporaryDirectory()
     store = SQLiteMemoryGraphStore(Path(tempdir.name) / "cortex.sqlite3")
@@ -396,6 +414,7 @@ def default_server() -> CortexMCPServer:
         store=store,
         palace=MemoryPalaceService(store),
         skills={skill.skill_id: skill},
+        self_lessons=(self_lesson,),
         _tempdir=tempdir,
     )
 
