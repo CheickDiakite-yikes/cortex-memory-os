@@ -1,0 +1,56 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+secrets/
+private/
+
+# Local data, memory stores, and generated artifacts
+data/
+local-data/
+memory-store/
+vector-store/
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+*.log
+logs/
+
+# Model files and large local assets
+models/
+weights/
+checkpoints/
+*.safetensors
+*.gguf
+*.onnx
+*.pt
+*.pth
+
+# Benchmark and test outputs
+benchmarks/runs/*
+!benchmarks/runs/.gitkeep
+coverage/
+htmlcov/
+.pytest_cache/
+
+# Language and editor noise
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+*.egg-info/
+node_modules/
+dist/
+build/
+.DS_Store
+.idea/
+.vscode/

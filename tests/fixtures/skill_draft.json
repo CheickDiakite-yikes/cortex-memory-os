@@ -1,0 +1,28 @@
+{
+  "skill_id": "skill_research_synthesis_v1",
+  "name": "Deep technical research synthesis",
+  "description": "Research a complex AI/software topic using primary sources, synthesis, and architecture implications.",
+  "learned_from": ["episode_201", "episode_218", "episode_230"],
+  "trigger_conditions": ["serious research request", "architecture blueprint request"],
+  "inputs": {
+    "topic": "string",
+    "depth": "quick | serious | exhaustive",
+    "output_format": "memo | blueprint | roadmap"
+  },
+  "procedure": [
+    "Search current primary sources",
+    "Separate products, papers, benchmarks, risks",
+    "Extract design principles",
+    "Challenge shallow assumptions",
+    "Produce architecture implications",
+    "Cite load-bearing claims"
+  ],
+  "success_signals": ["user builds on structure", "low correction rate"],
+  "failure_modes": ["too broad", "summary without synthesis", "not enough implementation detail"],
+  "risk_level": "low",
+  "maturity_level": 2,
+  "execution_mode": "draft_only",
+  "requires_confirmation_before": [],
+  "status": "candidate"
+}
+

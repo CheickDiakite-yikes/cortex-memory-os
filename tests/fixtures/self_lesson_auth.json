@@ -1,0 +1,13 @@
+{
+  "lesson_id": "lesson_044",
+  "type": "self_lesson",
+  "content": "Before editing auth-related code, retrieve recent browser console errors, terminal logs, and route files.",
+  "learned_from": ["task_332_failure", "task_333_success"],
+  "applies_to": ["coding", "frontend_debugging", "auth_flows"],
+  "confidence": 0.84,
+  "status": "active",
+  "risk_level": "low",
+  "last_validated": "2026-04-27",
+  "rollback_if": ["causes irrelevant context retrieval", "user flags as annoying"]
+}
+

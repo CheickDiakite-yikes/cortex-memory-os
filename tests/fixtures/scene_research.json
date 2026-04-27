@@ -1,0 +1,16 @@
+{
+  "scene_id": "scene_2026_04_27_1542",
+  "start_time": "2026-04-27T15:42:00-04:00",
+  "end_time": "2026-04-27T16:18:00-04:00",
+  "scene_type": "research_sprint",
+  "inferred_goal": "Research screen-based memory systems for AI agents",
+  "apps": ["Chrome", "Terminal"],
+  "entities": ["Codex", "Chronicle", "MCP", "Graphiti"],
+  "action_trace_refs": ["trace_101", "trace_102"],
+  "evidence_refs": ["ev_901", "ev_902"],
+  "outcome": "notes_created",
+  "confidence": 0.82,
+  "privacy_level": "private_work",
+  "segmentation_reason": ["topic_continuity", "agent_task_boundary"]
+}
+

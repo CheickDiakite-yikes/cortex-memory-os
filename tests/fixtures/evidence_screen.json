@@ -1,0 +1,15 @@
+{
+  "evidence_id": "ev_901",
+  "source": "screen_frame",
+  "device": "macbook",
+  "app": "Chrome",
+  "timestamp": "2026-04-27T15:47:13-04:00",
+  "raw_ref": "encrypted_blob://local/ev_901",
+  "derived_text_refs": ["ocr_901"],
+  "retention_policy": "delete_raw_after_6h",
+  "sensitivity": "private_work",
+  "contains_third_party_content": false,
+  "eligible_for_memory": true,
+  "eligible_for_model_training": false
+}
+

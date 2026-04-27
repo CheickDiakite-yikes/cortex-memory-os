@@ -1,0 +1,13 @@
+{
+  "edge_id": "edge_441",
+  "subject": "user",
+  "predicate": "prefers",
+  "object": "primary_source_research_before_synthesis",
+  "valid_from": "2026-04-27",
+  "valid_to": null,
+  "confidence": 0.86,
+  "source_refs": ["scene_2026_04_27_1542", "mem_001"],
+  "status": "active",
+  "supersedes": []
+}
+

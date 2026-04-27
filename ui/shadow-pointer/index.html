@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cortex Shadow Pointer</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="surface" aria-label="Shadow Pointer prototype">
+      <section class="workspace" aria-label="Observed workspace">
+        <div class="window chrome">
+          <div class="bar"><span></span><span></span><span></span></div>
+          <div class="research-lines">
+            <b>developer.openai.com</b>
+            <p>Chronicle context and memory notes</p>
+            <p>MCP security and consent requirements</p>
+            <p>Temporal graph memory direction</p>
+          </div>
+        </div>
+        <div class="window editor">
+          <div class="bar"><span></span><span></span><span></span></div>
+          <pre>src/auth/callback.ts
+
+test: onboarding redirect mismatch
+status: local reproduction found
+next: smallest safe patch</pre>
+        </div>
+        <button class="shadow-pointer" id="pointer" aria-expanded="true" aria-controls="panel">
+          <span class="halo"></span>
+          <span class="dot"></span>
+          <span class="state-pill" id="pointer-state">Observing</span>
+        </button>
+      </section>
+
+      <aside class="panel" id="panel">
+        <header>
+          <p class="eyebrow">Cortex is <span id="state-label">Observing</span></p>
+          <h1 id="workstream">Debugging auth flow</h1>
+        </header>
+
+        <dl class="rows">
+          <div>
+            <dt>Seeing</dt>
+            <dd id="seeing">VS Code, Terminal, Chrome</dd>
+          </div>
+          <div>
+            <dt>Ignoring</dt>
+            <dd id="ignoring">password fields, private messages</dd>
+          </div>
+          <div>
+            <dt>Possible memory</dt>
+            <dd id="memory">Auth bug reproduction flow</dd>
+          </div>
+          <div>
+            <dt>Possible skill</dt>
+            <dd id="skill">Frontend auth debugging</dd>
+          </div>
+        </dl>
+
+        <div class="controls" aria-label="Shadow Pointer states">
+          <button data-state="off">Off</button>
+          <button data-state="observing" class="active">Observe</button>
+          <button data-state="private_masking">Mask</button>
+          <button data-state="remembering">Remember</button>
+          <button data-state="agent_contexting">Context</button>
+          <button data-state="needs_approval">Approve</button>
+          <button data-state="paused">Pause</button>
+        </div>
+
+        <div class="actions">
+          <button id="delete-recent">Delete last 10 min</button>
+          <button id="open-memory">Open Memory</button>
+        </div>
+      </aside>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

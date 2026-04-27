@@ -1,0 +1,13 @@
+{
+  "outcome_id": "out_001",
+  "task_id": "task_332",
+  "agent_id": "codex",
+  "status": "success",
+  "evidence_refs": ["test_run_55", "git_diff_12"],
+  "user_feedback": "Worked after the env fix.",
+  "memory_updates": ["mem_244"],
+  "skill_updates": ["skill_frontend_auth_debugging_v2"],
+  "postmortem_ref": "pm_001",
+  "created_at": "2026-04-27T17:10:00-04:00"
+}
+

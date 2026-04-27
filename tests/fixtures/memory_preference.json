@@ -1,0 +1,22 @@
+{
+  "memory_id": "mem_001",
+  "type": "preference",
+  "content": "User prefers primary-source research before architectural synthesis.",
+  "source_refs": ["scene_2026_04_27_1542", "conv_812"],
+  "evidence_type": "observed_and_inferred",
+  "confidence": 0.91,
+  "status": "active",
+  "created_at": "2026-04-27T16:19:00-04:00",
+  "valid_from": "2026-04-27",
+  "valid_to": null,
+  "sensitivity": "low",
+  "scope": "project_specific",
+  "influence_level": 3,
+  "allowed_influence": ["research_workflows", "answer_structure"],
+  "forbidden_influence": ["financial_decisions", "medical_decisions"],
+  "decay_policy": "review_after_90_days",
+  "contradicts": [],
+  "user_visible": true,
+  "requires_user_confirmation": false
+}
+

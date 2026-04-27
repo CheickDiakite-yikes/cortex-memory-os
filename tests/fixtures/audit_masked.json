@@ -1,0 +1,12 @@
+{
+  "audit_event_id": "audit_001",
+  "timestamp": "2026-04-27T15:47:14-04:00",
+  "actor": "cortex_firewall",
+  "action": "masked_observation",
+  "target_ref": "obs_001",
+  "policy_refs": ["policy_secret_masking_v1"],
+  "result": "allowed_after_masking",
+  "human_visible": true,
+  "redacted_summary": "Masked secret-like terminal output before storage."
+}
+

@@ -1,0 +1,22 @@
+{
+  "context_pack_id": "ctx_001",
+  "goal": "Continue fixing onboarding bug",
+  "active_project": "web_app",
+  "relevant_files": ["src/auth/callback.ts", "src/pages/onboarding.tsx"],
+  "recent_events": [
+    "User reproduced bug in Chrome",
+    "Terminal showed OAuth redirect mismatch"
+  ],
+  "relevant_memories": [
+    {
+      "memory_id": "mem_244",
+      "content": "User prefers smallest safe code changes and test verification after edits.",
+      "confidence": 0.91
+    }
+  ],
+  "relevant_skills": ["skill_frontend_auth_debugging_v2"],
+  "warnings": ["Do not use production credentials.", "Ask before changing deployment settings."],
+  "evidence_refs": ["ev_terminal_11", "ev_browser_22"],
+  "recommended_next_steps": ["Inspect callback route", "Check env redirect URI", "Run local login flow"]
+}
+
