@@ -6,19 +6,19 @@ Last updated: 2026-04-27
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| SELF-LESSON-AUDIT-001 | Persist self-lesson promotion and rollback audit receipts | Codex | Audit helper and benchmark case | Audit receipts should contain reason codes, not lesson content. |
+| CONTEXT-PACK-SELF-LESSON-001 | Route active self-lessons into context packs through templates | Codex | Retrieval/template benchmark case | Revoked lessons must be excluded. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| CONTEXT-PACK-SELF-LESSON-001 | Route active self-lessons into context packs through templates | Codex | Retrieval/template benchmark case | Revoked lessons must be excluded. |
+| GATEWAY-SELF-LESSON-001 | Expose self-lesson proposal through gateway tool | Codex | MCP tool contract and benchmark case | Tool should create candidates only, not active lessons. |
 
 ## Backlog
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-SELF-LESSON-001 | Expose self-lesson proposal through gateway tool | Codex | MCP tool contract and benchmark case | Tool should create candidates only, not active lessons. |
+| _None_ |  |  |  |  |
 
 ## Done
 
@@ -69,6 +69,7 @@ Last updated: 2026-04-27
 | SELF-LESSON-001 | Specify self-lesson proposal and rollback contract | Codex | `src/cortex_memory_os/self_lessons.py`, `docs/architecture/self-improvement-engine.md`, `uv run pytest` focused -> 7 passed, `uv run cortex-bench` -> 40/40 passed | Self-lessons can update methods only, require confirmation, reject hostile/permission changes, and roll back to revoked. |
 | CONTEXT-TEMPLATE-001 | Specify context pack template registry | Codex | `src/cortex_memory_os/context_templates.py`, `docs/architecture/context-pack-templates.md`, `uv run pytest` focused -> 17 passed, `uv run cortex-bench` -> 41/41 passed | Templates select compact coding/research/general lanes without widening retrieval scope. |
 | GATEWAY-SKILL-EXECUTION-001 | Expose draft-only skill execution through gateway tool | Codex | `src/cortex_memory_os/mcp_server.py`, `docs/architecture/skill-forge-lifecycle.md`, `uv run pytest` focused -> 18 passed, `uv run cortex-bench` -> 42/42 passed | Gateway returns reviewable draft outputs and blocks requested external effects. |
+| SELF-LESSON-AUDIT-001 | Persist self-lesson promotion and rollback audit receipts | Codex | `src/cortex_memory_os/self_lesson_audit.py`, `uv run pytest` -> 122 passed, `uv run cortex-bench` -> 43/43 passed | Audit receipts contain reason codes and policy refs, not lesson content. |
 
 ## Dropped
 

@@ -106,6 +106,11 @@ from cortex_memory_os.self_lessons import (
     propose_self_lesson,
     rollback_self_lesson,
 )
+from cortex_memory_os.self_lesson_audit import (
+    SELF_LESSON_AUDIT_POLICY_REF,
+    record_self_lesson_promotion_audit,
+    record_self_lesson_rollback_audit,
+)
 from cortex_memory_os.skill_forge import detect_skill_candidates
 from cortex_memory_os.skill_policy import (
     evaluate_skill_promotion,
@@ -182,6 +187,7 @@ def run_all() -> BenchmarkRunResult:
         case_draft_skill_execution_contract,
         case_gateway_draft_skill_execution_tool,
         case_self_lesson_methods_only_contract,
+        case_self_lesson_audit_events,
         case_repeated_workflow_stays_draft_skill,
         case_high_risk_action_requires_review,
         case_benchmark_plan_quality_gate,
@@ -2139,6 +2145,75 @@ def case_self_lesson_methods_only_contract() -> BenchmarkCaseResult:
             "policy_ref": SELF_LESSON_POLICY_REF,
             "no_confirmation_reason": no_confirmation.reason,
             "blocked_reason": blocked_reason,
+        },
+    )
+
+
+def case_self_lesson_audit_events() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    proposal = propose_self_lesson(
+        content=(
+            "Before editing auth code, retrieve browser console errors and "
+            "recent terminal logs."
+        ),
+        learned_from=["task_332_failure", "task_333_success"],
+        applies_to=["frontend_debugging", "auth_flows"],
+        change_type=SelfLessonChangeType.FAILURE_CHECKLIST,
+        change_summary="Add a debugging checklist item before auth edits.",
+        confidence=0.84,
+        risk_level=ActionRisk.LOW,
+        now=datetime(2026, 4, 27, 23, 0, tzinfo=UTC),
+    )
+    promotion_decision = evaluate_self_lesson_promotion(proposal, user_confirmed=True)
+    active = promote_self_lesson(
+        proposal,
+        user_confirmed=True,
+        today=datetime(2026, 4, 27, tzinfo=UTC).date(),
+    )
+    rollback_decision = evaluate_self_lesson_rollback(active, failure_count=1)
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        promotion_event = record_self_lesson_promotion_audit(
+            store,
+            proposal,
+            promotion_decision,
+            actor="benchmark",
+            now=datetime(2026, 4, 27, 23, 10, tzinfo=UTC),
+        )
+        rollback_event = record_self_lesson_rollback_audit(
+            store,
+            active,
+            rollback_decision,
+            actor="benchmark",
+            now=datetime(2026, 4, 27, 23, 11, tzinfo=UTC),
+        )
+        audits = store.audit_for_target(proposal.lesson.lesson_id)
+
+    serialized = " ".join(event.model_dump_json() for event in audits)
+    passed = (
+        audits == [promotion_event, rollback_event]
+        and [event.action for event in audits]
+        == ["promote_self_lesson", "rollback_self_lesson"]
+        and all(event.human_visible for event in audits)
+        and all(SELF_LESSON_POLICY_REF in event.policy_refs for event in audits)
+        and all(SELF_LESSON_AUDIT_POLICY_REF in event.policy_refs for event in audits)
+        and promotion_event.result == "promotion_allowed"
+        and rollback_event.result == "rollback_allowed"
+        and proposal.lesson.content not in serialized
+        and proposal.change_summary not in serialized
+        and proposal.lesson.learned_from[0] not in serialized
+    )
+    return BenchmarkCaseResult(
+        case_id="SELF-LESSON-AUDIT-001/redacted_self_lesson_audit",
+        suite="SELF-LESSON-AUDIT-001",
+        passed=passed,
+        summary="Self-lesson promotion and rollback persist reason-coded audit receipts without lesson content.",
+        metrics={"audit_count": len(audits)},
+        evidence={
+            "audit_event_ids": [event.audit_event_id for event in audits],
+            "actions": [event.action for event in audits],
         },
     )
 

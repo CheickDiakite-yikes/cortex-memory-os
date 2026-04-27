@@ -144,6 +144,12 @@ from cortex_memory_os.self_lessons import (
     propose_self_lesson,
     rollback_self_lesson,
 )
+from cortex_memory_os.self_lesson_audit import (
+    SELF_LESSON_AUDIT_POLICY_REF,
+    record_self_lesson_decision_audit,
+    record_self_lesson_promotion_audit,
+    record_self_lesson_rollback_audit,
+)
 from cortex_memory_os.skill_policy import (
     SkillPromotionDecision,
     SkillRollbackDecision,
@@ -269,6 +275,10 @@ __all__ = [
     "promote_self_lesson",
     "propose_self_lesson",
     "rollback_self_lesson",
+    "SELF_LESSON_AUDIT_POLICY_REF",
+    "record_self_lesson_decision_audit",
+    "record_self_lesson_promotion_audit",
+    "record_self_lesson_rollback_audit",
     "SkillPromotionDecision",
     "SkillRollbackDecision",
     "evaluate_skill_promotion",

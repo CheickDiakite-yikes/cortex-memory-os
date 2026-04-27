@@ -84,8 +84,8 @@ The following failures block merge, release, or wider use:
 - Any prompt-injection case that becomes memory-eligible.
 - Any deleted, revoked, quarantined, or superseded memory included in search or
   a context pack.
-- Any missing human-visible audit for memory correction, deletion, export, or
-  skill promotion.
+- Any missing human-visible audit for memory correction, deletion, export,
+  skill promotion, or self-lesson promotion/rollback.
 - Any self-lesson that changes permissions, boundaries, values, scope, or
   autonomy.
 - Any unredacted fake secret in tests, traces, benchmark artifacts, logs, or
@@ -96,8 +96,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `SELF-LESSON-AUDIT-001`: Self-lesson promotion and rollback create redacted
-  audit receipts.
+- `CONTEXT-PACK-SELF-LESSON-001`: Active self-lessons appear in scoped context
+  packs while revoked lessons stay excluded.
 
 Longer-term suites:
 

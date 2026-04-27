@@ -49,6 +49,25 @@ for a failure, but it cannot become a self-lesson instruction.
 Rollback preserves the lesson record and evidence trail. It stops future use
 without erasing why the system became more conservative.
 
+## Audit Receipts
+
+Self-lesson promotion and rollback decisions create human-visible audit
+receipts.
+
+The receipt may contain:
+
+- lesson ID;
+- action;
+- actor;
+- target status;
+- allowed / denied;
+- reason code;
+- policy refs.
+
+The receipt must not copy lesson content, change summaries, source task IDs, or
+rollback trigger text. These receipts prove governance decisions without turning
+the audit log into another memory leak.
+
 ## Benchmark
 
 `SELF-LESSON-001` verifies:
@@ -58,3 +77,10 @@ without erasing why the system became more conservative.
 - method-only changes can become active;
 - permission, boundary, autonomy, and prompt-injection changes are rejected;
 - rollback revokes the lesson and records a reason reference.
+
+`SELF-LESSON-AUDIT-001` verifies:
+
+- promotion creates a persisted human-visible audit receipt;
+- rollback creates a persisted human-visible audit receipt;
+- audit receipts contain reason codes and policy refs;
+- audit receipts omit lesson content, change summaries, and source task IDs.
