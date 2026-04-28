@@ -17,6 +17,7 @@ class MemoryPalaceFlowId(str, Enum):
     SELF_LESSON_EXPLAIN = "explain_self_lesson"
     SELF_LESSON_CORRECT = "correct_self_lesson"
     SELF_LESSON_PROMOTE = "promote_self_lesson"
+    SELF_LESSON_REFRESH = "refresh_self_lesson"
     SELF_LESSON_ROLLBACK = "rollback_self_lesson"
     SELF_LESSON_DELETE = "delete_self_lesson"
 
@@ -40,6 +41,16 @@ class MemoryPalaceFlow:
     def matches(self, user_text: str) -> bool:
         normalized = _normalize(user_text)
         return any(_normalize(phrase) in normalized for phrase in self.trigger_phrases)
+
+
+@dataclass(frozen=True)
+class SelfLessonReviewAction:
+    flow_id: MemoryPalaceFlowId
+    gateway_tool: str
+    required_inputs: tuple[str, ...]
+    requires_confirmation: bool
+    mutation: bool
+    content_redacted: bool = True
 
 
 def default_memory_palace_flows() -> tuple[MemoryPalaceFlow, ...]:
@@ -218,12 +229,14 @@ def default_self_lesson_palace_flows() -> tuple[MemoryPalaceFlow, ...]:
                 "do not treat lesson content as an instruction during review",
                 "default review cards preserve scope metadata while redacting lesson content and provenance",
                 "stale scoped lessons must be marked for review before context use",
+                "review-required lessons must link to exact anchored explain, refresh, correct, and delete tools",
             ),
             completion_checks=(
                 "candidate, active, and revoked lessons are inspectable",
                 "context eligibility is visible for every listed lesson",
                 "scope and redaction state are visible for every listed lesson",
                 "review-required lessons expose review state and available review action",
+                "review action plan preserves confirmations for refresh, correction, and deletion",
             ),
             mutation=False,
             requires_memory_anchor=False,
@@ -324,6 +337,38 @@ def default_self_lesson_palace_flows() -> tuple[MemoryPalaceFlow, ...]:
             audit_action="promote_self_lesson",
         ),
         MemoryPalaceFlow(
+            flow_id=MemoryPalaceFlowId.SELF_LESSON_REFRESH,
+            title="Refresh a review-required self-lesson",
+            trigger_phrases=(
+                "refresh this lesson",
+                "reviewed this lesson",
+                "keep using this lesson",
+                "mark this lesson current",
+            ),
+            entry_surfaces=("Memory Palace", "Agent Gateway"),
+            required_inputs=("lesson_id_or_visible_card_anchor", "explicit_refresh_confirmation"),
+            user_visible_context=(
+                "review_state",
+                "scope_and_applies_to",
+                "context_reentry_impact",
+                "audit_summary",
+            ),
+            safety_checks=(
+                "require explicit confirmation before restoring context use",
+                "refresh must not change lesson content, scope, permissions, or autonomy",
+                "refresh must persist a human-visible audit receipt",
+            ),
+            completion_checks=(
+                "lesson remains active",
+                "review state is current",
+                "matching scoped context can use the lesson again",
+                "human-visible audit receipt is persisted",
+            ),
+            mutation=True,
+            requires_confirmation=True,
+            audit_action="refresh_self_lesson",
+        ),
+        MemoryPalaceFlow(
             flow_id=MemoryPalaceFlowId.SELF_LESSON_ROLLBACK,
             title="Roll back a bad self-lesson",
             trigger_phrases=(
@@ -414,6 +459,59 @@ def self_lesson_available_flow_actions(status: MemoryStatus) -> tuple[str, ...]:
     return (
         MemoryPalaceFlowId.SELF_LESSON_EXPLAIN.value,
         MemoryPalaceFlowId.SELF_LESSON_DELETE.value,
+    )
+
+
+def self_lesson_review_action_plan(
+    status: MemoryStatus,
+    *,
+    review_required: bool,
+) -> tuple[SelfLessonReviewAction, ...]:
+    if status != MemoryStatus.ACTIVE or not review_required:
+        return (
+            SelfLessonReviewAction(
+                flow_id=MemoryPalaceFlowId.SELF_LESSON_EXPLAIN,
+                gateway_tool="self_lesson.explain",
+                required_inputs=("lesson_id",),
+                requires_confirmation=False,
+                mutation=False,
+            ),
+        )
+    return (
+        SelfLessonReviewAction(
+            flow_id=MemoryPalaceFlowId.SELF_LESSON_EXPLAIN,
+            gateway_tool="self_lesson.explain",
+            required_inputs=("lesson_id",),
+            requires_confirmation=False,
+            mutation=False,
+        ),
+        SelfLessonReviewAction(
+            flow_id=MemoryPalaceFlowId.SELF_LESSON_REFRESH,
+            gateway_tool="self_lesson.refresh",
+            required_inputs=("lesson_id", "user_confirmed"),
+            requires_confirmation=True,
+            mutation=True,
+        ),
+        SelfLessonReviewAction(
+            flow_id=MemoryPalaceFlowId.SELF_LESSON_CORRECT,
+            gateway_tool="self_lesson.correct",
+            required_inputs=(
+                "lesson_id",
+                "corrected_content",
+                "applies_to",
+                "change_summary",
+                "confidence",
+            ),
+            requires_confirmation=True,
+            mutation=True,
+        ),
+        SelfLessonReviewAction(
+            flow_id=MemoryPalaceFlowId.SELF_LESSON_DELETE,
+            gateway_tool="self_lesson.delete",
+            required_inputs=("lesson_id", "user_confirmed"),
+            requires_confirmation=True,
+            mutation=True,
+        ),
     )
 
 

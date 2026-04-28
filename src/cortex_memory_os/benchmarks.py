@@ -76,6 +76,7 @@ from cortex_memory_os.memory_palace_flows import (
     flow_for_user_text,
     self_lesson_available_flow_actions,
     self_lesson_flow_for_user_text,
+    self_lesson_review_action_plan,
 )
 from cortex_memory_os.memory_store import InMemoryMemoryStore
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
@@ -195,6 +196,7 @@ def run_all() -> BenchmarkRunResult:
         case_memory_palace_correction_delete,
         case_memory_palace_flow_contract,
         case_memory_palace_self_lesson_flow_contract,
+        case_memory_palace_self_lesson_review_flow,
         case_memory_palace_export_ui_flow,
         case_memory_palace_audit_events,
         case_deletion_aware_memory_export,
@@ -2578,6 +2580,7 @@ def case_memory_palace_self_lesson_flow_contract() -> BenchmarkCaseResult:
             MemoryPalaceFlowId.SELF_LESSON_EXPLAIN,
             MemoryPalaceFlowId.SELF_LESSON_CORRECT,
             MemoryPalaceFlowId.SELF_LESSON_PROMOTE,
+            MemoryPalaceFlowId.SELF_LESSON_REFRESH,
             MemoryPalaceFlowId.SELF_LESSON_ROLLBACK,
             MemoryPalaceFlowId.SELF_LESSON_DELETE,
         }
@@ -2591,6 +2594,7 @@ def case_memory_palace_self_lesson_flow_contract() -> BenchmarkCaseResult:
         and promote_flow.flow_id == MemoryPalaceFlowId.SELF_LESSON_PROMOTE
         and promote_flow.requires_confirmation
         and promote_flow.audit_action == "promote_self_lesson"
+        and self_lesson_flow_for_user_text("refresh this lesson") is not None
         and rollback_flow is not None
         and rollback_flow.flow_id == MemoryPalaceFlowId.SELF_LESSON_ROLLBACK
         and rollback_flow.audit_action == "rollback_self_lesson"
@@ -2622,6 +2626,60 @@ def case_memory_palace_self_lesson_flow_contract() -> BenchmarkCaseResult:
             "promote_flow_id": promote_flow.flow_id.value if promote_flow else None,
             "rollback_flow_id": rollback_flow.flow_id.value if rollback_flow else None,
             "revoked_actions": list(revoked_actions),
+        },
+    )
+
+
+def case_memory_palace_self_lesson_review_flow() -> BenchmarkCaseResult:
+    review_flow = self_lesson_flow_for_user_text("what did you learn?")
+    action_plan = self_lesson_review_action_plan(
+        MemoryStatus.ACTIVE,
+        review_required=True,
+    )
+    tool_names = [action.gateway_tool for action in action_plan]
+    confirmation_by_tool = {
+        action.gateway_tool: action.requires_confirmation for action in action_plan
+    }
+    mutation_by_tool = {action.gateway_tool: action.mutation for action in action_plan}
+    product_doc = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_doc = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+
+    passed = (
+        review_flow is not None
+        and review_flow.flow_id == MemoryPalaceFlowId.SELF_LESSON_REVIEW
+        and tool_names
+        == [
+            "self_lesson.explain",
+            "self_lesson.refresh",
+            "self_lesson.correct",
+            "self_lesson.delete",
+        ]
+        and confirmation_by_tool["self_lesson.explain"] is False
+        and mutation_by_tool["self_lesson.explain"] is False
+        and all(confirmation_by_tool[tool] for tool in tool_names[1:])
+        and all(mutation_by_tool[tool] for tool in tool_names[1:])
+        and all(action.content_redacted for action in action_plan)
+        and "PALACE-SELF-LESSON-REVIEW-FLOW-001" in product_doc
+        and "PALACE-SELF-LESSON-REVIEW-FLOW-001" in plan_doc
+    )
+    return BenchmarkCaseResult(
+        case_id="PALACE-SELF-LESSON-REVIEW-FLOW-001/action_plan_contract",
+        suite="PALACE-SELF-LESSON-REVIEW-FLOW-001",
+        passed=passed,
+        summary="Memory Palace review-required self-lessons link to anchored explain, refresh, correct, and delete gateway tools.",
+        metrics={
+            "action_count": len(action_plan),
+            "confirmation_required_count": sum(
+                1 for action in action_plan if action.requires_confirmation
+            ),
+        },
+        evidence={
+            "tool_names": tool_names,
+            "mutation_by_tool": mutation_by_tool,
         },
     )
 

@@ -82,6 +82,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-28 | Stale scoped self-lesson export markers | `uv run cortex-bench` | 64/64 passed | `benchmarks/runs/bench_20260428T211628Z.json` | Next benchmark: redacted self-lesson review queue. |
 | 2026-04-28 | Redacted self-lesson review queue | `uv run cortex-bench` | 65/65 passed | `benchmarks/runs/bench_20260428T211908Z.json` | Next benchmark: context-pack review-required summary. |
 | 2026-04-28 | Context-pack review-required self-lesson summary | `uv run cortex-bench` | 66/66 passed | `benchmarks/runs/bench_20260428T212220Z.json` | Next benchmark: Memory Palace self-lesson review flow. |
+| 2026-04-28 | Memory Palace self-lesson review action flow | `uv run cortex-bench` | 67/67 passed | `benchmarks/runs/bench_20260428T214630Z.json` | Next benchmark: gateway review queue action plans. |
 
 ## First Runnable Harness Requirements
 

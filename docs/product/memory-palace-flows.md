@@ -34,6 +34,7 @@ Required surface:
 - Forbidden influence.
 - Recall eligibility.
 - Available actions.
+- Review-required action plan with exact gateway tool names.
 
 Safety rules:
 
@@ -202,6 +203,8 @@ Safety rules:
 - Default review cards preserve scope metadata while redacting lesson content
   and learned-from provenance.
 - Stale scoped lessons must be marked for review before context use.
+- Review-required lessons must link to anchored explanation, refresh,
+  correction, and deletion tools.
 - Lesson content, when explicitly revealed, is displayed for review and not
   treated as an instruction.
 
@@ -211,6 +214,23 @@ Completion signal:
 - Context eligibility is visible for every listed lesson.
 - Scope and redaction state are visible for every listed lesson.
 - Review-required lessons expose review state and available review action.
+- Review-required action plans keep explanation read-only and require
+  confirmation for refresh, correction, and deletion.
+
+### `PALACE-SELF-LESSON-REVIEW-FLOW-001`
+
+Review-required self-lessons have a fixed action plan:
+
+| Order | Flow | Gateway tool | Confirmation | Mutation |
+| --- | --- | --- | --- | --- |
+| 1 | Explain | `self_lesson.explain` | No | No |
+| 2 | Refresh | `self_lesson.refresh` | Yes | Yes |
+| 3 | Correct | `self_lesson.correct` | Yes | Yes |
+| 4 | Delete | `self_lesson.delete` | Yes | Yes |
+
+The plan is intentionally anchored by lesson ID. It should never execute from
+natural-language search alone, and it should render content/provenance redacted
+until the user explicitly opens an explanation or correction surface.
 
 ## Flow 6: Explain a Self-Lesson
 
@@ -395,3 +415,11 @@ the Memory Palace contract:
 - Candidate lessons can be explained, corrected, promoted, or deleted.
 - Active lessons can be explained, corrected, rolled back, or deleted.
 - Revoked lessons can only be explained by default.
+
+`PALACE-SELF-LESSON-REVIEW-FLOW-001` must pass before the stale-review queue can
+claim a complete user action path:
+
+- Review-required lessons link to explain, refresh, correct, and delete tools.
+- Explanation is read-only and does not require confirmation.
+- Refresh, correction, and deletion require explicit confirmation.
+- All review action metadata remains content-redacted by default.

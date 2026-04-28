@@ -10,6 +10,7 @@ from cortex_memory_os.memory_palace_flows import (
     default_self_lesson_palace_flows,
     flow_for_user_text,
     self_lesson_available_flow_actions,
+    self_lesson_review_action_plan,
     self_lesson_flow_for_user_text,
 )
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
@@ -67,6 +68,7 @@ def test_self_lesson_flow_contract_covers_safe_review_actions():
         MemoryPalaceFlowId.SELF_LESSON_EXPLAIN,
         MemoryPalaceFlowId.SELF_LESSON_CORRECT,
         MemoryPalaceFlowId.SELF_LESSON_PROMOTE,
+        MemoryPalaceFlowId.SELF_LESSON_REFRESH,
         MemoryPalaceFlowId.SELF_LESSON_ROLLBACK,
         MemoryPalaceFlowId.SELF_LESSON_DELETE,
     }
@@ -86,6 +88,13 @@ def test_self_lesson_flow_contract_covers_safe_review_actions():
     assert flows[MemoryPalaceFlowId.SELF_LESSON_PROMOTE].audit_action == (
         "promote_self_lesson"
     )
+    assert flows[MemoryPalaceFlowId.SELF_LESSON_REFRESH].requires_confirmation is True
+    assert flows[MemoryPalaceFlowId.SELF_LESSON_REFRESH].audit_action == (
+        "refresh_self_lesson"
+    )
+    assert "refresh must not change lesson content, scope, permissions, or autonomy" in (
+        flows[MemoryPalaceFlowId.SELF_LESSON_REFRESH].safety_checks
+    )
     assert flows[MemoryPalaceFlowId.SELF_LESSON_ROLLBACK].audit_action == (
         "rollback_self_lesson"
     )
@@ -104,6 +113,9 @@ def test_self_lesson_flow_phrase_matching_and_status_actions():
     )
     assert self_lesson_flow_for_user_text("approve this lesson").flow_id == (
         MemoryPalaceFlowId.SELF_LESSON_PROMOTE
+    )
+    assert self_lesson_flow_for_user_text("refresh this lesson").flow_id == (
+        MemoryPalaceFlowId.SELF_LESSON_REFRESH
     )
     assert self_lesson_flow_for_user_text("roll back this lesson").flow_id == (
         MemoryPalaceFlowId.SELF_LESSON_ROLLBACK
@@ -125,6 +137,31 @@ def test_self_lesson_flow_phrase_matching_and_status_actions():
     assert self_lesson_available_flow_actions(MemoryStatus.REVOKED) == (
         MemoryPalaceFlowId.SELF_LESSON_EXPLAIN.value,
     )
+
+
+def test_review_required_self_lesson_action_plan_links_safe_gateway_tools():
+    plan = self_lesson_review_action_plan(
+        MemoryStatus.ACTIVE,
+        review_required=True,
+    )
+
+    assert [action.flow_id for action in plan] == [
+        MemoryPalaceFlowId.SELF_LESSON_EXPLAIN,
+        MemoryPalaceFlowId.SELF_LESSON_REFRESH,
+        MemoryPalaceFlowId.SELF_LESSON_CORRECT,
+        MemoryPalaceFlowId.SELF_LESSON_DELETE,
+    ]
+    assert [action.gateway_tool for action in plan] == [
+        "self_lesson.explain",
+        "self_lesson.refresh",
+        "self_lesson.correct",
+        "self_lesson.delete",
+    ]
+    assert plan[0].requires_confirmation is False
+    assert plan[0].mutation is False
+    assert all(action.requires_confirmation for action in plan[1:])
+    assert all(action.mutation for action in plan[1:])
+    assert all(action.content_redacted for action in plan)
 
 
 def test_explain_surface_lists_safe_available_actions(tmp_path):
