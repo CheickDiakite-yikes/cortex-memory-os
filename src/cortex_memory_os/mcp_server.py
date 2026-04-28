@@ -423,7 +423,7 @@ class CortexMCPServer:
             context_eligible_ids = [
                 lesson.lesson_id
                 for lesson in lessons
-                if lesson.status == MemoryStatus.ACTIVE
+                if _self_lesson_context_eligibility(lesson)["status"] == "eligible_global"
             ]
             return {
                 "lessons": [serialize_self_lesson_list_item(lesson) for lesson in lessons],
@@ -919,7 +919,9 @@ def serialize_self_lesson(lesson: SelfLesson) -> dict[str, Any]:
 
 def serialize_self_lesson_list_item(lesson: SelfLesson) -> dict[str, Any]:
     item = serialize_self_lesson(lesson)
-    item["context_eligible"] = lesson.status == MemoryStatus.ACTIVE
+    eligibility = _self_lesson_context_eligibility(lesson)
+    item["context_eligible"] = eligibility["status"] == "eligible_global"
+    item["context_eligibility"] = eligibility
     return item
 
 
@@ -939,7 +941,9 @@ def serialize_self_lesson_explanation(
         "last_validated": lesson.last_validated.isoformat()
         if lesson.last_validated
         else None,
-        "context_eligible": lesson.status == MemoryStatus.ACTIVE,
+        "context_eligible": _self_lesson_context_eligibility(lesson)["status"]
+        == "eligible_global",
+        "context_eligibility": _self_lesson_context_eligibility(lesson),
         "available_actions": _self_lesson_available_actions(lesson),
         "audit_events": [serialize_audit_event(event) for event in audit_events],
     }
@@ -1059,6 +1063,29 @@ def _self_lesson_available_actions(lesson: SelfLesson) -> list[str]:
     if lesson.status == MemoryStatus.ACTIVE:
         return ["rollback_if_failed_or_requested"]
     return []
+
+
+def _self_lesson_context_eligibility(lesson: SelfLesson) -> dict[str, Any]:
+    lifecycle_eligible = lesson.status == MemoryStatus.ACTIVE
+    required_ref_prefix = {
+        ScopeLevel.PROJECT_SPECIFIC: "project:",
+        ScopeLevel.AGENT_SPECIFIC: "agent:",
+        ScopeLevel.SESSION_ONLY: "session:",
+    }.get(lesson.scope)
+    requires_scope_match = required_ref_prefix is not None
+    if not lifecycle_eligible:
+        status = "not_active"
+    elif requires_scope_match:
+        status = "requires_scope_match"
+    else:
+        status = "eligible_global"
+    return {
+        "status": status,
+        "lifecycle_eligible": lifecycle_eligible,
+        "scope": lesson.scope.value,
+        "requires_scope_match": requires_scope_match,
+        "required_ref_prefix": required_ref_prefix,
+    }
 
 
 def _safe_self_lesson_error(error: ValueError) -> str:

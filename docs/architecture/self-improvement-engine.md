@@ -180,3 +180,10 @@ one project, agent, or session from silently shaping another.
 - rejection messages do not echo submitted evidence or validation payloads;
 - scoped candidates do not enter context packs before promotion;
 - ephemeral and never-store scopes are not exposed as durable proposal options.
+
+`SELF-LESSON-SCOPE-INSPECTION-001` verifies:
+
+- list and explanation surfaces expose scope eligibility metadata;
+- active scoped lessons are marked as requiring a scope match instead of global
+  context eligibility;
+- matching context-pack requests can still retrieve the scoped active lesson.

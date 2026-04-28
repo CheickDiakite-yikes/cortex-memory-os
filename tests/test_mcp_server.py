@@ -1070,6 +1070,62 @@ def test_self_lesson_propose_tool_enforces_scoped_candidate_tags(tmp_path):
     assert ScopeLevel.EPHEMERAL.value not in scope_values
 
 
+def test_self_lesson_list_and_explain_show_scope_eligibility_without_activation(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    scoped = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_alpha",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_alpha"],
+        }
+    )
+    store.add_self_lesson(scoped)
+    server = CortexMCPServer(store=store)
+
+    listed = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 68,
+            "method": "tools/call",
+            "params": {"name": "self_lesson.list", "arguments": {}},
+        }
+    )
+    explained = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 69,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.explain",
+                "arguments": {"lesson_id": scoped.lesson_id},
+            },
+        }
+    )
+    context_response = server.call_tool(
+        "memory.get_context_pack",
+        {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
+    )
+
+    list_item = listed["result"]["lessons"][0]
+    explanation = explained["result"]["explanation"]
+
+    assert listed["result"]["context_eligible_ids"] == []
+    assert list_item["context_eligible"] is False
+    assert list_item["context_eligibility"] == {
+        "status": "requires_scope_match",
+        "lifecycle_eligible": True,
+        "scope": ScopeLevel.PROJECT_SPECIFIC.value,
+        "requires_scope_match": True,
+        "required_ref_prefix": "project:",
+    }
+    assert explanation["context_eligible"] is False
+    assert explanation["context_eligibility"] == list_item["context_eligibility"]
+    assert [item["lesson_id"] for item in context_response["relevant_self_lessons"]] == [
+        scoped.lesson_id
+    ]
+
+
 def test_memory_explain_returns_provenance_and_influence_limits():
     server = default_server()
 

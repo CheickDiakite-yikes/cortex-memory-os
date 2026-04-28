@@ -175,6 +175,7 @@ def run_all() -> BenchmarkRunResult:
         case_context_pack_audit_metadata_lane,
         case_scoped_self_lesson_recall_boundaries,
         case_gateway_scoped_self_lesson_proposal_checks,
+        case_self_lesson_scope_inspection_metadata,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
@@ -1365,6 +1366,70 @@ def case_gateway_scoped_self_lesson_proposal_checks() -> BenchmarkCaseResult:
             .get("lesson", {})
             .get("scope"),
             "missing_tag_error": missing_tag.get("error", {}).get("message"),
+        },
+    )
+
+
+def case_self_lesson_scope_inspection_metadata() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+        scoped = active.model_copy(
+            update={
+                "lesson_id": "lesson_project_alpha",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_alpha"],
+            }
+        )
+        store.add_self_lesson(scoped)
+        server = CortexMCPServer(store=store)
+        listed = server.call_tool("self_lesson.list", {})
+        explained = server.call_tool("self_lesson.explain", {"lesson_id": scoped.lesson_id})
+        context_response = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
+        )
+
+    list_item = listed.get("lessons", [{}])[0]
+    explanation = explained.get("explanation", {})
+    eligibility = list_item.get("context_eligibility", {})
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        listed.get("context_eligible_ids") == []
+        and list_item.get("context_eligible") is False
+        and eligibility.get("status") == "requires_scope_match"
+        and eligibility.get("scope") == ScopeLevel.PROJECT_SPECIFIC.value
+        and eligibility.get("required_ref_prefix") == "project:"
+        and explanation.get("context_eligibility") == eligibility
+        and [
+            lesson.get("lesson_id")
+            for lesson in context_response.get("relevant_self_lessons", [])
+        ]
+        == [scoped.lesson_id]
+        and "SELF-LESSON-SCOPE-INSPECTION-001" in docs_text
+        and "SELF-LESSON-SCOPE-INSPECTION-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SELF-LESSON-SCOPE-INSPECTION-001/list_explain_metadata",
+        suite="SELF-LESSON-SCOPE-INSPECTION-001",
+        passed=passed,
+        summary="List and explanation surfaces show scoped self-lesson eligibility without global activation.",
+        metrics={
+            "context_eligible_id_count": len(listed.get("context_eligible_ids", [])),
+            "matching_context_lesson_count": len(
+                context_response.get("relevant_self_lessons", [])
+            ),
+        },
+        evidence={
+            "listed_status": eligibility.get("status"),
+            "required_ref_prefix": eligibility.get("required_ref_prefix"),
         },
     )
 

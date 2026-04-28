@@ -6,7 +6,7 @@ Last updated: 2026-04-28
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| SELF-LESSON-SCOPE-INSPECTION-001 | Add self-lesson scope inspection metadata | Codex | List/explain contract and benchmark case | Show scope and context eligibility without implying cross-scope activation. |
+| SELF-LESSON-SCOPE-CORRECTION-001 | Preserve scope during self-lesson correction | Codex | Correction contract and benchmark case | Candidate replacements must keep scope/provenance boundaries. |
 
 ## Next
 
@@ -83,6 +83,7 @@ Last updated: 2026-04-28
 | CONTEXT-PACK-AUDIT-LANE-001 | Add context-pack audit metadata lane without treating audit text as instructions | Codex | `uv run pytest` -> 143 passed, `uv run cortex-bench` -> 54/54 passed, `uv run cortex-mcp --smoke` | Audit metadata enters context packs without audit summaries or instruction text. |
 | SELF-LESSON-RECALL-SCOPE-001 | Add scoped self-lesson recall boundaries | Codex | `uv run pytest` -> 147 passed, `uv run cortex-bench` -> 55/55 passed, `uv run cortex-mcp --smoke` | Project, agent, and session self-lessons do not cross context-pack boundaries. |
 | GATEWAY-SELF-LESSON-SCOPE-PROPOSE-001 | Add scoped self-lesson proposal gateway checks | Codex | `uv run pytest` -> 148 passed, `uv run cortex-bench` -> 56/56 passed, `uv run cortex-mcp --smoke` | Scoped candidate lessons need matching provenance tags, redacted rejection errors, and no context activation. |
+| SELF-LESSON-SCOPE-INSPECTION-001 | Add self-lesson scope inspection metadata | Codex | `uv run pytest` -> 149 passed, `uv run cortex-bench` -> 57/57 passed, `uv run cortex-mcp --smoke` | List/explain surfaces distinguish global eligibility from scope-required lessons. |
 
 ## Dropped
 
