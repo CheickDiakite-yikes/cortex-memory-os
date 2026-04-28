@@ -19,6 +19,7 @@ def test_lists_memory_tools():
         "self_lesson.propose",
         "self_lesson.list",
         "self_lesson.explain",
+        "self_lesson.audit",
         "self_lesson.correct",
         "self_lesson.promote",
         "self_lesson.rollback",
@@ -750,6 +751,75 @@ def test_self_lesson_delete_tool_requires_confirmation_and_excludes_context(tmp_
         "delete_self_lesson",
     ]
     assert "Before editing auth" not in allowed["result"]["audit_event"]["redacted_summary"]
+    assert context_response["result"]["relevant_self_lessons"] == []
+
+
+def test_self_lesson_audit_tool_lists_redacted_receipts_without_content(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    store.add_self_lesson(active)
+    server = CortexMCPServer(store=store)
+    server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 58,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.delete",
+                "arguments": {"lesson_id": active.lesson_id, "user_confirmed": False},
+            },
+        }
+    )
+    server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 59,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.delete",
+                "arguments": {
+                    "lesson_id": active.lesson_id,
+                    "user_confirmed": True,
+                    "reason_ref": "user_request",
+                },
+            },
+        }
+    )
+
+    listed = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 60,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.audit",
+                "arguments": {"lesson_id": active.lesson_id, "limit": 10},
+            },
+        }
+    )
+    context_response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 61,
+            "method": "tools/call",
+            "params": {
+                "name": "memory.get_context_pack",
+                "arguments": {"goal": "continue fixing onboarding auth bug"},
+            },
+        }
+    )
+
+    result = listed["result"]
+    rendered = str(result)
+    assert result["lesson_id"] == active.lesson_id
+    assert result["count"] == 2
+    assert result["content_redacted"] is True
+    assert [event["action"] for event in result["audit_events"]] == [
+        "delete_self_lesson",
+        "delete_self_lesson",
+    ]
+    assert active.content not in rendered
+    assert "task_332_failure" not in rendered
     assert context_response["result"]["relevant_self_lessons"] == []
 
 

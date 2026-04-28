@@ -202,6 +202,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_self_lesson_explain_tool,
         case_gateway_self_lesson_correction_tool,
         case_gateway_self_lesson_deletion_tool,
+        case_gateway_self_lesson_audit_list_tool,
         case_repeated_workflow_stays_draft_skill,
         case_high_risk_action_requires_review,
         case_benchmark_plan_quality_gate,
@@ -2856,6 +2857,72 @@ def case_gateway_self_lesson_deletion_tool() -> BenchmarkCaseResult:
             "lesson_id": active.lesson_id,
             "audit_actions": [event.action for event in audits],
             "final_status": stored.status.value if stored else None,
+        },
+    )
+
+
+def case_gateway_self_lesson_audit_list_tool() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    active = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        store.add_self_lesson(active)
+        server = CortexMCPServer(store=store)
+        server.call_tool(
+            "self_lesson.delete",
+            {"lesson_id": active.lesson_id, "user_confirmed": False},
+        )
+        server.call_tool(
+            "self_lesson.delete",
+            {
+                "lesson_id": active.lesson_id,
+                "user_confirmed": True,
+                "reason_ref": "user_request",
+            },
+        )
+        audit_response = server.call_tool(
+            "self_lesson.audit",
+            {"lesson_id": active.lesson_id, "limit": 10},
+        )
+        context_response = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug"},
+        )
+
+    serialized = json.dumps(audit_response, sort_keys=True)
+    audit_events = audit_response.get("audit_events", [])
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        audit_response.get("lesson_id") == active.lesson_id
+        and audit_response.get("count") == 2
+        and audit_response.get("content_redacted") is True
+        and [event.get("action") for event in audit_events]
+        == ["delete_self_lesson", "delete_self_lesson"]
+        and active.content not in serialized
+        and "task_332_failure" not in serialized
+        and context_response.get("relevant_self_lessons") == []
+        and "SELF-LESSON-AUDIT-LIST-001" in docs_text
+        and "SELF-LESSON-AUDIT-LIST-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SELF-LESSON-AUDIT-LIST-001/redacted_audit_listing",
+        suite="SELF-LESSON-AUDIT-LIST-001",
+        passed=passed,
+        summary="Gateway lists self-lesson audit receipts by lesson ID without exposing lesson content.",
+        metrics={
+            "audit_count": len(audit_events),
+            "context_lesson_count": len(context_response.get("relevant_self_lessons", [])),
+        },
+        evidence={
+            "lesson_id": active.lesson_id,
+            "audit_actions": [event.get("action") for event in audit_events],
+            "content_redacted": audit_response.get("content_redacted"),
         },
     )
 

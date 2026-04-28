@@ -185,6 +185,19 @@ class CortexMCPServer:
                 },
             },
             {
+                "name": "self_lesson.audit",
+                "description": "List redacted self-lesson audit receipts by lesson ID without returning lesson content.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "lesson_id": {"type": "string"},
+                        "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+                    },
+                    "required": ["lesson_id"],
+                    "additionalProperties": False,
+                },
+            },
+            {
                 "name": "self_lesson.correct",
                 "description": "Supersede a self-lesson and create a candidate replacement with a redacted audit receipt.",
                 "inputSchema": {
@@ -419,6 +432,22 @@ class CortexMCPServer:
                     lesson,
                     audit_events,
                 )
+            }
+        if name == "self_lesson.audit":
+            store = self._require_self_lesson_store()
+            lesson_id = _require_string(arguments, "lesson_id")
+            lesson = store.get_self_lesson(lesson_id)
+            if lesson is None:
+                raise JsonRpcError(-32602, f"unknown lesson_id: {lesson_id}")
+            if not hasattr(store, "audit_for_target"):
+                raise JsonRpcError(-32601, "self-lesson audit listing is not configured")
+            limit = _optional_int_range(arguments, "limit", default=50, minimum=1, maximum=100)
+            audit_events = store.audit_for_target(lesson_id)[:limit]
+            return {
+                "lesson_id": lesson_id,
+                "audit_events": [serialize_audit_event(event) for event in audit_events],
+                "count": len(audit_events),
+                "content_redacted": True,
             }
         if name == "self_lesson.correct":
             store = self._require_self_lesson_store()

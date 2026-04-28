@@ -144,3 +144,10 @@ self-lessons only, so proposal storage cannot silently become behavior change.
 - confirmed deletion marks the lesson deleted and preserves the reason reference;
 - deletion creates a redacted audit receipt without copying lesson content;
 - deleted self-lessons are excluded from context packs.
+
+`SELF-LESSON-AUDIT-LIST-001` verifies:
+
+- gateway audit listing is anchored to an exact lesson ID;
+- audit listing returns redacted receipts, not lesson content;
+- source task IDs and lesson text do not leak through audit summaries;
+- listing receipts does not activate or restore any self-lesson in context packs.
