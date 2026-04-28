@@ -423,3 +423,10 @@ claim a complete user action path:
 - Explanation is read-only and does not require confirmation.
 - Refresh, correction, and deletion require explicit confirmation.
 - All review action metadata remains content-redacted by default.
+
+`GATEWAY-SELF-LESSON-REVIEW-ACTIONS-001` must pass before the Agent Gateway can
+claim the same path:
+
+- Each `self_lesson.review_queue` entry includes the fixed review action plan.
+- The plan carries exact gateway tool names and required input names.
+- The queued lesson still omits content, learned-from refs, and rollback text.

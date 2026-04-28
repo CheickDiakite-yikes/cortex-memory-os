@@ -6,7 +6,7 @@ Last updated: 2026-04-28
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-SELF-LESSON-REVIEW-ACTIONS-001 | Add Memory Palace action plans to gateway review queue | Codex | Gateway contract, tests, benchmark case | Review queue entries should carry exact explain, refresh, correct, and delete tool plans without lesson content. |
+| GATEWAY-SELF-LESSON-REVIEW-FLOW-001 | Add anchored gateway self-lesson review flow tool | Codex | Gateway contract, tests, benchmark case | One lesson ID should return queue metadata, explanation route, refresh route, correction route, and deletion route without lesson content. |
 
 ## Next
 
@@ -94,6 +94,7 @@ Last updated: 2026-04-28
 | GATEWAY-SELF-LESSON-REVIEW-QUEUE-001 | Expose stale scoped self-lesson review queue | Codex | `uv run pytest` -> 157 passed, `uv run cortex-bench` -> 65/65 passed, `uv run cortex-mcp --smoke` | Review queue is redacted and lists only lessons requiring review. |
 | CONTEXT-PACK-SELF-LESSON-REVIEW-SUMMARY-001 | Summarize review-required self-lessons in context packs | Codex | `uv run pytest` -> 158 passed, `uv run cortex-bench` -> 66/66 passed, `uv run cortex-mcp --smoke` | Context packs expose aggregate review requirements without lesson content. |
 | PALACE-SELF-LESSON-REVIEW-FLOW-001 | Connect self-lesson review queue to Memory Palace actions | Codex | `uv run pytest` -> 159 passed, `uv run cortex-bench` -> 67/67 passed, `uv run cortex-mcp --smoke` | Review action plan links explanation, refresh, correction, and deletion with confirmation metadata. |
+| GATEWAY-SELF-LESSON-REVIEW-ACTIONS-001 | Add Memory Palace action plans to gateway review queue | Codex | `uv run pytest` -> 159 passed, `uv run cortex-bench` -> 68/68 passed, `uv run cortex-mcp --smoke` | Redacted review queue entries carry exact explain, refresh, correct, and delete gateway tool plans. |
 
 ## Dropped
 

@@ -38,6 +38,10 @@ from cortex_memory_os.firewall import detect_prompt_injection
 from cortex_memory_os.fixtures import load_json
 from cortex_memory_os.memory_export import export_memories_with_audit
 from cortex_memory_os.memory_palace import MemoryExplanation, MemoryPalaceService
+from cortex_memory_os.memory_palace_flows import (
+    SelfLessonReviewAction,
+    self_lesson_review_action_plan,
+)
 from cortex_memory_os.memory_store import InMemoryMemoryStore
 from cortex_memory_os.retrieval import RankedMemory, RetrievalScope, self_lesson_scope_allowed
 from cortex_memory_os.self_lesson_audit import record_self_lesson_decision_audit
@@ -1124,7 +1128,27 @@ def serialize_self_lesson_list_item(
     item["context_eligible"] = eligibility["status"] == "eligible_global"
     item["context_eligibility"] = eligibility
     item["available_actions"] = _self_lesson_available_actions(lesson)
+    item["review_action_plan"] = [
+        serialize_self_lesson_review_action(action)
+        for action in self_lesson_review_action_plan(
+            lesson.status,
+            review_required=item["review_state"]["review_required"],
+        )
+    ]
     return item
+
+
+def serialize_self_lesson_review_action(
+    action: SelfLessonReviewAction,
+) -> dict[str, Any]:
+    return {
+        "flow_id": action.flow_id.value,
+        "gateway_tool": action.gateway_tool,
+        "required_inputs": list(action.required_inputs),
+        "requires_confirmation": action.requires_confirmation,
+        "mutation": action.mutation,
+        "content_redacted": action.content_redacted,
+    }
 
 
 def serialize_self_lesson_export(

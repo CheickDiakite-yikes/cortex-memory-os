@@ -1410,6 +1410,19 @@ def test_self_lesson_review_queue_lists_only_review_required_lessons_redacted(tm
         "review_before_context_use",
         "refresh_with_confirmation",
     ]
+    assert [action["gateway_tool"] for action in queued["review_action_plan"]] == [
+        "self_lesson.explain",
+        "self_lesson.refresh",
+        "self_lesson.correct",
+        "self_lesson.delete",
+    ]
+    assert queued["review_action_plan"][0]["requires_confirmation"] is False
+    assert queued["review_action_plan"][0]["mutation"] is False
+    assert all(
+        action["requires_confirmation"] for action in queued["review_action_plan"][1:]
+    )
+    assert all(action["mutation"] for action in queued["review_action_plan"][1:])
+    assert all(action["content_redacted"] for action in queued["review_action_plan"])
     assert "content" not in queued
     assert "learned_from" not in queued
     assert "rollback_if" not in queued

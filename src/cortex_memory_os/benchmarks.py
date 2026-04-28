@@ -185,6 +185,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_scope_refresh_with_audit,
         case_self_lesson_scope_stale_export_marker,
         case_gateway_self_lesson_review_queue,
+        case_gateway_self_lesson_review_actions,
         case_context_pack_self_lesson_review_summary,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
@@ -2028,6 +2029,75 @@ def case_gateway_self_lesson_review_queue() -> BenchmarkCaseResult:
         evidence={
             "queued_ids": queue.get("lesson_ids", []),
             "review_status": queued_lesson.get("review_state", {}).get("status"),
+        },
+    )
+
+
+def case_gateway_self_lesson_review_actions() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        stale = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_stale_review_actions",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_stale_review_actions"],
+                "last_validated": date(2025, 1, 1),
+            }
+        )
+        store.add_self_lesson(stale)
+        server = CortexMCPServer(store=store)
+        queue = server.call_tool("self_lesson.review_queue", {})
+
+    queued_lesson = queue.get("lessons", [{}])[0]
+    action_plan = queued_lesson.get("review_action_plan", [])
+    tool_names = [action.get("gateway_tool") for action in action_plan]
+    serialized_queue = json.dumps(queue, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        queue.get("lesson_ids") == [stale.lesson_id]
+        and tool_names
+        == [
+            "self_lesson.explain",
+            "self_lesson.refresh",
+            "self_lesson.correct",
+            "self_lesson.delete",
+        ]
+        and action_plan[0].get("requires_confirmation") is False
+        and action_plan[0].get("mutation") is False
+        and all(action.get("requires_confirmation") for action in action_plan[1:])
+        and all(action.get("mutation") for action in action_plan[1:])
+        and all(action.get("content_redacted") for action in action_plan)
+        and "content" not in queued_lesson
+        and "learned_from" not in queued_lesson
+        and "rollback_if" not in queued_lesson
+        and "Before editing auth" not in serialized_queue
+        and "project:alpha" not in serialized_queue
+        and "task_project_stale_review_actions" not in serialized_queue
+        and "GATEWAY-SELF-LESSON-REVIEW-ACTIONS-001" in docs_text
+        and "GATEWAY-SELF-LESSON-REVIEW-ACTIONS-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-SELF-LESSON-REVIEW-ACTIONS-001/redacted_action_plan",
+        suite="GATEWAY-SELF-LESSON-REVIEW-ACTIONS-001",
+        passed=passed,
+        summary="Gateway review queue entries include redacted Memory Palace action plans for exact self-lesson tools.",
+        metrics={
+            "action_count": len(action_plan),
+            "confirmation_required_count": sum(
+                1 for action in action_plan if action.get("requires_confirmation")
+            ),
+        },
+        evidence={
+            "queued_ids": queue.get("lesson_ids", []),
+            "tool_names": tool_names,
         },
     )
 
