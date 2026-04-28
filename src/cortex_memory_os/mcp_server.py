@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
@@ -57,6 +58,7 @@ from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
 
 
 PROTOCOL_VERSION = "2025-11-25"
+SELF_LESSON_SCOPE_EXPORT_POLICY_REF = "policy_self_lesson_scope_export_v1"
 
 
 class JsonRpcError(ValueError):
@@ -184,6 +186,7 @@ class CortexMCPServer:
                             "enum": [item.value for item in MemoryStatus],
                         },
                         "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+                        "include_content": {"type": "boolean"},
                     },
                     "additionalProperties": False,
                 },
@@ -285,6 +288,24 @@ class CortexMCPServer:
                         "reason_ref": {"type": "string"},
                     },
                     "required": ["lesson_id", "user_confirmed"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "self_lesson.export",
+                "description": "Export exact self-lesson IDs with scope metadata and redacted content by default.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "lesson_ids": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "minItems": 1,
+                            "maxItems": 20,
+                        },
+                        "include_content": {"type": "boolean"},
+                    },
+                    "required": ["lesson_ids"],
                     "additionalProperties": False,
                 },
             },
@@ -416,6 +437,11 @@ class CortexMCPServer:
         if name == "self_lesson.list":
             status = _optional_memory_status(arguments, "status")
             limit = _optional_int_range(arguments, "limit", default=50, minimum=1, maximum=100)
+            include_content = (
+                _require_bool(arguments, "include_content")
+                if "include_content" in arguments
+                else False
+            )
             lessons = _all_self_lessons(
                 self.store,
                 self.self_lessons,
@@ -427,10 +453,17 @@ class CortexMCPServer:
                 if _self_lesson_context_eligibility(lesson)["status"] == "eligible_global"
             ]
             return {
-                "lessons": [serialize_self_lesson_list_item(lesson) for lesson in lessons],
+                "lessons": [
+                    serialize_self_lesson_list_item(
+                        lesson,
+                        include_content=include_content,
+                    )
+                    for lesson in lessons
+                ],
                 "count": len(lessons),
                 "status_filter": status.value if status else None,
                 "context_eligible_ids": context_eligible_ids,
+                "content_redacted": not include_content,
             }
         if name == "self_lesson.explain":
             lesson_id = _require_string(arguments, "lesson_id")
@@ -639,6 +672,31 @@ class CortexMCPServer:
             return {
                 "lesson": serialize_self_lesson(updated_lesson),
                 "decision": serialize_self_lesson_decision(decision),
+                "audit_event": serialize_audit_event(audit_event),
+            }
+        if name == "self_lesson.export":
+            store = self._require_self_lesson_store()
+            include_content = (
+                _require_bool(arguments, "include_content")
+                if "include_content" in arguments
+                else False
+            )
+            lessons: list[SelfLesson] = []
+            for lesson_id in _require_string_list(arguments, "lesson_ids"):
+                lesson = _find_self_lesson(self.store, self.self_lessons, lesson_id)
+                if lesson is None:
+                    raise JsonRpcError(-32602, f"unknown lesson_id: {lesson_id}")
+                lessons.append(lesson)
+            timestamp = datetime.now(UTC)
+            export = serialize_self_lesson_export(
+                lessons,
+                include_content=include_content,
+                now=timestamp,
+            )
+            audit_event = self_lesson_export_audit_event(export, now=timestamp)
+            store.add_audit_event(audit_event)
+            return {
+                "export": export,
                 "audit_event": serialize_audit_event(audit_event),
             }
         if name == "memory.explain":
@@ -943,12 +1001,80 @@ def serialize_self_lesson(lesson: SelfLesson) -> dict[str, Any]:
     return lesson.model_dump(mode="json")
 
 
-def serialize_self_lesson_list_item(lesson: SelfLesson) -> dict[str, Any]:
-    item = serialize_self_lesson(lesson)
+def serialize_self_lesson_list_item(
+    lesson: SelfLesson,
+    *,
+    include_content: bool = False,
+) -> dict[str, Any]:
+    if include_content:
+        item = serialize_self_lesson(lesson)
+        item["content_redacted"] = False
+        item["learned_from_redacted"] = False
+        item["rollback_if_redacted"] = False
+    else:
+        item = {
+            "lesson_id": lesson.lesson_id,
+            "type": lesson.type.value,
+            "status": lesson.status.value,
+            "confidence": lesson.confidence,
+            "risk_level": lesson.risk_level.value,
+            "applies_to": list(lesson.applies_to),
+            "scope": lesson.scope.value,
+            "last_validated": lesson.last_validated.isoformat()
+            if lesson.last_validated
+            else None,
+            "content_redacted": True,
+            "learned_from_redacted": True,
+            "rollback_if_redacted": True,
+        }
     eligibility = _self_lesson_context_eligibility(lesson)
     item["context_eligible"] = eligibility["status"] == "eligible_global"
     item["context_eligibility"] = eligibility
+    item["available_actions"] = _self_lesson_available_actions(lesson)
     return item
+
+
+def serialize_self_lesson_export(
+    lessons: list[SelfLesson],
+    *,
+    include_content: bool,
+    now: datetime,
+) -> dict[str, Any]:
+    redaction_count = 0 if include_content else len(lessons) * 3
+    return {
+        "export_id": f"self_lesson_export_{now.strftime('%Y%m%dT%H%M%SZ')}",
+        "created_at": now.isoformat(),
+        "lesson_ids": [lesson.lesson_id for lesson in lessons],
+        "lessons": [
+            serialize_self_lesson_list_item(
+                lesson,
+                include_content=include_content,
+            )
+            for lesson in lessons
+        ],
+        "include_content": include_content,
+        "redaction_count": redaction_count,
+        "content_redacted": not include_content,
+        "policy_refs": [SELF_LESSON_SCOPE_EXPORT_POLICY_REF],
+    }
+
+
+def self_lesson_export_audit_event(export: dict[str, Any], *, now: datetime) -> AuditEvent:
+    return AuditEvent(
+        audit_event_id=f"audit_export_self_lessons_{export['export_id']}",
+        timestamp=now,
+        actor="user",
+        action="export_self_lessons",
+        target_ref=export["export_id"],
+        policy_refs=list(export["policy_refs"]),
+        result="export_created",
+        human_visible=True,
+        redacted_summary=(
+            "Self-lesson export created with "
+            f"{len(export['lessons'])} lessons, "
+            f"{export['redaction_count']} redactions."
+        ),
+    )
 
 
 def serialize_self_lesson_explanation(
@@ -967,6 +1093,7 @@ def serialize_self_lesson_explanation(
         "last_validated": lesson.last_validated.isoformat()
         if lesson.last_validated
         else None,
+        "content_redacted": True,
         "context_eligible": _self_lesson_context_eligibility(lesson)["status"]
         == "eligible_global",
         "context_eligibility": _self_lesson_context_eligibility(lesson),

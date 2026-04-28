@@ -32,6 +32,7 @@ def test_lists_memory_tools():
         "self_lesson.promote",
         "self_lesson.rollback",
         "self_lesson.delete",
+        "self_lesson.export",
         "memory.explain",
         "memory.correct",
         "memory.forget",
@@ -1228,6 +1229,10 @@ def test_self_lesson_list_and_explain_show_scope_eligibility_without_activation(
             },
         }
     )
+    listed_with_content = server.call_tool(
+        "self_lesson.list",
+        {"include_content": True},
+    )
     context_response = server.call_tool(
         "memory.get_context_pack",
         {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
@@ -1237,7 +1242,12 @@ def test_self_lesson_list_and_explain_show_scope_eligibility_without_activation(
     explanation = explained["result"]["explanation"]
 
     assert listed["result"]["context_eligible_ids"] == []
+    assert listed["result"]["content_redacted"] is True
     assert list_item["context_eligible"] is False
+    assert "content" not in list_item
+    assert "learned_from" not in list_item
+    assert list_item["content_redacted"] is True
+    assert list_item["learned_from_redacted"] is True
     assert list_item["context_eligibility"] == {
         "status": "requires_scope_match",
         "lifecycle_eligible": True,
@@ -1245,11 +1255,71 @@ def test_self_lesson_list_and_explain_show_scope_eligibility_without_activation(
         "requires_scope_match": True,
         "required_ref_prefix": "project:",
     }
+    assert listed_with_content["lessons"][0]["content"] == scoped.content
+    assert listed_with_content["lessons"][0]["learned_from"] == [
+        "project:alpha",
+        "task_project_alpha",
+    ]
+    assert listed_with_content["lessons"][0]["content_redacted"] is False
     assert explanation["context_eligible"] is False
+    assert explanation["content_redacted"] is True
     assert explanation["context_eligibility"] == list_item["context_eligibility"]
     assert [item["lesson_id"] for item in context_response["relevant_self_lessons"]] == [
         scoped.lesson_id
     ]
+
+
+def test_self_lesson_export_redacts_content_and_preserves_scope_metadata(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    scoped = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_alpha",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_alpha"],
+        }
+    )
+    store.add_self_lesson(scoped)
+    server = CortexMCPServer(store=store)
+
+    response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 70,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.export",
+                "arguments": {"lesson_ids": [scoped.lesson_id]},
+            },
+        }
+    )
+
+    export = response["result"]["export"]
+    audit = response["result"]["audit_event"]
+    exported_lesson = export["lessons"][0]
+    rendered_export = json.dumps(export)
+
+    assert export["lesson_ids"] == [scoped.lesson_id]
+    assert export["content_redacted"] is True
+    assert export["redaction_count"] == 3
+    assert exported_lesson["scope"] == ScopeLevel.PROJECT_SPECIFIC.value
+    assert exported_lesson["context_eligibility"] == {
+        "status": "requires_scope_match",
+        "lifecycle_eligible": True,
+        "scope": ScopeLevel.PROJECT_SPECIFIC.value,
+        "requires_scope_match": True,
+        "required_ref_prefix": "project:",
+    }
+    assert "content" not in exported_lesson
+    assert "learned_from" not in exported_lesson
+    assert "Before editing auth" not in rendered_export
+    assert "project:alpha" not in rendered_export
+    assert "task_project_alpha" not in rendered_export
+    assert audit["action"] == "export_self_lessons"
+    assert audit["target_ref"] == export["export_id"]
+    assert audit["redacted_summary"] == (
+        "Self-lesson export created with 1 lessons, 3 redactions."
+    )
 
 
 def test_memory_explain_returns_provenance_and_influence_limits():

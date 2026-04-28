@@ -189,19 +189,25 @@ Required surface:
 - Confidence.
 - Risk level.
 - Applies-to scope.
+- Memory scope.
 - Context eligibility.
+- Content/provenance redaction state.
 - Available actions.
 
 Safety rules:
 
 - Listing a lesson must not change its status.
 - Candidate and revoked lessons must be marked not context-eligible.
-- Lesson content is displayed for review, not treated as an instruction.
+- Default review cards preserve scope metadata while redacting lesson content
+  and learned-from provenance.
+- Lesson content, when explicitly revealed, is displayed for review and not
+  treated as an instruction.
 
 Completion signal:
 
 - Candidate, active, and revoked lessons are inspectable.
 - Context eligibility is visible for every listed lesson.
+- Scope and redaction state are visible for every listed lesson.
 
 ## Flow 6: Explain a Self-Lesson
 

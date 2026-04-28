@@ -179,6 +179,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_scope_preserving_correction,
         case_self_lesson_scope_audit_metadata,
         case_context_pack_self_lesson_exclusion_metadata,
+        case_self_lesson_scope_export_review_metadata,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
@@ -1660,6 +1661,84 @@ def case_context_pack_self_lesson_exclusion_metadata() -> BenchmarkCaseResult:
             "matched_scope_reason": alpha_exclusions[0].get("reason_tags")
             if alpha_exclusions
             else [],
+        },
+    )
+
+
+def case_self_lesson_scope_export_review_metadata() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        scoped = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_alpha",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_alpha"],
+            }
+        )
+        store.add_self_lesson(scoped)
+        server = CortexMCPServer(store=store)
+        list_response = server.call_tool("self_lesson.list", {})
+        export_response = server.call_tool(
+            "self_lesson.export",
+            {"lesson_ids": [scoped.lesson_id]},
+        )
+
+    listed_lesson = list_response.get("lessons", [{}])[0]
+    export = export_response.get("export", {})
+    exported_lesson = export.get("lessons", [{}])[0]
+    audit = export_response.get("audit_event", {})
+    serialized_default_surfaces = json.dumps(
+        {
+            "list": list_response,
+            "export": export,
+            "audit": audit,
+        },
+        sort_keys=True,
+    )
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        list_response.get("content_redacted") is True
+        and listed_lesson.get("scope") == ScopeLevel.PROJECT_SPECIFIC.value
+        and listed_lesson.get("context_eligibility", {}).get("required_ref_prefix")
+        == "project:"
+        and "content" not in listed_lesson
+        and "learned_from" not in listed_lesson
+        and export.get("content_redacted") is True
+        and export.get("redaction_count") == 3
+        and exported_lesson.get("scope") == ScopeLevel.PROJECT_SPECIFIC.value
+        and exported_lesson.get("context_eligibility", {}).get("required_ref_prefix")
+        == "project:"
+        and "content" not in exported_lesson
+        and "learned_from" not in exported_lesson
+        and audit.get("action") == "export_self_lessons"
+        and "Before editing auth" not in serialized_default_surfaces
+        and "project:alpha" not in serialized_default_surfaces
+        and "task_project_alpha" not in serialized_default_surfaces
+        and "SELF-LESSON-SCOPE-EXPORT-001" in docs_text
+        and "SELF-LESSON-SCOPE-EXPORT-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SELF-LESSON-SCOPE-EXPORT-001/redacted_review_export",
+        suite="SELF-LESSON-SCOPE-EXPORT-001",
+        passed=passed,
+        summary="Self-lesson review and export preserve scope metadata while redacting hidden content by default.",
+        metrics={
+            "review_count": list_response.get("count", 0),
+            "export_count": len(export.get("lessons", [])),
+            "redaction_count": export.get("redaction_count", 0),
+        },
+        evidence={
+            "review_scope": listed_lesson.get("scope"),
+            "export_scope": exported_lesson.get("scope"),
+            "audit_action": audit.get("action"),
         },
     )
 

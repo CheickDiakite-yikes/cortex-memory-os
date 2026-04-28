@@ -212,3 +212,12 @@ one project, agent, or session from silently shaping another.
 - exclusion records carry lesson ID, scope, status, required context, and reason
   tags only;
 - exclusion records do not copy lesson content or scoped provenance refs.
+
+`SELF-LESSON-SCOPE-EXPORT-001` verifies:
+
+- self-lesson review lists preserve status, risk, applies-to tags, scope, and
+  context eligibility without returning lesson content by default;
+- self-lesson exports preserve the same scope metadata while redacting content,
+  learned-from refs, and rollback conditions by default;
+- export audit receipts summarize counts and redactions without copying lesson
+  content or scoped provenance.
