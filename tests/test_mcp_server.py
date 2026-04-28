@@ -1328,6 +1328,49 @@ def test_self_lesson_export_redacts_content_and_preserves_scope_metadata(tmp_pat
     )
 
 
+def test_stale_scoped_self_lesson_export_marks_review_required_without_hidden_content(
+    tmp_path,
+):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    stale = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_stale_export",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_stale_export"],
+            "last_validated": date(2025, 1, 1),
+        }
+    )
+    store.add_self_lesson(stale)
+    server = CortexMCPServer(store=store)
+
+    response = server.call_tool(
+        "self_lesson.export",
+        {"lesson_ids": [stale.lesson_id]},
+    )
+
+    export = response["export"]
+    exported_lesson = export["lessons"][0]
+    rendered_export = json.dumps(export)
+
+    assert export["review_required_lesson_ids"] == [stale.lesson_id]
+    assert export["review_required_count"] == 1
+    assert exported_lesson["review_state"] == {
+        "status": "review_required",
+        "review_required": True,
+        "reason_tags": ["last_validated_stale"],
+        "review_after_days": 90,
+        "last_validated": "2025-01-01",
+    }
+    assert exported_lesson["context_eligibility"]["status"] == "review_required"
+    assert "content" not in exported_lesson
+    assert "learned_from" not in exported_lesson
+    assert "rollback_if" not in exported_lesson
+    assert "Before editing auth" not in rendered_export
+    assert "project:alpha" not in rendered_export
+    assert "task_project_stale_export" not in rendered_export
+
+
 def test_stale_scoped_self_lesson_requires_review_before_context_use(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))

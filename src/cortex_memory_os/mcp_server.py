@@ -1097,10 +1097,17 @@ def serialize_self_lesson_export(
     now: datetime,
 ) -> dict[str, Any]:
     redaction_count = 0 if include_content else len(lessons) * 3
+    review_required_lesson_ids = [
+        lesson.lesson_id
+        for lesson in lessons
+        if self_lesson_review_state(lesson)["review_required"]
+    ]
     return {
         "export_id": f"self_lesson_export_{now.strftime('%Y%m%dT%H%M%SZ')}",
         "created_at": now.isoformat(),
         "lesson_ids": [lesson.lesson_id for lesson in lessons],
+        "review_required_lesson_ids": review_required_lesson_ids,
+        "review_required_count": len(review_required_lesson_ids),
         "lessons": [
             serialize_self_lesson_list_item(
                 lesson,

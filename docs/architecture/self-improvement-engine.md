@@ -236,3 +236,12 @@ one project, agent, or session from silently shaping another.
 - denied and accepted refresh attempts both create redacted audit receipts;
 - a confirmed refresh updates validation state so matching scoped context packs
   can use the lesson again.
+
+`SELF-LESSON-SCOPE-STALE-EXPORT-001` verifies:
+
+- default self-lesson exports include explicit IDs and counts for stale scoped
+  lessons that require review;
+- exported stale scoped lessons carry review-state and context-eligibility
+  metadata;
+- export markers do not reveal lesson content, learned-from refs, rollback
+  conditions, or scoped provenance tags.

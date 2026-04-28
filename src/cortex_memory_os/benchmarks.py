@@ -182,6 +182,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_scope_export_review_metadata,
         case_self_lesson_scope_retention_review,
         case_self_lesson_scope_refresh_with_audit,
+        case_self_lesson_scope_stale_export_marker,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
@@ -1887,6 +1888,70 @@ def case_self_lesson_scope_refresh_with_audit() -> BenchmarkCaseResult:
         evidence={
             "denied_reason": denied.get("decision", {}).get("reason"),
             "refresh_action": refreshed.get("audit_event", {}).get("action"),
+        },
+    )
+
+
+def case_self_lesson_scope_stale_export_marker() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        stale = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_stale_export",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_stale_export"],
+                "last_validated": date(2025, 1, 1),
+            }
+        )
+        store.add_self_lesson(stale)
+        server = CortexMCPServer(store=store)
+        export_response = server.call_tool(
+            "self_lesson.export",
+            {"lesson_ids": [stale.lesson_id]},
+        )
+
+    export = export_response.get("export", {})
+    exported_lesson = export.get("lessons", [{}])[0]
+    review_state = exported_lesson.get("review_state", {})
+    serialized_export = json.dumps(export, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        export.get("review_required_lesson_ids") == [stale.lesson_id]
+        and export.get("review_required_count") == 1
+        and review_state.get("status") == "review_required"
+        and review_state.get("reason_tags") == ["last_validated_stale"]
+        and exported_lesson.get("context_eligibility", {}).get("status")
+        == "review_required"
+        and export.get("content_redacted") is True
+        and "content" not in exported_lesson
+        and "learned_from" not in exported_lesson
+        and "rollback_if" not in exported_lesson
+        and "Before editing auth" not in serialized_export
+        and "project:alpha" not in serialized_export
+        and "task_project_stale_export" not in serialized_export
+        and "SELF-LESSON-SCOPE-STALE-EXPORT-001" in docs_text
+        and "SELF-LESSON-SCOPE-STALE-EXPORT-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SELF-LESSON-SCOPE-STALE-EXPORT-001/review_required_export_marker",
+        suite="SELF-LESSON-SCOPE-STALE-EXPORT-001",
+        passed=passed,
+        summary="Default self-lesson exports mark stale scoped lessons as review-required without hidden content.",
+        metrics={
+            "review_required_count": export.get("review_required_count", 0),
+            "redaction_count": export.get("redaction_count", 0),
+        },
+        evidence={
+            "review_required_ids": export.get("review_required_lesson_ids", []),
+            "review_status": review_state.get("status"),
         },
     )
 
