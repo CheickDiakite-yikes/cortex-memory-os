@@ -544,6 +544,9 @@ class CortexMCPServer:
                 "lesson": lesson_item,
                 "review_required": lesson_item["review_state"]["review_required"],
                 "review_action_plan": action_plan,
+                "safety_summary": summarize_self_lesson_review_flow_safety(
+                    action_plan
+                ),
                 "next_tools": {
                     action["flow_id"]: action["gateway_tool"] for action in action_plan
                 },
@@ -1182,6 +1185,35 @@ def serialize_self_lesson_review_action(
         "requires_confirmation": action.requires_confirmation,
         "mutation": action.mutation,
         "content_redacted": action.content_redacted,
+    }
+
+
+def summarize_self_lesson_review_flow_safety(
+    action_plan: list[dict[str, Any]],
+) -> dict[str, Any]:
+    mutation_actions = [action for action in action_plan if action["mutation"]]
+    return {
+        "requires_lesson_id": True,
+        "content_redacted": True,
+        "learned_from_redacted": True,
+        "rollback_if_redacted": True,
+        "external_effects_allowed": False,
+        "read_only_tools": [
+            action["gateway_tool"] for action in action_plan if not action["mutation"]
+        ],
+        "mutation_tools": [action["gateway_tool"] for action in mutation_actions],
+        "confirmation_required_tools": [
+            action["gateway_tool"]
+            for action in action_plan
+            if action["requires_confirmation"]
+        ],
+        "mutation_tools_require_confirmation": all(
+            action["requires_confirmation"] for action in mutation_actions
+        ),
+        "policy_refs": [
+            SELF_LESSON_REVIEW_QUEUE_POLICY_REF,
+            SELF_LESSON_REVIEW_FLOW_POLICY_REF,
+        ],
     }
 
 

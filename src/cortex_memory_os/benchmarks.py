@@ -187,6 +187,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_self_lesson_review_queue,
         case_gateway_self_lesson_review_actions,
         case_gateway_self_lesson_review_flow,
+        case_self_lesson_review_flow_safety_summary,
         case_context_pack_self_lesson_review_summary,
         case_context_pack_self_lesson_review_flow_hint,
         case_gateway_memory_palace_tools,
@@ -2177,6 +2178,89 @@ def case_gateway_self_lesson_review_flow() -> BenchmarkCaseResult:
         evidence={
             "lesson_id": flow.get("lesson_id"),
             "tool_names": tool_names,
+        },
+    )
+
+
+def case_self_lesson_review_flow_safety_summary() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        stale = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_stale_safety_summary",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_stale_safety_summary"],
+                "last_validated": date(2025, 1, 1),
+            }
+        )
+        store.add_self_lesson(stale)
+        server = CortexMCPServer(store=store)
+        flow = server.call_tool(
+            "self_lesson.review_flow",
+            {"lesson_id": stale.lesson_id},
+        )
+
+    safety_summary = flow.get("safety_summary", {})
+    serialized_summary = json.dumps(safety_summary, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    architecture_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        safety_summary.get("requires_lesson_id") is True
+        and safety_summary.get("content_redacted") is True
+        and safety_summary.get("learned_from_redacted") is True
+        and safety_summary.get("rollback_if_redacted") is True
+        and safety_summary.get("external_effects_allowed") is False
+        and safety_summary.get("read_only_tools") == ["self_lesson.explain"]
+        and safety_summary.get("mutation_tools")
+        == [
+            "self_lesson.refresh",
+            "self_lesson.correct",
+            "self_lesson.delete",
+        ]
+        and safety_summary.get("confirmation_required_tools")
+        == [
+            "self_lesson.refresh",
+            "self_lesson.correct",
+            "self_lesson.delete",
+        ]
+        and safety_summary.get("mutation_tools_require_confirmation") is True
+        and safety_summary.get("policy_refs")
+        == [
+            "policy_self_lesson_review_queue_v1",
+            "policy_self_lesson_review_flow_v1",
+        ]
+        and "Before editing auth" not in serialized_summary
+        and "project:alpha" not in serialized_summary
+        and "task_project_stale_safety_summary" not in serialized_summary
+        and "SELF-LESSON-REVIEW-FLOW-SAFETY-SUMMARY-001" in docs_text
+        and "SELF-LESSON-REVIEW-FLOW-SAFETY-SUMMARY-001" in architecture_text
+        and "SELF-LESSON-REVIEW-FLOW-SAFETY-SUMMARY-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SELF-LESSON-REVIEW-FLOW-SAFETY-SUMMARY-001/safety_summary",
+        suite="SELF-LESSON-REVIEW-FLOW-SAFETY-SUMMARY-001",
+        passed=passed,
+        summary="Review flow responses summarize redaction, confirmation, and mutation safety without lesson content.",
+        metrics={
+            "read_only_tool_count": len(safety_summary.get("read_only_tools", [])),
+            "mutation_tool_count": len(safety_summary.get("mutation_tools", [])),
+            "confirmation_required_tool_count": len(
+                safety_summary.get("confirmation_required_tools", [])
+            ),
+        },
+        evidence={
+            "mutation_tools": safety_summary.get("mutation_tools"),
+            "read_only_tools": safety_summary.get("read_only_tools"),
         },
     )
 

@@ -438,3 +438,12 @@ surface can claim an end-to-end gateway contract:
 - The response links back to the review queue and returns the same action plan.
 - The response exposes next-tool routes without copying lesson content or
   scoped provenance.
+
+`SELF-LESSON-REVIEW-FLOW-SAFETY-SUMMARY-001` must pass before review flows can
+be safely rendered as a compact card:
+
+- the response includes a `safety_summary` that separates read-only tools from
+  mutation tools;
+- every mutation tool in the summary requires confirmation;
+- the summary marks content, learned-from refs, and rollback conditions as
+  redacted without copying lesson text or scoped provenance.

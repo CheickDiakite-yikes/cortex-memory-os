@@ -86,6 +86,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-28 | Gateway review queue action plans | `uv run cortex-bench` | 68/68 passed | `benchmarks/runs/bench_20260428T214833Z.json` | Next benchmark: anchored gateway review flow. |
 | 2026-04-28 | Anchored gateway self-lesson review flow | `uv run cortex-bench` | 69/69 passed | `benchmarks/runs/bench_20260428T215042Z.json` | Next benchmark: context-pack review flow hints. |
 | 2026-04-28 | Context-pack review flow routing hints | `uv run cortex-bench` | 70/70 passed | `benchmarks/runs/bench_20260428T215505Z.json` | Next benchmark: review flow safety summary. |
+| 2026-04-28 | Review flow safety summary | `uv run cortex-bench` | 71/71 passed | `benchmarks/runs/bench_20260428T215719Z.json` | Next benchmark: review flow audit preview. |
 
 ## First Runnable Harness Requirements
 

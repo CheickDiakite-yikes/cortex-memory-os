@@ -1483,6 +1483,53 @@ def test_self_lesson_review_flow_returns_exact_redacted_action_routes(tmp_path):
     assert "task_project_stale_review_flow" not in rendered_flow
 
 
+def test_self_lesson_review_flow_safety_summary_redacts_content_and_requires_confirmation(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    stale = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_stale_safety_summary",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_stale_safety_summary"],
+            "last_validated": date(2025, 1, 1),
+        }
+    )
+    store.add_self_lesson(stale)
+    server = CortexMCPServer(store=store)
+
+    flow = server.call_tool(
+        "self_lesson.review_flow",
+        {"lesson_id": stale.lesson_id},
+    )
+
+    safety_summary = flow["safety_summary"]
+    assert safety_summary["requires_lesson_id"] is True
+    assert safety_summary["content_redacted"] is True
+    assert safety_summary["learned_from_redacted"] is True
+    assert safety_summary["rollback_if_redacted"] is True
+    assert safety_summary["external_effects_allowed"] is False
+    assert safety_summary["read_only_tools"] == ["self_lesson.explain"]
+    assert safety_summary["mutation_tools"] == [
+        "self_lesson.refresh",
+        "self_lesson.correct",
+        "self_lesson.delete",
+    ]
+    assert safety_summary["confirmation_required_tools"] == [
+        "self_lesson.refresh",
+        "self_lesson.correct",
+        "self_lesson.delete",
+    ]
+    assert safety_summary["mutation_tools_require_confirmation"] is True
+    assert safety_summary["policy_refs"] == [
+        "policy_self_lesson_review_queue_v1",
+        "policy_self_lesson_review_flow_v1",
+    ]
+    rendered_summary = json.dumps(safety_summary)
+    assert "Before editing auth" not in rendered_summary
+    assert "project:alpha" not in rendered_summary
+    assert "task_project_stale_safety_summary" not in rendered_summary
+
+
 def test_stale_scoped_self_lesson_requires_review_before_context_use(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))

@@ -6,13 +6,13 @@ Last updated: 2026-04-28
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| SELF-LESSON-REVIEW-FLOW-SAFETY-SUMMARY-001 | Add review flow safety summary | Codex | Contract, tests, benchmark case | Review flow responses should summarize confirmation, mutation, and redaction safety without lesson content. |
+| _None_ |  |  |  |  |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| _None_ |  |  |  |  |
+| SELF-LESSON-REVIEW-FLOW-AUDIT-PREVIEW-001 | Add review flow audit preview | Codex | Contract, tests, benchmark case | Review flows should preview mutation audit receipt shape before execution. |
 
 ## Backlog
 
@@ -97,6 +97,7 @@ Last updated: 2026-04-28
 | GATEWAY-SELF-LESSON-REVIEW-ACTIONS-001 | Add Memory Palace action plans to gateway review queue | Codex | `uv run pytest` -> 159 passed, `uv run cortex-bench` -> 68/68 passed, `uv run cortex-mcp --smoke` | Redacted review queue entries carry exact explain, refresh, correct, and delete gateway tool plans. |
 | GATEWAY-SELF-LESSON-REVIEW-FLOW-001 | Add anchored gateway self-lesson review flow tool | Codex | `uv run pytest` -> 160 passed, `uv run cortex-bench` -> 69/69 passed, `uv run cortex-mcp --smoke` | Exact lesson review flow returns queue metadata and follow-up tool routes without lesson content. |
 | CONTEXT-PACK-SELF-LESSON-REVIEW-FLOW-HINT-001 | Add context-pack review flow routing hints | Codex | `uv run pytest` -> 160 passed, `uv run cortex-bench` -> 70/70 passed, `uv run cortex-mcp --smoke` | Review summaries point to aggregate queue and exact-ID review-flow tools. |
+| SELF-LESSON-REVIEW-FLOW-SAFETY-SUMMARY-001 | Add review flow safety summary | Codex | `uv run pytest` -> 161 passed, `uv run cortex-bench` -> 71/71 passed, `uv run cortex-mcp --smoke` | Review flow responses summarize confirmation, mutation, and redaction safety without lesson content. |
 
 ## Dropped
 

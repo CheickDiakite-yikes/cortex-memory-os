@@ -269,3 +269,11 @@ one project, agent, or session from silently shaping another.
 - the same summaries point exact lesson review to `self_lesson.review_flow`;
 - exact review flow hints require a lesson ID and do not expose lesson content,
   learned-from refs, or scoped provenance tags.
+
+`SELF-LESSON-REVIEW-FLOW-SAFETY-SUMMARY-001` verifies:
+
+- exact review flow responses summarize read-only and mutation tools separately;
+- mutation tools require confirmation and allow no external effects from the
+  review card itself;
+- the safety summary preserves redaction boundaries for lesson content,
+  learned-from refs, rollback text, and scoped provenance.
