@@ -362,6 +362,8 @@ class SelfLessonReviewSummary(StrictModel):
     reason_counts: dict[str, int] = Field(default_factory=dict)
     scope_counts: dict[str, int] = Field(default_factory=dict)
     review_queue_tool: str = "self_lesson.review_queue"
+    review_flow_tool: str = "self_lesson.review_flow"
+    review_flow_requires_lesson_id: bool = True
     content_redacted: bool = True
 
 

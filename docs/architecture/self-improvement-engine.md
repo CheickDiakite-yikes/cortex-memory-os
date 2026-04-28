@@ -261,3 +261,11 @@ one project, agent, or session from silently shaping another.
 - summary metadata groups review-required lessons by reason and scope;
 - summaries point agents toward the review queue tool without exposing lesson
   content, learned-from refs, or scoped provenance tags.
+
+`CONTEXT-PACK-SELF-LESSON-REVIEW-FLOW-HINT-001` verifies:
+
+- context-pack review summaries point aggregate review to
+  `self_lesson.review_queue`;
+- the same summaries point exact lesson review to `self_lesson.review_flow`;
+- exact review flow hints require a lesson ID and do not expose lesson content,
+  learned-from refs, or scoped provenance tags.

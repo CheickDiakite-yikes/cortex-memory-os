@@ -1565,6 +1565,8 @@ def test_context_pack_review_summary_counts_stale_lessons_without_content(tmp_pa
         "reason_counts": {"last_validated_stale": 1},
         "scope_counts": {ScopeLevel.PROJECT_SPECIFIC.value: 1},
         "review_queue_tool": "self_lesson.review_queue",
+        "review_flow_tool": "self_lesson.review_flow",
+        "review_flow_requires_lesson_id": True,
         "content_redacted": True,
     }
     assert [item["lesson_id"] for item in pack["relevant_self_lessons"]] == [
