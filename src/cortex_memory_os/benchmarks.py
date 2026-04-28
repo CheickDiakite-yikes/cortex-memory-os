@@ -183,6 +183,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_scope_retention_review,
         case_self_lesson_scope_refresh_with_audit,
         case_self_lesson_scope_stale_export_marker,
+        case_gateway_self_lesson_review_queue,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
@@ -1952,6 +1953,78 @@ def case_self_lesson_scope_stale_export_marker() -> BenchmarkCaseResult:
         evidence={
             "review_required_ids": export.get("review_required_lesson_ids", []),
             "review_status": review_state.get("status"),
+        },
+    )
+
+
+def case_gateway_self_lesson_review_queue() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        stale = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_stale_queue",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_stale_queue"],
+                "last_validated": date(2025, 1, 1),
+            }
+        )
+        current = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_current_queue",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_current_queue"],
+                "last_validated": date(2026, 4, 28),
+            }
+        )
+        global_lesson = base.model_copy(update={"lesson_id": "lesson_global_queue"})
+        store.add_self_lesson(stale)
+        store.add_self_lesson(current)
+        store.add_self_lesson(global_lesson)
+        server = CortexMCPServer(store=store)
+        queue = server.call_tool("self_lesson.review_queue", {})
+
+    queued_lesson = queue.get("lessons", [{}])[0]
+    serialized_queue = json.dumps(queue, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        queue.get("lesson_ids") == [stale.lesson_id]
+        and queue.get("count") == 1
+        and queue.get("content_redacted") is True
+        and queue.get("policy_refs") == ["policy_self_lesson_review_queue_v1"]
+        and queued_lesson.get("review_state", {}).get("status") == "review_required"
+        and queued_lesson.get("available_actions", [])[:2]
+        == ["review_before_context_use", "refresh_with_confirmation"]
+        and "content" not in queued_lesson
+        and "learned_from" not in queued_lesson
+        and "rollback_if" not in queued_lesson
+        and current.lesson_id not in queue.get("lesson_ids", [])
+        and global_lesson.lesson_id not in queue.get("lesson_ids", [])
+        and "Before editing auth" not in serialized_queue
+        and "project:alpha" not in serialized_queue
+        and "task_project_stale_queue" not in serialized_queue
+        and "GATEWAY-SELF-LESSON-REVIEW-QUEUE-001" in docs_text
+        and "GATEWAY-SELF-LESSON-REVIEW-QUEUE-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-SELF-LESSON-REVIEW-QUEUE-001/redacted_review_queue",
+        suite="GATEWAY-SELF-LESSON-REVIEW-QUEUE-001",
+        passed=passed,
+        summary="Gateway review queue lists only review-required self-lessons without lesson content.",
+        metrics={
+            "queue_count": queue.get("count", 0),
+            "policy_ref_count": len(queue.get("policy_refs", [])),
+        },
+        evidence={
+            "queued_ids": queue.get("lesson_ids", []),
+            "review_status": queued_lesson.get("review_state", {}).get("status"),
         },
     )
 

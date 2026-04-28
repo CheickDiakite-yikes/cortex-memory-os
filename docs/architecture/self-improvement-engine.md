@@ -245,3 +245,12 @@ one project, agent, or session from silently shaping another.
   metadata;
 - export markers do not reveal lesson content, learned-from refs, rollback
   conditions, or scoped provenance tags.
+
+`GATEWAY-SELF-LESSON-REVIEW-QUEUE-001` verifies:
+
+- the gateway exposes a dedicated redacted queue for self-lessons requiring
+  review;
+- current scoped lessons, global lessons, and non-review-required lessons stay
+  out of the queue;
+- queued items include review state and safe actions without lesson content,
+  learned-from refs, rollback conditions, or scoped provenance tags.

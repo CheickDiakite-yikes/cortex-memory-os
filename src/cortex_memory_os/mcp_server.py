@@ -61,6 +61,7 @@ from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
 
 PROTOCOL_VERSION = "2025-11-25"
 SELF_LESSON_SCOPE_EXPORT_POLICY_REF = "policy_self_lesson_scope_export_v1"
+SELF_LESSON_REVIEW_QUEUE_POLICY_REF = "policy_self_lesson_review_queue_v1"
 SELF_LESSON_REVIEW_AFTER_DAYS = 90
 
 
@@ -190,6 +191,17 @@ class CortexMCPServer:
                         },
                         "limit": {"type": "integer", "minimum": 1, "maximum": 100},
                         "include_content": {"type": "boolean"},
+                    },
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "self_lesson.review_queue",
+                "description": "List review-required self-lessons for Memory Palace inspection without lesson content.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "limit": {"type": "integer", "minimum": 1, "maximum": 100},
                     },
                     "additionalProperties": False,
                 },
@@ -480,6 +492,27 @@ class CortexMCPServer:
                 "status_filter": status.value if status else None,
                 "context_eligible_ids": context_eligible_ids,
                 "content_redacted": not include_content,
+            }
+        if name == "self_lesson.review_queue":
+            limit = _optional_int_range(arguments, "limit", default=50, minimum=1, maximum=100)
+            review_lessons = [
+                lesson
+                for lesson in _all_self_lessons(self.store, self.self_lessons)
+                if self_lesson_review_state(lesson)["review_required"]
+            ][:limit]
+            return {
+                "queue_id": "self_lesson_review_queue",
+                "lessons": [
+                    serialize_self_lesson_list_item(
+                        lesson,
+                        include_content=False,
+                    )
+                    for lesson in review_lessons
+                ],
+                "lesson_ids": [lesson.lesson_id for lesson in review_lessons],
+                "count": len(review_lessons),
+                "content_redacted": True,
+                "policy_refs": [SELF_LESSON_REVIEW_QUEUE_POLICY_REF],
             }
         if name == "self_lesson.explain":
             lesson_id = _require_string(arguments, "lesson_id")

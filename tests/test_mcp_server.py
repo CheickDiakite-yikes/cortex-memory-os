@@ -27,6 +27,7 @@ def test_lists_memory_tools():
         "skill.execute_draft",
         "self_lesson.propose",
         "self_lesson.list",
+        "self_lesson.review_queue",
         "self_lesson.explain",
         "self_lesson.audit",
         "self_lesson.correct",
@@ -1369,6 +1370,54 @@ def test_stale_scoped_self_lesson_export_marks_review_required_without_hidden_co
     assert "Before editing auth" not in rendered_export
     assert "project:alpha" not in rendered_export
     assert "task_project_stale_export" not in rendered_export
+
+
+def test_self_lesson_review_queue_lists_only_review_required_lessons_redacted(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    stale = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_stale_queue",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_stale_queue"],
+            "last_validated": date(2025, 1, 1),
+        }
+    )
+    current = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_current_queue",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_current_queue"],
+            "last_validated": date(2026, 4, 28),
+        }
+    )
+    global_lesson = active.model_copy(update={"lesson_id": "lesson_global_queue"})
+    store.add_self_lesson(stale)
+    store.add_self_lesson(current)
+    store.add_self_lesson(global_lesson)
+    server = CortexMCPServer(store=store)
+
+    queue = server.call_tool("self_lesson.review_queue", {})
+
+    assert queue["lesson_ids"] == [stale.lesson_id]
+    assert queue["count"] == 1
+    assert queue["content_redacted"] is True
+    assert queue["policy_refs"] == ["policy_self_lesson_review_queue_v1"]
+    queued = queue["lessons"][0]
+    rendered_queue = json.dumps(queue)
+    assert queued["review_state"]["status"] == "review_required"
+    assert queued["available_actions"][:2] == [
+        "review_before_context_use",
+        "refresh_with_confirmation",
+    ]
+    assert "content" not in queued
+    assert "learned_from" not in queued
+    assert "rollback_if" not in queued
+    assert current.lesson_id not in queue["lesson_ids"]
+    assert global_lesson.lesson_id not in queue["lesson_ids"]
+    assert "Before editing auth" not in rendered_queue
+    assert "project:alpha" not in rendered_queue
+    assert "task_project_stale_queue" not in rendered_queue
 
 
 def test_stale_scoped_self_lesson_requires_review_before_context_use(tmp_path):
