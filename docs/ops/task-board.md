@@ -6,7 +6,7 @@ Last updated: 2026-04-28
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| CONTEXT-PACK-SELF-LESSON-EXCLUSION-001 | Explain scoped self-lesson exclusions | Codex | Context-pack exclusion contract and benchmark case | Context packs should explain excluded scoped lessons without exposing lesson content. |
+| SELF-LESSON-SCOPE-EXPORT-001 | Preserve scope in self-lesson export/review | Codex | Export/review contract and benchmark case | Review/export surfaces should preserve scope metadata without hidden content by default. |
 
 ## Next
 
@@ -86,6 +86,7 @@ Last updated: 2026-04-28
 | SELF-LESSON-SCOPE-INSPECTION-001 | Add self-lesson scope inspection metadata | Codex | `uv run pytest` -> 149 passed, `uv run cortex-bench` -> 57/57 passed, `uv run cortex-mcp --smoke` | List/explain surfaces distinguish global eligibility from scope-required lessons. |
 | SELF-LESSON-SCOPE-CORRECTION-001 | Preserve scope during self-lesson correction | Codex | `uv run pytest` -> 151 passed, `uv run cortex-bench` -> 58/58 passed, `uv run cortex-mcp --smoke` | Candidate replacements keep scoped provenance and stay out of context until promotion. |
 | SELF-LESSON-SCOPE-AUDIT-001 | Add self-lesson audit scope metadata | Codex | `uv run pytest` -> 152 passed, `uv run cortex-bench` -> 59/59 passed, `uv run cortex-mcp --smoke` | Audit listings expose scope metadata without copying lesson content or provenance. |
+| CONTEXT-PACK-SELF-LESSON-EXCLUSION-001 | Explain scoped self-lesson exclusions | Codex | `uv run pytest` -> 152 passed, `uv run cortex-bench` -> 60/60 passed, `uv run cortex-mcp --smoke` | Context packs explain scoped self-lesson exclusions without exposing lesson content. |
 
 ## Dropped
 

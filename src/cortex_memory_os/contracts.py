@@ -348,6 +348,15 @@ class RelevantSelfLesson(StrictModel):
     scope: ScopeLevel = ScopeLevel.PERSONAL_GLOBAL
 
 
+class SelfLessonExclusion(StrictModel):
+    lesson_id: str = Field(min_length=1)
+    status: MemoryStatus
+    scope: ScopeLevel
+    reason_tags: list[str] = Field(min_length=1)
+    required_context: str | None = None
+    content_redacted: bool = True
+
+
 class RetrievalScoreSummary(StrictModel):
     memory_id: str = Field(min_length=1)
     score: float = Field(ge=0.0)
@@ -371,6 +380,7 @@ class ContextPack(StrictModel):
     recent_events: list[str] = Field(default_factory=list)
     relevant_memories: list[RelevantMemory] = Field(default_factory=list)
     relevant_self_lessons: list[RelevantSelfLesson] = Field(default_factory=list)
+    self_lesson_exclusions: list[SelfLessonExclusion] = Field(default_factory=list)
     retrieval_scores: list[RetrievalScoreSummary] = Field(default_factory=list)
     audit_metadata: list[AuditMetadata] = Field(default_factory=list)
     blocked_memory_ids: list[str] = Field(default_factory=list)

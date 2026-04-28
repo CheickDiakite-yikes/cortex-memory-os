@@ -22,6 +22,7 @@ from cortex_memory_os.contracts import (
     RetrievalScoreSummary,
     ScopeLevel,
     SelfLesson,
+    SelfLessonExclusion,
     SkillRecord,
 )
 from cortex_memory_os.context_policy import CONTEXT_PACK_POLICY_REF, evaluate_context_memory
@@ -36,7 +37,7 @@ from cortex_memory_os.fixtures import load_json
 from cortex_memory_os.memory_export import export_memories_with_audit
 from cortex_memory_os.memory_palace import MemoryExplanation, MemoryPalaceService
 from cortex_memory_os.memory_store import InMemoryMemoryStore
-from cortex_memory_os.retrieval import RankedMemory, RetrievalScope
+from cortex_memory_os.retrieval import RankedMemory, RetrievalScope, self_lesson_scope_allowed
 from cortex_memory_os.self_lesson_audit import record_self_lesson_decision_audit
 from cortex_memory_os.self_lessons import (
     SelfLessonChangeType,
@@ -728,10 +729,17 @@ class CortexMCPServer:
             session_id=session_id,
         )
         ranked_memories = _rank_store(self.store, goal, limit=limit, scope=retrieval_scope)
+        available_self_lessons = _available_self_lessons(self.store, self.self_lessons)
         self_lessons = select_context_self_lessons(
-            _available_self_lessons(self.store, self.self_lessons),
+            available_self_lessons,
             goal,
             template,
+            scope=retrieval_scope,
+        )
+        self_lesson_exclusions = _self_lesson_exclusions(
+            available_self_lessons,
+            selected_lessons=self_lessons,
+            goal=goal,
             scope=retrieval_scope,
         )
         trusted_ranked: list[RankedMemory] = []
@@ -779,6 +787,7 @@ class CortexMCPServer:
                 )
                 for lesson in self_lessons
             ],
+            self_lesson_exclusions=self_lesson_exclusions,
             retrieval_scores=[
                 RetrievalScoreSummary(
                     memory_id=ranked.memory.memory_id,
@@ -1036,6 +1045,55 @@ def _available_self_lessons(
         for lesson in _all_self_lessons(store, configured_lessons)
         if lesson.status == MemoryStatus.ACTIVE
     )
+
+
+def _self_lesson_exclusions(
+    lessons: tuple[SelfLesson, ...],
+    *,
+    selected_lessons: tuple[SelfLesson, ...],
+    goal: str,
+    scope: RetrievalScope,
+) -> list[SelfLessonExclusion]:
+    selected_ids = {lesson.lesson_id for lesson in selected_lessons}
+    exclusions: list[SelfLessonExclusion] = []
+    for lesson in lessons:
+        if lesson.lesson_id in selected_ids or not _self_lesson_goal_relevant(lesson, goal):
+            continue
+        allowed, reasons = self_lesson_scope_allowed(lesson, scope)
+        if allowed or not reasons:
+            continue
+        exclusions.append(
+            SelfLessonExclusion(
+                lesson_id=lesson.lesson_id,
+                status=lesson.status,
+                scope=lesson.scope,
+                reason_tags=reasons,
+                required_context=_required_self_lesson_context(lesson.scope),
+                content_redacted=True,
+            )
+        )
+    return sorted(exclusions, key=lambda item: item.lesson_id)
+
+
+def _required_self_lesson_context(scope: ScopeLevel) -> str | None:
+    return {
+        ScopeLevel.PROJECT_SPECIFIC: "active_project",
+        ScopeLevel.AGENT_SPECIFIC: "agent_id",
+        ScopeLevel.SESSION_ONLY: "session_id",
+    }.get(scope)
+
+
+def _self_lesson_goal_relevant(lesson: SelfLesson, goal: str) -> bool:
+    goal_tokens = _context_tokens(goal)
+    lesson_tokens = _context_tokens(" ".join([lesson.content, *lesson.applies_to]))
+    return bool(goal_tokens & lesson_tokens)
+
+
+def _context_tokens(value: str) -> set[str]:
+    normalized = " ".join(
+        "".join(char.lower() if char.isalnum() else " " for char in value).split()
+    )
+    return set(normalized.split())
 
 
 def _all_self_lessons(

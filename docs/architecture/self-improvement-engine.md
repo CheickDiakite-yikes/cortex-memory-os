@@ -204,3 +204,11 @@ one project, agent, or session from silently shaping another.
 - each returned audit receipt carries the same scope/status metadata for Memory
   Palace rendering;
 - audit responses do not copy lesson content or scoped provenance tags.
+
+`CONTEXT-PACK-SELF-LESSON-EXCLUSION-001` verifies:
+
+- context packs include redacted metadata for active self-lessons excluded by
+  project, agent, or session scope;
+- exclusion records carry lesson ID, scope, status, required context, and reason
+  tags only;
+- exclusion records do not copy lesson content or scoped provenance refs.

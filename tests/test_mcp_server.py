@@ -508,7 +508,25 @@ def test_context_pack_filters_self_lessons_by_project_agent_and_session_scope(tm
     assert [item["lesson_id"] for item in project_pack["relevant_self_lessons"]] == [
         "lesson_project_alpha"
     ]
+    assert [item["lesson_id"] for item in project_pack["self_lesson_exclusions"]] == [
+        "lesson_project_beta"
+    ]
+    assert project_pack["self_lesson_exclusions"][0]["reason_tags"] == [
+        "project_scope_mismatch"
+    ]
     assert missing_project_pack["relevant_self_lessons"] == []
+    assert [item["lesson_id"] for item in missing_project_pack["self_lesson_exclusions"]] == [
+        "lesson_project_alpha",
+        "lesson_project_beta",
+    ]
+    assert all(
+        item["required_context"] == "active_project"
+        for item in missing_project_pack["self_lesson_exclusions"]
+    )
+    rendered_exclusions = json.dumps(missing_project_pack["self_lesson_exclusions"])
+    assert "Before editing auth" not in rendered_exclusions
+    assert "project:alpha" not in rendered_exclusions
+    assert "task:lesson_project_alpha" not in rendered_exclusions
 
     agent_store = SQLiteMemoryGraphStore(tmp_path / "agent.sqlite3")
     agent_store.add_self_lesson(

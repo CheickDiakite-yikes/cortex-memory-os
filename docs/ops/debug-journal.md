@@ -1,6 +1,6 @@
 # Debug Journal
 
-Last updated: 2026-04-27
+Last updated: 2026-04-28
 
 Use this file for failures that teach us something. Keep entries reproducible, concise, and privacy-aware.
 
@@ -14,7 +14,7 @@ Use this file for failures that teach us something. Keep entries reproducible, c
 
 | ID | Date resolved | Root cause | Fix | Verification |
 | --- | --- | --- | --- | --- |
-| _None_ |  |  |  |  |
+| DBG-001 | 2026-04-28 | Vault tests and benchmark fixture reads used wall-clock `now`, so synthetic evidence from 2026-04-27 expired when run on 2026-04-28. | Pass fixture timestamps into raw reads that are intended to verify storage/cipher behavior rather than retention expiry. | `uv run pytest tests/test_evidence_vault.py tests/test_mcp_server.py tests/test_benchmarks.py tests/test_contracts.py` -> 62 passed; `uv run pytest` -> 152 passed; `uv run cortex-bench` -> 60/60 passed. |
 
 ## Incident Template
 

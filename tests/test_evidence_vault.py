@@ -29,7 +29,7 @@ def test_vault_stores_reads_and_checksums_raw_payload(tmp_path):
     assert metadata.sha256
     assert metadata.byte_count == len(payload)
     assert metadata.retention_policy == RetentionPolicy.DELETE_RAW_AFTER_6H
-    assert vault.read_raw("ev_store_read") == payload
+    assert vault.read_raw("ev_store_read", now=evidence.timestamp) == payload
 
 
 def test_vault_expires_raw_payload_but_keeps_metadata(tmp_path):
@@ -105,4 +105,4 @@ def test_authenticated_cipher_boundary_works_in_production(tmp_path):
     assert vault.cipher_decision.reason == "production_cipher_boundary_satisfied"
     assert metadata.cipher == cipher.name
     assert sealed != payload
-    assert vault.read_raw("ev_prod_cipher") == payload
+    assert vault.read_raw("ev_prod_cipher", now=evidence.timestamp) == payload

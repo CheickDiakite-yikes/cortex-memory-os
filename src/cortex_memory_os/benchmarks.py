@@ -178,6 +178,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_scope_inspection_metadata,
         case_self_lesson_scope_preserving_correction,
         case_self_lesson_scope_audit_metadata,
+        case_context_pack_self_lesson_exclusion_metadata,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
@@ -1582,6 +1583,83 @@ def case_self_lesson_scope_audit_metadata() -> BenchmarkCaseResult:
         evidence={
             "target_scope": audit_response.get("target_scope"),
             "target_status": audit_response.get("target_status"),
+        },
+    )
+
+
+def case_context_pack_self_lesson_exclusion_metadata() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+        alpha = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_alpha",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_alpha"],
+            }
+        )
+        beta = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_beta",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:beta", "task_project_beta"],
+            }
+        )
+        store.add_self_lesson(alpha)
+        store.add_self_lesson(beta)
+        server = CortexMCPServer(store=store)
+        missing_scope_pack = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug"},
+        )
+        alpha_pack = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
+        )
+
+    missing_exclusions = missing_scope_pack.get("self_lesson_exclusions", [])
+    alpha_exclusions = alpha_pack.get("self_lesson_exclusions", [])
+    serialized_exclusions = json.dumps(missing_exclusions + alpha_exclusions, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        [item.get("lesson_id") for item in missing_exclusions]
+        == ["lesson_project_alpha", "lesson_project_beta"]
+        and all(item.get("reason_tags") == ["project_scope_missing"] for item in missing_exclusions)
+        and all(item.get("required_context") == "active_project" for item in missing_exclusions)
+        and [item.get("lesson_id") for item in alpha_pack.get("relevant_self_lessons", [])]
+        == ["lesson_project_alpha"]
+        and [item.get("lesson_id") for item in alpha_exclusions]
+        == ["lesson_project_beta"]
+        and alpha_exclusions[0].get("reason_tags") == ["project_scope_mismatch"]
+        and "Before editing auth" not in serialized_exclusions
+        and "project:alpha" not in serialized_exclusions
+        and "task_project_alpha" not in serialized_exclusions
+        and "CONTEXT-PACK-SELF-LESSON-EXCLUSION-001" in docs_text
+        and "CONTEXT-PACK-SELF-LESSON-EXCLUSION-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="CONTEXT-PACK-SELF-LESSON-EXCLUSION-001/redacted_scope_exclusions",
+        suite="CONTEXT-PACK-SELF-LESSON-EXCLUSION-001",
+        passed=passed,
+        summary="Context packs explain scoped self-lesson exclusions without exposing lesson content.",
+        metrics={
+            "missing_scope_exclusion_count": len(missing_exclusions),
+            "matched_scope_exclusion_count": len(alpha_exclusions),
+        },
+        evidence={
+            "missing_scope_reason": missing_exclusions[0].get("reason_tags")
+            if missing_exclusions
+            else [],
+            "matched_scope_reason": alpha_exclusions[0].get("reason_tags")
+            if alpha_exclusions
+            else [],
         },
     )
 
@@ -3496,7 +3574,7 @@ def case_vault_encryption_boundary() -> BenchmarkCaseResult:
         )
         metadata = vault.store(evidence, payload)
         sealed = (root / metadata.blob_path).read_bytes() if metadata.blob_path else b""
-        read_back = vault.read_raw(evidence.evidence_id)
+        read_back = vault.read_raw(evidence.evidence_id, now=evidence.timestamp)
 
     policy_doc = REPO_ROOT / "docs" / "security" / "evidence-vault-encryption-boundary.md"
     policy_text = policy_doc.read_text(encoding="utf-8")

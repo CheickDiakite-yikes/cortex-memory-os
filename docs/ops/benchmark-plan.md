@@ -74,6 +74,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `SELF-LESSON-SCOPE-INSPECTION-001` | Self-lesson list and explanation surfaces expose scope eligibility without implying global activation. | Scoped active lesson is shown as globally context eligible. |
 | `SELF-LESSON-SCOPE-CORRECTION-001` | Self-lesson correction preserves scope and provenance on candidate replacements. | Replacement loses scoped provenance or enters context before promotion. |
 | `SELF-LESSON-SCOPE-AUDIT-001` | Self-lesson audit listings expose scope metadata without copying lesson content. | Audit listing hides scope state or leaks lesson content/provenance. |
+| `CONTEXT-PACK-SELF-LESSON-EXCLUSION-001` | Context packs explain scoped self-lesson exclusions without exposing lesson content. | Exclusion metadata leaks content/provenance or omits scoped exclusion reasons. |
 | `GATEWAY-SELF-LESSON-001` | Gateway can propose candidate self-lessons without promoting them to active guidance. | Gateway proposal becomes active without confirmation. |
 | `SELF-LESSON-STORE-001` | Candidate and active self-lessons persist in SQLite while context packs use active lessons only. | Candidate proposal appears in context before confirmation. |
 | `GATEWAY-SELF-LESSON-PROMOTE-001` | Gateway can promote confirmed self-lessons and roll back active lessons with audit receipts. | Promotion skips confirmation or rollback leaves lesson active in context. |
@@ -115,8 +116,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `CONTEXT-PACK-SELF-LESSON-EXCLUSION-001`: Context packs explain scoped
-  self-lesson exclusions without exposing lesson content.
+- `SELF-LESSON-SCOPE-EXPORT-001`: Self-lesson export/review surfaces preserve
+  scope metadata without exporting hidden content by default.
 
 Longer-term suites:
 
