@@ -6,7 +6,7 @@ import argparse
 import json
 import time
 from collections.abc import Callable
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -180,6 +180,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_scope_audit_metadata,
         case_context_pack_self_lesson_exclusion_metadata,
         case_self_lesson_scope_export_review_metadata,
+        case_self_lesson_scope_retention_review,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
@@ -1739,6 +1740,71 @@ def case_self_lesson_scope_export_review_metadata() -> BenchmarkCaseResult:
             "review_scope": listed_lesson.get("scope"),
             "export_scope": exported_lesson.get("scope"),
             "audit_action": audit.get("action"),
+        },
+    )
+
+
+def case_self_lesson_scope_retention_review() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        stale = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_stale",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_stale"],
+                "last_validated": date(2025, 1, 1),
+            }
+        )
+        store.add_self_lesson(stale)
+        server = CortexMCPServer(store=store)
+        list_response = server.call_tool("self_lesson.list", {})
+        context_response = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
+        )
+
+    listed_lesson = list_response.get("lessons", [{}])[0]
+    review_state = listed_lesson.get("review_state", {})
+    exclusions = context_response.get("self_lesson_exclusions", [])
+    serialized_exclusions = json.dumps(exclusions, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        review_state.get("status") == "review_required"
+        and review_state.get("reason_tags") == ["last_validated_stale"]
+        and listed_lesson.get("context_eligible") is False
+        and listed_lesson.get("context_eligibility", {}).get("status")
+        == "review_required"
+        and context_response.get("relevant_self_lessons") == []
+        and [item.get("lesson_id") for item in exclusions] == [stale.lesson_id]
+        and exclusions[0].get("reason_tags")
+        == ["self_lesson_review_required", "last_validated_stale"]
+        and exclusions[0].get("required_context") == "self_lesson_review"
+        and "Before editing auth" not in serialized_exclusions
+        and "project:alpha" not in serialized_exclusions
+        and "SELF-LESSON-SCOPE-RETENTION-001" in docs_text
+        and "SELF-LESSON-SCOPE-RETENTION-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SELF-LESSON-SCOPE-RETENTION-001/stale_scoped_review_gate",
+        suite="SELF-LESSON-SCOPE-RETENTION-001",
+        passed=passed,
+        summary="Stale scoped self-lessons require review before future context use.",
+        metrics={
+            "review_required": int(bool(review_state.get("review_required"))),
+            "context_lesson_count": len(context_response.get("relevant_self_lessons", [])),
+            "exclusion_count": len(exclusions),
+        },
+        evidence={
+            "review_status": review_state.get("status"),
+            "exclusion_reason": exclusions[0].get("reason_tags") if exclusions else [],
         },
     )
 

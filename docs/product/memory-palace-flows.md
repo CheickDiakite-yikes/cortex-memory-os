@@ -191,6 +191,7 @@ Required surface:
 - Applies-to scope.
 - Memory scope.
 - Context eligibility.
+- Review state.
 - Content/provenance redaction state.
 - Available actions.
 
@@ -200,6 +201,7 @@ Safety rules:
 - Candidate and revoked lessons must be marked not context-eligible.
 - Default review cards preserve scope metadata while redacting lesson content
   and learned-from provenance.
+- Stale scoped lessons must be marked for review before context use.
 - Lesson content, when explicitly revealed, is displayed for review and not
   treated as an instruction.
 
@@ -208,6 +210,7 @@ Completion signal:
 - Candidate, active, and revoked lessons are inspectable.
 - Context eligibility is visible for every listed lesson.
 - Scope and redaction state are visible for every listed lesson.
+- Review-required lessons expose review state and available review action.
 
 ## Flow 6: Explain a Self-Lesson
 

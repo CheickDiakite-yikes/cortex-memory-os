@@ -6,7 +6,7 @@ import argparse
 import json
 import sys
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
@@ -59,6 +59,7 @@ from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
 
 PROTOCOL_VERSION = "2025-11-25"
 SELF_LESSON_SCOPE_EXPORT_POLICY_REF = "policy_self_lesson_scope_export_v1"
+SELF_LESSON_REVIEW_AFTER_DAYS = 90
 
 
 class JsonRpcError(ValueError):
@@ -788,8 +789,13 @@ class CortexMCPServer:
         )
         ranked_memories = _rank_store(self.store, goal, limit=limit, scope=retrieval_scope)
         available_self_lessons = _available_self_lessons(self.store, self.self_lessons)
+        context_ready_self_lessons = tuple(
+            lesson
+            for lesson in available_self_lessons
+            if not self_lesson_review_state(lesson)["review_required"]
+        )
         self_lessons = select_context_self_lessons(
-            available_self_lessons,
+            context_ready_self_lessons,
             goal,
             template,
             scope=retrieval_scope,
@@ -1027,6 +1033,7 @@ def serialize_self_lesson_list_item(
             "learned_from_redacted": True,
             "rollback_if_redacted": True,
         }
+    item["review_state"] = self_lesson_review_state(lesson)
     eligibility = _self_lesson_context_eligibility(lesson)
     item["context_eligible"] = eligibility["status"] == "eligible_global"
     item["context_eligibility"] = eligibility
@@ -1094,6 +1101,7 @@ def serialize_self_lesson_explanation(
         if lesson.last_validated
         else None,
         "content_redacted": True,
+        "review_state": self_lesson_review_state(lesson),
         "context_eligible": _self_lesson_context_eligibility(lesson)["status"]
         == "eligible_global",
         "context_eligibility": _self_lesson_context_eligibility(lesson),
@@ -1186,6 +1194,20 @@ def _self_lesson_exclusions(
     for lesson in lessons:
         if lesson.lesson_id in selected_ids or not _self_lesson_goal_relevant(lesson, goal):
             continue
+        review_state = self_lesson_review_state(lesson)
+        if review_state["review_required"]:
+            exclusions.append(
+                SelfLessonExclusion(
+                    lesson_id=lesson.lesson_id,
+                    status=lesson.status,
+                    scope=lesson.scope,
+                    reason_tags=["self_lesson_review_required"]
+                    + list(review_state["reason_tags"]),
+                    required_context="self_lesson_review",
+                    content_redacted=True,
+                )
+            )
+            continue
         allowed, reasons = self_lesson_scope_allowed(lesson, scope)
         if allowed or not reasons:
             continue
@@ -1263,12 +1285,51 @@ def _self_lesson_available_actions(lesson: SelfLesson) -> list[str]:
     if lesson.status == MemoryStatus.CANDIDATE:
         return ["promote_with_confirmation"]
     if lesson.status == MemoryStatus.ACTIVE:
-        return ["rollback_if_failed_or_requested"]
+        actions = ["rollback_if_failed_or_requested"]
+        if self_lesson_review_state(lesson)["review_required"]:
+            actions.insert(0, "review_before_context_use")
+        return actions
     return []
+
+
+def self_lesson_review_state(
+    lesson: SelfLesson,
+    *,
+    today: date | None = None,
+) -> dict[str, Any]:
+    current_date = today or datetime.now(UTC).date()
+    scoped = lesson.scope in {
+        ScopeLevel.PROJECT_SPECIFIC,
+        ScopeLevel.AGENT_SPECIFIC,
+        ScopeLevel.SESSION_ONLY,
+    }
+    reason_tags: list[str] = []
+    if lesson.status != MemoryStatus.ACTIVE or not scoped:
+        status = "not_applicable"
+    elif lesson.last_validated is None:
+        reason_tags.append("last_validated_missing")
+        status = "review_required"
+    elif current_date - lesson.last_validated > timedelta(
+        days=SELF_LESSON_REVIEW_AFTER_DAYS
+    ):
+        reason_tags.append("last_validated_stale")
+        status = "review_required"
+    else:
+        status = "current"
+    return {
+        "status": status,
+        "review_required": status == "review_required",
+        "reason_tags": reason_tags,
+        "review_after_days": SELF_LESSON_REVIEW_AFTER_DAYS,
+        "last_validated": lesson.last_validated.isoformat()
+        if lesson.last_validated
+        else None,
+    }
 
 
 def _self_lesson_context_eligibility(lesson: SelfLesson) -> dict[str, Any]:
     lifecycle_eligible = lesson.status == MemoryStatus.ACTIVE
+    review_state = self_lesson_review_state(lesson)
     required_ref_prefix = {
         ScopeLevel.PROJECT_SPECIFIC: "project:",
         ScopeLevel.AGENT_SPECIFIC: "agent:",
@@ -1277,6 +1338,8 @@ def _self_lesson_context_eligibility(lesson: SelfLesson) -> dict[str, Any]:
     requires_scope_match = required_ref_prefix is not None
     if not lifecycle_eligible:
         status = "not_active"
+    elif review_state["review_required"]:
+        status = "review_required"
     elif requires_scope_match:
         status = "requires_scope_match"
     else:
@@ -1287,6 +1350,8 @@ def _self_lesson_context_eligibility(lesson: SelfLesson) -> dict[str, Any]:
         "scope": lesson.scope.value,
         "requires_scope_match": requires_scope_match,
         "required_ref_prefix": required_ref_prefix,
+        "review_required": review_state["review_required"],
+        "review_reason_tags": review_state["reason_tags"],
     }
 
 

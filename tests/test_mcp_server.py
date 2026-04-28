@@ -1,4 +1,5 @@
 import json
+from datetime import date
 
 from cortex_memory_os.contracts import (
     EvidenceType,
@@ -1254,6 +1255,8 @@ def test_self_lesson_list_and_explain_show_scope_eligibility_without_activation(
         "scope": ScopeLevel.PROJECT_SPECIFIC.value,
         "requires_scope_match": True,
         "required_ref_prefix": "project:",
+        "review_required": False,
+        "review_reason_tags": [],
     }
     assert listed_with_content["lessons"][0]["content"] == scoped.content
     assert listed_with_content["lessons"][0]["learned_from"] == [
@@ -1309,6 +1312,8 @@ def test_self_lesson_export_redacts_content_and_preserves_scope_metadata(tmp_pat
         "scope": ScopeLevel.PROJECT_SPECIFIC.value,
         "requires_scope_match": True,
         "required_ref_prefix": "project:",
+        "review_required": False,
+        "review_reason_tags": [],
     }
     assert "content" not in exported_lesson
     assert "learned_from" not in exported_lesson
@@ -1320,6 +1325,52 @@ def test_self_lesson_export_redacts_content_and_preserves_scope_metadata(tmp_pat
     assert audit["redacted_summary"] == (
         "Self-lesson export created with 1 lessons, 3 redactions."
     )
+
+
+def test_stale_scoped_self_lesson_requires_review_before_context_use(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    stale = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_stale",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_stale"],
+            "last_validated": date(2025, 1, 1),
+        }
+    )
+    store.add_self_lesson(stale)
+    server = CortexMCPServer(store=store)
+
+    listed = server.call_tool("self_lesson.list", {})
+    pack = server.call_tool(
+        "memory.get_context_pack",
+        {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
+    )
+
+    list_item = listed["lessons"][0]
+
+    assert list_item["review_state"] == {
+        "status": "review_required",
+        "review_required": True,
+        "reason_tags": ["last_validated_stale"],
+        "review_after_days": 90,
+        "last_validated": "2025-01-01",
+    }
+    assert list_item["context_eligible"] is False
+    assert list_item["context_eligibility"]["status"] == "review_required"
+    assert list_item["available_actions"][0] == "review_before_context_use"
+    assert pack["relevant_self_lessons"] == []
+    assert [item["lesson_id"] for item in pack["self_lesson_exclusions"]] == [
+        stale.lesson_id
+    ]
+    assert pack["self_lesson_exclusions"][0]["reason_tags"] == [
+        "self_lesson_review_required",
+        "last_validated_stale",
+    ]
+    assert pack["self_lesson_exclusions"][0]["required_context"] == "self_lesson_review"
+    rendered_exclusions = json.dumps(pack["self_lesson_exclusions"])
+    assert "Before editing auth" not in rendered_exclusions
+    assert "project:alpha" not in rendered_exclusions
 
 
 def test_memory_explain_returns_provenance_and_influence_limits():

@@ -221,3 +221,11 @@ one project, agent, or session from silently shaping another.
   learned-from refs, and rollback conditions by default;
 - export audit receipts summarize counts and redactions without copying lesson
   content or scoped provenance.
+
+`SELF-LESSON-SCOPE-RETENTION-001` verifies:
+
+- active scoped self-lessons with missing or stale validation dates are marked
+  `review_required` in review surfaces;
+- stale scoped lessons are excluded from context packs until reviewed again;
+- exclusion metadata names the review requirement without copying lesson content
+  or scoped provenance refs.

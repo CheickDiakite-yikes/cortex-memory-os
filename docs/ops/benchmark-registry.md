@@ -77,6 +77,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-28 | Self-lesson audit scope metadata | `uv run cortex-bench` | 59/59 passed | `benchmarks/runs/bench_20260428T003052Z.json` | Next benchmark: scoped self-lesson exclusion metadata. |
 | 2026-04-28 | Scoped self-lesson exclusion metadata | `uv run cortex-bench` | 60/60 passed | `benchmarks/runs/bench_20260428T143557Z.json` | Next benchmark: self-lesson scoped export/review metadata. |
 | 2026-04-28 | Self-lesson scoped export/review metadata | `uv run cortex-bench` | 61/61 passed | `benchmarks/runs/bench_20260428T144142Z.json` | Next benchmark: stale scoped self-lesson review. |
+| 2026-04-28 | Stale scoped self-lesson review | `uv run cortex-bench` | 62/62 passed | `benchmarks/runs/bench_20260428T144541Z.json` | Next benchmark: scoped self-lesson refresh with audit. |
 
 ## First Runnable Harness Requirements
 

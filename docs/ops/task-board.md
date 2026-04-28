@@ -6,7 +6,7 @@ Last updated: 2026-04-28
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| SELF-LESSON-SCOPE-RETENTION-001 | Review stale scoped self-lessons | Codex | Retention/review contract and benchmark case | Stale scoped lessons should surface for review before future context use. |
+| SELF-LESSON-SCOPE-REFRESH-001 | Refresh reviewed scoped self-lessons | Codex | Refresh/audit contract and benchmark case | Reviewed scoped lessons should re-enter context only with audit evidence. |
 
 ## Next
 
@@ -88,6 +88,7 @@ Last updated: 2026-04-28
 | SELF-LESSON-SCOPE-AUDIT-001 | Add self-lesson audit scope metadata | Codex | `uv run pytest` -> 152 passed, `uv run cortex-bench` -> 59/59 passed, `uv run cortex-mcp --smoke` | Audit listings expose scope metadata without copying lesson content or provenance. |
 | CONTEXT-PACK-SELF-LESSON-EXCLUSION-001 | Explain scoped self-lesson exclusions | Codex | `uv run pytest` -> 152 passed, `uv run cortex-bench` -> 60/60 passed, `uv run cortex-mcp --smoke` | Context packs explain scoped self-lesson exclusions without exposing lesson content. |
 | SELF-LESSON-SCOPE-EXPORT-001 | Preserve scope in self-lesson export/review | Codex | `uv run pytest` -> 153 passed, `uv run cortex-bench` -> 61/61 passed, `uv run cortex-mcp --smoke` | Review/export surfaces preserve scope metadata without hidden content by default. |
+| SELF-LESSON-SCOPE-RETENTION-001 | Review stale scoped self-lessons | Codex | `uv run pytest` -> 154 passed, `uv run cortex-bench` -> 62/62 passed, `uv run cortex-mcp --smoke` | Stale scoped lessons surface for review before future context use. |
 
 ## Dropped
 
