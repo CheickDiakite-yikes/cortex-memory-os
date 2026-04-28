@@ -1001,6 +1001,75 @@ def test_self_lesson_propose_tool_rejects_hostile_or_permission_expanding_text()
     assert "self-lessons cannot" in response["error"]["message"]
 
 
+def test_self_lesson_propose_tool_enforces_scoped_candidate_tags(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    server = CortexMCPServer(store=store)
+
+    response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 66,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.propose",
+                "arguments": {
+                    "content": "Before auth edits, retrieve project-local route files.",
+                    "learned_from": ["project:cortex", "task_scope_success"],
+                    "applies_to": ["frontend_debugging", "auth_flows"],
+                    "scope": ScopeLevel.PROJECT_SPECIFIC.value,
+                    "change_type": "failure_checklist",
+                    "change_summary": "Add a project-scoped auth debugging preflight.",
+                    "confidence": 0.84,
+                },
+            },
+        }
+    )
+    proposal = response["result"]["proposal"]
+    lesson_id = proposal["lesson"]["lesson_id"]
+
+    assert proposal["lesson"]["status"] == MemoryStatus.CANDIDATE.value
+    assert proposal["lesson"]["scope"] == ScopeLevel.PROJECT_SPECIFIC.value
+    assert store.get_self_lesson(lesson_id).scope == ScopeLevel.PROJECT_SPECIFIC
+
+    context_response = server.call_tool(
+        "memory.get_context_pack",
+        {"goal": "continue fixing onboarding auth bug", "active_project": "cortex"},
+    )
+
+    assert context_response["relevant_self_lessons"] == []
+
+    missing_tag = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 67,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.propose",
+                "arguments": {
+                    "content": "Before auth edits, retrieve agent-local diagnostics.",
+                    "learned_from": ["task_missing_agent_tag"],
+                    "applies_to": ["frontend_debugging", "auth_flows"],
+                    "scope": ScopeLevel.AGENT_SPECIFIC.value,
+                    "change_type": "failure_checklist",
+                    "change_summary": "Add an agent-scoped auth debugging preflight.",
+                    "confidence": 0.84,
+                },
+            },
+        }
+    )
+    propose_schema = {
+        tool["name"]: tool for tool in server.list_tools()
+    }["self_lesson.propose"]["inputSchema"]
+    scope_values = propose_schema["properties"]["scope"]["enum"]
+
+    assert missing_tag["error"]["code"] == -32602
+    assert "matching provenance tags" in missing_tag["error"]["message"]
+    assert "input_value" not in missing_tag["error"]["message"]
+    assert "task_missing_agent_tag" not in missing_tag["error"]["message"]
+    assert ScopeLevel.NEVER_STORE.value not in scope_values
+    assert ScopeLevel.EPHEMERAL.value not in scope_values
+
+
 def test_memory_explain_returns_provenance_and_influence_limits():
     server = default_server()
 

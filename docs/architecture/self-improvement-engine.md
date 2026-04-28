@@ -171,3 +171,12 @@ one project, agent, or session from silently shaping another.
 - project-scoped lessons do not appear without a matching active project;
 - agent-scoped lessons do not appear for the wrong agent;
 - session-scoped lessons do not appear outside the matching session.
+
+`GATEWAY-SELF-LESSON-SCOPE-PROPOSE-001` verifies:
+
+- gateway proposals can create scoped candidate lessons when provenance tags
+  match the declared scope;
+- missing scope tags are rejected before storage;
+- rejection messages do not echo submitted evidence or validation payloads;
+- scoped candidates do not enter context packs before promotion;
+- ephemeral and never-store scopes are not exposed as durable proposal options.

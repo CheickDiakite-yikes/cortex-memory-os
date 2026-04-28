@@ -174,6 +174,7 @@ def run_all() -> BenchmarkRunResult:
         case_context_pack_self_lesson_routing,
         case_context_pack_audit_metadata_lane,
         case_scoped_self_lesson_recall_boundaries,
+        case_gateway_scoped_self_lesson_proposal_checks,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
@@ -1265,6 +1266,105 @@ def case_scoped_self_lesson_recall_boundaries() -> BenchmarkCaseResult:
             "missing_project_ids": missing_project_ids,
             "agent_ids": agent_ids,
             "session_ids": session_ids,
+        },
+    )
+
+
+def case_gateway_scoped_self_lesson_proposal_checks() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        server = CortexMCPServer(store=store)
+        accepted = server.handle_jsonrpc(
+            {
+                "jsonrpc": "2.0",
+                "id": 66,
+                "method": "tools/call",
+                "params": {
+                    "name": "self_lesson.propose",
+                    "arguments": {
+                        "content": "Before auth edits, retrieve project-local route files.",
+                        "learned_from": ["project:cortex", "task_scope_success"],
+                        "applies_to": ["frontend_debugging", "auth_flows"],
+                        "scope": ScopeLevel.PROJECT_SPECIFIC.value,
+                        "change_type": "failure_checklist",
+                        "change_summary": "Add a project-scoped auth debugging preflight.",
+                        "confidence": 0.84,
+                    },
+                },
+            }
+        )
+        lesson_id = accepted.get("result", {}).get("proposal", {}).get("lesson", {}).get(
+            "lesson_id"
+        )
+        context_response = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug", "active_project": "cortex"},
+        )
+        missing_tag = server.handle_jsonrpc(
+            {
+                "jsonrpc": "2.0",
+                "id": 67,
+                "method": "tools/call",
+                "params": {
+                    "name": "self_lesson.propose",
+                    "arguments": {
+                        "content": "Before auth edits, retrieve agent-local diagnostics.",
+                        "learned_from": ["task_missing_agent_tag"],
+                        "applies_to": ["frontend_debugging", "auth_flows"],
+                        "scope": ScopeLevel.AGENT_SPECIFIC.value,
+                        "change_type": "failure_checklist",
+                        "change_summary": "Add an agent-scoped auth debugging preflight.",
+                        "confidence": 0.84,
+                    },
+                },
+            }
+        )
+        propose_schema = {
+            tool["name"]: tool for tool in server.list_tools()
+        }["self_lesson.propose"]["inputSchema"]
+        stored_scope = store.get_self_lesson(lesson_id).scope
+
+    scope_values = propose_schema["properties"]["scope"]["enum"]
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        accepted.get("result", {}).get("proposal", {}).get("lesson", {}).get("status")
+        == MemoryStatus.CANDIDATE.value
+        and accepted.get("result", {}).get("proposal", {}).get("lesson", {}).get("scope")
+        == ScopeLevel.PROJECT_SPECIFIC.value
+        and stored_scope == ScopeLevel.PROJECT_SPECIFIC
+        and context_response.get("relevant_self_lessons") == []
+        and missing_tag.get("error", {}).get("code") == -32602
+        and "matching provenance tags" in missing_tag.get("error", {}).get("message", "")
+        and "input_value" not in missing_tag.get("error", {}).get("message", "")
+        and "task_missing_agent_tag" not in missing_tag.get("error", {}).get("message", "")
+        and ScopeLevel.NEVER_STORE.value not in scope_values
+        and ScopeLevel.EPHEMERAL.value not in scope_values
+        and "GATEWAY-SELF-LESSON-SCOPE-PROPOSE-001" in docs_text
+        and "GATEWAY-SELF-LESSON-SCOPE-PROPOSE-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-SELF-LESSON-SCOPE-PROPOSE-001/provenance_tags",
+        suite="GATEWAY-SELF-LESSON-SCOPE-PROPOSE-001",
+        passed=passed,
+        summary="Gateway scoped self-lesson proposals require matching provenance and remain candidate-only.",
+        metrics={
+            "candidate_context_count": len(context_response.get("relevant_self_lessons", [])),
+            "scope_option_count": len(scope_values),
+        },
+        evidence={
+            "accepted_lesson_id": lesson_id,
+            "accepted_scope": accepted.get("result", {})
+            .get("proposal", {})
+            .get("lesson", {})
+            .get("scope"),
+            "missing_tag_error": missing_tag.get("error", {}).get("message"),
         },
     )
 

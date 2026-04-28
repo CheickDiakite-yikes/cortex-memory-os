@@ -408,7 +408,7 @@ class CortexMCPServer:
                     risk_level=ActionRisk(arguments.get("risk_level", ActionRisk.LOW.value)),
                 )
             except ValueError as error:
-                raise JsonRpcError(-32602, str(error)) from error
+                raise JsonRpcError(-32602, _safe_self_lesson_error(error)) from error
             if hasattr(self.store, "add_self_lesson"):
                 self.store.add_self_lesson(proposal.lesson)
             return {"proposal": serialize_self_lesson_proposal(proposal)}
@@ -1059,6 +1059,22 @@ def _self_lesson_available_actions(lesson: SelfLesson) -> list[str]:
     if lesson.status == MemoryStatus.ACTIVE:
         return ["rollback_if_failed_or_requested"]
     return []
+
+
+def _safe_self_lesson_error(error: ValueError) -> str:
+    text = str(error)
+    safe_reasons = (
+        "self-lessons cannot change permissions, boundaries, or autonomy",
+        "self-lessons cannot carry prompt-injection instructions",
+        "scoped self-lessons require matching provenance tags",
+        "self-lessons cannot use ephemeral or never-store scope",
+        "self-lessons cannot be high or critical risk",
+        "active self-lessons require confidence >= 0.75",
+    )
+    for reason in safe_reasons:
+        if reason in text:
+            return reason
+    return text.splitlines()[0]
 
 
 def serve_stdio(server: CortexMCPServer) -> int:
