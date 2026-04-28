@@ -353,6 +353,15 @@ class RetrievalScoreSummary(StrictModel):
     reason_tags: list[str] = Field(default_factory=list)
 
 
+class AuditMetadata(StrictModel):
+    audit_event_id: str = Field(min_length=1)
+    action: str = Field(min_length=1)
+    target_ref: str = Field(min_length=1)
+    result: str = Field(min_length=1)
+    policy_refs: list[str] = Field(default_factory=list)
+    human_visible: bool = True
+
+
 class ContextPack(StrictModel):
     context_pack_id: str = Field(min_length=1)
     goal: str = Field(min_length=1)
@@ -362,6 +371,7 @@ class ContextPack(StrictModel):
     relevant_memories: list[RelevantMemory] = Field(default_factory=list)
     relevant_self_lessons: list[RelevantSelfLesson] = Field(default_factory=list)
     retrieval_scores: list[RetrievalScoreSummary] = Field(default_factory=list)
+    audit_metadata: list[AuditMetadata] = Field(default_factory=list)
     blocked_memory_ids: list[str] = Field(default_factory=list)
     untrusted_evidence_refs: list[str] = Field(default_factory=list)
     context_policy_refs: list[str] = Field(default_factory=list)

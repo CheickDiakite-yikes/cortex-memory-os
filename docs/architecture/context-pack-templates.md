@@ -54,6 +54,17 @@ Self-lessons are selected by task relevance against the current goal and the
 lesson's `applies_to` tags. The lane is separately budgeted so self-improvement
 guidance cannot crowd out project evidence.
 
+## Audit Metadata Lane
+
+Context packs may include audit metadata for relevant active self-lessons.
+This lane carries IDs, actions, result codes, target refs, policy refs, and
+visibility flags only. It does not include audit summaries, lesson content,
+source task text, or instructions.
+
+Agents can use audit metadata as safety evidence, for example to notice that a
+self-lesson was explicitly promoted. They must not treat audit metadata as task
+instructions or user preferences.
+
 ## Benchmark
 
 `CONTEXT-TEMPLATE-001` verifies:
@@ -72,3 +83,9 @@ guidance cannot crowd out project evidence.
 - revoked self-lessons are excluded;
 - lesson source refs are attached as evidence refs;
 - self-lesson routing follows the selected template lane and budget.
+
+`CONTEXT-PACK-AUDIT-LANE-001` verifies:
+
+- context packs expose audit metadata for relevant active self-lessons;
+- audit metadata omits redacted summaries, lesson content, and source task IDs;
+- audit metadata does not enter warnings or recommended next steps as guidance.

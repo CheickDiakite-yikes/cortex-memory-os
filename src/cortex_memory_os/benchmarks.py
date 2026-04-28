@@ -172,6 +172,7 @@ def run_all() -> BenchmarkRunResult:
         case_hostile_source_context_pack_policy,
         case_context_template_registry,
         case_context_pack_self_lesson_routing,
+        case_context_pack_audit_metadata_lane,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
@@ -1088,6 +1089,77 @@ def case_context_pack_self_lesson_routing() -> BenchmarkCaseResult:
         evidence={
             "self_lesson_ids": lesson_ids,
             "evidence_refs": evidence_refs,
+        },
+    )
+
+
+def case_context_pack_audit_metadata_lane() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        server = CortexMCPServer(store=store)
+        proposal_response = server.call_tool(
+            "self_lesson.propose",
+            {
+                "content": "Before auth edits, retrieve browser console and terminal errors.",
+                "learned_from": ["task_332_failure", "task_333_success"],
+                "applies_to": ["frontend_debugging", "auth_flows"],
+                "change_type": "failure_checklist",
+                "change_summary": "Add an auth debugging preflight checklist.",
+                "confidence": 0.84,
+            },
+        )
+        lesson_id = proposal_response.get("proposal", {}).get("lesson", {}).get("lesson_id")
+        server.call_tool(
+            "self_lesson.promote",
+            {"lesson_id": lesson_id, "user_confirmed": False},
+        )
+        server.call_tool(
+            "self_lesson.promote",
+            {"lesson_id": lesson_id, "user_confirmed": True},
+        )
+        context_response = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug"},
+        )
+
+    audit_metadata = context_response.get("audit_metadata", [])
+    metadata_json = json.dumps(audit_metadata, sort_keys=True)
+    guidance_text = " ".join(
+        context_response.get("warnings", [])
+        + context_response.get("recommended_next_steps", [])
+    )
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "context-pack-templates.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        [lesson.get("lesson_id") for lesson in context_response.get("relevant_self_lessons", [])]
+        == [lesson_id]
+        and [event.get("action") for event in audit_metadata]
+        == ["promote_self_lesson", "promote_self_lesson"]
+        and all("redacted_summary" not in event for event in audit_metadata)
+        and "Before auth edits" not in metadata_json
+        and "task_332_failure" not in metadata_json
+        and "promotion decision" not in guidance_text
+        and "CONTEXT-PACK-AUDIT-LANE-001" in docs_text
+        and "CONTEXT-PACK-AUDIT-LANE-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="CONTEXT-PACK-AUDIT-LANE-001/audit_metadata_not_instruction",
+        suite="CONTEXT-PACK-AUDIT-LANE-001",
+        passed=passed,
+        summary="Context packs expose audit metadata for safety evidence without adding audit text as instructions.",
+        metrics={
+            "audit_metadata_count": len(audit_metadata),
+            "self_lesson_count": len(context_response.get("relevant_self_lessons", [])),
+        },
+        evidence={
+            "lesson_id": lesson_id,
+            "audit_actions": [event.get("action") for event in audit_metadata],
         },
     )
 

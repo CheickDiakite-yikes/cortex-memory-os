@@ -393,6 +393,80 @@ def test_context_pack_uses_active_self_lessons_from_sqlite_store(tmp_path):
     ]
 
 
+def test_context_pack_includes_self_lesson_audit_metadata_without_instruction_text(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    server = CortexMCPServer(store=store)
+    proposal_response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 62,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.propose",
+                "arguments": {
+                    "content": "Before auth edits, retrieve browser console and terminal errors.",
+                    "learned_from": ["task_332_failure", "task_333_success"],
+                    "applies_to": ["frontend_debugging", "auth_flows"],
+                    "change_type": "failure_checklist",
+                    "change_summary": "Add an auth debugging preflight checklist.",
+                    "confidence": 0.84,
+                },
+            },
+        }
+    )
+    lesson_id = proposal_response["result"]["proposal"]["lesson"]["lesson_id"]
+    server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 63,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.promote",
+                "arguments": {"lesson_id": lesson_id, "user_confirmed": False},
+            },
+        }
+    )
+    server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 64,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.promote",
+                "arguments": {"lesson_id": lesson_id, "user_confirmed": True},
+            },
+        }
+    )
+
+    response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 65,
+            "method": "tools/call",
+            "params": {
+                "name": "memory.get_context_pack",
+                "arguments": {"goal": "continue fixing onboarding auth bug"},
+            },
+        }
+    )
+
+    pack = response["result"]
+    audit_metadata = pack["audit_metadata"]
+    rendered_metadata = str(audit_metadata)
+    guidance_text = " ".join(pack["warnings"] + pack["recommended_next_steps"])
+    assert [lesson["lesson_id"] for lesson in pack["relevant_self_lessons"]] == [
+        lesson_id
+    ]
+    assert [event["action"] for event in audit_metadata] == [
+        "promote_self_lesson",
+        "promote_self_lesson",
+    ]
+    assert all("redacted_summary" not in event for event in audit_metadata)
+    assert "Before auth edits" not in rendered_metadata
+    assert "task_332_failure" not in rendered_metadata
+    assert "promotion decision" not in guidance_text
+
+
 def test_self_lesson_list_tool_filters_status_without_context_activation(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))

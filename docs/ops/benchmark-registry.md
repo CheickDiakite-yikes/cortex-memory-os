@@ -1,6 +1,6 @@
 # Benchmark Registry
 
-Last updated: 2026-04-27
+Last updated: 2026-04-28
 
 Benchmarks should become runnable as soon as implementation begins. Until then, this registry defines what must be measurable.
 
@@ -69,6 +69,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-27 | Gateway self-lesson correction | `uv run cortex-bench` | 51/51 passed | `benchmarks/runs/bench_20260428T000434Z.json` | Next benchmark: gateway self-lesson deletion/revocation. |
 | 2026-04-27 | Gateway self-lesson deletion | `uv run cortex-bench` | 52/52 passed | `benchmarks/runs/bench_20260428T000737Z.json` | Next benchmark: self-lesson audit listing. |
 | 2026-04-27 | Self-lesson audit listing | `uv run cortex-bench` | 53/53 passed | `benchmarks/runs/bench_20260428T000935Z.json` | Next benchmark: context-pack audit metadata lane. |
+| 2026-04-28 | Context-pack audit metadata lane | `uv run cortex-bench` | 54/54 passed | `benchmarks/runs/bench_20260428T001321Z.json` | Next benchmark: scoped self-lesson recall. |
 
 ## First Runnable Harness Requirements
 

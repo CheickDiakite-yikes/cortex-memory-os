@@ -2,6 +2,7 @@
 
 from cortex_memory_os.contracts import (
     ActionRisk,
+    AuditMetadata,
     AuditEvent,
     ConsentState,
     ContextPack,
@@ -174,6 +175,7 @@ from cortex_memory_os.skill_policy import (
 
 __all__ = [
     "ActionRisk",
+    "AuditMetadata",
     "AuditEvent",
     "ConsentState",
     "ContextPack",

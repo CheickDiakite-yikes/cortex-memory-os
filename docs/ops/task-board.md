@@ -1,12 +1,12 @@
 # Cortex Memory OS Task Board
 
-Last updated: 2026-04-27
+Last updated: 2026-04-28
 
 ## Active
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| CONTEXT-PACK-AUDIT-LANE-001 | Add context-pack audit metadata lane without treating audit text as instructions | Codex | Context compiler contract and benchmark case | Audit metadata may inform safety, not agent instructions. |
+| SELF-LESSON-RECALL-SCOPE-001 | Add scoped self-lesson recall boundaries | Codex | Context-pack/store contract and benchmark case | Project, agent, and session self-lessons must not cross retrieval boundaries. |
 
 ## Next
 
@@ -80,6 +80,7 @@ Last updated: 2026-04-27
 | GATEWAY-SELF-LESSON-CORRECT-001 | Correct self-lessons through gateway with candidate replacement and audit receipt | Codex | `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 139 passed, `uv run cortex-bench` -> 51/51 passed | Correction supersedes the old lesson and keeps replacement guidance candidate-only. |
 | GATEWAY-SELF-LESSON-DELETE-001 | Delete or revoke self-lessons through gateway with audit receipt | Codex | `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 141 passed, `uv run cortex-bench` -> 52/52 passed | Deletion requires confirmation and excludes deleted lessons from context packs. |
 | SELF-LESSON-AUDIT-LIST-001 | List self-lesson audit receipts through gateway without exposing lesson content | Codex | `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 142 passed, `uv run cortex-bench` -> 53/53 passed | Audit listing preserves redacted receipts without copying lesson text. |
+| CONTEXT-PACK-AUDIT-LANE-001 | Add context-pack audit metadata lane without treating audit text as instructions | Codex | `uv run pytest` -> 143 passed, `uv run cortex-bench` -> 54/54 passed, `uv run cortex-mcp --smoke` | Audit metadata enters context packs without audit summaries or instruction text. |
 
 ## Dropped
 

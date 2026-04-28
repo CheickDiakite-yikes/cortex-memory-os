@@ -13,6 +13,7 @@ from typing import Any
 from cortex_memory_os.contracts import (
     ActionRisk,
     AuditEvent,
+    AuditMetadata,
     ContextPack,
     MemoryRecord,
     MemoryStatus,
@@ -759,6 +760,7 @@ class CortexMCPServer:
                 )
                 for ranked in trusted_ranked
             ],
+            audit_metadata=_audit_metadata_for_self_lessons(self.store, self_lessons),
             blocked_memory_ids=blocked_memory_ids,
             untrusted_evidence_refs=untrusted_evidence_refs,
             context_policy_refs=[
@@ -958,6 +960,28 @@ def _rank_store(
     from cortex_memory_os.retrieval import rank_memories
 
     return rank_memories(memories, query, limit=limit, scope=scope)
+
+
+def _audit_metadata_for_self_lessons(
+    store: Any,
+    lessons: tuple[SelfLesson, ...],
+) -> list[AuditMetadata]:
+    if not hasattr(store, "audit_for_target"):
+        return []
+    metadata: list[AuditMetadata] = []
+    for lesson in lessons:
+        for event in store.audit_for_target(lesson.lesson_id):
+            metadata.append(
+                AuditMetadata(
+                    audit_event_id=event.audit_event_id,
+                    action=event.action,
+                    target_ref=event.target_ref,
+                    result=event.result,
+                    policy_refs=list(event.policy_refs),
+                    human_visible=event.human_visible,
+                )
+            )
+    return metadata
 
 
 def _available_self_lessons(
