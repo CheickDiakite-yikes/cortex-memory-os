@@ -176,6 +176,7 @@ def run_all() -> BenchmarkRunResult:
         case_scoped_self_lesson_recall_boundaries,
         case_gateway_scoped_self_lesson_proposal_checks,
         case_self_lesson_scope_inspection_metadata,
+        case_self_lesson_scope_preserving_correction,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
@@ -1430,6 +1431,85 @@ def case_self_lesson_scope_inspection_metadata() -> BenchmarkCaseResult:
         evidence={
             "listed_status": eligibility.get("status"),
             "required_ref_prefix": eligibility.get("required_ref_prefix"),
+        },
+    )
+
+
+def case_self_lesson_scope_preserving_correction() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+        scoped = active.model_copy(
+            update={
+                "lesson_id": "lesson_project_alpha",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_alpha"],
+            }
+        )
+        store.add_self_lesson(scoped)
+        server = CortexMCPServer(store=store)
+        response = server.call_tool(
+            "self_lesson.correct",
+            {
+                "lesson_id": scoped.lesson_id,
+                "corrected_content": (
+                    "Before auth edits in this project, inspect terminal errors and route files."
+                ),
+                "applies_to": ["frontend_debugging", "auth_flows"],
+                "change_type": SelfLessonChangeType.FAILURE_CHECKLIST.value,
+                "change_summary": (
+                    "Narrow the project auth debugging preflight without changing scope."
+                ),
+                "confidence": 0.86,
+            },
+        )
+        context_response = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
+        )
+        stored_old = store.get_self_lesson(scoped.lesson_id)
+        replacement_id = response.get("replacement_lesson", {}).get("lesson_id")
+        stored_replacement = store.get_self_lesson(replacement_id or "")
+
+    replacement = response.get("replacement_lesson", {})
+    learned_from = replacement.get("learned_from", [])
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        response.get("decision", {}).get("allowed") is True
+        and response.get("superseded_lesson", {}).get("status") == MemoryStatus.SUPERSEDED.value
+        and replacement.get("status") == MemoryStatus.CANDIDATE.value
+        and replacement.get("scope") == ScopeLevel.PROJECT_SPECIFIC.value
+        and "project:alpha" in learned_from
+        and f"corrected_from:{scoped.lesson_id}" in learned_from
+        and stored_old is not None
+        and stored_old.status == MemoryStatus.SUPERSEDED
+        and stored_replacement is not None
+        and stored_replacement.status == MemoryStatus.CANDIDATE
+        and stored_replacement.scope == ScopeLevel.PROJECT_SPECIFIC
+        and context_response.get("relevant_self_lessons") == []
+        and "SELF-LESSON-SCOPE-CORRECTION-001" in docs_text
+        and "SELF-LESSON-SCOPE-CORRECTION-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SELF-LESSON-SCOPE-CORRECTION-001/candidate_replacement_scope",
+        suite="SELF-LESSON-SCOPE-CORRECTION-001",
+        passed=passed,
+        summary="Self-lesson correction preserves scoped provenance while keeping replacements candidate-only.",
+        metrics={
+            "replacement_context_count": len(context_response.get("relevant_self_lessons", [])),
+            "learned_from_count": len(learned_from),
+        },
+        evidence={
+            "replacement_scope": replacement.get("scope"),
+            "old_status": response.get("superseded_lesson", {}).get("status"),
+            "replacement_status": replacement.get("status"),
         },
     )
 

@@ -187,3 +187,12 @@ one project, agent, or session from silently shaping another.
 - active scoped lessons are marked as requiring a scope match instead of global
   context eligibility;
 - matching context-pack requests can still retrieve the scoped active lesson.
+
+`SELF-LESSON-SCOPE-CORRECTION-001` verifies:
+
+- correcting a scoped self-lesson preserves the original scope on the candidate
+  replacement;
+- scoped provenance tags remain attached to the replacement alongside the
+  `corrected_from` source reference;
+- superseded old lessons and candidate replacements both stay out of context
+  packs until the replacement is explicitly promoted.

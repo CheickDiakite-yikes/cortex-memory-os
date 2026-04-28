@@ -2,7 +2,7 @@ from datetime import UTC, date, datetime
 
 import pytest
 
-from cortex_memory_os.contracts import ActionRisk, MemoryStatus
+from cortex_memory_os.contracts import ActionRisk, MemoryStatus, ScopeLevel
 from cortex_memory_os.self_lessons import (
     SELF_LESSON_POLICY_REF,
     SelfLessonChangeType,
@@ -138,6 +138,34 @@ def test_self_lesson_correction_creates_candidate_replacement():
     assert f"corrected_to:{correction.replacement_lesson.lesson_id}" in (
         correction.old_lesson.rollback_if
     )
+
+
+def test_self_lesson_correction_preserves_scope_and_provenance_boundaries():
+    active = promote_self_lesson(
+        _proposal(
+            learned_from=["project:alpha", "task_project_alpha"],
+            scope=ScopeLevel.PROJECT_SPECIFIC,
+        ),
+        user_confirmed=True,
+        today=date(2026, 4, 27),
+    )
+
+    correction = correct_self_lesson(
+        active,
+        corrected_content=(
+            "Before auth edits in this project, retrieve terminal logs and route errors."
+        ),
+        applies_to=["frontend_debugging", "auth_flows"],
+        change_summary="Narrow the project auth debugging checklist without changing scope.",
+        confidence=0.86,
+        now=datetime(2026, 4, 27, 23, 45, tzinfo=UTC),
+    )
+
+    assert correction.replacement_lesson.status == MemoryStatus.CANDIDATE
+    assert correction.replacement_lesson.scope == ScopeLevel.PROJECT_SPECIFIC
+    assert "project:alpha" in correction.replacement_lesson.learned_from
+    assert f"corrected_from:{active.lesson_id}" in correction.replacement_lesson.learned_from
+    assert correction.old_lesson.status == MemoryStatus.SUPERSEDED
 
 
 def test_self_lesson_correction_rejects_hostile_or_risky_replacements():

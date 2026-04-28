@@ -747,6 +747,69 @@ def test_self_lesson_correct_tool_creates_candidate_replacement_with_audit(tmp_p
     assert context_response["result"]["relevant_self_lessons"] == []
 
 
+def test_self_lesson_correct_tool_preserves_scoped_boundaries(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    scoped = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_alpha",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_alpha"],
+        }
+    )
+    store.add_self_lesson(scoped)
+    server = CortexMCPServer(store=store)
+
+    response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 531,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.correct",
+                "arguments": {
+                    "lesson_id": scoped.lesson_id,
+                    "corrected_content": (
+                        "Before auth edits in this project, inspect terminal errors and route files."
+                    ),
+                    "applies_to": ["frontend_debugging", "auth_flows"],
+                    "change_type": "failure_checklist",
+                    "change_summary": (
+                        "Narrow the project auth debugging preflight without changing scope."
+                    ),
+                    "confidence": 0.86,
+                },
+            },
+        }
+    )
+    context_response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 532,
+            "method": "tools/call",
+            "params": {
+                "name": "memory.get_context_pack",
+                "arguments": {
+                    "goal": "continue fixing onboarding auth bug",
+                    "active_project": "alpha",
+                },
+            },
+        }
+    )
+
+    result = response["result"]
+    replacement_id = result["replacement_lesson"]["lesson_id"]
+    stored_replacement = store.get_self_lesson(replacement_id)
+
+    assert result["replacement_lesson"]["status"] == "candidate"
+    assert result["replacement_lesson"]["scope"] == ScopeLevel.PROJECT_SPECIFIC.value
+    assert "project:alpha" in result["replacement_lesson"]["learned_from"]
+    assert f"corrected_from:{scoped.lesson_id}" in result["replacement_lesson"]["learned_from"]
+    assert store.get_self_lesson(scoped.lesson_id).status == MemoryStatus.SUPERSEDED
+    assert stored_replacement.scope == ScopeLevel.PROJECT_SPECIFIC
+    assert context_response["result"]["relevant_self_lessons"] == []
+
+
 def test_self_lesson_promote_tool_requires_confirmation_and_persists_audit(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     server = CortexMCPServer(store=store)
