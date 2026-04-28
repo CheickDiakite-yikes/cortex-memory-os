@@ -128,3 +128,11 @@ self-lessons only, so proposal storage cannot silently become behavior change.
 - explanations include redacted audit receipts for prior decisions;
 - explanation does not copy lesson content into audit receipts;
 - explaining a candidate lesson does not activate it or add it to context packs.
+
+`GATEWAY-SELF-LESSON-CORRECT-001` verifies:
+
+- gateway correction supersedes the old self-lesson;
+- the corrected guidance is stored as a candidate replacement only;
+- the replacement records the old lesson as provenance;
+- correction creates a redacted audit receipt without copying lesson content;
+- neither the superseded old lesson nor the candidate replacement enters context packs.

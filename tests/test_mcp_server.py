@@ -19,6 +19,7 @@ def test_lists_memory_tools():
         "self_lesson.propose",
         "self_lesson.list",
         "self_lesson.explain",
+        "self_lesson.correct",
         "self_lesson.promote",
         "self_lesson.rollback",
         "memory.explain",
@@ -529,6 +530,66 @@ def test_self_lesson_explain_tool_returns_sources_and_audits_without_activation(
         "promote_self_lesson"
     ]
     assert "Before auth edits" not in explanation["audit_events"][0]["redacted_summary"]
+    assert context_response["result"]["relevant_self_lessons"] == []
+
+
+def test_self_lesson_correct_tool_creates_candidate_replacement_with_audit(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    store.add_self_lesson(active)
+    server = CortexMCPServer(store=store)
+
+    response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 53,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.correct",
+                "arguments": {
+                    "lesson_id": active.lesson_id,
+                    "corrected_content": (
+                        "Before auth edits, inspect recent terminal errors and route files."
+                    ),
+                    "applies_to": ["frontend_debugging", "auth_flows"],
+                    "change_type": "failure_checklist",
+                    "change_summary": (
+                        "Narrow the auth debugging preflight to terminal errors and routes."
+                    ),
+                    "confidence": 0.86,
+                },
+            },
+        }
+    )
+    context_response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 54,
+            "method": "tools/call",
+            "params": {
+                "name": "memory.get_context_pack",
+                "arguments": {"goal": "continue fixing onboarding auth bug"},
+            },
+        }
+    )
+
+    result = response["result"]
+    replacement_id = result["replacement_lesson"]["lesson_id"]
+    stored_old = store.get_self_lesson(active.lesson_id)
+    stored_replacement = store.get_self_lesson(replacement_id)
+    audit_events = store.audit_for_target(active.lesson_id)
+
+    assert result["decision"]["allowed"] is True
+    assert result["decision"]["target_status"] == "candidate"
+    assert result["superseded_lesson"]["status"] == "superseded"
+    assert result["replacement_lesson"]["status"] == "candidate"
+    assert f"corrected_from:{active.lesson_id}" in result["replacement_lesson"]["learned_from"]
+    assert stored_old.status == MemoryStatus.SUPERSEDED
+    assert stored_replacement.status == MemoryStatus.CANDIDATE
+    assert result["audit_event"]["action"] == "correct_self_lesson"
+    assert result["audit_event"]["target_ref"] == active.lesson_id
+    assert "Before auth edits" not in result["audit_event"]["redacted_summary"]
+    assert [event.action for event in audit_events] == ["correct_self_lesson"]
     assert context_response["result"]["relevant_self_lessons"] == []
 
 

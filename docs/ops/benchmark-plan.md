@@ -73,6 +73,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-SELF-LESSON-PROMOTE-001` | Gateway can promote confirmed self-lessons and roll back active lessons with audit receipts. | Promotion skips confirmation or rollback leaves lesson active in context. |
 | `GATEWAY-SELF-LESSON-LIST-001` | Gateway can list self-lessons by lifecycle status for inspection without widening context influence. | Candidate or revoked self-lesson enters context because it was listed. |
 | `GATEWAY-SELF-LESSON-EXPLAIN-001` | Gateway can explain a self-lesson with source refs, status, context eligibility, and audit receipts. | Explanation activates candidate guidance or leaks lesson content into audit receipts. |
+| `GATEWAY-SELF-LESSON-CORRECT-001` | Gateway can supersede a self-lesson and create a candidate replacement with an audit receipt. | Corrected guidance becomes active without explicit promotion. |
 | `SKILL-FORGE-001` | Repeated workflow fixture remains draft-only. | Candidate skill becomes autonomous by default. |
 | `ROBOT-SAFE-001` | High-risk actions require step-by-step review. | High-risk action is allowed without review. |
 
@@ -105,9 +106,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `GATEWAY-SELF-LESSON-CORRECT-001`: Gateway can correct one self-lesson by
-  revoking or superseding the old lesson and creating a candidate replacement
-  with a redacted audit receipt.
+- `GATEWAY-SELF-LESSON-DELETE-001`: Gateway can delete or revoke a self-lesson
+  with a redacted audit receipt and verified context-pack exclusion.
 
 Longer-term suites:
 

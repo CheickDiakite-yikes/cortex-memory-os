@@ -52,6 +52,13 @@ class SelfLessonDecision:
     policy_refs: tuple[str, ...] = (SELF_LESSON_POLICY_REF,)
 
 
+@dataclass(frozen=True)
+class SelfLessonCorrection:
+    old_lesson: SelfLesson
+    replacement_lesson: SelfLesson
+    decision: SelfLessonDecision
+
+
 FORBIDDEN_CHANGE_PHRASES = (
     "grant permission",
     "expand permission",
@@ -216,6 +223,87 @@ def promote_stored_self_lesson(
             "status": MemoryStatus.ACTIVE,
             "last_validated": today or date.today(),
         }
+    )
+
+
+def evaluate_self_lesson_correction(
+    lesson: SelfLesson,
+    *,
+    corrected_content: str,
+    change_summary: str,
+    confidence: float,
+    risk_level: ActionRisk | None = None,
+) -> SelfLessonDecision:
+    if lesson.status in {MemoryStatus.DELETED, MemoryStatus.QUARANTINED}:
+        return _deny(MemoryStatus.CANDIDATE, "terminal_lesson_cannot_correct")
+    if contains_prompt_injection_risk(corrected_content) or contains_prompt_injection_risk(
+        change_summary
+    ):
+        return _deny(MemoryStatus.QUARANTINED, "prompt_injection_risk")
+    if contains_forbidden_self_lesson_change(
+        corrected_content
+    ) or contains_forbidden_self_lesson_change(change_summary):
+        return _deny(MemoryStatus.CANDIDATE, "forbidden_change_target")
+    if (risk_level or lesson.risk_level) in {ActionRisk.HIGH, ActionRisk.CRITICAL}:
+        return _deny(MemoryStatus.CANDIDATE, "risk_level_too_high")
+    if confidence < 0.75:
+        return _deny(MemoryStatus.CANDIDATE, "confidence_too_low")
+    return SelfLessonDecision(
+        allowed=True,
+        target_status=MemoryStatus.CANDIDATE,
+        required_behavior="candidate_replacement_requires_confirmation",
+        reason="correction_allowed",
+    )
+
+
+def correct_self_lesson(
+    lesson: SelfLesson,
+    *,
+    corrected_content: str,
+    applies_to: list[str],
+    change_summary: str,
+    confidence: float,
+    risk_level: ActionRisk | None = None,
+    now: datetime | None = None,
+) -> SelfLessonCorrection:
+    decision = evaluate_self_lesson_correction(
+        lesson,
+        corrected_content=corrected_content,
+        change_summary=change_summary,
+        confidence=confidence,
+        risk_level=risk_level,
+    )
+    if not decision.allowed:
+        raise ValueError(decision.reason)
+
+    corrected_at = now or datetime.now(UTC)
+    replacement = SelfLesson(
+        lesson_id=_lesson_id(applies_to, corrected_at),
+        type=MemoryType.SELF_LESSON,
+        content=corrected_content,
+        learned_from=[*lesson.learned_from, f"corrected_from:{lesson.lesson_id}"],
+        applies_to=applies_to,
+        confidence=confidence,
+        status=MemoryStatus.CANDIDATE,
+        risk_level=risk_level or lesson.risk_level,
+        last_validated=None,
+        rollback_if=[
+            "user rejects lesson",
+            "causes irrelevant context retrieval",
+            "changes behavior outside declared applies_to scope",
+            f"replaces:{lesson.lesson_id}",
+        ],
+    )
+    superseded = lesson.model_copy(
+        update={
+            "status": MemoryStatus.SUPERSEDED,
+            "rollback_if": [*lesson.rollback_if, f"corrected_to:{replacement.lesson_id}"],
+        }
+    )
+    return SelfLessonCorrection(
+        old_lesson=superseded,
+        replacement_lesson=replacement,
+        decision=decision,
     )
 
 

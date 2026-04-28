@@ -38,6 +38,8 @@ from cortex_memory_os.retrieval import RankedMemory, RetrievalScope
 from cortex_memory_os.self_lesson_audit import record_self_lesson_decision_audit
 from cortex_memory_os.self_lessons import (
     SelfLessonChangeType,
+    correct_self_lesson,
+    evaluate_self_lesson_correction,
     evaluate_self_lesson_rollback,
     evaluate_stored_self_lesson_promotion,
     promote_stored_self_lesson,
@@ -177,6 +179,41 @@ class CortexMCPServer:
                     "type": "object",
                     "properties": {"lesson_id": {"type": "string"}},
                     "required": ["lesson_id"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "self_lesson.correct",
+                "description": "Supersede a self-lesson and create a candidate replacement with a redacted audit receipt.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "lesson_id": {"type": "string"},
+                        "corrected_content": {"type": "string"},
+                        "applies_to": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "minItems": 1,
+                            "maxItems": 20,
+                        },
+                        "change_type": {
+                            "type": "string",
+                            "enum": [item.value for item in SelfLessonChangeType],
+                        },
+                        "change_summary": {"type": "string"},
+                        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                        "risk_level": {
+                            "type": "string",
+                            "enum": [ActionRisk.LOW.value, ActionRisk.MEDIUM.value],
+                        },
+                    },
+                    "required": [
+                        "lesson_id",
+                        "corrected_content",
+                        "applies_to",
+                        "change_summary",
+                        "confidence",
+                    ],
                     "additionalProperties": False,
                 },
             },
@@ -366,6 +403,65 @@ class CortexMCPServer:
                     lesson,
                     audit_events,
                 )
+            }
+        if name == "self_lesson.correct":
+            store = self._require_self_lesson_store()
+            lesson_id = _require_string(arguments, "lesson_id")
+            lesson = store.get_self_lesson(lesson_id)
+            if lesson is None:
+                raise JsonRpcError(-32602, f"unknown lesson_id: {lesson_id}")
+            try:
+                change_type = SelfLessonChangeType(
+                    arguments.get(
+                        "change_type",
+                        SelfLessonChangeType.FAILURE_CHECKLIST.value,
+                    )
+                )
+                risk_level = ActionRisk(arguments.get("risk_level", lesson.risk_level.value))
+            except ValueError as error:
+                raise JsonRpcError(-32602, str(error)) from error
+            corrected_content = _require_string(arguments, "corrected_content")
+            applies_to = _require_string_list(arguments, "applies_to")
+            change_summary = _require_string(arguments, "change_summary")
+            confidence = _require_number(arguments, "confidence")
+            decision = evaluate_self_lesson_correction(
+                lesson,
+                corrected_content=corrected_content,
+                change_summary=change_summary,
+                confidence=confidence,
+                risk_level=risk_level,
+            )
+            audit_event = record_self_lesson_decision_audit(
+                store,
+                lesson_id=lesson.lesson_id,
+                action="correct_self_lesson",
+                target_status=decision.target_status,
+                allowed=decision.allowed,
+                reason=decision.reason,
+            )
+            if not decision.allowed:
+                return {
+                    "lesson": serialize_self_lesson(lesson),
+                    "change_type": change_type.value,
+                    "decision": serialize_self_lesson_decision(decision),
+                    "audit_event": serialize_audit_event(audit_event),
+                }
+            correction = correct_self_lesson(
+                lesson,
+                corrected_content=corrected_content,
+                applies_to=applies_to,
+                change_summary=change_summary,
+                confidence=confidence,
+                risk_level=risk_level,
+            )
+            store.add_self_lesson(correction.old_lesson)
+            store.add_self_lesson(correction.replacement_lesson)
+            return {
+                "superseded_lesson": serialize_self_lesson(correction.old_lesson),
+                "replacement_lesson": serialize_self_lesson(correction.replacement_lesson),
+                "change_type": change_type.value,
+                "decision": serialize_self_lesson_decision(correction.decision),
+                "audit_event": serialize_audit_event(audit_event),
             }
         if name == "self_lesson.promote":
             store = self._require_self_lesson_store()

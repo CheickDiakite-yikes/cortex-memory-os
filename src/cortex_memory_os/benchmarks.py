@@ -200,6 +200,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_self_lesson_promotion_rollback,
         case_gateway_self_lesson_list_tool,
         case_gateway_self_lesson_explain_tool,
+        case_gateway_self_lesson_correction_tool,
         case_repeated_workflow_stays_draft_skill,
         case_high_risk_action_requires_review,
         case_benchmark_plan_quality_gate,
@@ -2706,6 +2707,86 @@ def case_gateway_self_lesson_explain_tool() -> BenchmarkCaseResult:
             "lesson_id": lesson_id,
             "status": explanation.get("status"),
             "audit_actions": [event.get("action") for event in audit_events],
+        },
+    )
+
+
+def case_gateway_self_lesson_correction_tool() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    active = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        store.add_self_lesson(active)
+        server = CortexMCPServer(store=store)
+        correction_response = server.call_tool(
+            "self_lesson.correct",
+            {
+                "lesson_id": active.lesson_id,
+                "corrected_content": (
+                    "Before auth edits, inspect recent terminal errors and route files."
+                ),
+                "applies_to": ["frontend_debugging", "auth_flows"],
+                "change_type": "failure_checklist",
+                "change_summary": (
+                    "Narrow the auth debugging preflight to terminal errors and routes."
+                ),
+                "confidence": 0.86,
+            },
+        )
+        context_response = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug"},
+        )
+        replacement_id = correction_response.get("replacement_lesson", {}).get("lesson_id")
+        stored_old = store.get_self_lesson(active.lesson_id)
+        stored_replacement = store.get_self_lesson(replacement_id) if replacement_id else None
+        audits = store.audit_for_target(active.lesson_id)
+
+    context_lessons = context_response.get("relevant_self_lessons", [])
+    audit_summaries = " ".join(event.redacted_summary for event in audits)
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        correction_response.get("decision", {}).get("allowed") is True
+        and correction_response.get("decision", {}).get("target_status")
+        == MemoryStatus.CANDIDATE.value
+        and correction_response.get("superseded_lesson", {}).get("status")
+        == MemoryStatus.SUPERSEDED.value
+        and correction_response.get("replacement_lesson", {}).get("status")
+        == MemoryStatus.CANDIDATE.value
+        and stored_old is not None
+        and stored_old.status == MemoryStatus.SUPERSEDED
+        and stored_replacement is not None
+        and stored_replacement.status == MemoryStatus.CANDIDATE
+        and f"corrected_from:{active.lesson_id}" in stored_replacement.learned_from
+        and [event.action for event in audits] == ["correct_self_lesson"]
+        and active.content not in audit_summaries
+        and context_lessons == []
+        and "GATEWAY-SELF-LESSON-CORRECT-001" in docs_text
+        and "GATEWAY-SELF-LESSON-CORRECT-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-SELF-LESSON-CORRECT-001/candidate_replacement_audit",
+        suite="GATEWAY-SELF-LESSON-CORRECT-001",
+        passed=passed,
+        summary="Gateway correction supersedes the old self-lesson, creates a candidate replacement, and keeps context clean.",
+        metrics={
+            "audit_count": len(audits),
+            "context_lesson_count": len(context_lessons),
+        },
+        evidence={
+            "old_lesson_id": active.lesson_id,
+            "replacement_lesson_id": replacement_id,
+            "audit_actions": [event.action for event in audits],
+            "old_status": stored_old.status.value if stored_old else None,
+            "replacement_status": stored_replacement.status.value
+            if stored_replacement
+            else None,
         },
     )
 

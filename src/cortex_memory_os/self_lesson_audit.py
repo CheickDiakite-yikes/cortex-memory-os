@@ -70,9 +70,13 @@ def record_self_lesson_decision_audit(
     actor: str = "agent",
     now: datetime | None = None,
 ) -> AuditEvent:
-    if action not in {"promote_self_lesson", "rollback_self_lesson"}:
+    labels = {
+        "promote_self_lesson": "promotion",
+        "rollback_self_lesson": "rollback",
+        "correct_self_lesson": "correction",
+    }
+    if action not in labels:
         raise ValueError("unsupported self-lesson audit action")
-    label = "promotion" if action == "promote_self_lesson" else "rollback"
     event = _self_lesson_audit_event(
         lesson_id=lesson_id,
         action=action,
@@ -81,7 +85,7 @@ def record_self_lesson_decision_audit(
         target_status=target_status,
         allowed=allowed,
         result=reason,
-        decision_label=label,
+        decision_label=labels[action],
     )
     store.add_audit_event(event)
     return event
