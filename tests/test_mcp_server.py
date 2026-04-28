@@ -1,4 +1,10 @@
-from cortex_memory_os.contracts import EvidenceType, InfluenceLevel, MemoryStatus, SelfLesson
+from cortex_memory_os.contracts import (
+    EvidenceType,
+    InfluenceLevel,
+    MemoryStatus,
+    ScopeLevel,
+    SelfLesson,
+)
 from cortex_memory_os.fixtures import load_json
 from cortex_memory_os.mcp_server import CortexMCPServer, default_server
 from cortex_memory_os.memory_store import InMemoryMemoryStore
@@ -465,6 +471,78 @@ def test_context_pack_includes_self_lesson_audit_metadata_without_instruction_te
     assert "Before auth edits" not in rendered_metadata
     assert "task_332_failure" not in rendered_metadata
     assert "promotion decision" not in guidance_text
+
+
+def test_context_pack_filters_self_lessons_by_project_agent_and_session_scope(tmp_path):
+    base = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+
+    def lesson(lesson_id: str, scope: ScopeLevel, ref: str) -> SelfLesson:
+        return base.model_copy(
+            update={
+                "lesson_id": lesson_id,
+                "scope": scope,
+                "learned_from": [ref, f"task:{lesson_id}"],
+            }
+        )
+
+    project_store = SQLiteMemoryGraphStore(tmp_path / "project.sqlite3")
+    project_store.add_self_lesson(
+        lesson("lesson_project_alpha", ScopeLevel.PROJECT_SPECIFIC, "project:alpha")
+    )
+    project_store.add_self_lesson(
+        lesson("lesson_project_beta", ScopeLevel.PROJECT_SPECIFIC, "project:beta")
+    )
+    project_server = CortexMCPServer(store=project_store)
+
+    project_pack = project_server.call_tool(
+        "memory.get_context_pack",
+        {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
+    )
+    missing_project_pack = project_server.call_tool(
+        "memory.get_context_pack",
+        {"goal": "continue fixing onboarding auth bug"},
+    )
+
+    assert [item["lesson_id"] for item in project_pack["relevant_self_lessons"]] == [
+        "lesson_project_alpha"
+    ]
+    assert missing_project_pack["relevant_self_lessons"] == []
+
+    agent_store = SQLiteMemoryGraphStore(tmp_path / "agent.sqlite3")
+    agent_store.add_self_lesson(
+        lesson("lesson_agent_codex", ScopeLevel.AGENT_SPECIFIC, "agent:codex")
+    )
+    agent_store.add_self_lesson(
+        lesson("lesson_agent_claude", ScopeLevel.AGENT_SPECIFIC, "agent:claude")
+    )
+    agent_server = CortexMCPServer(store=agent_store)
+
+    agent_pack = agent_server.call_tool(
+        "memory.get_context_pack",
+        {"goal": "continue fixing onboarding auth bug", "agent_id": "codex"},
+    )
+
+    assert [item["lesson_id"] for item in agent_pack["relevant_self_lessons"]] == [
+        "lesson_agent_codex"
+    ]
+
+    session_store = SQLiteMemoryGraphStore(tmp_path / "session.sqlite3")
+    session_store.add_self_lesson(
+        lesson("lesson_session_one", ScopeLevel.SESSION_ONLY, "session:s1")
+    )
+    session_store.add_self_lesson(
+        lesson("lesson_session_two", ScopeLevel.SESSION_ONLY, "session:s2")
+    )
+    session_server = CortexMCPServer(store=session_store)
+
+    session_pack = session_server.call_tool(
+        "memory.get_context_pack",
+        {"goal": "continue fixing onboarding auth bug", "session_id": "s1"},
+    )
+
+    assert [item["lesson_id"] for item in session_pack["relevant_self_lessons"]] == [
+        "lesson_session_one"
+    ]
 
 
 def test_self_lesson_list_tool_filters_status_without_context_activation(tmp_path):

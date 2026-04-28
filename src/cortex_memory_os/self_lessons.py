@@ -8,7 +8,13 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from cortex_memory_os.contracts import ActionRisk, MemoryStatus, MemoryType, SelfLesson
+from cortex_memory_os.contracts import (
+    ActionRisk,
+    MemoryStatus,
+    MemoryType,
+    ScopeLevel,
+    SelfLesson,
+)
 
 SELF_LESSON_POLICY_REF = "policy_self_lesson_methods_only_v1"
 
@@ -102,6 +108,7 @@ def propose_self_lesson(
     content: str,
     learned_from: list[str],
     applies_to: list[str],
+    scope: ScopeLevel = ScopeLevel.PERSONAL_GLOBAL,
     change_type: SelfLessonChangeType,
     change_summary: str,
     confidence: float,
@@ -116,6 +123,7 @@ def propose_self_lesson(
         content=content,
         learned_from=learned_from,
         applies_to=applies_to,
+        scope=scope,
         confidence=confidence,
         status=MemoryStatus.CANDIDATE,
         risk_level=risk_level,
@@ -289,6 +297,7 @@ def correct_self_lesson(
         content=corrected_content,
         learned_from=[*lesson.learned_from, f"corrected_from:{lesson.lesson_id}"],
         applies_to=applies_to,
+        scope=lesson.scope,
         confidence=confidence,
         status=MemoryStatus.CANDIDATE,
         risk_level=risk_level or lesson.risk_level,

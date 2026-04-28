@@ -345,6 +345,7 @@ class RelevantSelfLesson(StrictModel):
     content: str = Field(min_length=1)
     confidence: float = Field(ge=0.0, le=1.0)
     applies_to: list[str] = Field(min_length=1)
+    scope: ScopeLevel = ScopeLevel.PERSONAL_GLOBAL
 
 
 class RetrievalScoreSummary(StrictModel):
@@ -408,6 +409,7 @@ class SelfLesson(StrictModel):
     content: str = Field(min_length=1)
     learned_from: list[str] = Field(min_length=1)
     applies_to: list[str] = Field(min_length=1)
+    scope: ScopeLevel = ScopeLevel.PERSONAL_GLOBAL
     confidence: float = Field(ge=0.0, le=1.0)
     status: MemoryStatus
     risk_level: ActionRisk
@@ -418,8 +420,18 @@ class SelfLesson(StrictModel):
     def enforce_self_lesson_scope(self) -> SelfLesson:
         if self.risk_level in {ActionRisk.HIGH, ActionRisk.CRITICAL}:
             raise ValueError("self-lessons cannot be high or critical risk")
+        if self.scope in {ScopeLevel.EPHEMERAL, ScopeLevel.NEVER_STORE}:
+            raise ValueError("self-lessons cannot use ephemeral or never-store scope")
         if self.status == MemoryStatus.ACTIVE and self.confidence < 0.75:
             raise ValueError("active self-lessons require confidence >= 0.75")
+        required_tag = {
+            ScopeLevel.PROJECT_SPECIFIC: "project:",
+            ScopeLevel.AGENT_SPECIFIC: "agent:",
+            ScopeLevel.SESSION_ONLY: "session:",
+            ScopeLevel.EPHEMERAL: "session:",
+        }.get(self.scope)
+        if required_tag and not any(ref.startswith(required_tag) for ref in self.learned_from):
+            raise ValueError("scoped self-lessons require matching provenance tags")
         return self
 
 

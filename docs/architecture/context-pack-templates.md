@@ -52,7 +52,8 @@ quarantined lessons stay out of context packs.
 
 Self-lessons are selected by task relevance against the current goal and the
 lesson's `applies_to` tags. The lane is separately budgeted so self-improvement
-guidance cannot crowd out project evidence.
+guidance cannot crowd out project evidence. Scoped self-lessons must also match
+the request's project, agent, or session scope before they can enter the lane.
 
 ## Audit Metadata Lane
 
@@ -89,3 +90,10 @@ instructions or user preferences.
 - context packs expose audit metadata for relevant active self-lessons;
 - audit metadata omits redacted summaries, lesson content, and source task IDs;
 - audit metadata does not enter warnings or recommended next steps as guidance.
+
+`SELF-LESSON-RECALL-SCOPE-001` verifies:
+
+- project-scoped self-lessons require a matching active project;
+- agent-scoped self-lessons require a matching agent ID;
+- session-scoped self-lessons require a matching session ID;
+- missing scope context excludes scoped self-lessons from context packs.

@@ -69,6 +69,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `SELF-LESSON-AUDIT-001` | Self-lesson promotion and rollback create redacted audit receipts. | Audit receipt copies lesson content or source task details. |
 | `CONTEXT-PACK-SELF-LESSON-001` | Active self-lessons appear in scoped context packs while revoked lessons stay excluded. | Revoked or candidate self-lesson enters context. |
 | `CONTEXT-PACK-AUDIT-LANE-001` | Context packs can cite audit metadata as safety evidence without adding audit text as instructions. | Audit summaries or lesson content enter warnings, next steps, or instruction lanes. |
+| `SELF-LESSON-RECALL-SCOPE-001` | Project, agent, and session self-lessons stay inside matching context-pack scopes. | Scoped self-lesson crosses a mismatched project, agent, or session. |
 | `GATEWAY-SELF-LESSON-001` | Gateway can propose candidate self-lessons without promoting them to active guidance. | Gateway proposal becomes active without confirmation. |
 | `SELF-LESSON-STORE-001` | Candidate and active self-lessons persist in SQLite while context packs use active lessons only. | Candidate proposal appears in context before confirmation. |
 | `GATEWAY-SELF-LESSON-PROMOTE-001` | Gateway can promote confirmed self-lessons and roll back active lessons with audit receipts. | Promotion skips confirmation or rollback leaves lesson active in context. |
@@ -110,8 +111,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `SELF-LESSON-RECALL-SCOPE-001`: Self-lessons can carry project, agent, or
-  session scope without crossing retrieval boundaries.
+- `GATEWAY-SELF-LESSON-SCOPE-PROPOSE-001`: Gateway proposals can create scoped
+  candidate lessons with required provenance tags and no context activation.
 
 Longer-term suites:
 

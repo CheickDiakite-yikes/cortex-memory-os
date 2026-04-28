@@ -173,6 +173,7 @@ def run_all() -> BenchmarkRunResult:
         case_context_template_registry,
         case_context_pack_self_lesson_routing,
         case_context_pack_audit_metadata_lane,
+        case_scoped_self_lesson_recall_boundaries,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
@@ -1160,6 +1161,110 @@ def case_context_pack_audit_metadata_lane() -> BenchmarkCaseResult:
         evidence={
             "lesson_id": lesson_id,
             "audit_actions": [event.get("action") for event in audit_metadata],
+        },
+    )
+
+
+def case_scoped_self_lesson_recall_boundaries() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        base = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+
+        def scoped_lesson(lesson_id: str, scope: ScopeLevel, ref: str) -> SelfLesson:
+            return base.model_copy(
+                update={
+                    "lesson_id": lesson_id,
+                    "scope": scope,
+                    "learned_from": [ref, f"task:{lesson_id}"],
+                }
+            )
+
+        project_store = SQLiteMemoryGraphStore(temp_path / "project.sqlite3")
+        project_store.add_self_lesson(
+            scoped_lesson("lesson_project_alpha", ScopeLevel.PROJECT_SPECIFIC, "project:alpha")
+        )
+        project_store.add_self_lesson(
+            scoped_lesson("lesson_project_beta", ScopeLevel.PROJECT_SPECIFIC, "project:beta")
+        )
+        project_server = CortexMCPServer(store=project_store)
+        project_pack = project_server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
+        )
+        missing_project_pack = project_server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug"},
+        )
+
+        agent_store = SQLiteMemoryGraphStore(temp_path / "agent.sqlite3")
+        agent_store.add_self_lesson(
+            scoped_lesson("lesson_agent_codex", ScopeLevel.AGENT_SPECIFIC, "agent:codex")
+        )
+        agent_store.add_self_lesson(
+            scoped_lesson("lesson_agent_claude", ScopeLevel.AGENT_SPECIFIC, "agent:claude")
+        )
+        agent_server = CortexMCPServer(store=agent_store)
+        agent_pack = agent_server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug", "agent_id": "codex"},
+        )
+
+        session_store = SQLiteMemoryGraphStore(temp_path / "session.sqlite3")
+        session_store.add_self_lesson(
+            scoped_lesson("lesson_session_one", ScopeLevel.SESSION_ONLY, "session:s1")
+        )
+        session_store.add_self_lesson(
+            scoped_lesson("lesson_session_two", ScopeLevel.SESSION_ONLY, "session:s2")
+        )
+        session_server = CortexMCPServer(store=session_store)
+        session_pack = session_server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug", "session_id": "s1"},
+        )
+
+    project_ids = [
+        lesson["lesson_id"] for lesson in project_pack.get("relevant_self_lessons", [])
+    ]
+    missing_project_ids = [
+        lesson["lesson_id"]
+        for lesson in missing_project_pack.get("relevant_self_lessons", [])
+    ]
+    agent_ids = [lesson["lesson_id"] for lesson in agent_pack.get("relevant_self_lessons", [])]
+    session_ids = [
+        lesson["lesson_id"] for lesson in session_pack.get("relevant_self_lessons", [])
+    ]
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        project_ids == ["lesson_project_alpha"]
+        and missing_project_ids == []
+        and agent_ids == ["lesson_agent_codex"]
+        and session_ids == ["lesson_session_one"]
+        and "SELF-LESSON-RECALL-SCOPE-001" in docs_text
+        and "SELF-LESSON-RECALL-SCOPE-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SELF-LESSON-RECALL-SCOPE-001/project_agent_session",
+        suite="SELF-LESSON-RECALL-SCOPE-001",
+        passed=passed,
+        summary="Project, agent, and session self-lessons stay inside matching context-pack scopes.",
+        metrics={
+            "project_lesson_count": len(project_ids),
+            "agent_lesson_count": len(agent_ids),
+            "session_lesson_count": len(session_ids),
+            "missing_scope_lesson_count": len(missing_project_ids),
+        },
+        evidence={
+            "project_ids": project_ids,
+            "missing_project_ids": missing_project_ids,
+            "agent_ids": agent_ids,
+            "session_ids": session_ids,
         },
     )
 

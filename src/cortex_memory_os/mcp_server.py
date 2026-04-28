@@ -20,6 +20,7 @@ from cortex_memory_os.contracts import (
     RelevantMemory,
     RelevantSelfLesson,
     RetrievalScoreSummary,
+    ScopeLevel,
     SelfLesson,
     SkillRecord,
 )
@@ -95,6 +96,8 @@ class CortexMCPServer:
                     "properties": {
                         "goal": {"type": "string"},
                         "active_project": {"type": "string"},
+                        "agent_id": {"type": "string"},
+                        "session_id": {"type": "string"},
                         "limit": {"type": "integer", "minimum": 1, "maximum": 20},
                     },
                     "required": ["goal"],
@@ -144,6 +147,15 @@ class CortexMCPServer:
                         },
                         "change_summary": {"type": "string"},
                         "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                        "scope": {
+                            "type": "string",
+                            "enum": [
+                                item.value
+                                for item in ScopeLevel
+                                if item
+                                not in {ScopeLevel.EPHEMERAL, ScopeLevel.NEVER_STORE}
+                            ],
+                        },
                         "risk_level": {
                             "type": "string",
                             "enum": [ActionRisk.LOW.value, ActionRisk.MEDIUM.value],
@@ -389,6 +401,7 @@ class CortexMCPServer:
                     content=_require_string(arguments, "content"),
                     learned_from=_require_string_list(arguments, "learned_from"),
                     applies_to=_require_string_list(arguments, "applies_to"),
+                    scope=ScopeLevel(arguments.get("scope", ScopeLevel.PERSONAL_GLOBAL.value)),
                     change_type=SelfLessonChangeType(_require_string(arguments, "change_type")),
                     change_summary=_require_string(arguments, "change_summary"),
                     confidence=_require_number(arguments, "confidence"),
@@ -699,14 +712,21 @@ class CortexMCPServer:
     def get_context_pack(self, arguments: dict[str, Any]) -> ContextPack:
         goal = _require_string(arguments, "goal")
         active_project = arguments.get("active_project")
+        agent_id = arguments.get("agent_id")
+        session_id = arguments.get("session_id")
         template = select_context_pack_template(goal)
         limit = effective_context_limit(template, int(arguments.get("limit", template.max_memories)))
-        retrieval_scope = RetrievalScope(active_project=active_project)
+        retrieval_scope = RetrievalScope(
+            active_project=active_project,
+            agent_id=agent_id,
+            session_id=session_id,
+        )
         ranked_memories = _rank_store(self.store, goal, limit=limit, scope=retrieval_scope)
         self_lessons = select_context_self_lessons(
             _available_self_lessons(self.store, self.self_lessons),
             goal,
             template,
+            scope=retrieval_scope,
         )
         trusted_ranked: list[RankedMemory] = []
         blocked_memory_ids: list[str] = []
@@ -749,6 +769,7 @@ class CortexMCPServer:
                     content=lesson.content,
                     confidence=lesson.confidence,
                     applies_to=lesson.applies_to,
+                    scope=lesson.scope,
                 )
                 for lesson in self_lessons
             ],
@@ -913,6 +934,7 @@ def serialize_self_lesson_explanation(
         "risk_level": lesson.risk_level.value,
         "learned_from": list(lesson.learned_from),
         "applies_to": list(lesson.applies_to),
+        "scope": lesson.scope.value,
         "rollback_if": list(lesson.rollback_if),
         "last_validated": lesson.last_validated.isoformat()
         if lesson.last_validated

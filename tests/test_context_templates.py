@@ -1,6 +1,6 @@
 import pytest
 
-from cortex_memory_os.contracts import MemoryStatus, SelfLesson
+from cortex_memory_os.contracts import MemoryStatus, ScopeLevel, SelfLesson
 from cortex_memory_os.context_templates import (
     CONTEXT_TEMPLATE_POLICY_REF,
     ContextMemoryLane,
@@ -12,6 +12,7 @@ from cortex_memory_os.context_templates import (
     select_context_pack_template,
 )
 from cortex_memory_os.fixtures import load_json
+from cortex_memory_os.retrieval import RetrievalScope
 
 
 def test_context_template_registry_is_compact_and_policy_backed():
@@ -64,6 +65,41 @@ def test_context_template_routes_active_self_lessons_and_excludes_revoked():
     )
 
     assert [lesson.lesson_id for lesson in selected] == ["lesson_044"]
+
+
+def test_context_template_filters_self_lessons_by_retrieval_scope():
+    template = select_context_pack_template("continue fixing onboarding auth bug")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    alpha = active.model_copy(
+        update={
+            "lesson_id": "lesson_alpha",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_alpha"],
+        }
+    )
+    beta = active.model_copy(
+        update={
+            "lesson_id": "lesson_beta",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:beta", "task_beta"],
+        }
+    )
+
+    selected = select_context_self_lessons(
+        [beta, alpha],
+        "continue fixing onboarding auth bug",
+        template,
+        scope=RetrievalScope(active_project="alpha"),
+    )
+    missing_scope = select_context_self_lessons(
+        [alpha],
+        "continue fixing onboarding auth bug",
+        template,
+        scope=RetrievalScope(),
+    )
+
+    assert [lesson.lesson_id for lesson in selected] == ["lesson_alpha"]
+    assert missing_scope == ()
 
 
 def test_context_template_rejects_scope_widening_or_secret_requests():

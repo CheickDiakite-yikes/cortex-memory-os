@@ -12,6 +12,7 @@ from cortex_memory_os.contracts import (
     MemoryRecord,
     MemoryStatus,
     ScopeLevel,
+    SelfLesson,
     Sensitivity,
 )
 
@@ -155,35 +156,62 @@ def tokenize(text: str) -> set[str]:
 
 
 def _scope_allowed(memory: MemoryRecord, scope: RetrievalScope | None) -> tuple[bool, list[str]]:
+    return scope_refs_allowed(
+        memory.scope,
+        memory.source_refs,
+        scope,
+        project_allow_untagged=True,
+    )
+
+
+def self_lesson_scope_allowed(
+    lesson: SelfLesson,
+    scope: RetrievalScope | None,
+) -> tuple[bool, list[str]]:
+    return scope_refs_allowed(
+        lesson.scope,
+        lesson.learned_from,
+        scope or RetrievalScope(),
+        project_allow_untagged=False,
+    )
+
+
+def scope_refs_allowed(
+    scope_level: ScopeLevel,
+    source_refs: Iterable[str],
+    scope: RetrievalScope | None,
+    *,
+    project_allow_untagged: bool,
+) -> tuple[bool, list[str]]:
     if scope is None:
         return True, []
-    if memory.scope == ScopeLevel.NEVER_STORE:
+    if scope_level == ScopeLevel.NEVER_STORE:
         return False, ["scope_never_store"]
-    if memory.scope in {ScopeLevel.PERSONAL_GLOBAL, ScopeLevel.WORK_GLOBAL}:
+    if scope_level in {ScopeLevel.PERSONAL_GLOBAL, ScopeLevel.WORK_GLOBAL}:
         if scope.include_global:
             return True, []
         return False, ["global_scope_excluded"]
-    if memory.scope == ScopeLevel.PROJECT_SPECIFIC:
+    if scope_level == ScopeLevel.PROJECT_SPECIFIC:
         return _tag_scope_allowed(
-            memory,
+            source_refs,
             prefix="project",
             requested=scope.active_project,
             missing_reason="project_scope_missing",
             mismatch_reason="project_scope_mismatch",
-            allow_untagged=True,
+            allow_untagged=project_allow_untagged,
         )
-    if memory.scope == ScopeLevel.AGENT_SPECIFIC:
+    if scope_level == ScopeLevel.AGENT_SPECIFIC:
         return _tag_scope_allowed(
-            memory,
+            source_refs,
             prefix="agent",
             requested=scope.agent_id,
             missing_reason="agent_scope_missing",
             mismatch_reason="agent_scope_mismatch",
             allow_untagged=False,
         )
-    if memory.scope in {ScopeLevel.SESSION_ONLY, ScopeLevel.EPHEMERAL}:
+    if scope_level in {ScopeLevel.SESSION_ONLY, ScopeLevel.EPHEMERAL}:
         return _tag_scope_allowed(
-            memory,
+            source_refs,
             prefix="session",
             requested=scope.session_id,
             missing_reason="session_scope_missing",
@@ -194,7 +222,7 @@ def _scope_allowed(memory: MemoryRecord, scope: RetrievalScope | None) -> tuple[
 
 
 def _tag_scope_allowed(
-    memory: MemoryRecord,
+    source_refs: Iterable[str],
     *,
     prefix: str,
     requested: str | None,
@@ -202,7 +230,7 @@ def _tag_scope_allowed(
     mismatch_reason: str,
     allow_untagged: bool,
 ) -> tuple[bool, list[str]]:
-    tags = _source_ref_tags(memory, prefix)
+    tags = _source_ref_tags(source_refs, prefix)
     if not tags:
         if allow_untagged:
             return True, []
@@ -214,11 +242,11 @@ def _tag_scope_allowed(
     return False, [mismatch_reason]
 
 
-def _source_ref_tags(memory: MemoryRecord, prefix: str) -> set[str]:
+def _source_ref_tags(source_refs: Iterable[str], prefix: str) -> set[str]:
     marker = f"{prefix}:"
     return {
         source_ref[len(marker) :]
-        for source_ref in memory.source_refs
+        for source_ref in source_refs
         if source_ref.startswith(marker) and len(source_ref) > len(marker)
     }
 

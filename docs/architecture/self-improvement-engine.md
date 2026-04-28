@@ -1,6 +1,6 @@
 # Self-Improvement Engine
 
-Last updated: 2026-04-27
+Last updated: 2026-04-28
 
 Code contract: `src/cortex_memory_os/self_lessons.py`
 
@@ -75,6 +75,19 @@ Self-lessons persist separately from ordinary memories.
 Candidate lessons can be stored durably after proposal, but they must not enter
 context packs until promotion makes them active. Context packs read active
 self-lessons only, so proposal storage cannot silently become behavior change.
+
+## Recall Scope
+
+Durable self-lessons can be global, project-specific, agent-specific, or
+session-only. Non-global lessons must carry matching provenance tags in
+`learned_from`, such as `project:cortex`, `agent:codex`, or `session:debug-42`.
+Ephemeral and never-store scopes are rejected for stored self-lessons; transient
+guidance should stay outside the durable self-lesson registry.
+
+Context packs apply the same retrieval scope vocabulary used for memories, but
+project-scoped self-lessons are stricter than ordinary project memories: a
+missing project tag blocks recall. This prevents a debugging lesson learned in
+one project, agent, or session from silently shaping another.
 
 ## Benchmark
 
@@ -151,3 +164,10 @@ self-lessons only, so proposal storage cannot silently become behavior change.
 - audit listing returns redacted receipts, not lesson content;
 - source task IDs and lesson text do not leak through audit summaries;
 - listing receipts does not activate or restore any self-lesson in context packs.
+
+`SELF-LESSON-RECALL-SCOPE-001` verifies:
+
+- scoped self-lessons require matching provenance tags;
+- project-scoped lessons do not appear without a matching active project;
+- agent-scoped lessons do not appear for the wrong agent;
+- session-scoped lessons do not appear outside the matching session.

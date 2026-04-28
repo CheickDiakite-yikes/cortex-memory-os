@@ -7,6 +7,7 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from cortex_memory_os.contracts import MemoryStatus, SelfLesson
+from cortex_memory_os.retrieval import RetrievalScope, self_lesson_scope_allowed
 
 CONTEXT_TEMPLATE_POLICY_REF = "policy_context_template_compact_scope_v1"
 
@@ -173,6 +174,7 @@ def select_context_self_lessons(
     lessons: tuple[SelfLesson, ...] | list[SelfLesson],
     goal: str,
     template: ContextPackTemplate,
+    scope: RetrievalScope | None = None,
 ) -> tuple[SelfLesson, ...]:
     if (
         ContextMemoryLane.SELF_LESSON not in template.memory_lanes
@@ -184,6 +186,9 @@ def select_context_self_lessons(
     scored: list[tuple[float, str, SelfLesson]] = []
     for lesson in lessons:
         if lesson.status != MemoryStatus.ACTIVE:
+            continue
+        allowed, _reasons = self_lesson_scope_allowed(lesson, scope)
+        if not allowed:
             continue
         lesson_tokens = _tokens(" ".join([lesson.content, *lesson.applies_to]))
         overlap = goal_tokens & lesson_tokens
