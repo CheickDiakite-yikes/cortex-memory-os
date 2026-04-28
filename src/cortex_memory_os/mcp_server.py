@@ -67,6 +67,7 @@ from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
 PROTOCOL_VERSION = "2025-11-25"
 SELF_LESSON_SCOPE_EXPORT_POLICY_REF = "policy_self_lesson_scope_export_v1"
 SELF_LESSON_REVIEW_QUEUE_POLICY_REF = "policy_self_lesson_review_queue_v1"
+SELF_LESSON_REVIEW_FLOW_POLICY_REF = "policy_self_lesson_review_flow_v1"
 SELF_LESSON_REVIEW_AFTER_DAYS = 90
 
 
@@ -208,6 +209,16 @@ class CortexMCPServer:
                     "properties": {
                         "limit": {"type": "integer", "minimum": 1, "maximum": 100},
                     },
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "self_lesson.review_flow",
+                "description": "Return one exact self-lesson review flow with redacted lesson metadata and action routes.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {"lesson_id": {"type": "string"}},
+                    "required": ["lesson_id"],
                     "additionalProperties": False,
                 },
             },
@@ -518,6 +529,29 @@ class CortexMCPServer:
                 "count": len(review_lessons),
                 "content_redacted": True,
                 "policy_refs": [SELF_LESSON_REVIEW_QUEUE_POLICY_REF],
+            }
+        if name == "self_lesson.review_flow":
+            lesson_id = _require_string(arguments, "lesson_id")
+            lesson = _find_self_lesson(self.store, self.self_lessons, lesson_id)
+            if lesson is None:
+                raise JsonRpcError(-32602, f"unknown lesson_id: {lesson_id}")
+            lesson_item = serialize_self_lesson_list_item(lesson, include_content=False)
+            action_plan = lesson_item["review_action_plan"]
+            return {
+                "flow_id": "self_lesson_review_flow",
+                "queue_id": "self_lesson_review_queue",
+                "lesson_id": lesson.lesson_id,
+                "lesson": lesson_item,
+                "review_required": lesson_item["review_state"]["review_required"],
+                "review_action_plan": action_plan,
+                "next_tools": {
+                    action["flow_id"]: action["gateway_tool"] for action in action_plan
+                },
+                "content_redacted": True,
+                "policy_refs": [
+                    SELF_LESSON_REVIEW_QUEUE_POLICY_REF,
+                    SELF_LESSON_REVIEW_FLOW_POLICY_REF,
+                ],
             }
         if name == "self_lesson.explain":
             lesson_id = _require_string(arguments, "lesson_id")

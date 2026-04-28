@@ -28,6 +28,7 @@ def test_lists_memory_tools():
         "self_lesson.propose",
         "self_lesson.list",
         "self_lesson.review_queue",
+        "self_lesson.review_flow",
         "self_lesson.explain",
         "self_lesson.audit",
         "self_lesson.correct",
@@ -1431,6 +1432,55 @@ def test_self_lesson_review_queue_lists_only_review_required_lessons_redacted(tm
     assert "Before editing auth" not in rendered_queue
     assert "project:alpha" not in rendered_queue
     assert "task_project_stale_queue" not in rendered_queue
+
+
+def test_self_lesson_review_flow_returns_exact_redacted_action_routes(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    stale = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_stale_review_flow",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_stale_review_flow"],
+            "last_validated": date(2025, 1, 1),
+        }
+    )
+    store.add_self_lesson(stale)
+    server = CortexMCPServer(store=store)
+
+    flow = server.call_tool(
+        "self_lesson.review_flow",
+        {"lesson_id": stale.lesson_id},
+    )
+
+    assert flow["flow_id"] == "self_lesson_review_flow"
+    assert flow["queue_id"] == "self_lesson_review_queue"
+    assert flow["lesson_id"] == stale.lesson_id
+    assert flow["review_required"] is True
+    assert flow["content_redacted"] is True
+    assert flow["policy_refs"] == [
+        "policy_self_lesson_review_queue_v1",
+        "policy_self_lesson_review_flow_v1",
+    ]
+    assert [action["gateway_tool"] for action in flow["review_action_plan"]] == [
+        "self_lesson.explain",
+        "self_lesson.refresh",
+        "self_lesson.correct",
+        "self_lesson.delete",
+    ]
+    assert flow["next_tools"] == {
+        "explain_self_lesson": "self_lesson.explain",
+        "refresh_self_lesson": "self_lesson.refresh",
+        "correct_self_lesson": "self_lesson.correct",
+        "delete_self_lesson": "self_lesson.delete",
+    }
+    rendered_flow = json.dumps(flow)
+    assert "content" not in flow["lesson"]
+    assert "learned_from" not in flow["lesson"]
+    assert "rollback_if" not in flow["lesson"]
+    assert "Before editing auth" not in rendered_flow
+    assert "project:alpha" not in rendered_flow
+    assert "task_project_stale_review_flow" not in rendered_flow
 
 
 def test_stale_scoped_self_lesson_requires_review_before_context_use(tmp_path):

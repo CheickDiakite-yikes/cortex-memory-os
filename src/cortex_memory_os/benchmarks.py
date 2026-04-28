@@ -186,6 +186,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_scope_stale_export_marker,
         case_gateway_self_lesson_review_queue,
         case_gateway_self_lesson_review_actions,
+        case_gateway_self_lesson_review_flow,
         case_context_pack_self_lesson_review_summary,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
@@ -2097,6 +2098,83 @@ def case_gateway_self_lesson_review_actions() -> BenchmarkCaseResult:
         },
         evidence={
             "queued_ids": queue.get("lesson_ids", []),
+            "tool_names": tool_names,
+        },
+    )
+
+
+def case_gateway_self_lesson_review_flow() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        stale = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_stale_review_flow",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_stale_review_flow"],
+                "last_validated": date(2025, 1, 1),
+            }
+        )
+        store.add_self_lesson(stale)
+        server = CortexMCPServer(store=store)
+        flow = server.call_tool(
+            "self_lesson.review_flow",
+            {"lesson_id": stale.lesson_id},
+        )
+
+    action_plan = flow.get("review_action_plan", [])
+    tool_names = [action.get("gateway_tool") for action in action_plan]
+    serialized_flow = json.dumps(flow, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        flow.get("flow_id") == "self_lesson_review_flow"
+        and flow.get("queue_id") == "self_lesson_review_queue"
+        and flow.get("lesson_id") == stale.lesson_id
+        and flow.get("review_required") is True
+        and flow.get("content_redacted") is True
+        and flow.get("policy_refs")
+        == [
+            "policy_self_lesson_review_queue_v1",
+            "policy_self_lesson_review_flow_v1",
+        ]
+        and tool_names
+        == [
+            "self_lesson.explain",
+            "self_lesson.refresh",
+            "self_lesson.correct",
+            "self_lesson.delete",
+        ]
+        and flow.get("next_tools", {}).get("explain_self_lesson")
+        == "self_lesson.explain"
+        and flow.get("next_tools", {}).get("refresh_self_lesson")
+        == "self_lesson.refresh"
+        and "content" not in flow.get("lesson", {})
+        and "learned_from" not in flow.get("lesson", {})
+        and "rollback_if" not in flow.get("lesson", {})
+        and "Before editing auth" not in serialized_flow
+        and "project:alpha" not in serialized_flow
+        and "task_project_stale_review_flow" not in serialized_flow
+        and "GATEWAY-SELF-LESSON-REVIEW-FLOW-001" in docs_text
+        and "GATEWAY-SELF-LESSON-REVIEW-FLOW-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-SELF-LESSON-REVIEW-FLOW-001/anchored_review_flow",
+        suite="GATEWAY-SELF-LESSON-REVIEW-FLOW-001",
+        passed=passed,
+        summary="Gateway returns an anchored redacted self-lesson review flow with exact follow-up tool routes.",
+        metrics={
+            "action_count": len(action_plan),
+            "policy_ref_count": len(flow.get("policy_refs", [])),
+        },
+        evidence={
+            "lesson_id": flow.get("lesson_id"),
             "tool_names": tool_names,
         },
     )

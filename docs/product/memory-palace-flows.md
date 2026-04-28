@@ -430,3 +430,11 @@ claim the same path:
 - Each `self_lesson.review_queue` entry includes the fixed review action plan.
 - The plan carries exact gateway tool names and required input names.
 - The queued lesson still omits content, learned-from refs, and rollback text.
+
+`GATEWAY-SELF-LESSON-REVIEW-FLOW-001` must pass before a single-card review
+surface can claim an end-to-end gateway contract:
+
+- `self_lesson.review_flow` requires an exact lesson ID.
+- The response links back to the review queue and returns the same action plan.
+- The response exposes next-tool routes without copying lesson content or
+  scoped provenance.
