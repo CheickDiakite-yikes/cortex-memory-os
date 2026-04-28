@@ -459,7 +459,13 @@ class CortexMCPServer:
             audit_events = store.audit_for_target(lesson_id)[:limit]
             return {
                 "lesson_id": lesson_id,
-                "audit_events": [serialize_audit_event(event) for event in audit_events],
+                "target_status": lesson.status.value,
+                "target_scope": lesson.scope.value,
+                "target_context_eligibility": _self_lesson_context_eligibility(lesson),
+                "audit_events": [
+                    serialize_self_lesson_audit_event(event, lesson)
+                    for event in audit_events
+                ],
                 "count": len(audit_events),
                 "content_redacted": True,
             }
@@ -900,6 +906,17 @@ def serialize_audit_event(event: AuditEvent) -> dict[str, Any]:
         "human_visible": event.human_visible,
         "redacted_summary": event.redacted_summary,
     }
+
+
+def serialize_self_lesson_audit_event(
+    event: AuditEvent, lesson: SelfLesson
+) -> dict[str, Any]:
+    item = serialize_audit_event(event)
+    item["target_status"] = lesson.status.value
+    item["target_scope"] = lesson.scope.value
+    item["target_context_eligibility"] = _self_lesson_context_eligibility(lesson)
+    item["content_redacted"] = True
+    return item
 
 
 def serialize_self_lesson_proposal(proposal: Any) -> dict[str, Any]:

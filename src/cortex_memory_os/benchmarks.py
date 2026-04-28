@@ -177,6 +177,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_scoped_self_lesson_proposal_checks,
         case_self_lesson_scope_inspection_metadata,
         case_self_lesson_scope_preserving_correction,
+        case_self_lesson_scope_audit_metadata,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
@@ -1510,6 +1511,77 @@ def case_self_lesson_scope_preserving_correction() -> BenchmarkCaseResult:
             "replacement_scope": replacement.get("scope"),
             "old_status": response.get("superseded_lesson", {}).get("status"),
             "replacement_status": replacement.get("status"),
+        },
+    )
+
+
+def case_self_lesson_scope_audit_metadata() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+        scoped = active.model_copy(
+            update={
+                "lesson_id": "lesson_project_alpha",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_alpha"],
+            }
+        )
+        store.add_self_lesson(scoped)
+        server = CortexMCPServer(store=store)
+        server.call_tool(
+            "self_lesson.correct",
+            {
+                "lesson_id": scoped.lesson_id,
+                "corrected_content": (
+                    "Before auth edits in this project, inspect terminal errors and route files."
+                ),
+                "applies_to": ["frontend_debugging", "auth_flows"],
+                "change_type": SelfLessonChangeType.FAILURE_CHECKLIST.value,
+                "change_summary": "Narrow project auth preflight without changing scope.",
+                "confidence": 0.86,
+            },
+        )
+        audit_response = server.call_tool(
+            "self_lesson.audit",
+            {"lesson_id": scoped.lesson_id},
+        )
+
+    audit_json = json.dumps(audit_response, sort_keys=True)
+    events = audit_response.get("audit_events", [])
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        audit_response.get("target_scope") == ScopeLevel.PROJECT_SPECIFIC.value
+        and audit_response.get("target_status") == MemoryStatus.SUPERSEDED.value
+        and audit_response.get("target_context_eligibility", {}).get("status")
+        == "not_active"
+        and len(events) == 1
+        and events[0].get("target_scope") == ScopeLevel.PROJECT_SPECIFIC.value
+        and events[0].get("target_status") == MemoryStatus.SUPERSEDED.value
+        and events[0].get("content_redacted") is True
+        and "Before auth edits" not in audit_json
+        and "project:alpha" not in audit_json
+        and "SELF-LESSON-SCOPE-AUDIT-001" in docs_text
+        and "SELF-LESSON-SCOPE-AUDIT-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SELF-LESSON-SCOPE-AUDIT-001/redacted_scope_metadata",
+        suite="SELF-LESSON-SCOPE-AUDIT-001",
+        passed=passed,
+        summary="Self-lesson audit listings expose scope metadata without copying lesson content.",
+        metrics={
+            "audit_count": len(events),
+            "content_redacted": int("Before auth edits" not in audit_json),
+        },
+        evidence={
+            "target_scope": audit_response.get("target_scope"),
+            "target_status": audit_response.get("target_status"),
         },
     )
 

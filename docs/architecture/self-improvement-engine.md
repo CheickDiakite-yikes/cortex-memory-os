@@ -196,3 +196,11 @@ one project, agent, or session from silently shaping another.
   `corrected_from` source reference;
 - superseded old lessons and candidate replacements both stay out of context
   packs until the replacement is explicitly promoted.
+
+`SELF-LESSON-SCOPE-AUDIT-001` verifies:
+
+- audit listing responses expose the target lesson status, scope, and context
+  eligibility metadata;
+- each returned audit receipt carries the same scope/status metadata for Memory
+  Palace rendering;
+- audit responses do not copy lesson content or scoped provenance tags.

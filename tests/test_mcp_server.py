@@ -1,3 +1,5 @@
+import json
+
 from cortex_memory_os.contracts import (
     EvidenceType,
     InfluenceLevel,
@@ -1036,6 +1038,49 @@ def test_self_lesson_audit_tool_lists_redacted_receipts_without_content(tmp_path
     assert active.content not in rendered
     assert "task_332_failure" not in rendered
     assert context_response["result"]["relevant_self_lessons"] == []
+
+
+def test_self_lesson_audit_tool_includes_scope_metadata_without_content(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    scoped = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_alpha",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_alpha"],
+        }
+    )
+    store.add_self_lesson(scoped)
+    server = CortexMCPServer(store=store)
+    server.call_tool(
+        "self_lesson.correct",
+        {
+            "lesson_id": scoped.lesson_id,
+            "corrected_content": (
+                "Before auth edits in this project, inspect terminal errors and route files."
+            ),
+            "applies_to": ["frontend_debugging", "auth_flows"],
+            "change_type": "failure_checklist",
+            "change_summary": "Narrow the project auth preflight without changing scope.",
+            "confidence": 0.86,
+        },
+    )
+
+    audit_response = server.call_tool("self_lesson.audit", {"lesson_id": scoped.lesson_id})
+    rendered = json.dumps(audit_response)
+
+    assert audit_response["target_status"] == MemoryStatus.SUPERSEDED.value
+    assert audit_response["target_scope"] == ScopeLevel.PROJECT_SPECIFIC.value
+    assert audit_response["target_context_eligibility"]["status"] == "not_active"
+    assert audit_response["audit_events"][0]["target_scope"] == (
+        ScopeLevel.PROJECT_SPECIFIC.value
+    )
+    assert audit_response["audit_events"][0]["target_status"] == (
+        MemoryStatus.SUPERSEDED.value
+    )
+    assert audit_response["audit_events"][0]["content_redacted"] is True
+    assert "Before auth edits" not in rendered
+    assert "project:alpha" not in rendered
 
 
 def test_self_lesson_propose_tool_rejects_hostile_or_permission_expanding_text():
