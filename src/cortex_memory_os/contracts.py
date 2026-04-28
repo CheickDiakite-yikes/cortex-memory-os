@@ -357,6 +357,14 @@ class SelfLessonExclusion(StrictModel):
     content_redacted: bool = True
 
 
+class SelfLessonReviewSummary(StrictModel):
+    review_required_count: int = Field(default=0, ge=0)
+    reason_counts: dict[str, int] = Field(default_factory=dict)
+    scope_counts: dict[str, int] = Field(default_factory=dict)
+    review_queue_tool: str = "self_lesson.review_queue"
+    content_redacted: bool = True
+
+
 class RetrievalScoreSummary(StrictModel):
     memory_id: str = Field(min_length=1)
     score: float = Field(ge=0.0)
@@ -381,6 +389,9 @@ class ContextPack(StrictModel):
     relevant_memories: list[RelevantMemory] = Field(default_factory=list)
     relevant_self_lessons: list[RelevantSelfLesson] = Field(default_factory=list)
     self_lesson_exclusions: list[SelfLessonExclusion] = Field(default_factory=list)
+    self_lesson_review_summary: SelfLessonReviewSummary = Field(
+        default_factory=SelfLessonReviewSummary
+    )
     retrieval_scores: list[RetrievalScoreSummary] = Field(default_factory=list)
     audit_metadata: list[AuditMetadata] = Field(default_factory=list)
     blocked_memory_ids: list[str] = Field(default_factory=list)

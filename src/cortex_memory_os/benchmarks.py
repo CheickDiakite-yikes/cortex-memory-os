@@ -184,6 +184,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_scope_refresh_with_audit,
         case_self_lesson_scope_stale_export_marker,
         case_gateway_self_lesson_review_queue,
+        case_context_pack_self_lesson_review_summary,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
@@ -2025,6 +2026,82 @@ def case_gateway_self_lesson_review_queue() -> BenchmarkCaseResult:
         evidence={
             "queued_ids": queue.get("lesson_ids", []),
             "review_status": queued_lesson.get("review_state", {}).get("status"),
+        },
+    )
+
+
+def case_context_pack_self_lesson_review_summary() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        stale = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_stale_summary",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_stale_summary"],
+                "last_validated": date(2025, 1, 1),
+            }
+        )
+        current = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_current_summary",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_current_summary"],
+                "last_validated": date(2026, 4, 28),
+            }
+        )
+        store.add_self_lesson(stale)
+        store.add_self_lesson(current)
+        server = CortexMCPServer(store=store)
+        context_pack = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
+        )
+
+    summary = context_pack.get("self_lesson_review_summary", {})
+    serialized_summary = json.dumps(summary, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        summary.get("review_required_count") == 1
+        and summary.get("reason_counts") == {"last_validated_stale": 1}
+        and summary.get("scope_counts") == {ScopeLevel.PROJECT_SPECIFIC.value: 1}
+        and summary.get("review_queue_tool") == "self_lesson.review_queue"
+        and summary.get("content_redacted") is True
+        and [
+            lesson.get("lesson_id")
+            for lesson in context_pack.get("relevant_self_lessons", [])
+        ]
+        == [current.lesson_id]
+        and [
+            exclusion.get("lesson_id")
+            for exclusion in context_pack.get("self_lesson_exclusions", [])
+        ]
+        == [stale.lesson_id]
+        and "Before editing auth" not in serialized_summary
+        and "project:alpha" not in serialized_summary
+        and "task_project_stale_summary" not in serialized_summary
+        and "CONTEXT-PACK-SELF-LESSON-REVIEW-SUMMARY-001" in docs_text
+        and "CONTEXT-PACK-SELF-LESSON-REVIEW-SUMMARY-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="CONTEXT-PACK-SELF-LESSON-REVIEW-SUMMARY-001/aggregate_review_summary",
+        suite="CONTEXT-PACK-SELF-LESSON-REVIEW-SUMMARY-001",
+        passed=passed,
+        summary="Context packs summarize review-required self-lessons without lesson content.",
+        metrics={
+            "review_required_count": summary.get("review_required_count", 0),
+            "reason_count_keys": len(summary.get("reason_counts", {})),
+        },
+        evidence={
+            "reason_counts": summary.get("reason_counts", {}),
+            "scope_counts": summary.get("scope_counts", {}),
         },
     )
 

@@ -1467,6 +1467,54 @@ def test_stale_scoped_self_lesson_requires_review_before_context_use(tmp_path):
     assert "project:alpha" not in rendered_exclusions
 
 
+def test_context_pack_review_summary_counts_stale_lessons_without_content(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    stale = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_stale_summary",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_stale_summary"],
+            "last_validated": date(2025, 1, 1),
+        }
+    )
+    current = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_current_summary",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_current_summary"],
+            "last_validated": date(2026, 4, 28),
+        }
+    )
+    store.add_self_lesson(stale)
+    store.add_self_lesson(current)
+    server = CortexMCPServer(store=store)
+
+    pack = server.call_tool(
+        "memory.get_context_pack",
+        {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
+    )
+
+    summary = pack["self_lesson_review_summary"]
+    rendered_summary = json.dumps(summary)
+    assert summary == {
+        "review_required_count": 1,
+        "reason_counts": {"last_validated_stale": 1},
+        "scope_counts": {ScopeLevel.PROJECT_SPECIFIC.value: 1},
+        "review_queue_tool": "self_lesson.review_queue",
+        "content_redacted": True,
+    }
+    assert [item["lesson_id"] for item in pack["relevant_self_lessons"]] == [
+        current.lesson_id
+    ]
+    assert [item["lesson_id"] for item in pack["self_lesson_exclusions"]] == [
+        stale.lesson_id
+    ]
+    assert "Before editing auth" not in rendered_summary
+    assert "project:alpha" not in rendered_summary
+    assert "task_project_stale_summary" not in rendered_summary
+
+
 def test_refresh_reviewed_scoped_self_lesson_reenters_context_with_audit(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))

@@ -80,6 +80,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `SELF-LESSON-SCOPE-REFRESH-001` | Reviewed scoped self-lessons can refresh validation with audit evidence before re-entering context. | Refresh skips confirmation, lacks audit evidence, or fails to restore matching scoped context use. |
 | `SELF-LESSON-SCOPE-STALE-EXPORT-001` | Default exports mark stale scoped self-lessons as review-required without hidden content. | Stale scoped lesson exports omit review markers or leak content/provenance. |
 | `GATEWAY-SELF-LESSON-REVIEW-QUEUE-001` | Gateway lists only review-required self-lessons in a redacted review queue. | Review queue includes current/global lessons or leaks content/provenance. |
+| `CONTEXT-PACK-SELF-LESSON-REVIEW-SUMMARY-001` | Context packs expose aggregate review-required self-lesson counts without hidden content. | Context-pack summaries leak lesson content/provenance or omit review-required counts. |
 | `GATEWAY-SELF-LESSON-001` | Gateway can propose candidate self-lessons without promoting them to active guidance. | Gateway proposal becomes active without confirmation. |
 | `SELF-LESSON-STORE-001` | Candidate and active self-lessons persist in SQLite while context packs use active lessons only. | Candidate proposal appears in context before confirmation. |
 | `GATEWAY-SELF-LESSON-PROMOTE-001` | Gateway can promote confirmed self-lessons and roll back active lessons with audit receipts. | Promotion skips confirmation or rollback leaves lesson active in context. |
@@ -121,8 +122,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `CONTEXT-PACK-SELF-LESSON-REVIEW-SUMMARY-001`: Context packs expose
-  aggregate review-required self-lesson counts without lesson content.
+- `PALACE-SELF-LESSON-REVIEW-FLOW-001`: Memory Palace review flow links
+  review queue, explanation, refresh, correction, and deletion actions.
 
 Longer-term suites:
 

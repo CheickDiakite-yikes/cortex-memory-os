@@ -24,6 +24,7 @@ from cortex_memory_os.contracts import (
     ScopeLevel,
     SelfLesson,
     SelfLessonExclusion,
+    SelfLessonReviewSummary,
     SkillRecord,
 )
 from cortex_memory_os.context_policy import CONTEXT_PACK_POLICY_REF, evaluate_context_memory
@@ -934,6 +935,9 @@ class CortexMCPServer:
                 for lesson in self_lessons
             ],
             self_lesson_exclusions=self_lesson_exclusions,
+            self_lesson_review_summary=_self_lesson_review_summary(
+                self_lesson_exclusions
+            ),
             retrieval_scores=[
                 RetrievalScoreSummary(
                     memory_id=ranked.memory.memory_id,
@@ -1311,6 +1315,29 @@ def _self_lesson_exclusions(
             )
         )
     return sorted(exclusions, key=lambda item: item.lesson_id)
+
+
+def _self_lesson_review_summary(
+    exclusions: list[SelfLessonExclusion],
+) -> SelfLessonReviewSummary:
+    review_exclusions = [
+        exclusion
+        for exclusion in exclusions
+        if "self_lesson_review_required" in exclusion.reason_tags
+    ]
+    reason_counts: dict[str, int] = {}
+    scope_counts: dict[str, int] = {}
+    for exclusion in review_exclusions:
+        scope_counts[exclusion.scope.value] = scope_counts.get(exclusion.scope.value, 0) + 1
+        for reason in exclusion.reason_tags:
+            if reason == "self_lesson_review_required":
+                continue
+            reason_counts[reason] = reason_counts.get(reason, 0) + 1
+    return SelfLessonReviewSummary(
+        review_required_count=len(review_exclusions),
+        reason_counts=dict(sorted(reason_counts.items())),
+        scope_counts=dict(sorted(scope_counts.items())),
+    )
 
 
 def _required_self_lesson_context(scope: ScopeLevel) -> str | None:

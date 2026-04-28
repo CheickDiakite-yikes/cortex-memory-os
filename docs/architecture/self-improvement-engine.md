@@ -254,3 +254,10 @@ one project, agent, or session from silently shaping another.
   out of the queue;
 - queued items include review state and safe actions without lesson content,
   learned-from refs, rollback conditions, or scoped provenance tags.
+
+`CONTEXT-PACK-SELF-LESSON-REVIEW-SUMMARY-001` verifies:
+
+- context packs include aggregate counts for review-required self-lessons;
+- summary metadata groups review-required lessons by reason and scope;
+- summaries point agents toward the review queue tool without exposing lesson
+  content, learned-from refs, or scoped provenance tags.
