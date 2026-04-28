@@ -59,6 +59,12 @@ class SelfLessonCorrection:
     decision: SelfLessonDecision
 
 
+@dataclass(frozen=True)
+class SelfLessonDeletion:
+    lesson: SelfLesson
+    decision: SelfLessonDecision
+
+
 FORBIDDEN_CHANGE_PHRASES = (
     "grant permission",
     "expand permission",
@@ -303,6 +309,51 @@ def correct_self_lesson(
     return SelfLessonCorrection(
         old_lesson=superseded,
         replacement_lesson=replacement,
+        decision=decision,
+    )
+
+
+def evaluate_self_lesson_deletion(
+    lesson: SelfLesson,
+    *,
+    user_confirmed: bool,
+) -> SelfLessonDecision:
+    if lesson.status == MemoryStatus.DELETED:
+        return _deny(MemoryStatus.DELETED, "already_deleted")
+    if not user_confirmed:
+        return _deny(MemoryStatus.DELETED, "user_confirmation_required")
+    return SelfLessonDecision(
+        allowed=True,
+        target_status=MemoryStatus.DELETED,
+        required_behavior="stop_using_and_hide_from_context",
+        reason="delete_allowed",
+    )
+
+
+def delete_self_lesson(
+    lesson: SelfLesson,
+    *,
+    user_confirmed: bool,
+    reason_ref: str | None = None,
+) -> SelfLessonDeletion:
+    decision = evaluate_self_lesson_deletion(
+        lesson,
+        user_confirmed=user_confirmed,
+    )
+    if not decision.allowed:
+        raise ValueError(decision.reason)
+    rollback_if = list(lesson.rollback_if)
+    if reason_ref:
+        deletion_ref = f"deleted:{reason_ref}"
+        if deletion_ref not in rollback_if:
+            rollback_if.append(deletion_ref)
+    return SelfLessonDeletion(
+        lesson=lesson.model_copy(
+            update={
+                "status": MemoryStatus.DELETED,
+                "rollback_if": rollback_if,
+            }
+        ),
         decision=decision,
     )
 

@@ -201,6 +201,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_self_lesson_list_tool,
         case_gateway_self_lesson_explain_tool,
         case_gateway_self_lesson_correction_tool,
+        case_gateway_self_lesson_deletion_tool,
         case_repeated_workflow_stays_draft_skill,
         case_high_risk_action_requires_review,
         case_benchmark_plan_quality_gate,
@@ -2787,6 +2788,74 @@ def case_gateway_self_lesson_correction_tool() -> BenchmarkCaseResult:
             "replacement_status": stored_replacement.status.value
             if stored_replacement
             else None,
+        },
+    )
+
+
+def case_gateway_self_lesson_deletion_tool() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    active = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        store.add_self_lesson(active)
+        server = CortexMCPServer(store=store)
+        denied = server.call_tool(
+            "self_lesson.delete",
+            {"lesson_id": active.lesson_id, "user_confirmed": False},
+        )
+        allowed = server.call_tool(
+            "self_lesson.delete",
+            {
+                "lesson_id": active.lesson_id,
+                "user_confirmed": True,
+                "reason_ref": "user_request",
+            },
+        )
+        context_response = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug"},
+        )
+        stored = store.get_self_lesson(active.lesson_id)
+        audits = store.audit_for_target(active.lesson_id)
+
+    audit_summaries = " ".join(event.redacted_summary for event in audits)
+    context_lessons = context_response.get("relevant_self_lessons", [])
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        denied.get("decision", {}).get("allowed") is False
+        and denied.get("decision", {}).get("reason") == "user_confirmation_required"
+        and denied.get("lesson", {}).get("status") == MemoryStatus.ACTIVE.value
+        and allowed.get("decision", {}).get("allowed") is True
+        and allowed.get("lesson", {}).get("status") == MemoryStatus.DELETED.value
+        and "deleted:user_request" in allowed.get("lesson", {}).get("rollback_if", [])
+        and stored is not None
+        and stored.status == MemoryStatus.DELETED
+        and [event.action for event in audits]
+        == ["delete_self_lesson", "delete_self_lesson"]
+        and active.content not in audit_summaries
+        and context_lessons == []
+        and "GATEWAY-SELF-LESSON-DELETE-001" in docs_text
+        and "GATEWAY-SELF-LESSON-DELETE-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-SELF-LESSON-DELETE-001/confirmed_delete_audit",
+        suite="GATEWAY-SELF-LESSON-DELETE-001",
+        passed=passed,
+        summary="Gateway deletion requires confirmation, persists redacted audits, and removes self-lessons from context.",
+        metrics={
+            "audit_count": len(audits),
+            "context_lesson_count": len(context_lessons),
+        },
+        evidence={
+            "lesson_id": active.lesson_id,
+            "audit_actions": [event.action for event in audits],
+            "final_status": stored.status.value if stored else None,
         },
     )
 

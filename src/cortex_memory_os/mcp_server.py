@@ -39,7 +39,9 @@ from cortex_memory_os.self_lesson_audit import record_self_lesson_decision_audit
 from cortex_memory_os.self_lessons import (
     SelfLessonChangeType,
     correct_self_lesson,
+    delete_self_lesson,
     evaluate_self_lesson_correction,
+    evaluate_self_lesson_deletion,
     evaluate_self_lesson_rollback,
     evaluate_stored_self_lesson_promotion,
     promote_stored_self_lesson,
@@ -242,6 +244,20 @@ class CortexMCPServer:
                         "reason_ref": {"type": "string"},
                     },
                     "required": ["lesson_id", "failure_count"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "self_lesson.delete",
+                "description": "Delete a self-lesson from context use after explicit confirmation and persist an audit receipt.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "lesson_id": {"type": "string"},
+                        "user_confirmed": {"type": "boolean"},
+                        "reason_ref": {"type": "string"},
+                    },
+                    "required": ["lesson_id", "user_confirmed"],
                     "additionalProperties": False,
                 },
             },
@@ -531,6 +547,44 @@ class CortexMCPServer:
                     user_requested=user_requested,
                     reason_ref=reason_ref,
                 )
+                store.add_self_lesson(updated_lesson)
+            return {
+                "lesson": serialize_self_lesson(updated_lesson),
+                "decision": serialize_self_lesson_decision(decision),
+                "audit_event": serialize_audit_event(audit_event),
+            }
+        if name == "self_lesson.delete":
+            store = self._require_self_lesson_store()
+            lesson_id = _require_string(arguments, "lesson_id")
+            lesson = store.get_self_lesson(lesson_id)
+            if lesson is None:
+                raise JsonRpcError(-32602, f"unknown lesson_id: {lesson_id}")
+            user_confirmed = _require_bool(arguments, "user_confirmed")
+            reason_ref = (
+                _require_string(arguments, "reason_ref")
+                if "reason_ref" in arguments
+                else None
+            )
+            decision = evaluate_self_lesson_deletion(
+                lesson,
+                user_confirmed=user_confirmed,
+            )
+            audit_event = record_self_lesson_decision_audit(
+                store,
+                lesson_id=lesson.lesson_id,
+                action="delete_self_lesson",
+                target_status=decision.target_status,
+                allowed=decision.allowed,
+                reason=decision.reason,
+            )
+            updated_lesson = lesson
+            if decision.allowed:
+                deletion = delete_self_lesson(
+                    lesson,
+                    user_confirmed=True,
+                    reason_ref=reason_ref,
+                )
+                updated_lesson = deletion.lesson
                 store.add_self_lesson(updated_lesson)
             return {
                 "lesson": serialize_self_lesson(updated_lesson),

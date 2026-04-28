@@ -67,6 +67,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-27 | Gateway self-lesson explanation | `uv run cortex-bench` | 49/49 passed | `benchmarks/runs/bench_20260427T210745Z.json` | Next benchmark: Memory Palace self-lesson flows. |
 | 2026-04-27 | Memory Palace self-lesson flows | `uv run cortex-bench` | 50/50 passed | `benchmarks/runs/bench_20260427T235840Z.json` | Next benchmark: gateway self-lesson correction. |
 | 2026-04-27 | Gateway self-lesson correction | `uv run cortex-bench` | 51/51 passed | `benchmarks/runs/bench_20260428T000434Z.json` | Next benchmark: gateway self-lesson deletion/revocation. |
+| 2026-04-27 | Gateway self-lesson deletion | `uv run cortex-bench` | 52/52 passed | `benchmarks/runs/bench_20260428T000737Z.json` | Next benchmark: self-lesson audit listing. |
 
 ## First Runnable Harness Requirements
 

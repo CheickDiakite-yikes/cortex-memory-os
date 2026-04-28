@@ -22,6 +22,7 @@ def test_lists_memory_tools():
         "self_lesson.correct",
         "self_lesson.promote",
         "self_lesson.rollback",
+        "self_lesson.delete",
         "memory.explain",
         "memory.correct",
         "memory.forget",
@@ -690,6 +691,65 @@ def test_self_lesson_rollback_tool_revokes_active_lesson_and_persists_audit(tmp_
     assert "rolled_back:ctx_pack_noise" in response["result"]["lesson"]["rollback_if"]
     assert store.get_self_lesson(active.lesson_id).status == MemoryStatus.REVOKED
     assert response["result"]["audit_event"]["action"] == "rollback_self_lesson"
+    assert context_response["result"]["relevant_self_lessons"] == []
+
+
+def test_self_lesson_delete_tool_requires_confirmation_and_excludes_context(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    store.add_self_lesson(active)
+    server = CortexMCPServer(store=store)
+
+    denied = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 55,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.delete",
+                "arguments": {"lesson_id": active.lesson_id, "user_confirmed": False},
+            },
+        }
+    )
+    allowed = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 56,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.delete",
+                "arguments": {
+                    "lesson_id": active.lesson_id,
+                    "user_confirmed": True,
+                    "reason_ref": "user_request",
+                },
+            },
+        }
+    )
+    context_response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 57,
+            "method": "tools/call",
+            "params": {
+                "name": "memory.get_context_pack",
+                "arguments": {"goal": "continue fixing onboarding auth bug"},
+            },
+        }
+    )
+
+    assert denied["result"]["decision"]["allowed"] is False
+    assert denied["result"]["decision"]["reason"] == "user_confirmation_required"
+    assert denied["result"]["lesson"]["status"] == "active"
+    assert allowed["result"]["decision"]["allowed"] is True
+    assert allowed["result"]["lesson"]["status"] == "deleted"
+    assert "deleted:user_request" in allowed["result"]["lesson"]["rollback_if"]
+    assert store.get_self_lesson(active.lesson_id).status == MemoryStatus.DELETED
+    assert [event.action for event in store.audit_for_target(active.lesson_id)] == [
+        "delete_self_lesson",
+        "delete_self_lesson",
+    ]
+    assert "Before editing auth" not in allowed["result"]["audit_event"]["redacted_summary"]
     assert context_response["result"]["relevant_self_lessons"] == []
 
 

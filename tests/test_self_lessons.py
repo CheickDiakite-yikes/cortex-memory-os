@@ -7,7 +7,9 @@ from cortex_memory_os.self_lessons import (
     SELF_LESSON_POLICY_REF,
     SelfLessonChangeType,
     correct_self_lesson,
+    delete_self_lesson,
     evaluate_self_lesson_correction,
+    evaluate_self_lesson_deletion,
     evaluate_self_lesson_promotion,
     evaluate_self_lesson_rollback,
     evaluate_stored_self_lesson_promotion,
@@ -198,6 +200,37 @@ def test_self_lesson_rollback_revokes_active_lesson():
     assert allowed.required_behavior == "stop_using_lesson"
     assert revoked.status == MemoryStatus.REVOKED
     assert "rolled_back:ctx_pack_noise" in revoked.rollback_if
+
+
+def test_self_lesson_deletion_requires_confirmation_and_blocks_use():
+    active = promote_self_lesson(
+        _proposal(),
+        user_confirmed=True,
+        today=date(2026, 4, 27),
+    )
+
+    no_confirmation = evaluate_self_lesson_deletion(
+        active,
+        user_confirmed=False,
+    )
+    allowed = evaluate_self_lesson_deletion(
+        active,
+        user_confirmed=True,
+    )
+    deleted = delete_self_lesson(
+        active,
+        user_confirmed=True,
+        reason_ref="user_request",
+    )
+
+    assert no_confirmation.reason == "user_confirmation_required"
+    assert no_confirmation.allowed is False
+    assert allowed.allowed is True
+    assert allowed.required_behavior == "stop_using_and_hide_from_context"
+    assert deleted.lesson.status == MemoryStatus.DELETED
+    assert "deleted:user_request" in deleted.lesson.rollback_if
+    with pytest.raises(ValueError, match="user_confirmation_required"):
+        delete_self_lesson(active, user_confirmed=False)
 
 
 def test_self_lesson_can_only_use_low_or_medium_risk_contract():

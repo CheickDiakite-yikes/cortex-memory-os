@@ -136,3 +136,11 @@ self-lessons only, so proposal storage cannot silently become behavior change.
 - the replacement records the old lesson as provenance;
 - correction creates a redacted audit receipt without copying lesson content;
 - neither the superseded old lesson nor the candidate replacement enters context packs.
+
+`GATEWAY-SELF-LESSON-DELETE-001` verifies:
+
+- gateway deletion requires explicit confirmation;
+- denied deletion attempts leave the lesson unchanged while recording a receipt;
+- confirmed deletion marks the lesson deleted and preserves the reason reference;
+- deletion creates a redacted audit receipt without copying lesson content;
+- deleted self-lessons are excluded from context packs.
