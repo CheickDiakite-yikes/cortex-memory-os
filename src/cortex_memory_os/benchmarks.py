@@ -181,6 +181,7 @@ def run_all() -> BenchmarkRunResult:
         case_context_pack_self_lesson_exclusion_metadata,
         case_self_lesson_scope_export_review_metadata,
         case_self_lesson_scope_retention_review,
+        case_self_lesson_scope_refresh_with_audit,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
@@ -1805,6 +1806,87 @@ def case_self_lesson_scope_retention_review() -> BenchmarkCaseResult:
         evidence={
             "review_status": review_state.get("status"),
             "exclusion_reason": exclusions[0].get("reason_tags") if exclusions else [],
+        },
+    )
+
+
+def case_self_lesson_scope_refresh_with_audit() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        stale = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_stale",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_stale"],
+                "last_validated": date(2025, 1, 1),
+            }
+        )
+        store.add_self_lesson(stale)
+        server = CortexMCPServer(store=store)
+        denied = server.call_tool(
+            "self_lesson.refresh",
+            {"lesson_id": stale.lesson_id, "user_confirmed": False},
+        )
+        blocked_context = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
+        )
+        refreshed = server.call_tool(
+            "self_lesson.refresh",
+            {"lesson_id": stale.lesson_id, "user_confirmed": True},
+        )
+        allowed_context = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
+        )
+        audit_response = server.call_tool(
+            "self_lesson.audit",
+            {"lesson_id": stale.lesson_id},
+        )
+
+    audit_events = audit_response.get("audit_events", [])
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        denied.get("decision", {}).get("allowed") is False
+        and denied.get("decision", {}).get("reason") == "user_confirmation_required"
+        and blocked_context.get("relevant_self_lessons") == []
+        and refreshed.get("decision", {}).get("allowed") is True
+        and refreshed.get("decision", {}).get("reason") == "refresh_allowed"
+        and refreshed.get("review_state", {}).get("status") == "current"
+        and refreshed.get("audit_event", {}).get("action") == "refresh_self_lesson"
+        and [
+            lesson.get("lesson_id")
+            for lesson in allowed_context.get("relevant_self_lessons", [])
+        ]
+        == [stale.lesson_id]
+        and allowed_context.get("self_lesson_exclusions") == []
+        and [event.get("action") for event in audit_events]
+        == ["refresh_self_lesson", "refresh_self_lesson"]
+        and all(event.get("content_redacted") is True for event in audit_events)
+        and "SELF-LESSON-SCOPE-REFRESH-001" in docs_text
+        and "SELF-LESSON-SCOPE-REFRESH-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SELF-LESSON-SCOPE-REFRESH-001/audited_refresh_reenters_context",
+        suite="SELF-LESSON-SCOPE-REFRESH-001",
+        passed=passed,
+        summary="Reviewed scoped self-lessons can re-enter context only after confirmed audit-backed refresh.",
+        metrics={
+            "audit_count": len(audit_events),
+            "blocked_context_count": len(blocked_context.get("relevant_self_lessons", [])),
+            "allowed_context_count": len(allowed_context.get("relevant_self_lessons", [])),
+        },
+        evidence={
+            "denied_reason": denied.get("decision", {}).get("reason"),
+            "refresh_action": refreshed.get("audit_event", {}).get("action"),
         },
     )
 

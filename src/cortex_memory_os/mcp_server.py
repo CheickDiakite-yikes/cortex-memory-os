@@ -46,10 +46,12 @@ from cortex_memory_os.self_lessons import (
     delete_self_lesson,
     evaluate_self_lesson_correction,
     evaluate_self_lesson_deletion,
+    evaluate_self_lesson_refresh,
     evaluate_self_lesson_rollback,
     evaluate_stored_self_lesson_promotion,
     promote_stored_self_lesson,
     propose_self_lesson,
+    refresh_self_lesson,
     rollback_self_lesson,
 )
 from cortex_memory_os.skill_audit import record_skill_maturity_audit
@@ -275,6 +277,19 @@ class CortexMCPServer:
                         "reason_ref": {"type": "string"},
                     },
                     "required": ["lesson_id", "failure_count"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "self_lesson.refresh",
+                "description": "Refresh a reviewed active self-lesson with explicit confirmation and audit evidence.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "lesson_id": {"type": "string"},
+                        "user_confirmed": {"type": "boolean"},
+                    },
+                    "required": ["lesson_id", "user_confirmed"],
                     "additionalProperties": False,
                 },
             },
@@ -635,6 +650,40 @@ class CortexMCPServer:
             return {
                 "lesson": serialize_self_lesson(updated_lesson),
                 "decision": serialize_self_lesson_decision(decision),
+                "audit_event": serialize_audit_event(audit_event),
+            }
+        if name == "self_lesson.refresh":
+            store = self._require_self_lesson_store()
+            lesson_id = _require_string(arguments, "lesson_id")
+            lesson = store.get_self_lesson(lesson_id)
+            if lesson is None:
+                raise JsonRpcError(-32602, f"unknown lesson_id: {lesson_id}")
+            review_state = self_lesson_review_state(lesson)
+            decision = evaluate_self_lesson_refresh(
+                lesson,
+                user_confirmed=_require_bool(arguments, "user_confirmed"),
+                review_required=review_state["review_required"],
+            )
+            audit_event = record_self_lesson_decision_audit(
+                store,
+                lesson_id=lesson.lesson_id,
+                action="refresh_self_lesson",
+                target_status=decision.target_status,
+                allowed=decision.allowed,
+                reason=decision.reason,
+            )
+            updated_lesson = lesson
+            if decision.allowed:
+                updated_lesson = refresh_self_lesson(
+                    lesson,
+                    user_confirmed=True,
+                    review_required=review_state["review_required"],
+                )
+                store.add_self_lesson(updated_lesson)
+            return {
+                "lesson": serialize_self_lesson(updated_lesson),
+                "decision": serialize_self_lesson_decision(decision),
+                "review_state": self_lesson_review_state(updated_lesson),
                 "audit_event": serialize_audit_event(audit_event),
             }
         if name == "self_lesson.delete":
@@ -1287,6 +1336,7 @@ def _self_lesson_available_actions(lesson: SelfLesson) -> list[str]:
     if lesson.status == MemoryStatus.ACTIVE:
         actions = ["rollback_if_failed_or_requested"]
         if self_lesson_review_state(lesson)["review_required"]:
+            actions.insert(0, "refresh_with_confirmation")
             actions.insert(0, "review_before_context_use")
         return actions
     return []

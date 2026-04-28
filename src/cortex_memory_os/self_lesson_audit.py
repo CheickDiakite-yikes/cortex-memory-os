@@ -75,6 +75,7 @@ def record_self_lesson_decision_audit(
         "rollback_self_lesson": "rollback",
         "correct_self_lesson": "correction",
         "delete_self_lesson": "deletion",
+        "refresh_self_lesson": "refresh",
     }
     if action not in labels:
         raise ValueError("unsupported self-lesson audit action")

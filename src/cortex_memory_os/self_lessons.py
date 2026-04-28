@@ -412,6 +412,47 @@ def rollback_self_lesson(
     )
 
 
+def evaluate_self_lesson_refresh(
+    lesson: SelfLesson,
+    *,
+    user_confirmed: bool,
+    review_required: bool,
+) -> SelfLessonDecision:
+    if lesson.status != MemoryStatus.ACTIVE:
+        return _deny(MemoryStatus.ACTIVE, "only_active_lessons_can_refresh")
+    if not review_required:
+        return _deny(MemoryStatus.ACTIVE, "review_not_required")
+    if not user_confirmed:
+        return _deny(MemoryStatus.ACTIVE, "user_confirmation_required")
+    return SelfLessonDecision(
+        allowed=True,
+        target_status=MemoryStatus.ACTIVE,
+        required_behavior="refresh_validation_with_audit",
+        reason="refresh_allowed",
+    )
+
+
+def refresh_self_lesson(
+    lesson: SelfLesson,
+    *,
+    user_confirmed: bool,
+    review_required: bool,
+    validated_on: date | None = None,
+) -> SelfLesson:
+    decision = evaluate_self_lesson_refresh(
+        lesson,
+        user_confirmed=user_confirmed,
+        review_required=review_required,
+    )
+    if not decision.allowed:
+        raise ValueError(decision.reason)
+    return lesson.model_copy(
+        update={
+            "last_validated": validated_on or datetime.now(UTC).date(),
+        }
+    )
+
+
 def contains_forbidden_self_lesson_change(value: str) -> bool:
     normalized = _normalize(value)
     return any(phrase in normalized for phrase in FORBIDDEN_CHANGE_PHRASES)

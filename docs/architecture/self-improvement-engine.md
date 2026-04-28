@@ -229,3 +229,10 @@ one project, agent, or session from silently shaping another.
 - stale scoped lessons are excluded from context packs until reviewed again;
 - exclusion metadata names the review requirement without copying lesson content
   or scoped provenance refs.
+
+`SELF-LESSON-SCOPE-REFRESH-001` verifies:
+
+- refreshing a scoped self-lesson requires explicit user confirmation;
+- denied and accepted refresh attempts both create redacted audit receipts;
+- a confirmed refresh updates validation state so matching scoped context packs
+  can use the lesson again.

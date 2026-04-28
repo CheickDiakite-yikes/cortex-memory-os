@@ -32,6 +32,7 @@ def test_lists_memory_tools():
         "self_lesson.correct",
         "self_lesson.promote",
         "self_lesson.rollback",
+        "self_lesson.refresh",
         "self_lesson.delete",
         "self_lesson.export",
         "memory.explain",
@@ -1359,6 +1360,7 @@ def test_stale_scoped_self_lesson_requires_review_before_context_use(tmp_path):
     assert list_item["context_eligible"] is False
     assert list_item["context_eligibility"]["status"] == "review_required"
     assert list_item["available_actions"][0] == "review_before_context_use"
+    assert "refresh_with_confirmation" in list_item["available_actions"]
     assert pack["relevant_self_lessons"] == []
     assert [item["lesson_id"] for item in pack["self_lesson_exclusions"]] == [
         stale.lesson_id
@@ -1371,6 +1373,58 @@ def test_stale_scoped_self_lesson_requires_review_before_context_use(tmp_path):
     rendered_exclusions = json.dumps(pack["self_lesson_exclusions"])
     assert "Before editing auth" not in rendered_exclusions
     assert "project:alpha" not in rendered_exclusions
+
+
+def test_refresh_reviewed_scoped_self_lesson_reenters_context_with_audit(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    stale = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_stale",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_stale"],
+            "last_validated": date(2025, 1, 1),
+        }
+    )
+    store.add_self_lesson(stale)
+    server = CortexMCPServer(store=store)
+
+    denied = server.call_tool(
+        "self_lesson.refresh",
+        {"lesson_id": stale.lesson_id, "user_confirmed": False},
+    )
+    blocked_pack = server.call_tool(
+        "memory.get_context_pack",
+        {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
+    )
+    refreshed = server.call_tool(
+        "self_lesson.refresh",
+        {"lesson_id": stale.lesson_id, "user_confirmed": True},
+    )
+    allowed_pack = server.call_tool(
+        "memory.get_context_pack",
+        {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
+    )
+    audit_response = server.call_tool("self_lesson.audit", {"lesson_id": stale.lesson_id})
+
+    assert denied["decision"]["allowed"] is False
+    assert denied["decision"]["reason"] == "user_confirmation_required"
+    assert blocked_pack["relevant_self_lessons"] == []
+    assert refreshed["decision"]["allowed"] is True
+    assert refreshed["decision"]["reason"] == "refresh_allowed"
+    assert refreshed["lesson"]["status"] == MemoryStatus.ACTIVE.value
+    assert refreshed["lesson"]["last_validated"] != "2025-01-01"
+    assert refreshed["review_state"]["status"] == "current"
+    assert refreshed["audit_event"]["action"] == "refresh_self_lesson"
+    assert [item["lesson_id"] for item in allowed_pack["relevant_self_lessons"]] == [
+        stale.lesson_id
+    ]
+    assert allowed_pack["self_lesson_exclusions"] == []
+    assert [item["action"] for item in audit_response["audit_events"]] == [
+        "refresh_self_lesson",
+        "refresh_self_lesson",
+    ]
+    assert all(item["content_redacted"] is True for item in audit_response["audit_events"])
 
 
 def test_memory_explain_returns_provenance_and_influence_limits():
