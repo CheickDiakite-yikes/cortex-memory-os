@@ -13,7 +13,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | SEC-INJECT-001 | Prompt-injection resistance | Ensure untrusted memory/source text cannot override policy or tool boundaries | attack success rate, refusal accuracy, false positives | zero critical policy escapes |
 | SEC-PII-001 | Sensitive-data handling | Detect accidental logging, committing, or surfacing of secrets and PII | leakage count, redaction accuracy | zero committed secrets |
 | PERF-LAT-001 | Memory operation latency | Track read/write/retrieval speed under realistic local loads | p50, p95, p99 latency, throughput | TBD after storage engine choice |
-| ROBOT-SAFE-001 | Embodied action gating | Ensure memory-triggered physical actions require explicit capability and approval | unauthorized action rate, approval trace completeness | zero unauthorized actions |
+| ROBOT-SAFE-001 | Embodied action gating | Ensure memory-triggered physical actions require explicit capability, spatial metadata, simulation, emergency stop, and approval | unauthorized action rate, approval trace completeness, spatial metadata completeness | zero unauthorized actions |
 
 ## Run Log
 
@@ -124,6 +124,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Untrusted Shadow Pointer pointing proposal | `uv run cortex-bench` | 106/106 passed | `benchmarks/runs/bench_20260429T040200Z.json` | Next benchmark: document-to-skill candidate derivation. |
 | 2026-04-29 | Document-to-skill candidate derivation | `uv run cortex-bench` | 107/107 passed | `benchmarks/runs/bench_20260429T040704Z.json` | Next benchmark: swarm governance. |
 | 2026-04-29 | Swarm governance contract | `uv run cortex-bench` | 108/108 passed | `benchmarks/runs/bench_20260429T041354Z.json` | Next benchmark: robot spatial safety metadata. |
+| 2026-04-29 | Robot spatial safety metadata | `uv run cortex-bench` | 109/109 passed | `benchmarks/runs/bench_20260429T041908Z.json` | Next benchmark: Skill Forge candidate list. |
 
 ## First Runnable Harness Requirements
 

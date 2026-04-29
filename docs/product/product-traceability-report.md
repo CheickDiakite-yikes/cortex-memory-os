@@ -14,6 +14,7 @@ Source documents:
 - `docs/architecture/context-pack-templates.md`
 - `docs/architecture/document-to-skill-derivation.md`
 - `docs/architecture/swarm-governance.md`
+- `docs/architecture/robot-spatial-safety.md`
 - `docs/architecture/agent-runtime-trace.md`
 - `docs/architecture/shadow-pointer-pointing.md`
 - `docs/architecture/system-blueprint.md`
@@ -38,7 +39,7 @@ Source documents:
 | Swarm Governance | Validated contract | `SWARM-GOVERNANCE-001`, `docs/adr/0005-swarm-governance-boundary.md` | Wire future parallel agents through governed gateway execution instead of direct delegation. |
 | Shadow Pointer | Partial with controls and pointing contract | `SHADOW-POINTER-001`, `SHADOW-POINTER-CONTROLS-001`, `POINTER-PROPOSAL-001`, static UI prototype | Build native overlay with live permissions and wire controls/proposals to real capture adapters. |
 | Native Perception Bus | Envelope, firewall handoff, and evidence eligibility handoff validated; adapters not started | `PERCEPTION-EVENT-ENVELOPE-001`, `PERCEPTION-FIREWALL-HANDOFF-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001`, roadmap, and ADR | Add consented macOS app/window, accessibility, terminal, and browser adapters. |
-| Robot readiness | Safety contract only | `ROBOT-SAFE-001`, initial threat model | Add simulation-first capability gates before physical integrations. |
+| Robot readiness | Spatial safety contract validated | `ROBOT-SAFE-001`, `docs/architecture/robot-spatial-safety.md`, initial threat model | Keep physical integrations blocked until real simulation, capability, emergency-stop, and audit adapters exist. |
 
 ## Coverage Snapshot
 
@@ -66,6 +67,9 @@ User-facing pillars:
   artifacts, approvals, retries, blocked hostile content, and outcome checks.
 - Swarm Governance: validated source isolation, disjoint write scopes, budget
   enforcement, cancellation receipts, and non-autonomous task ceilings.
+- Robot readiness: validated capability refs, workspace bounds, affordances,
+  material constraints, spatial hazards, simulation status, emergency stop,
+  approval, and bounded force/speed metadata for future embodied actions.
 
 ## Next Product Gaps
 

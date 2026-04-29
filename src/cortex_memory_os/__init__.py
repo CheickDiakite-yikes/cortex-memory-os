@@ -180,6 +180,16 @@ from cortex_memory_os.swarm_governance import (
     evaluate_swarm_plan,
     evaluate_swarm_source_access,
 )
+from cortex_memory_os.robot_safety import (
+    ROBOT_MAX_FORCE_NEWTONS,
+    ROBOT_MAX_SPEED_MPS,
+    ROBOT_SPATIAL_SAFETY_POLICY_REF,
+    RobotHazardKind,
+    RobotSimulationStatus,
+    RobotSpatialSafetyDecision,
+    RobotSpatialSafetyEnvelope,
+    evaluate_robot_spatial_safety,
+)
 from cortex_memory_os.sensitive_data_policy import (
     FIREWALL_POLICY_REF,
     REDACTED_SECRET_PLACEHOLDER,
@@ -384,6 +394,14 @@ __all__ = [
     "cancel_swarm_plan",
     "evaluate_swarm_plan",
     "evaluate_swarm_source_access",
+    "ROBOT_MAX_FORCE_NEWTONS",
+    "ROBOT_MAX_SPEED_MPS",
+    "ROBOT_SPATIAL_SAFETY_POLICY_REF",
+    "RobotHazardKind",
+    "RobotSimulationStatus",
+    "RobotSpatialSafetyDecision",
+    "RobotSpatialSafetyEnvelope",
+    "evaluate_robot_spatial_safety",
     "FIREWALL_POLICY_REF",
     "REDACTED_SECRET_PLACEHOLDER",
     "REQUIRED_NON_COMMIT_PATTERNS",

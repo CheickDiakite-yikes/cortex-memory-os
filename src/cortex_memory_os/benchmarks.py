@@ -135,6 +135,13 @@ from cortex_memory_os.swarm_governance import (
     evaluate_swarm_plan,
     evaluate_swarm_source_access,
 )
+from cortex_memory_os.robot_safety import (
+    ROBOT_SPATIAL_SAFETY_POLICY_REF,
+    RobotHazardKind,
+    RobotSimulationStatus,
+    RobotSpatialSafetyEnvelope,
+    evaluate_robot_spatial_safety,
+)
 from cortex_memory_os.shadow_pointer import (
     SHADOW_POINTER_POINTING_POLICY_REF,
     ShadowPointerCoordinateSpace,
@@ -326,6 +333,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_self_lesson_deletion_tool,
         case_gateway_self_lesson_audit_list_tool,
         case_repeated_workflow_stays_draft_skill,
+        case_robot_spatial_safety_contract,
         case_high_risk_action_requires_review,
         case_benchmark_plan_quality_gate,
     ]
@@ -564,6 +572,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "docs/architecture/context-pack-templates.md",
         "docs/architecture/document-to-skill-derivation.md",
         "docs/architecture/swarm-governance.md",
+        "docs/architecture/robot-spatial-safety.md",
         "docs/architecture/agent-runtime-trace.md",
         "docs/architecture/shadow-pointer-pointing.md",
         "docs/ops/task-board.md",
@@ -8447,6 +8456,97 @@ def case_high_risk_action_requires_review() -> BenchmarkCaseResult:
         evidence={
             "required_behavior": decision.required_behavior,
             "reason": decision.reason,
+        },
+    )
+
+
+def case_robot_spatial_safety_contract() -> BenchmarkCaseResult:
+    doc_path = REPO_ROOT / "docs" / "architecture" / "robot-spatial-safety.md"
+    doc_text = doc_path.read_text(encoding="utf-8")
+    required_doc_terms = [
+        "ROBOT-SPATIAL-SAFETY-001",
+        "spatial hazards",
+        "affordances",
+        "material constraints",
+        "simulation status",
+        "emergency stop",
+        "workspace bounds",
+        ROBOT_SPATIAL_SAFETY_POLICY_REF,
+    ]
+    missing_doc_terms = _missing_terms(doc_text, required_doc_terms)
+
+    valid = RobotSpatialSafetyEnvelope(
+        action_id="robot_action_pick_cup_001",
+        capability="robot.arm.grasp.v1",
+        action_summary="Pick up the empty cup from the marked test table.",
+        source_refs=["scene_robot_lab_synthetic"],
+        workspace_bounds_ref="workspace://lab/table-a/bounds-v1",
+        target_object_ref="object://cup-empty-blue",
+        affordances=["top_grasp", "stable_table_surface"],
+        material_constraints=["ceramic", "do_not_squeeze"],
+        risk_level=ActionRisk.MEDIUM,
+        physical_effect=True,
+        simulation_status=RobotSimulationStatus.PASSED,
+        simulation_evidence_refs=["sim://pick-cup/pass-001"],
+        approval_ref="approval://user/session-001",
+        emergency_stop_ref="estop://local/session-001",
+        max_force_newtons=10.0,
+        max_speed_mps=0.2,
+        policy_refs=[ROBOT_SPATIAL_SAFETY_POLICY_REF],
+    )
+    valid_decision = evaluate_robot_spatial_safety(valid)
+    not_simulated = evaluate_robot_spatial_safety(
+        valid.model_copy(
+            update={
+                "simulation_status": RobotSimulationStatus.NOT_RUN,
+                "simulation_evidence_refs": [],
+            }
+        )
+    )
+    hazardous = evaluate_robot_spatial_safety(
+        valid.model_copy(
+            update={
+                "hazards": [RobotHazardKind.HUMAN_PROXIMITY],
+                "bystander_present": True,
+            }
+        )
+    )
+    over_limit = evaluate_robot_spatial_safety(
+        valid.model_copy(update={"max_force_newtons": 40.0})
+    )
+
+    passed = (
+        valid_decision.allowed
+        and valid_decision.required_behavior == "approval_before_physical_effect"
+        and not not_simulated.allowed
+        and "simulation_not_passed" in not_simulated.reason_codes
+        and not hazardous.allowed
+        and hazardous.required_behavior == "step_by_step_review"
+        and not over_limit.allowed
+        and "force_limit_exceeded" in over_limit.reason_codes
+        and not missing_doc_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="ROBOT-SAFE-001/spatial_metadata_contract",
+        suite="ROBOT-SAFE-001",
+        passed=passed,
+        summary=(
+            "Robot spatial safety metadata requires capability, workspace bounds, "
+            "affordances, material constraints, simulation evidence, approval, "
+            "emergency stop, and bounded force/speed before physical effects."
+        ),
+        metrics={
+            "valid_allowed": int(valid_decision.allowed),
+            "hazard_count": len(hazardous.reason_codes),
+            "simulation_blocked": int(not not_simulated.allowed),
+            "force_limited": int(not over_limit.allowed),
+        },
+        evidence={
+            "policy_ref": ROBOT_SPATIAL_SAFETY_POLICY_REF,
+            "missing_doc_terms": missing_doc_terms,
+            "not_simulated_reason": ",".join(not_simulated.reason_codes),
+            "hazard_behavior": hazardous.required_behavior,
+            "over_limit_reason": ",".join(over_limit.reason_codes),
         },
     )
 

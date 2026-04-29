@@ -6,13 +6,13 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| ROBOT-SPATIAL-SAFETY-001 | Expand robot spatial safety metadata | Codex | Contract and `ROBOT-SAFE-001` expansion | Add spatial hazards, affordances, material constraints, and simulation status. |
+| SKILL-FORGE-LIST-001 | Add inspectable Skill Forge candidate list view model | Codex | Contract and Skill Forge dashboard benchmark | Make learned workflow candidates reviewable before building the real UI. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| _None_ |  |  |  |  |
+| CODEX-PLUGIN-001 | Package first Cortex Codex plugin skeleton | Codex | Plugin manifest plus smoke validation | Bundle MCP config and progressive-disclosure skills after candidate-list contract. |
 
 ## Backlog
 
@@ -135,6 +135,7 @@ Last updated: 2026-04-29
 | POINTER-PROPOSAL-001 | Define untrusted model pointing proposal contract | Codex | `src/cortex_memory_os/shadow_pointer.py`, `docs/adr/0004-untrusted-pointing-proposals.md`, `uv run pytest` -> 220 passed, `uv run cortex-bench` -> 106/106 passed, `uv run cortex-mcp --smoke` | Parses model-proposed coordinates as display-only overlays, not clicks, tool calls, trusted instructions, or memory writes. |
 | SKILL-DOC-DERIVATION-001 | Specify document-to-skill candidate flow | Codex | `src/cortex_memory_os/skill_forge.py`, `docs/architecture/document-to-skill-derivation.md`, `uv run pytest` -> 223 passed, `uv run cortex-bench` -> 107/107 passed, `uv run cortex-mcp --smoke` | Document workflows derive candidate-only draft skills with provenance, approval, rollback, deletion, and hostile-source gates. |
 | SWARM-GOVERNANCE-001 | Add swarm orchestration constraints | Codex | `docs/adr/0005-swarm-governance-boundary.md`, `docs/architecture/swarm-governance.md`, `uv run pytest` -> 228 passed, `uv run cortex-bench` -> 108/108 passed, `uv run cortex-mcp --smoke` | Swarm plans enforce budget ceilings, source isolation, disjoint write scopes, cancellation receipts, and non-autonomous task modes. |
+| ROBOT-SPATIAL-SAFETY-001 | Expand robot spatial safety metadata | Codex | `src/cortex_memory_os/robot_safety.py`, `docs/architecture/robot-spatial-safety.md`, `uv run pytest` focused -> 8 passed, `uv run cortex-bench` -> 109/109 passed | Robot spatial actions now require capability, workspace bounds, simulation status, emergency stop, approval, hazards, affordances, material constraints, and force/speed metadata. |
 
 ## Dropped
 
