@@ -13,6 +13,7 @@ from cortex_memory_os.mcp_server import (
     SELF_LESSON_REVIEW_QUEUE_ORDERING,
     CortexMCPServer,
     default_server,
+    encode_self_lesson_review_queue_cursor,
 )
 from cortex_memory_os.memory_store import InMemoryMemoryStore
 from cortex_memory_os.contracts import MemoryRecord
@@ -1708,6 +1709,7 @@ def test_self_lesson_review_queue_pages_with_stable_cursor(tmp_path):
     assert first_page["cursor"] is None
     assert first_page["has_more"] is True
     assert first_page["next_cursor"]
+    assert first_page["truncated"] is True
     assert first_page["page_start"] == 0
     assert first_page["page_end"] == 2
     assert first_page["safety_summary"]["next_cursor_present"] is True
@@ -1718,11 +1720,70 @@ def test_self_lesson_review_queue_pages_with_stable_cursor(tmp_path):
     assert second_page["cursor"] == first_page["next_cursor"]
     assert second_page["has_more"] is False
     assert second_page["next_cursor"] is None
+    assert second_page["truncated"] is False
     assert second_page["page_start"] == 2
     assert second_page["page_end"] == 4
     assert second_page["safety_summary"]["next_cursor_present"] is False
     assert "project:" not in first_page["next_cursor"]
     assert "task_" not in first_page["next_cursor"]
+
+
+def test_self_lesson_review_queue_exhausted_cursor_returns_empty_page(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+
+    def stale_lesson(
+        lesson_id: str,
+        ref: str,
+        last_validated: date | None,
+    ) -> SelfLesson:
+        return active.model_copy(
+            update={
+                "lesson_id": lesson_id,
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": [ref, f"task_{lesson_id}"],
+                "last_validated": last_validated,
+            }
+        )
+
+    for lesson in (
+        stale_lesson("lesson_project_stale_newer", "project:newer", date(2025, 3, 1)),
+        stale_lesson("lesson_project_stale_old_b", "project:old-b", date(2024, 1, 1)),
+        stale_lesson("lesson_project_missing_validation", "project:missing", None),
+        stale_lesson("lesson_project_stale_old_a", "project:old-a", date(2024, 1, 1)),
+    ):
+        store.add_self_lesson(lesson)
+    server = CortexMCPServer(store=store)
+    cursor = encode_self_lesson_review_queue_cursor(4)
+
+    page = server.call_tool(
+        "self_lesson.review_queue",
+        {"limit": 2, "cursor": cursor},
+    )
+
+    assert page["lesson_ids"] == []
+    assert page["lessons"] == []
+    assert page["count"] == 0
+    assert page["returned_count"] == 0
+    assert page["total_review_required_count"] == 4
+    assert page["cursor"] == cursor
+    assert page["next_cursor"] is None
+    assert page["has_more"] is False
+    assert page["page_start"] == 4
+    assert page["page_end"] == 4
+    assert page["truncated"] is False
+    safety_summary = page["safety_summary"]
+    assert safety_summary["empty_queue"] is True
+    assert safety_summary["lesson_count"] == 0
+    assert safety_summary["returned_count"] == 0
+    assert safety_summary["total_review_required_count"] == 4
+    assert safety_summary["has_more"] is False
+    assert safety_summary["next_cursor_present"] is False
+    assert safety_summary["truncated"] is False
+    rendered_page = json.dumps(page)
+    assert "Before editing auth" not in rendered_page
+    assert "project:" not in rendered_page
+    assert "task_" not in rendered_page
 
 
 def test_self_lesson_review_queue_invalid_cursor_error_is_redacted(tmp_path):

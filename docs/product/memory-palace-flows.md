@@ -542,6 +542,14 @@ queue is shown:
 - following `next_cursor` returns the next ordered page without repeating the
   previous page.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-EXHAUSTED-001` must pass before a UI treats a
+cursor page as complete:
+
+- exhausted cursors return an empty redacted page, not an error;
+- `has_more` is false, `next_cursor` is absent, and `truncated` is false;
+- the empty page preserves total review-required count and pagination metadata
+  without leaking lesson content/provenance.
+
 `GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001` must pass before accepting a cursor
 from any UI, agent, or external caller:
 

@@ -359,6 +359,14 @@ one project, agent, or session from silently shaping another.
 - following a cursor returns the next ordered page without repeating lessons or
   exposing content/provenance.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-EXHAUSTED-001` verifies:
+
+- exhausted cursors return an empty page with no next cursor;
+- `truncated` follows `has_more`, so exhausted pages are not shown as
+  incomplete;
+- empty exhausted pages preserve redaction and no-external-effects safety
+  metadata.
+
 `GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001` verifies:
 
 - malformed review queue cursors fail with a fixed redacted error;

@@ -61,6 +61,7 @@ from cortex_memory_os.mcp_server import (
     CortexMCPServer,
     JsonRpcError,
     default_server,
+    encode_self_lesson_review_queue_cursor,
 )
 from cortex_memory_os.memory_compiler import compile_scene_memory
 from cortex_memory_os.memory_lifecycle import (
@@ -198,6 +199,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_limit_safety_summary,
         case_gateway_review_queue_ordering,
         case_gateway_review_queue_paging_cursor,
+        case_gateway_review_queue_exhausted_cursor,
         case_gateway_review_queue_invalid_cursor,
         case_gateway_self_lesson_review_flow,
         case_self_lesson_review_flow_safety_summary,
@@ -2700,6 +2702,119 @@ def case_gateway_review_queue_paging_cursor() -> BenchmarkCaseResult:
             "second_page_ids": second_page.get("lesson_ids", []),
             "cursor_contains_provenance": "project:" in first_cursor
             or "task_" in first_cursor,
+        },
+    )
+
+
+def case_gateway_review_queue_exhausted_cursor() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+
+        def stale_lesson(
+            lesson_id: str,
+            ref: str,
+            last_validated: date | None,
+        ) -> SelfLesson:
+            return base.model_copy(
+                update={
+                    "lesson_id": lesson_id,
+                    "scope": ScopeLevel.PROJECT_SPECIFIC,
+                    "learned_from": [ref, f"task_{lesson_id}"],
+                    "last_validated": last_validated,
+                }
+            )
+
+        for lesson in (
+            stale_lesson(
+                "lesson_project_stale_newer",
+                "project:newer",
+                date(2025, 3, 1),
+            ),
+            stale_lesson(
+                "lesson_project_stale_old_b",
+                "project:old-b",
+                date(2024, 1, 1),
+            ),
+            stale_lesson(
+                "lesson_project_missing_validation",
+                "project:missing",
+                None,
+            ),
+            stale_lesson(
+                "lesson_project_stale_old_a",
+                "project:old-a",
+                date(2024, 1, 1),
+            ),
+        ):
+            store.add_self_lesson(lesson)
+
+        exhausted_cursor = encode_self_lesson_review_queue_cursor(4)
+        server = CortexMCPServer(store=store)
+        page = server.call_tool(
+            "self_lesson.review_queue",
+            {"limit": 2, "cursor": exhausted_cursor},
+        )
+
+    safety_summary = page.get("safety_summary", {})
+    serialized_page = json.dumps(page, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        page.get("lesson_ids") == []
+        and page.get("lessons") == []
+        and page.get("count") == 0
+        and page.get("returned_count") == 0
+        and page.get("total_review_required_count") == 4
+        and page.get("cursor") == exhausted_cursor
+        and page.get("next_cursor") is None
+        and page.get("has_more") is False
+        and page.get("page_start") == 4
+        and page.get("page_end") == 4
+        and page.get("truncated") is False
+        and safety_summary.get("empty_queue") is True
+        and safety_summary.get("lesson_count") == 0
+        and safety_summary.get("returned_count") == 0
+        and safety_summary.get("total_review_required_count") == 4
+        and safety_summary.get("has_more") is False
+        and safety_summary.get("next_cursor_present") is False
+        and safety_summary.get("truncated") is False
+        and "project:" not in serialized_page
+        and "task_" not in serialized_page
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-EXHAUSTED-001" in docs_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-EXHAUSTED-001" in product_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-EXHAUSTED-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-REVIEW-QUEUE-CURSOR-EXHAUSTED-001/empty_page",
+        suite="GATEWAY-REVIEW-QUEUE-CURSOR-EXHAUSTED-001",
+        passed=passed,
+        summary=(
+            "Exhausted review queue cursors return an empty redacted page "
+            "with no next cursor."
+        ),
+        metrics={
+            "returned_count": page.get("returned_count", -1),
+            "has_more": int(page.get("has_more") is True),
+            "next_cursor_present": int(page.get("next_cursor") is not None),
+            "truncated": int(page.get("truncated") is True),
+        },
+        evidence={
+            "cursor": page.get("cursor"),
+            "page_start": page.get("page_start"),
+            "page_end": page.get("page_end"),
+            "total_review_required_count": page.get(
+                "total_review_required_count"
+            ),
         },
     )
 
