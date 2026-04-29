@@ -191,6 +191,10 @@ from cortex_memory_os.skill_forge import (
     derive_skill_candidate_from_document,
     detect_skill_candidates,
 )
+from cortex_memory_os.skill_forge_dashboard import (
+    SKILL_FORGE_CANDIDATE_LIST_POLICY_REF,
+    build_skill_forge_candidate_list,
+)
 from cortex_memory_os.skill_policy import (
     evaluate_skill_promotion,
     evaluate_skill_rollback,
@@ -307,6 +311,7 @@ def run_all() -> BenchmarkRunResult:
         case_memory_export_audit_events,
         case_skill_forge_detector,
         case_document_to_skill_derivation_contract,
+        case_skill_forge_candidate_list_contract,
         case_skill_promotion_gate,
         case_skill_rollback_gate,
         case_skill_maturity_audit_events,
@@ -569,6 +574,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "docs/product/build-roadmap.md",
         "docs/product/original-goal-coverage.md",
         "docs/product/memory-palace-dashboard.md",
+        "docs/product/skill-forge-candidate-list.md",
         "docs/architecture/context-pack-templates.md",
         "docs/architecture/document-to-skill-derivation.md",
         "docs/architecture/swarm-governance.md",
@@ -599,6 +605,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "MEMORY-PALACE-DASHBOARD-001",
         "SKILL-FORGE-002",
         "SKILL-DOC-DERIVATION-001",
+        "SKILL-FORGE-LIST-001",
         "GATEWAY-CTX-001",
         "SWARM-GOVERNANCE-001",
         "SHADOW-POINTER-001",
@@ -7291,6 +7298,126 @@ def case_document_to_skill_derivation_contract() -> BenchmarkCaseResult:
             "missing_doc_terms": missing_doc_terms,
             "rejected_hostile": rejected_hostile,
             "rejected_instruction_text": rejected_instruction_text,
+        },
+    )
+
+
+def case_skill_forge_candidate_list_contract() -> BenchmarkCaseResult:
+    from cortex_memory_os.contracts import Scene
+
+    base = load_json(TEST_FIXTURES / "scene_research.json")
+    coding_scenes = [
+        Scene.model_validate(
+            {
+                **base,
+                "scene_id": f"scene_coding_debug_repeat_{index}",
+                "scene_type": "coding_debugging",
+            }
+        )
+        for index in range(1, 4)
+    ]
+    repeated_skill = detect_skill_candidates(coding_scenes)[0]
+    document_result = derive_skill_candidate_from_document(
+        DocumentSkillDerivationRequest(
+            document_id="doc_monthly_update",
+            title="Monthly update workflow",
+            source_ref="docs/workflows/monthly-update.md",
+            source_trust=SourceTrust.LOCAL_OBSERVED,
+            workflow_name="Prepare monthly update draft",
+            trigger_conditions=["user asks for monthly update"],
+            procedure_steps=[
+                "Gather approved metrics",
+                "Draft update with source refs",
+                "Flag missing approvals before external sharing",
+            ],
+            evidence_refs=["ev_doc_monthly_update"],
+            risk_level=ActionRisk.MEDIUM,
+        )
+    )
+    fake_secret = "abcdefghijklmnop1234"
+    secret_candidate = document_result.skill.model_copy(
+        update={
+            "skill_id": "skill_doc_secret_preview_candidate_v1",
+            "description": f"Use api_key={fake_secret} only in local dry runs.",
+            "procedure": [
+                f"Never expose api_key={fake_secret} in rendered UI",
+                "Ask user to approve draft only",
+            ],
+        }
+    )
+    active_omitted = document_result.skill.model_copy(update={"status": MemoryStatus.ACTIVE})
+    candidate_list = build_skill_forge_candidate_list(
+        [repeated_skill, document_result.skill, secret_candidate, active_omitted]
+    )
+    secret_card = next(
+        card
+        for card in candidate_list.cards
+        if card.skill_id == "skill_doc_secret_preview_candidate_v1"
+    )
+
+    doc_text = (
+        REPO_ROOT / "docs" / "product" / "skill-forge-candidate-list.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    required_doc_terms = [
+        "SKILL-FORGE-LIST-001",
+        "candidate cards",
+        "promotion blockers",
+        "review action plans",
+        "external effects",
+        SKILL_FORGE_CANDIDATE_LIST_POLICY_REF,
+    ]
+    missing_doc_terms = _missing_terms(doc_text, required_doc_terms)
+
+    action_tools = {
+        plan.gateway_tool
+        for card in candidate_list.cards
+        for plan in card.action_plans
+    }
+    passed = (
+        candidate_list.candidate_count == 3
+        and candidate_list.external_effect_action_count == 0
+        and candidate_list.status_counts == {"active": 1, "candidate": 3}
+        and candidate_list.risk_counts == {"medium": 3}
+        and all(card.promotion_blockers == ["user_approval_required"] for card in candidate_list.cards)
+        and secret_card.redaction_count == 2
+        and fake_secret not in (secret_card.description_preview or "")
+        and all(fake_secret not in step for step in secret_card.procedure_preview)
+        and "skill.execute_draft" in action_tools
+        and "skill.approve_draft_only" in action_tools
+        and not missing_doc_terms
+        and "SKILL-FORGE-LIST-001" in plan_text
+        and "SKILL-FORGE-LIST-001" in task_text
+        and "Skill Forge candidate list" in registry_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SKILL-FORGE-LIST-001/candidate_list_contract",
+        suite="SKILL-FORGE-LIST-001",
+        passed=passed,
+        summary=(
+            "Skill Forge candidate lists render repeated-scene and document-derived "
+            "draft skills with safe previews, action plans, promotion blockers, "
+            "and no external effects."
+        ),
+        metrics={
+            "candidate_count": candidate_list.candidate_count,
+            "review_required_count": candidate_list.review_required_count,
+            "external_effect_action_count": candidate_list.external_effect_action_count,
+            "redaction_count": secret_card.redaction_count,
+        },
+        evidence={
+            "policy_ref": SKILL_FORGE_CANDIDATE_LIST_POLICY_REF,
+            "missing_doc_terms": missing_doc_terms,
+            "action_tool_count": len(action_tools),
+            "status_counts": candidate_list.status_counts,
         },
     )
 

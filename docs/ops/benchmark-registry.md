@@ -125,6 +125,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Document-to-skill candidate derivation | `uv run cortex-bench` | 107/107 passed | `benchmarks/runs/bench_20260429T040704Z.json` | Next benchmark: swarm governance. |
 | 2026-04-29 | Swarm governance contract | `uv run cortex-bench` | 108/108 passed | `benchmarks/runs/bench_20260429T041354Z.json` | Next benchmark: robot spatial safety metadata. |
 | 2026-04-29 | Robot spatial safety metadata | `uv run cortex-bench` | 109/109 passed | `benchmarks/runs/bench_20260429T041908Z.json` | Next benchmark: Skill Forge candidate list. |
+| 2026-04-29 | Skill Forge candidate list | `uv run cortex-bench` | 110/110 passed | `benchmarks/runs/bench_20260429T042542Z.json` | Next benchmark: Cortex Codex plugin skeleton. |
 
 ## First Runnable Harness Requirements
 

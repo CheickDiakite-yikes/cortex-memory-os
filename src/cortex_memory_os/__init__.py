@@ -109,6 +109,13 @@ from cortex_memory_os.skill_forge import (
     derive_skill_candidate_from_document,
     detect_skill_candidates,
 )
+from cortex_memory_os.skill_forge_dashboard import (
+    SKILL_FORGE_CANDIDATE_LIST_POLICY_REF,
+    SkillForgeActionPlan,
+    SkillForgeCandidateCard,
+    SkillForgeCandidateList,
+    build_skill_forge_candidate_list,
+)
 from cortex_memory_os.memory_palace import (
     MemoryCorrection,
     MemoryExplanation,
@@ -339,6 +346,11 @@ __all__ = [
     "DocumentSkillDerivationResult",
     "derive_skill_candidate_from_document",
     "detect_skill_candidates",
+    "SKILL_FORGE_CANDIDATE_LIST_POLICY_REF",
+    "SkillForgeActionPlan",
+    "SkillForgeCandidateCard",
+    "SkillForgeCandidateList",
+    "build_skill_forge_candidate_list",
     "MemoryCorrection",
     "MemoryExplanation",
     "MemoryPalaceService",
