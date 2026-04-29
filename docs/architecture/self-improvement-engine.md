@@ -277,3 +277,11 @@ one project, agent, or session from silently shaping another.
   review card itself;
 - the safety summary preserves redaction boundaries for lesson content,
   learned-from refs, rollback text, and scoped provenance.
+
+`SELF-LESSON-REVIEW-FLOW-AUDIT-PREVIEW-001` verifies:
+
+- exact review flow responses preview mutation audit receipts before execution;
+- audit previews name refresh, correction, and deletion receipt shapes without
+  running the mutation tools;
+- previews preserve the same no-content and no-scoped-provenance boundary as the
+  review flow itself.

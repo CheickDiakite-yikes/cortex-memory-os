@@ -44,8 +44,12 @@ from cortex_memory_os.memory_palace_flows import (
 )
 from cortex_memory_os.memory_store import InMemoryMemoryStore
 from cortex_memory_os.retrieval import RankedMemory, RetrievalScope, self_lesson_scope_allowed
-from cortex_memory_os.self_lesson_audit import record_self_lesson_decision_audit
+from cortex_memory_os.self_lesson_audit import (
+    SELF_LESSON_AUDIT_POLICY_REF,
+    record_self_lesson_decision_audit,
+)
 from cortex_memory_os.self_lessons import (
+    SELF_LESSON_POLICY_REF,
     SelfLessonChangeType,
     correct_self_lesson,
     delete_self_lesson,
@@ -547,6 +551,7 @@ class CortexMCPServer:
                 "safety_summary": summarize_self_lesson_review_flow_safety(
                     action_plan
                 ),
+                "audit_preview": preview_self_lesson_review_flow_audits(action_plan),
                 "next_tools": {
                     action["flow_id"]: action["gateway_tool"] for action in action_plan
                 },
@@ -1214,6 +1219,47 @@ def summarize_self_lesson_review_flow_safety(
             SELF_LESSON_REVIEW_QUEUE_POLICY_REF,
             SELF_LESSON_REVIEW_FLOW_POLICY_REF,
         ],
+    }
+
+
+def preview_self_lesson_review_flow_audits(
+    action_plan: list[dict[str, Any]],
+) -> dict[str, Any]:
+    target_status_by_action = {
+        "refresh_self_lesson": MemoryStatus.ACTIVE.value,
+        "correct_self_lesson": MemoryStatus.SUPERSEDED.value,
+        "delete_self_lesson": MemoryStatus.DELETED.value,
+    }
+    previews = []
+    for action in action_plan:
+        if not action["mutation"]:
+            continue
+        audit_action = action["flow_id"]
+        previews.append(
+            {
+                "gateway_tool": action["gateway_tool"],
+                "audit_action": audit_action,
+                "target_ref_field": "lesson_id",
+                "target_status": target_status_by_action[audit_action],
+                "requires_confirmation": action["requires_confirmation"],
+                "would_persist_audit_event": True,
+                "human_visible": True,
+                "content_redacted": True,
+                "redacted_summary_shape": (
+                    "Self-lesson decision with target status and allowed flag."
+                ),
+                "policy_refs": [
+                    SELF_LESSON_POLICY_REF,
+                    SELF_LESSON_AUDIT_POLICY_REF,
+                ],
+            }
+        )
+    return {
+        "audit_shape_id": "self_lesson_decision_audit_v1",
+        "target_ref_field": "lesson_id",
+        "content_redacted": True,
+        "previews": previews,
+        "preview_count": len(previews),
     }
 
 

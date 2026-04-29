@@ -1530,6 +1530,64 @@ def test_self_lesson_review_flow_safety_summary_redacts_content_and_requires_con
     assert "task_project_stale_safety_summary" not in rendered_summary
 
 
+def test_self_lesson_review_flow_previews_mutation_audit_receipts_without_content(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    stale = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_stale_audit_preview",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_stale_audit_preview"],
+            "last_validated": date(2025, 1, 1),
+        }
+    )
+    store.add_self_lesson(stale)
+    server = CortexMCPServer(store=store)
+
+    flow = server.call_tool(
+        "self_lesson.review_flow",
+        {"lesson_id": stale.lesson_id},
+    )
+
+    audit_preview = flow["audit_preview"]
+    assert audit_preview["audit_shape_id"] == "self_lesson_decision_audit_v1"
+    assert audit_preview["target_ref_field"] == "lesson_id"
+    assert audit_preview["content_redacted"] is True
+    assert audit_preview["preview_count"] == 3
+    previews = audit_preview["previews"]
+    assert [preview["gateway_tool"] for preview in previews] == [
+        "self_lesson.refresh",
+        "self_lesson.correct",
+        "self_lesson.delete",
+    ]
+    assert [preview["audit_action"] for preview in previews] == [
+        "refresh_self_lesson",
+        "correct_self_lesson",
+        "delete_self_lesson",
+    ]
+    assert [preview["target_status"] for preview in previews] == [
+        MemoryStatus.ACTIVE.value,
+        MemoryStatus.SUPERSEDED.value,
+        MemoryStatus.DELETED.value,
+    ]
+    assert all(preview["requires_confirmation"] for preview in previews)
+    assert all(preview["would_persist_audit_event"] for preview in previews)
+    assert all(preview["human_visible"] for preview in previews)
+    assert all(preview["content_redacted"] for preview in previews)
+    assert all(
+        preview["policy_refs"]
+        == [
+            "policy_self_lesson_methods_only_v1",
+            "policy_self_lesson_audit_receipt_v1",
+        ]
+        for preview in previews
+    )
+    rendered_preview = json.dumps(audit_preview)
+    assert "Before editing auth" not in rendered_preview
+    assert "project:alpha" not in rendered_preview
+    assert "task_project_stale_audit_preview" not in rendered_preview
+
+
 def test_stale_scoped_self_lesson_requires_review_before_context_use(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))

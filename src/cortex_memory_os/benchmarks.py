@@ -188,6 +188,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_self_lesson_review_actions,
         case_gateway_self_lesson_review_flow,
         case_self_lesson_review_flow_safety_summary,
+        case_self_lesson_review_flow_audit_preview,
         case_context_pack_self_lesson_review_summary,
         case_context_pack_self_lesson_review_flow_hint,
         case_gateway_memory_palace_tools,
@@ -2261,6 +2262,91 @@ def case_self_lesson_review_flow_safety_summary() -> BenchmarkCaseResult:
         evidence={
             "mutation_tools": safety_summary.get("mutation_tools"),
             "read_only_tools": safety_summary.get("read_only_tools"),
+        },
+    )
+
+
+def case_self_lesson_review_flow_audit_preview() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        stale = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_stale_audit_preview",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_stale_audit_preview"],
+                "last_validated": date(2025, 1, 1),
+            }
+        )
+        store.add_self_lesson(stale)
+        server = CortexMCPServer(store=store)
+        flow = server.call_tool(
+            "self_lesson.review_flow",
+            {"lesson_id": stale.lesson_id},
+        )
+
+    audit_preview = flow.get("audit_preview", {})
+    previews = audit_preview.get("previews", [])
+    serialized_preview = json.dumps(audit_preview, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    architecture_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        audit_preview.get("audit_shape_id") == "self_lesson_decision_audit_v1"
+        and audit_preview.get("target_ref_field") == "lesson_id"
+        and audit_preview.get("content_redacted") is True
+        and audit_preview.get("preview_count") == 3
+        and [preview.get("gateway_tool") for preview in previews]
+        == [
+            "self_lesson.refresh",
+            "self_lesson.correct",
+            "self_lesson.delete",
+        ]
+        and [preview.get("audit_action") for preview in previews]
+        == [
+            "refresh_self_lesson",
+            "correct_self_lesson",
+            "delete_self_lesson",
+        ]
+        and [preview.get("target_status") for preview in previews]
+        == [
+            MemoryStatus.ACTIVE.value,
+            MemoryStatus.SUPERSEDED.value,
+            MemoryStatus.DELETED.value,
+        ]
+        and all(preview.get("requires_confirmation") for preview in previews)
+        and all(preview.get("would_persist_audit_event") for preview in previews)
+        and all(preview.get("human_visible") for preview in previews)
+        and all(preview.get("content_redacted") for preview in previews)
+        and "Before editing auth" not in serialized_preview
+        and "project:alpha" not in serialized_preview
+        and "task_project_stale_audit_preview" not in serialized_preview
+        and "SELF-LESSON-REVIEW-FLOW-AUDIT-PREVIEW-001" in docs_text
+        and "SELF-LESSON-REVIEW-FLOW-AUDIT-PREVIEW-001" in architecture_text
+        and "SELF-LESSON-REVIEW-FLOW-AUDIT-PREVIEW-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SELF-LESSON-REVIEW-FLOW-AUDIT-PREVIEW-001/audit_preview",
+        suite="SELF-LESSON-REVIEW-FLOW-AUDIT-PREVIEW-001",
+        passed=passed,
+        summary="Review flow responses preview mutation audit receipt shape without executing or leaking lesson content.",
+        metrics={
+            "preview_count": audit_preview.get("preview_count", 0),
+            "confirmed_preview_count": sum(
+                1 for preview in previews if preview.get("requires_confirmation")
+            ),
+        },
+        evidence={
+            "audit_actions": [preview.get("audit_action") for preview in previews],
+            "audit_shape_id": audit_preview.get("audit_shape_id"),
         },
     )
 

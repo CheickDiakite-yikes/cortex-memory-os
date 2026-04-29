@@ -447,3 +447,13 @@ be safely rendered as a compact card:
 - every mutation tool in the summary requires confirmation;
 - the summary marks content, learned-from refs, and rollback conditions as
   redacted without copying lesson text or scoped provenance.
+
+`SELF-LESSON-REVIEW-FLOW-AUDIT-PREVIEW-001` must pass before mutation buttons
+inside the review card can be shown as audit-backed actions:
+
+- the review flow previews the audit receipt shape for refresh, correction, and
+  deletion without executing those tools;
+- each preview names the expected audit action, target status, confirmation
+  requirement, human-visible receipt, and policy refs;
+- the preview omits lesson content, learned-from refs, rollback text, and scoped
+  provenance.
