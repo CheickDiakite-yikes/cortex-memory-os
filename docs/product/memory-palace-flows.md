@@ -457,3 +457,13 @@ inside the review card can be shown as audit-backed actions:
   requirement, human-visible receipt, and policy refs;
 - the preview omits lesson content, learned-from refs, rollback text, and scoped
   provenance.
+
+`SELF-LESSON-REVIEW-FLOW-AUDIT-CONSISTENCY-001` must pass before audit previews
+can be treated as reliable action receipts:
+
+- real mutation responses expose the same audit shape ID that the review flow
+  previewed;
+- refresh, correction, and deletion responses keep policy refs aligned with
+  their preview entries;
+- actual audit responses stay redacted and do not copy lesson content or scoped
+  provenance.

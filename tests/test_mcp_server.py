@@ -1588,6 +1588,69 @@ def test_self_lesson_review_flow_previews_mutation_audit_receipts_without_conten
     assert "task_project_stale_audit_preview" not in rendered_preview
 
 
+def test_self_lesson_review_flow_audit_preview_matches_mutation_receipt_shape(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    stale = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_stale_audit_consistency",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_stale_audit_consistency"],
+            "last_validated": date(2025, 1, 1),
+        }
+    )
+    store.add_self_lesson(stale)
+    server = CortexMCPServer(store=store)
+
+    flow = server.call_tool(
+        "self_lesson.review_flow",
+        {"lesson_id": stale.lesson_id},
+    )
+    preview_shape_id = flow["audit_preview"]["audit_shape_id"]
+    preview_by_action = {
+        preview["audit_action"]: preview
+        for preview in flow["audit_preview"]["previews"]
+    }
+
+    refresh_response = server.call_tool(
+        "self_lesson.refresh",
+        {"lesson_id": stale.lesson_id, "user_confirmed": False},
+    )
+    correction_response = server.call_tool(
+        "self_lesson.correct",
+        {
+            "lesson_id": stale.lesson_id,
+            "corrected_content": "Use recent logs before editing auth callbacks.",
+            "applies_to": ["coding", "auth_flows"],
+            "change_summary": "low-confidence correction preview",
+            "confidence": 0.1,
+        },
+    )
+    delete_response = server.call_tool(
+        "self_lesson.delete",
+        {"lesson_id": stale.lesson_id, "user_confirmed": False},
+    )
+
+    responses = [refresh_response, correction_response, delete_response]
+    audit_events = [response["audit_event"] for response in responses]
+    assert [event["action"] for event in audit_events] == [
+        "refresh_self_lesson",
+        "correct_self_lesson",
+        "delete_self_lesson",
+    ]
+    assert all(event["audit_shape_id"] == preview_shape_id for event in audit_events)
+    assert all(event["target_ref"] == stale.lesson_id for event in audit_events)
+    assert all(event["human_visible"] is True for event in audit_events)
+    assert all(
+        event["policy_refs"] == preview_by_action[event["action"]]["policy_refs"]
+        for event in audit_events
+    )
+    rendered_events = json.dumps(audit_events)
+    assert "Before editing auth" not in rendered_events
+    assert "project:alpha" not in rendered_events
+    assert "task_project_stale_audit_consistency" not in rendered_events
+
+
 def test_stale_scoped_self_lesson_requires_review_before_context_use(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))

@@ -189,6 +189,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_self_lesson_review_flow,
         case_self_lesson_review_flow_safety_summary,
         case_self_lesson_review_flow_audit_preview,
+        case_self_lesson_review_flow_audit_consistency,
         case_context_pack_self_lesson_review_summary,
         case_context_pack_self_lesson_review_flow_hint,
         case_gateway_memory_palace_tools,
@@ -2347,6 +2348,102 @@ def case_self_lesson_review_flow_audit_preview() -> BenchmarkCaseResult:
         evidence={
             "audit_actions": [preview.get("audit_action") for preview in previews],
             "audit_shape_id": audit_preview.get("audit_shape_id"),
+        },
+    )
+
+
+def case_self_lesson_review_flow_audit_consistency() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        stale = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_stale_audit_consistency",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_stale_audit_consistency"],
+                "last_validated": date(2025, 1, 1),
+            }
+        )
+        store.add_self_lesson(stale)
+        server = CortexMCPServer(store=store)
+        flow = server.call_tool(
+            "self_lesson.review_flow",
+            {"lesson_id": stale.lesson_id},
+        )
+        refresh_response = server.call_tool(
+            "self_lesson.refresh",
+            {"lesson_id": stale.lesson_id, "user_confirmed": False},
+        )
+        correction_response = server.call_tool(
+            "self_lesson.correct",
+            {
+                "lesson_id": stale.lesson_id,
+                "corrected_content": "Use recent logs before editing auth callbacks.",
+                "applies_to": ["coding", "auth_flows"],
+                "change_summary": "low-confidence correction preview",
+                "confidence": 0.1,
+            },
+        )
+        delete_response = server.call_tool(
+            "self_lesson.delete",
+            {"lesson_id": stale.lesson_id, "user_confirmed": False},
+        )
+
+    preview_shape_id = flow.get("audit_preview", {}).get("audit_shape_id")
+    preview_by_action = {
+        preview.get("audit_action"): preview
+        for preview in flow.get("audit_preview", {}).get("previews", [])
+    }
+    audit_events = [
+        refresh_response.get("audit_event", {}),
+        correction_response.get("audit_event", {}),
+        delete_response.get("audit_event", {}),
+    ]
+    serialized_events = json.dumps(audit_events, sort_keys=True)
+    architecture_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        preview_shape_id == "self_lesson_decision_audit_v1"
+        and [event.get("action") for event in audit_events]
+        == [
+            "refresh_self_lesson",
+            "correct_self_lesson",
+            "delete_self_lesson",
+        ]
+        and all(event.get("audit_shape_id") == preview_shape_id for event in audit_events)
+        and all(event.get("target_ref") == stale.lesson_id for event in audit_events)
+        and all(event.get("human_visible") is True for event in audit_events)
+        and all(
+            event.get("policy_refs")
+            == preview_by_action[event.get("action")].get("policy_refs")
+            for event in audit_events
+        )
+        and "Before editing auth" not in serialized_events
+        and "project:alpha" not in serialized_events
+        and "task_project_stale_audit_consistency" not in serialized_events
+        and "SELF-LESSON-REVIEW-FLOW-AUDIT-CONSISTENCY-001" in architecture_text
+        and "SELF-LESSON-REVIEW-FLOW-AUDIT-CONSISTENCY-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SELF-LESSON-REVIEW-FLOW-AUDIT-CONSISTENCY-001/audit_shape_match",
+        suite="SELF-LESSON-REVIEW-FLOW-AUDIT-CONSISTENCY-001",
+        passed=passed,
+        summary="Mutation responses expose the same self-lesson audit shape ID previewed by the review flow.",
+        metrics={
+            "audit_event_count": len(audit_events),
+            "matched_shape_count": sum(
+                1 for event in audit_events if event.get("audit_shape_id") == preview_shape_id
+            ),
+        },
+        evidence={
+            "audit_actions": [event.get("action") for event in audit_events],
+            "audit_shape_id": preview_shape_id,
         },
     )
 

@@ -86,6 +86,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-SELF-LESSON-REVIEW-FLOW-001` | Gateway returns an exact-ID self-lesson review flow with queue metadata and follow-up tool routes. | Review flow can run from vague search, omits policy refs, or leaks content/provenance. |
 | `SELF-LESSON-REVIEW-FLOW-SAFETY-SUMMARY-001` | Review flows summarize confirmation, mutation, and redaction safety without lesson content. | Safety summary omits mutation confirmation requirements or leaks content/provenance. |
 | `SELF-LESSON-REVIEW-FLOW-AUDIT-PREVIEW-001` | Review flows preview mutation audit receipt shape before execution. | Audit previews require mutation execution, omit confirmation metadata, or leak content/provenance. |
+| `SELF-LESSON-REVIEW-FLOW-AUDIT-CONSISTENCY-001` | Mutation responses expose the same audit shape ID previewed by the review flow. | Actual mutation audit responses diverge from previewed receipt shape or leak content/provenance. |
 | `CONTEXT-PACK-SELF-LESSON-REVIEW-FLOW-HINT-001` | Context-pack review summaries point to aggregate queue and exact-ID review-flow tools. | Summaries omit review routing hints or leak lesson content/provenance. |
 | `GATEWAY-SELF-LESSON-001` | Gateway can propose candidate self-lessons without promoting them to active guidance. | Gateway proposal becomes active without confirmation. |
 | `SELF-LESSON-STORE-001` | Candidate and active self-lessons persist in SQLite while context packs use active lessons only. | Candidate proposal appears in context before confirmation. |
@@ -128,8 +129,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `SELF-LESSON-REVIEW-FLOW-AUDIT-CONSISTENCY-001`: Review mutation responses
-  should expose the same audit shape ID previewed by the review flow.
+- `CONTEXT-PACK-REVIEW-FLOW-AUDIT-HINT-001`: Context-pack review summaries
+  should point agents to review-flow audit previews without lesson content.
 
 Longer-term suites:
 

@@ -72,6 +72,7 @@ PROTOCOL_VERSION = "2025-11-25"
 SELF_LESSON_SCOPE_EXPORT_POLICY_REF = "policy_self_lesson_scope_export_v1"
 SELF_LESSON_REVIEW_QUEUE_POLICY_REF = "policy_self_lesson_review_queue_v1"
 SELF_LESSON_REVIEW_FLOW_POLICY_REF = "policy_self_lesson_review_flow_v1"
+SELF_LESSON_DECISION_AUDIT_SHAPE_ID = "self_lesson_decision_audit_v1"
 SELF_LESSON_REVIEW_AFTER_DAYS = 90
 
 
@@ -1100,7 +1101,7 @@ def serialize_explanation(explanation: MemoryExplanation) -> dict[str, Any]:
 
 
 def serialize_audit_event(event: AuditEvent) -> dict[str, Any]:
-    return {
+    item = {
         "audit_event_id": event.audit_event_id,
         "timestamp": event.timestamp.isoformat(),
         "actor": event.actor,
@@ -1111,6 +1112,26 @@ def serialize_audit_event(event: AuditEvent) -> dict[str, Any]:
         "human_visible": event.human_visible,
         "redacted_summary": event.redacted_summary,
     }
+    audit_shape_id = audit_shape_id_for_event(event)
+    if audit_shape_id:
+        item["audit_shape_id"] = audit_shape_id
+    return item
+
+
+def audit_shape_id_for_event(event: AuditEvent) -> str | None:
+    if (
+        event.action
+        in {
+            "promote_self_lesson",
+            "rollback_self_lesson",
+            "correct_self_lesson",
+            "delete_self_lesson",
+            "refresh_self_lesson",
+        }
+        and SELF_LESSON_AUDIT_POLICY_REF in event.policy_refs
+    ):
+        return SELF_LESSON_DECISION_AUDIT_SHAPE_ID
+    return None
 
 
 def serialize_self_lesson_audit_event(
@@ -1255,7 +1276,7 @@ def preview_self_lesson_review_flow_audits(
             }
         )
     return {
-        "audit_shape_id": "self_lesson_decision_audit_v1",
+        "audit_shape_id": SELF_LESSON_DECISION_AUDIT_SHAPE_ID,
         "target_ref_field": "lesson_id",
         "content_redacted": True,
         "previews": previews,

@@ -285,3 +285,12 @@ one project, agent, or session from silently shaping another.
   running the mutation tools;
 - previews preserve the same no-content and no-scoped-provenance boundary as the
   review flow itself.
+
+`SELF-LESSON-REVIEW-FLOW-AUDIT-CONSISTENCY-001` verifies:
+
+- self-lesson mutation responses expose the same audit shape ID previewed by the
+  review flow;
+- refresh, correction, and deletion responses keep policy refs aligned with
+  their preview entries;
+- real audit responses remain redacted and do not copy lesson content or scoped
+  provenance.
