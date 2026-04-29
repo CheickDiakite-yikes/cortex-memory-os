@@ -6,7 +6,7 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-CONTENT-INDEPENDENT-001 | Add content-independent queue signature contract | Codex | Contract, tests, benchmark case | Queue signatures should ignore lesson content/provenance when membership and ordering stay unchanged. |
+| PRODUCT-GOAL-COVERAGE-001 | Add original-goal coverage benchmark | Codex | Product coverage docs, benchmark case | Verify Cortex still maps to perception, evidence, memory, skill, agent gateway, outcome, safety, and user-facing pillars. |
 
 ## Next
 
@@ -120,6 +120,7 @@ Last updated: 2026-04-29
 | GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-ORDER-SENSITIVE-001 | Add order-sensitive queue signature contract | Codex | `uv run pytest` -> 179 passed, `uv run cortex-bench` -> 91/91 passed, `uv run cortex-mcp --smoke` | Queue signatures change when ordering-relevant lesson metadata changes. |
 | GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONREVIEW-STABILITY-001 | Add non-review signature stability contract | Codex | `uv run pytest` -> 180 passed, `uv run cortex-bench` -> 92/92 passed, `uv run cortex-mcp --smoke` | Queue signatures ignore non-review-required self-lessons. |
 | GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-MEMBERSHIP-SENSITIVE-001 | Add membership-sensitive queue signature contract | Codex | `uv run pytest` -> 181 passed, `uv run cortex-bench` -> 93/93 passed, `uv run cortex-mcp --smoke` | Queue signatures change when review-required membership changes. |
+| GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-CONTENT-INDEPENDENT-001 | Add content-independent queue signature contract | Codex | `uv run pytest` -> 182 passed, `uv run cortex-bench` -> 94/94 passed, `uv run cortex-mcp --smoke` | Queue signatures ignore lesson content/provenance when membership and ordering stay unchanged. |
 
 ## Dropped
 

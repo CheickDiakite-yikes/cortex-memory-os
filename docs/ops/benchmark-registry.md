@@ -109,6 +109,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Review queue order-sensitive cursor signature | `uv run cortex-bench` | 91/91 passed | `benchmarks/runs/bench_20260429T023919Z.json` | Next benchmark: non-review signature stability. |
 | 2026-04-29 | Review queue non-review cursor signature stability | `uv run cortex-bench` | 92/92 passed | `benchmarks/runs/bench_20260429T024153Z.json` | Next benchmark: membership-sensitive queue signature. |
 | 2026-04-29 | Review queue membership-sensitive cursor signature | `uv run cortex-bench` | 93/93 passed | `benchmarks/runs/bench_20260429T024403Z.json` | Next benchmark: content-independent queue signature. |
+| 2026-04-29 | Review queue content-independent cursor signature | `uv run cortex-bench` | 94/94 passed | `benchmarks/runs/bench_20260429T024912Z.json` | Next benchmark: original-goal product coverage. |
 
 ## First Runnable Harness Requirements
 

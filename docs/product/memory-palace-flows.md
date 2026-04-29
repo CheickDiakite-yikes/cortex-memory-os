@@ -569,6 +569,16 @@ before a UI assumes a cursor still points into the same review set:
 - the queue count and visible review cards shrink with the membership change;
 - the removed lesson is not exposed through signature metadata.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-CONTENT-INDEPENDENT-001` must pass
+before a UI treats signature drift as a queue-structure change:
+
+- edits to lesson prose, learned-from refs, or rollback notes do not change
+  `cursor_metadata.queue_signature` when the review queue cards and ordering
+  are unchanged;
+- content edits should update card details through exact-card refresh, not force
+  a paged queue restart;
+- signature metadata remains redacted and safe to show in debug surfaces.
+
 `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` must pass before a paged or limited
 queue is shown:
 

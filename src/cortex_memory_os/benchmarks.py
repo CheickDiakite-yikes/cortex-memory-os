@@ -204,6 +204,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_signature_order_sensitive,
         case_gateway_review_queue_signature_nonreview_stability,
         case_gateway_review_queue_signature_membership_sensitive,
+        case_gateway_review_queue_signature_content_independent,
         case_gateway_review_queue_limit_safety_summary,
         case_gateway_review_queue_ordering,
         case_gateway_review_queue_paging_cursor,
@@ -3166,6 +3167,105 @@ def case_gateway_review_queue_signature_membership_sensitive() -> BenchmarkCaseR
         evidence={
             "signature_subject": changed_metadata.get("signature_subject"),
             "changed_lesson_ids": changed_queue.get("lesson_ids", []),
+        },
+    )
+
+
+def case_gateway_review_queue_signature_content_independent() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        original = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_stale_content_independent",
+                "content": "Before auth edits, inspect local test logs.",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_content_original"],
+                "rollback_if": ["too noisy"],
+                "last_validated": date(2024, 1, 1),
+            }
+        )
+        store.add_self_lesson(original)
+        server = CortexMCPServer(store=store)
+        initial_queue = server.call_tool("self_lesson.review_queue", {"limit": 10})
+
+        changed = original.model_copy(
+            update={
+                "content": "Before auth edits, inspect screenshots and browser logs.",
+                "learned_from": ["project:beta", "task_content_changed"],
+                "rollback_if": ["causes noisy retrieval", "stale note"],
+            }
+        )
+        store.add_self_lesson(changed)
+        changed_queue = server.call_tool("self_lesson.review_queue", {"limit": 10})
+
+    initial_metadata = initial_queue.get("cursor_metadata", {})
+    changed_metadata = changed_queue.get("cursor_metadata", {})
+    serialized_metadata = json.dumps(
+        [initial_metadata, changed_metadata],
+        sort_keys=True,
+    )
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        initial_queue.get("lesson_ids") == changed_queue.get("lesson_ids")
+        and changed_queue.get("total_review_required_count") == 1
+        and changed_metadata.get("queue_signature")
+        == initial_metadata.get("queue_signature")
+        and changed_metadata.get("signature_subject")
+        == "ordered_review_required_self_lessons"
+        and changed_metadata.get("empty_queue_signature") is False
+        and changed_metadata.get("signature_inputs_redacted") is True
+        and "inspect screenshots" not in serialized_metadata
+        and "project:beta" not in serialized_metadata
+        and "task_content_changed" not in serialized_metadata
+        and "causes noisy retrieval" not in serialized_metadata
+        and "lesson_project_stale_content_independent" not in serialized_metadata
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-CONTENT-INDEPENDENT-001"
+        in docs_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-CONTENT-INDEPENDENT-001"
+        in product_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-CONTENT-INDEPENDENT-001"
+        in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id=(
+            "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-CONTENT-INDEPENDENT-001/"
+            "content_provenance_changes_ignored"
+        ),
+        suite="GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-CONTENT-INDEPENDENT-001",
+        passed=passed,
+        summary=(
+            "Review queue signatures ignore lesson content and provenance "
+            "when membership and ordering stay unchanged."
+        ),
+        metrics={
+            "signature_stable": int(
+                changed_metadata.get("queue_signature")
+                == initial_metadata.get("queue_signature")
+            ),
+            "review_required_count": changed_queue.get(
+                "total_review_required_count",
+                -1,
+            ),
+            "lesson_ids_stable": int(
+                initial_queue.get("lesson_ids") == changed_queue.get("lesson_ids")
+            ),
+        },
+        evidence={
+            "signature_subject": changed_metadata.get("signature_subject"),
+            "signature_inputs_redacted": changed_metadata.get(
+                "signature_inputs_redacted"
+            ),
         },
     )
 

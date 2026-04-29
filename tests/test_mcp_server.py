@@ -2013,6 +2013,54 @@ def test_self_lesson_review_queue_signature_changes_when_membership_changes(tmp_
     assert "task_" not in rendered_metadata
 
 
+def test_self_lesson_review_queue_signature_ignores_content_and_provenance_changes(
+    tmp_path,
+):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+
+    original = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_stale_content_independent",
+            "content": "Before auth edits, inspect local test logs.",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_content_original"],
+            "rollback_if": ["too noisy"],
+            "last_validated": date(2024, 1, 1),
+        }
+    )
+    store.add_self_lesson(original)
+    server = CortexMCPServer(store=store)
+    initial_queue = server.call_tool("self_lesson.review_queue", {"limit": 10})
+
+    changed = original.model_copy(
+        update={
+            "content": "Before auth edits, inspect screenshots and browser logs.",
+            "learned_from": ["project:beta", "task_content_changed"],
+            "rollback_if": ["causes noisy retrieval", "stale note"],
+        }
+    )
+    store.add_self_lesson(changed)
+    changed_queue = server.call_tool("self_lesson.review_queue", {"limit": 10})
+
+    initial_metadata = initial_queue["cursor_metadata"]
+    changed_metadata = changed_queue["cursor_metadata"]
+    assert initial_queue["lesson_ids"] == changed_queue["lesson_ids"]
+    assert changed_queue["total_review_required_count"] == 1
+    assert changed_metadata["queue_signature"] == initial_metadata["queue_signature"]
+    assert changed_metadata["signature_subject"] == (
+        "ordered_review_required_self_lessons"
+    )
+    assert changed_metadata["empty_queue_signature"] is False
+    assert changed_metadata["signature_inputs_redacted"] is True
+    rendered_metadata = json.dumps([initial_metadata, changed_metadata])
+    assert "inspect screenshots" not in rendered_metadata
+    assert "project:beta" not in rendered_metadata
+    assert "task_content_changed" not in rendered_metadata
+    assert "causes noisy retrieval" not in rendered_metadata
+    assert "lesson_project_stale_content_independent" not in rendered_metadata
+
+
 def test_self_lesson_review_queue_limit_safety_summary_counts_returned_slice(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))

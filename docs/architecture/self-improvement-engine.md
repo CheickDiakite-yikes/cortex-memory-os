@@ -384,6 +384,15 @@ one project, agent, or session from silently shaping another.
 - signature metadata stays opaque and does not expose the removed lesson ID,
   content, learned-from refs, or scoped provenance.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-CONTENT-INDEPENDENT-001` verifies:
+
+- changing lesson content, learned-from refs, or rollback notes does not change
+  `queue_signature` when membership and ordering stay unchanged;
+- queue signatures compare review-card identity and ordering state, not hidden
+  lesson prose;
+- signature metadata remains safe for debug display because content and
+  provenance inputs stay redacted.
+
 `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` verifies:
 
 - review queues expose the applied limit, returned count, total review-required
