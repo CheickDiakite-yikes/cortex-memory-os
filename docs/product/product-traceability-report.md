@@ -11,6 +11,7 @@ Source documents:
 - `docs/product/build-roadmap.md`
 - `docs/product/original-goal-coverage.md`
 - `docs/product/memory-palace-dashboard.md`
+- `docs/architecture/agent-runtime-trace.md`
 - `docs/architecture/system-blueprint.md`
 - `docs/ops/task-board.md`
 - `docs/ops/benchmark-registry.md`
@@ -29,6 +30,7 @@ Source documents:
 | Memory Palace | Validated dashboard contract | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, `MEMORY-PALACE-DASHBOARD-001`, self-lesson review flows | Build real dashboard UI shell over the safe view model. |
 | Skill Forge | Validated skeleton | `SKILL-FORGE-002`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add candidate UI, workflow clustering, and skill success metrics. |
 | Agent Gateway | Validated skeleton | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools | Package Codex plugin and bridge additional clients. |
+| Agent Runtime Trace | Validated contract | `RUNTIME-TRACE-001`, `docs/architecture/agent-runtime-trace.md`, runtime trace fixture | Persist real agent traces through the gateway and outcome engine. |
 | Shadow Pointer | Partial with control contract | `SHADOW-POINTER-001`, `SHADOW-POINTER-CONTROLS-001`, static UI prototype | Build native overlay with live permissions and wire controls to real capture adapters. |
 | Native Perception Bus | Envelope, firewall handoff, and evidence eligibility handoff validated; adapters not started | `PERCEPTION-EVENT-ENVELOPE-001`, `PERCEPTION-FIREWALL-HANDOFF-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001`, roadmap, and ADR | Add consented macOS app/window, accessibility, terminal, and browser adapters. |
 | Robot readiness | Safety contract only | `ROBOT-SAFE-001`, initial threat model | Add simulation-first capability gates before physical integrations. |
@@ -55,14 +57,16 @@ User-facing pillars:
   audits, and draft-only execution.
 - Agent Gateway: validated context packs, scoped actions, audit receipts, review
   queues, and draft skill execution.
+- Agent Runtime Trace: validated tool calls, shell actions, browser actions,
+  artifacts, approvals, retries, blocked hostile content, and outcome checks.
 
 ## Next Product Gaps
 
 The next useful slices should move from contract depth into product surface and
 capture realism:
 
-1. Agent runtime trace contract for tool calls, shell actions, browser actions,
-   artifacts, approvals, retries, and outcomes.
+1. Budgeted context packs for token, time, tool, artifact, autonomy, and risk
+   budgets.
 2. Skill Forge candidate list using existing repeated-workflow and maturity
    gates.
 3. Codex plugin packaging for the MCP gateway and core skills.

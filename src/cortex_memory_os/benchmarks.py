@@ -29,6 +29,7 @@ from cortex_memory_os.contracts import (
     MemoryRecord,
     MemoryStatus,
     ObservationEvent,
+    OutcomeStatus,
     PerceptionEventEnvelope,
     PerceptionRoute,
     PerceptionSourceKind,
@@ -111,6 +112,16 @@ from cortex_memory_os.memory_palace_flows import (
 from cortex_memory_os.memory_store import InMemoryMemoryStore
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
 from cortex_memory_os.retrieval import RetrievalScope, rank_memories, score_memory
+from cortex_memory_os.runtime_trace import (
+    RUNTIME_TRACE_POLICY_REF,
+    AgentRuntimeEvent,
+    AgentRuntimeTrace,
+    RuntimeEffect,
+    RuntimeEventKind,
+    RuntimeEventStatus,
+    summarize_runtime_trace,
+    trace_evidence_refs,
+)
 from cortex_memory_os.temporal_graph import compile_temporal_edge
 from cortex_memory_os.shadow_pointer import (
     ShadowPointerControlAction,
@@ -275,6 +286,7 @@ def run_all() -> BenchmarkRunResult:
         case_product_goal_coverage_contract,
         case_product_traceability_report_contract,
         case_frontier_agent_research_synthesis,
+        case_agent_runtime_trace_contract,
         case_perception_event_envelope_contract,
         case_perception_firewall_handoff_contract,
         case_evidence_eligibility_handoff_contract,
@@ -523,6 +535,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "docs/product/build-roadmap.md",
         "docs/product/original-goal-coverage.md",
         "docs/product/memory-palace-dashboard.md",
+        "docs/architecture/agent-runtime-trace.md",
         "docs/ops/task-board.md",
         "docs/ops/benchmark-registry.md",
     ]
@@ -531,12 +544,14 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "Memory Palace",
         "Skill Forge",
         "Agent Gateway",
+        "Agent Runtime Trace",
         "Native Perception Bus",
         "Robot readiness",
     ]
     required_suite_refs = [
         "PRODUCT-GOAL-COVERAGE-001",
         "PRODUCT-TRACEABILITY-REPORT-001",
+        "RUNTIME-TRACE-001",
         "SEC-INJECT-001",
         "VAULT-RETENTION-001",
         "MEMORY-PALACE-001",
@@ -547,7 +562,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "ROBOT-SAFE-001",
     ]
     next_gap_terms = [
-        "Agent runtime trace",
+        "Budgeted context packs",
         "Skill Forge candidate list",
         "Codex plugin packaging",
         "Browser/terminal adapters",
@@ -700,6 +715,166 @@ def case_frontier_agent_research_synthesis() -> BenchmarkCaseResult:
             "missing_followups": missing_followups,
             "missing_source_urls": missing_source_urls,
             "missing_ledger_sources": missing_ledger_sources,
+        },
+    )
+
+
+def case_agent_runtime_trace_contract() -> BenchmarkCaseResult:
+    trace = AgentRuntimeTrace.model_validate(
+        load_json(TEST_FIXTURES / "agent_runtime_trace.json")
+    )
+    summary = summarize_runtime_trace(trace)
+    evidence_refs = trace_evidence_refs(trace)
+
+    def rejects_unapproved_medium_risk() -> bool:
+        try:
+            AgentRuntimeEvent(
+                event_id="evt_unapproved_write",
+                sequence=1,
+                timestamp=datetime(2026, 4, 29, 10, 0, tzinfo=UTC),
+                kind=RuntimeEventKind.SHELL_ACTION,
+                status=RuntimeEventStatus.SUCCEEDED,
+                actor="codex",
+                summary="Applied local write without approval.",
+                source_trust=SourceTrust.LOCAL_OBSERVED,
+                risk_level=ActionRisk.MEDIUM,
+                effects=[RuntimeEffect.LOCAL_WRITE],
+                target_ref="shell:apply-patch",
+            )
+        except Exception as exc:
+            return "approval_ref" in str(exc)
+        return False
+
+    def rejects_unredacted_hostile_content() -> bool:
+        try:
+            AgentRuntimeEvent(
+                event_id="evt_hostile",
+                sequence=1,
+                timestamp=datetime(2026, 4, 29, 10, 0, tzinfo=UTC),
+                kind=RuntimeEventKind.BROWSER_ACTION,
+                status=RuntimeEventStatus.BLOCKED,
+                actor="codex",
+                summary="Hostile page tried to become instructions.",
+                source_trust=SourceTrust.HOSTILE_UNTIL_SAFE,
+                risk_level=ActionRisk.HIGH,
+                effects=[RuntimeEffect.NONE],
+                target_ref="browser:external-page",
+                content_redacted=False,
+            )
+        except Exception as exc:
+            return "external or hostile" in str(exc)
+        return False
+
+    def rejects_bad_retry_ref() -> bool:
+        payload = load_json(TEST_FIXTURES / "agent_runtime_trace.json")
+        payload["events"][3]["retry_of"] = "evt_missing"
+        try:
+            AgentRuntimeTrace.model_validate(payload)
+        except Exception as exc:
+            return "retry events must reference" in str(exc)
+        return False
+
+    def rejects_future_retry_or_approval_ref() -> bool:
+        retry_payload = load_json(TEST_FIXTURES / "agent_runtime_trace.json")
+        retry_payload["events"][3]["retry_of"] = "evt_patch"
+        try:
+            AgentRuntimeTrace.model_validate(retry_payload)
+        except Exception as exc:
+            retry_rejected = "prior event" in str(exc)
+        else:
+            retry_rejected = False
+
+        approval_payload = load_json(TEST_FIXTURES / "agent_runtime_trace.json")
+        approval_payload["events"][1]["risk_level"] = "medium"
+        approval_payload["events"][1]["approval_ref"] = "evt_approval"
+        try:
+            AgentRuntimeTrace.model_validate(approval_payload)
+        except Exception as exc:
+            approval_rejected = "prior approval" in str(exc)
+        else:
+            approval_rejected = False
+        return retry_rejected and approval_rejected
+
+    def rejects_success_without_outcome_check() -> bool:
+        payload = load_json(TEST_FIXTURES / "agent_runtime_trace.json")
+        payload["events"] = [
+            event for event in payload["events"] if event["kind"] != "outcome_check"
+        ]
+        try:
+            AgentRuntimeTrace.model_validate(payload)
+        except Exception as exc:
+            return "successful traces require" in str(exc)
+        return False
+
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "agent-runtime-trace.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    report_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        "RUNTIME-TRACE-001",
+        "tool calls",
+        "shell actions",
+        "browser actions",
+        "artifacts",
+        "approval",
+        "retries",
+        "outcome checks",
+        "prompt-injection",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        trace.policy_refs == [RUNTIME_TRACE_POLICY_REF]
+        and summary.event_count == 11
+        and summary.tool_call_count == 1
+        and summary.shell_action_count == 2
+        and summary.browser_action_count == 2
+        and summary.artifact_count == 1
+        and summary.approval_count == 1
+        and summary.retry_count == 1
+        and summary.highest_risk == ActionRisk.HIGH
+        and summary.outcome_status == OutcomeStatus.SUCCESS
+        and summary.content_redacted
+        and "runtime_artifact:artifact_patch_001" in evidence_refs
+        and "outcome:onboarding-debug-local-tests" in evidence_refs
+        and rejects_unapproved_medium_risk()
+        and rejects_unredacted_hostile_content()
+        and rejects_bad_retry_ref()
+        and rejects_future_retry_or_approval_ref()
+        and rejects_success_without_outcome_check()
+        and not missing_doc_terms
+        and "RUNTIME-TRACE-001" in plan_text
+        and "RUNTIME-TRACE-001" in task_text
+        and "RUNTIME-TRACE-001" in report_text
+    )
+    return BenchmarkCaseResult(
+        case_id="RUNTIME-TRACE-001/tool_shell_browser_approval_outcome",
+        suite="RUNTIME-TRACE-001",
+        passed=passed,
+        summary=(
+            "Agent runtime traces capture tool, shell, browser, artifact, "
+            "approval, retry, blocked-hostile, and outcome evidence with "
+            "approval and redaction gates."
+        ),
+        metrics={
+            "event_count": summary.event_count,
+            "artifact_count": summary.artifact_count,
+            "approval_count": summary.approval_count,
+            "retry_count": summary.retry_count,
+            "evidence_ref_count": len(evidence_refs),
+        },
+        evidence={
+            "trace_id": trace.trace_id,
+            "policy_ref": RUNTIME_TRACE_POLICY_REF,
+            "highest_risk": summary.highest_risk.value,
+            "missing_doc_terms": missing_doc_terms,
         },
     )
 

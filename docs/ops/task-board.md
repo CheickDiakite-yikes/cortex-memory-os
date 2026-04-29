@@ -6,19 +6,18 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| RUNTIME-TRACE-001 | Define agent runtime trace schema and fixture | Codex | Contract, tests, benchmark | Research-driven next slice: tool calls, shell actions, browser actions, artifacts, approvals, retries, and outcomes. |
+| CONTEXT-BUDGET-001 | Add budget metadata to context-pack contracts | Codex | Gateway contract and benchmark | Track token, time, tool, artifact, autonomy, and risk budgets. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| CONTEXT-BUDGET-001 | Add budget metadata to context-pack contracts | Codex | Gateway contract and benchmark | Track token, time, tool, artifact, autonomy, and risk budgets. |
+| POINTER-PROPOSAL-001 | Define untrusted model pointing proposal contract | Codex | Shadow Pointer tests and safety benchmark | Parse model-proposed coordinates as display proposals, not privileged actions. |
 
 ## Backlog
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| POINTER-PROPOSAL-001 | Define untrusted model pointing proposal contract | Codex | Shadow Pointer tests and safety benchmark | Parse model-proposed coordinates as display proposals, not privileged actions. |
 | SKILL-DOC-DERIVATION-001 | Specify document-to-skill candidate flow | Codex | Skill Forge docs, tests, maturity gate | Preserve provenance, approval, rollback, and deletion paths. |
 | SWARM-GOVERNANCE-001 | Add swarm orchestration constraints | Codex | ADR plus budget/source-isolation benchmark | Prepare for parallel agents with cancellation, source isolation, and audit. |
 | ROBOT-SPATIAL-SAFETY-001 | Expand robot spatial safety metadata | Codex | Contract and `ROBOT-SAFE-001` expansion | Add spatial hazards, affordances, material constraints, and simulation status. |
@@ -133,6 +132,7 @@ Last updated: 2026-04-29
 | SHADOW-POINTER-CONTROLS-001 | Add native-ready Shadow Pointer control contract | Codex | `uv run pytest` -> 205 passed, `uv run cortex-bench` -> 101/101 passed, `uv run cortex-mcp --smoke` | Pause, delete-recent, app-ignore, resume, and status commands return explicit receipts for native overlay wiring. |
 | RESEARCH-FRONTIER-AI-LABS-001 | Synthesize frontier AI lab agent and model developments | Codex | `docs/research/frontier-agent-research-2026-04-29.md`, `uv run pytest` -> 205 passed, `uv run cortex-bench` -> 102/102 passed, `uv run cortex-mcp --smoke`, `uv run cortex-openai-smoke --assert-contains CORTEX_LIVE_OK` | Official/primary sources only; Clicky studied as untrusted architecture reference without executing code. |
 | MEMORY-PALACE-DASHBOARD-001 | Add inspectable Memory Palace dashboard contract | Codex | `src/cortex_memory_os/memory_palace_dashboard.py`, `docs/product/memory-palace-dashboard.md`, `uv run pytest` -> 208 passed, `uv run cortex-bench` -> 103/103 passed, `uv run cortex-mcp --smoke` | Dashboard cards expose safe previews, exact gateway action plans, scoped export previews, and count-only audit summaries. |
+| RUNTIME-TRACE-001 | Define agent runtime trace schema and fixture | Codex | `src/cortex_memory_os/runtime_trace.py`, `tests/fixtures/agent_runtime_trace.json`, `docs/architecture/agent-runtime-trace.md`, `uv run pytest` -> 213 passed, `uv run cortex-bench` -> 104/104 passed, `uv run cortex-mcp --smoke` | Captures tool, shell, browser, artifact, approval, retry, blocked-hostile, and outcome evidence with approval and redaction gates. |
 
 ## Dropped
 
