@@ -100,6 +100,15 @@ from cortex_memory_os.memory_palace import (
     MemoryExplanation,
     MemoryPalaceService,
 )
+from cortex_memory_os.memory_palace_dashboard import (
+    MEMORY_PALACE_DASHBOARD_POLICY_REF,
+    MemoryPalaceActionPlan,
+    MemoryPalaceAuditSummary,
+    MemoryPalaceCard,
+    MemoryPalaceDashboard,
+    MemoryPalaceExportPreview,
+    build_memory_palace_dashboard,
+)
 from cortex_memory_os.memory_palace_flows import (
     MemoryPalaceFlow,
     MemoryPalaceFlowId,
@@ -271,6 +280,13 @@ __all__ = [
     "MemoryCorrection",
     "MemoryExplanation",
     "MemoryPalaceService",
+    "MEMORY_PALACE_DASHBOARD_POLICY_REF",
+    "MemoryPalaceActionPlan",
+    "MemoryPalaceAuditSummary",
+    "MemoryPalaceCard",
+    "MemoryPalaceDashboard",
+    "MemoryPalaceExportPreview",
+    "build_memory_palace_dashboard",
     "MemoryPalaceFlow",
     "MemoryPalaceFlowId",
     "default_memory_palace_flows",

@@ -77,6 +77,28 @@ class SQLiteMemoryGraphStore:
             return None
         return MemoryRecord.model_validate_json(row["payload_json"])
 
+    def list_memories(self, *, status: MemoryStatus | None = None) -> list[MemoryRecord]:
+        with self._connect() as con:
+            if status is None:
+                rows = con.execute(
+                    """
+                    SELECT payload_json
+                    FROM memories
+                    ORDER BY status ASC, confidence DESC, memory_id ASC
+                    """
+                ).fetchall()
+            else:
+                rows = con.execute(
+                    """
+                    SELECT payload_json
+                    FROM memories
+                    WHERE status = ?
+                    ORDER BY confidence DESC, memory_id ASC
+                    """,
+                    (status.value,),
+                ).fetchall()
+        return [MemoryRecord.model_validate_json(row["payload_json"]) for row in rows]
+
     def forget_memory(self, memory_id: str) -> MemoryRecord:
         memory = self.get_memory(memory_id)
         if memory is None:

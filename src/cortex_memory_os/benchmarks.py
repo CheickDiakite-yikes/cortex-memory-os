@@ -96,6 +96,9 @@ from cortex_memory_os.memory_export import (
     export_memories_with_audit,
 )
 from cortex_memory_os.memory_palace import MemoryPalaceService
+from cortex_memory_os.memory_palace_dashboard import (
+    MEMORY_PALACE_DASHBOARD_POLICY_REF,
+)
 from cortex_memory_os.memory_palace_flows import (
     MemoryPalaceFlowId,
     default_memory_palace_flows,
@@ -256,6 +259,7 @@ def run_all() -> BenchmarkRunResult:
         case_memory_palace_self_lesson_flow_contract,
         case_memory_palace_self_lesson_review_flow,
         case_memory_palace_export_ui_flow,
+        case_memory_palace_dashboard_contract,
         case_memory_palace_audit_events,
         case_deletion_aware_memory_export,
         case_memory_export_audit_events,
@@ -518,6 +522,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "docs/product/vision.md",
         "docs/product/build-roadmap.md",
         "docs/product/original-goal-coverage.md",
+        "docs/product/memory-palace-dashboard.md",
         "docs/ops/task-board.md",
         "docs/ops/benchmark-registry.md",
     ]
@@ -535,18 +540,18 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "SEC-INJECT-001",
         "VAULT-RETENTION-001",
         "MEMORY-PALACE-001",
+        "MEMORY-PALACE-DASHBOARD-001",
         "SKILL-FORGE-002",
         "GATEWAY-CTX-001",
         "SHADOW-POINTER-001",
         "ROBOT-SAFE-001",
     ]
     next_gap_terms = [
-        "Evidence eligibility handoff",
-        "Shadow Pointer native overlay",
-        "Memory Palace dashboard",
+        "Agent runtime trace",
         "Skill Forge candidate list",
         "Codex plugin packaging",
         "Browser/terminal adapters",
+        "Shadow Pointer native overlay",
     ]
 
     missing_sections = _missing_terms(report_text, required_sections)
@@ -6233,6 +6238,154 @@ def case_memory_palace_export_ui_flow() -> BenchmarkCaseResult:
             "flow_id": export_flow.flow_id.value if export_flow else None,
             "audit_action": export_flow.audit_action if export_flow else None,
             "data_egress": export_flow.data_egress if export_flow else None,
+        },
+    )
+
+
+def case_memory_palace_dashboard_contract() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    memory = MemoryRecord.model_validate(load_json(TEST_FIXTURES / "memory_preference.json"))
+    secret = "CORTEX_FAKE_TOKEN_dashboardBenchSECRET123"
+    active = memory.model_copy(
+        update={
+            "memory_id": "mem_dashboard_alpha",
+            "source_refs": ["project:alpha", "scene_dashboard_alpha"],
+        }
+    )
+    secret_memory = memory.model_copy(
+        update={
+            "memory_id": "mem_dashboard_secret",
+            "content": f"Dashboard preview fixture token={secret}.",
+            "source_refs": ["project:alpha", "scene_dashboard_secret"],
+        }
+    )
+    wrong_project = memory.model_copy(
+        update={
+            "memory_id": "mem_dashboard_beta",
+            "source_refs": ["project:beta", "scene_dashboard_beta"],
+        }
+    )
+    stored_only = memory.model_copy(
+        update={
+            "memory_id": "mem_dashboard_stored_only",
+            "influence_level": InfluenceLevel.STORED_ONLY,
+            "allowed_influence": [],
+        }
+    )
+    deleted = transition_memory(
+        memory.model_copy(
+            update={
+                "memory_id": "mem_dashboard_deleted",
+                "content": "Deleted dashboard benchmark content must stay hidden.",
+            }
+        ),
+        MemoryStatus.DELETED,
+        now=datetime(2026, 4, 29, 9, 0, tzinfo=UTC),
+    )
+
+    with TemporaryDirectory() as tmp:
+        store = SQLiteMemoryGraphStore(Path(tmp) / "cortex.sqlite3")
+        store.add_memories([active, secret_memory, wrong_project, stored_only, deleted])
+        palace = MemoryPalaceService(store)
+        deleted_active = palace.delete_memory(
+            active.memory_id,
+            now=datetime(2026, 4, 29, 9, 5, tzinfo=UTC),
+        )
+        correction = palace.correct_memory(
+            secret_memory.memory_id,
+            "Dashboard previews should redact secret-like text.",
+            now=datetime(2026, 4, 29, 9, 10, tzinfo=UTC),
+        )
+        dashboard = palace.dashboard(
+            selected_memory_ids=[
+                correction.corrected_memory.memory_id,
+                wrong_project.memory_id,
+                stored_only.memory_id,
+                deleted_active.memory_id,
+            ],
+            scope=RetrievalScope(active_project="alpha"),
+            now=datetime(2026, 4, 29, 9, 15, tzinfo=UTC),
+        )
+
+    serialized = dashboard.model_dump_json()
+    cards = {card.memory_id: card for card in dashboard.cards}
+    corrected_card = cards[correction.corrected_memory.memory_id]
+    deleted_card = cards[deleted_active.memory_id]
+    preview = dashboard.export_preview
+    dashboard_doc = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-dashboard.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    required_doc_terms = [
+        "MEMORY-PALACE-DASHBOARD-001",
+        "memory.explain",
+        "memory.correct",
+        "memory.forget",
+        "memory.export",
+        "data egress",
+        "Deleted, revoked, and quarantined",
+    ]
+    missing_doc_terms = _missing_terms(dashboard_doc, required_doc_terms)
+    passed = (
+        MEMORY_PALACE_DASHBOARD_POLICY_REF in dashboard.policy_refs
+        and dashboard.audit_summary.counts_by_action
+        == {"correct_memory": 1, "delete_memory": 1}
+        and deleted_card.content_preview is None
+        and deleted_card.recall_eligible is False
+        and [action.gateway_tool for action in deleted_card.action_plans]
+        == ["memory.explain"]
+        and {action.gateway_tool for action in corrected_card.action_plans}
+        == {"memory.explain", "memory.correct", "memory.forget", "memory.export"}
+        and any(action.requires_confirmation for action in corrected_card.action_plans)
+        and any(action.data_egress for action in corrected_card.action_plans)
+        and preview.selection_mode == "explicit_ids"
+        and preview.exportable_count == 1
+        and set(preview.omitted_memory_ids)
+        == {
+            wrong_project.memory_id,
+            stored_only.memory_id,
+            deleted_active.memory_id,
+        }
+        and preview.omission_reasons[wrong_project.memory_id]
+        == ["project_scope_mismatch"]
+        and preview.omission_reasons[stored_only.memory_id] == ["not_recall_allowed"]
+        and preview.requires_confirmation
+        and preview.data_egress
+        and secret not in serialized
+        and "Deleted dashboard benchmark content" not in serialized
+        and not missing_doc_terms
+        and "MEMORY-PALACE-DASHBOARD-001" in plan_text
+        and "MEMORY-PALACE-DASHBOARD-001" in task_text
+    )
+    return BenchmarkCaseResult(
+        case_id="MEMORY-PALACE-DASHBOARD-001/cards_export_audit_contract",
+        suite="MEMORY-PALACE-DASHBOARD-001",
+        passed=passed,
+        summary=(
+            "Memory Palace dashboard cards expose safe previews, exact gateway "
+            "action plans, scoped export previews, and count-only audit summaries."
+        ),
+        metrics={
+            "card_count": len(dashboard.cards),
+            "exportable_count": preview.exportable_count,
+            "omitted_count": preview.omitted_count,
+            "audit_count": dashboard.audit_summary.human_visible_count,
+        },
+        evidence={
+            "dashboard_doc": "docs/product/memory-palace-dashboard.md",
+            "missing_doc_terms": missing_doc_terms,
+            "deleted_card_actions": [
+                action.gateway_tool for action in deleted_card.action_plans
+            ],
+            "corrected_card_actions": [
+                action.gateway_tool for action in corrected_card.action_plans
+            ],
         },
     )
 

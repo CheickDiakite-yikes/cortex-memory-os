@@ -10,6 +10,7 @@ Source documents:
 - `docs/product/vision.md`
 - `docs/product/build-roadmap.md`
 - `docs/product/original-goal-coverage.md`
+- `docs/product/memory-palace-dashboard.md`
 - `docs/architecture/system-blueprint.md`
 - `docs/ops/task-board.md`
 - `docs/ops/benchmark-registry.md`
@@ -25,7 +26,7 @@ Source documents:
 | Evidence Vault | Validated skeleton | `VAULT-RETENTION-001`, `VAULT-ENCRYPT-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001` | Replace dev cipher with production key management before real private data. |
 | Scene, memory, and graph pipeline | Validated skeleton | `SCENE-SEGMENT-001`, `MEM-COMPILE-001`, `GRAPH-EDGE-001` | Add richer multimodal segmentation and contradiction handling. |
 | Retrieval and context packs | Validated skeleton | `RETRIEVAL-SCORE-001`, `CONTEXT-PACK-001`, scoped self-lesson suites | Add vector/sparse/graph fusion behind stable interfaces. |
-| Memory Palace | Validated contract | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, self-lesson review flows | Build real dashboard UI beyond contract and gateway flows. |
+| Memory Palace | Validated dashboard contract | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, `MEMORY-PALACE-DASHBOARD-001`, self-lesson review flows | Build real dashboard UI shell over the safe view model. |
 | Skill Forge | Validated skeleton | `SKILL-FORGE-002`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add candidate UI, workflow clustering, and skill success metrics. |
 | Agent Gateway | Validated skeleton | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools | Package Codex plugin and bridge additional clients. |
 | Shadow Pointer | Partial with control contract | `SHADOW-POINTER-001`, `SHADOW-POINTER-CONTROLS-001`, static UI prototype | Build native overlay with live permissions and wire controls to real capture adapters. |
@@ -48,8 +49,8 @@ User-facing pillars:
 
 - Shadow Pointer: partial prototype, state contract, and native-ready control
   receipts.
-- Memory Palace: validated inspect, explain, correct, delete, export, and
-  self-lesson review flows.
+- Memory Palace: validated inspect, explain, correct, delete, export,
+  dashboard cards, export previews, action plans, and self-lesson review flows.
 - Skill Forge: validated repeated-workflow detector, maturity gates, rollback,
   audits, and draft-only execution.
 - Agent Gateway: validated context packs, scoped actions, audit receipts, review
@@ -60,8 +61,8 @@ User-facing pillars:
 The next useful slices should move from contract depth into product surface and
 capture realism:
 
-1. Memory Palace dashboard view over existing explain/correct/delete/export
-   contracts.
+1. Agent runtime trace contract for tool calls, shell actions, browser actions,
+   artifacts, approvals, retries, and outcomes.
 2. Skill Forge candidate list using existing repeated-workflow and maturity
    gates.
 3. Codex plugin packaging for the MCP gateway and core skills.

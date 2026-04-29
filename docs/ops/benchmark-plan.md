@@ -56,6 +56,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `PALACE-FLOW-001` | User phrases map to safe explain/delete flows. | Delete flow lacks anchor, confirmation, or recall blocking. |
 | `PALACE-SELF-LESSON-FLOWS-001` | Self-lesson review phrases map to safe inspect, correct, promote, rollback, and delete flows. | Review or correction silently activates candidate guidance. |
 | `PALACE-EXPORT-UI-001` | Memory Palace export flow is explicit, scoped, confirmation-gated, and audit-backed. | Export can run without visible scope, confirmation, redaction, or audit receipt. |
+| `MEMORY-PALACE-DASHBOARD-001` | Memory Palace dashboard cards expose safe previews, action plans, export previews, and audit counts. | Dashboard resurrects deleted content, leaks secrets, omits confirmation markers, or hides export omissions. |
 | `AUDIT-001` | Memory mutations persist human-visible audits. | Mutation lacks a redacted audit event. |
 | `EXPORT-001` | User memory export is scoped, redacted, and deletion-aware. | Deleted/revoked content appears in export output. |
 | `EXPORT-AUDIT-001` | Memory exports persist redacted audit receipts. | Export audit copies memory content or secret-like text. |
@@ -160,12 +161,12 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- Memory Palace dashboard view over existing explain/correct/delete/export
-  contracts.
 - Agent runtime trace contract from tool, shell, browser, and artifact events.
 - Budgeted context-pack contract for token, time, tool, artifact, autonomy, and
   risk budgets.
 - Untrusted pointing proposal contract for Shadow Pointer / cursor-overlay UX.
+- Skill Forge candidate list using existing repeated-workflow and maturity
+  gates.
 
 Longer-term suites:
 

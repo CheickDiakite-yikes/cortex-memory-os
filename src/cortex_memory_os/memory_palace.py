@@ -12,7 +12,12 @@ from cortex_memory_os.contracts import (
     MemoryStatus,
 )
 from cortex_memory_os.memory_lifecycle import recall_allowed, transition_memory
+from cortex_memory_os.memory_palace_dashboard import (
+    MemoryPalaceDashboard,
+    build_memory_palace_dashboard,
+)
 from cortex_memory_os.memory_palace_flows import MemoryPalaceFlowId
+from cortex_memory_os.retrieval import RetrievalScope
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
 
 MEMORY_PALACE_POLICY_REF = "policy_memory_palace_user_control_v1"
@@ -55,6 +60,28 @@ class MemoryPalaceService:
             forbidden_influence=memory.forbidden_influence,
             recall_eligible=recall_allowed(memory),
             available_actions=_available_actions(memory),
+        )
+
+    def dashboard(
+        self,
+        *,
+        selected_memory_ids: list[str] | None = None,
+        scope: RetrievalScope | None = None,
+        now: datetime | None = None,
+    ) -> MemoryPalaceDashboard:
+        memories = self.store.list_memories()
+        target_ids = [memory.memory_id for memory in memories]
+        audit_events = [
+            event
+            for memory_id in target_ids
+            for event in self.store.audit_for_target(memory_id)
+        ]
+        return build_memory_palace_dashboard(
+            memories,
+            audit_events=audit_events,
+            selected_memory_ids=selected_memory_ids,
+            scope=scope,
+            now=now,
         )
 
     def delete_memory(self, memory_id: str, *, now: datetime | None = None) -> MemoryRecord:

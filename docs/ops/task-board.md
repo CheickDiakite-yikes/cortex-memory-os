@@ -6,19 +6,18 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| MEMORY-PALACE-DASHBOARD-001 | Add inspectable Memory Palace dashboard contract | Codex | Contracts, docs, benchmark case | Build dashboard-facing view models over explain/correct/delete/export contracts. |
+| RUNTIME-TRACE-001 | Define agent runtime trace schema and fixture | Codex | Contract, tests, benchmark | Research-driven next slice: tool calls, shell actions, browser actions, artifacts, approvals, retries, and outcomes. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| RUNTIME-TRACE-001 | Define agent runtime trace schema and fixture | Codex | Contract, tests, benchmark | Research-driven next slice: tool calls, shell actions, browser actions, artifacts, approvals, retries, and outcomes. |
+| CONTEXT-BUDGET-001 | Add budget metadata to context-pack contracts | Codex | Gateway contract and benchmark | Track token, time, tool, artifact, autonomy, and risk budgets. |
 
 ## Backlog
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| CONTEXT-BUDGET-001 | Add budget metadata to context-pack contracts | Codex | Gateway contract and benchmark | Track token, time, tool, artifact, autonomy, and risk budgets. |
 | POINTER-PROPOSAL-001 | Define untrusted model pointing proposal contract | Codex | Shadow Pointer tests and safety benchmark | Parse model-proposed coordinates as display proposals, not privileged actions. |
 | SKILL-DOC-DERIVATION-001 | Specify document-to-skill candidate flow | Codex | Skill Forge docs, tests, maturity gate | Preserve provenance, approval, rollback, and deletion paths. |
 | SWARM-GOVERNANCE-001 | Add swarm orchestration constraints | Codex | ADR plus budget/source-isolation benchmark | Prepare for parallel agents with cancellation, source isolation, and audit. |
@@ -133,6 +132,7 @@ Last updated: 2026-04-29
 | EVIDENCE-ELIGIBILITY-HANDOFF-001 | Define firewall-to-evidence eligibility handoff | Codex | `uv run pytest` -> 199 passed, `uv run cortex-bench` -> 100/100 passed, `uv run cortex-mcp --smoke` | Firewall decisions compile into Evidence Vault raw, derived, metadata-only, and discard write plans. |
 | SHADOW-POINTER-CONTROLS-001 | Add native-ready Shadow Pointer control contract | Codex | `uv run pytest` -> 205 passed, `uv run cortex-bench` -> 101/101 passed, `uv run cortex-mcp --smoke` | Pause, delete-recent, app-ignore, resume, and status commands return explicit receipts for native overlay wiring. |
 | RESEARCH-FRONTIER-AI-LABS-001 | Synthesize frontier AI lab agent and model developments | Codex | `docs/research/frontier-agent-research-2026-04-29.md`, `uv run pytest` -> 205 passed, `uv run cortex-bench` -> 102/102 passed, `uv run cortex-mcp --smoke`, `uv run cortex-openai-smoke --assert-contains CORTEX_LIVE_OK` | Official/primary sources only; Clicky studied as untrusted architecture reference without executing code. |
+| MEMORY-PALACE-DASHBOARD-001 | Add inspectable Memory Palace dashboard contract | Codex | `src/cortex_memory_os/memory_palace_dashboard.py`, `docs/product/memory-palace-dashboard.md`, `uv run pytest` -> 208 passed, `uv run cortex-bench` -> 103/103 passed, `uv run cortex-mcp --smoke` | Dashboard cards expose safe previews, exact gateway action plans, scoped export previews, and count-only audit summaries. |
 
 ## Dropped
 
