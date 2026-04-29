@@ -83,6 +83,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `CONTEXT-PACK-SELF-LESSON-REVIEW-SUMMARY-001` | Context packs expose aggregate review-required self-lesson counts without hidden content. | Context-pack summaries leak lesson content/provenance or omit review-required counts. |
 | `PALACE-SELF-LESSON-REVIEW-FLOW-001` | Memory Palace review-required self-lessons link to anchored explain, refresh, correct, and delete tools. | Review-required lessons lack a safe action path or skip confirmation on mutation tools. |
 | `GATEWAY-SELF-LESSON-REVIEW-ACTIONS-001` | Gateway review queue entries include the Memory Palace action plan without lesson content. | Queue entries omit exact tool routes or leak content/provenance through action metadata. |
+| `GATEWAY-REVIEW-QUEUE-AUDIT-PREVIEW-001` | Review queue entries point to exact-card audit previews without embedding preview content. | Queue entries embed previews directly, omit audit-preview hints, or leak content/provenance. |
 | `GATEWAY-SELF-LESSON-REVIEW-FLOW-001` | Gateway returns an exact-ID self-lesson review flow with queue metadata and follow-up tool routes. | Review flow can run from vague search, omits policy refs, or leaks content/provenance. |
 | `SELF-LESSON-REVIEW-FLOW-SAFETY-SUMMARY-001` | Review flows summarize confirmation, mutation, and redaction safety without lesson content. | Safety summary omits mutation confirmation requirements or leaks content/provenance. |
 | `SELF-LESSON-REVIEW-FLOW-AUDIT-PREVIEW-001` | Review flows preview mutation audit receipt shape before execution. | Audit previews require mutation execution, omit confirmation metadata, or leak content/provenance. |
@@ -130,8 +131,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `GATEWAY-REVIEW-QUEUE-AUDIT-PREVIEW-001`: Review queue entries should point
-  to exact-card audit previews without embedding preview content.
+- `GATEWAY-REVIEW-QUEUE-AUDIT-CONSISTENCY-001`: Review queue hints should share
+  the same audit shape ID as review-flow audit previews.
 
 Longer-term suites:
 

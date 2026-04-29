@@ -475,3 +475,13 @@ aggregate context-pack review warnings to audit-backed review cards:
 - the summary includes the audit shape ID and exact-lesson-ID requirement;
 - the summary does not embed preview content, lesson content, learned-from refs,
   rollback text, or scoped provenance.
+
+`GATEWAY-REVIEW-QUEUE-AUDIT-PREVIEW-001` must pass before review queues can
+claim audit-preview routing:
+
+- each review-required queue entry points to `self_lesson.review_flow` with its
+  exact lesson ID;
+- the queue entry includes the audit preview shape ID and marks the preview as
+  not embedded;
+- the queue still omits lesson content, learned-from refs, rollback text, and
+  scoped provenance.

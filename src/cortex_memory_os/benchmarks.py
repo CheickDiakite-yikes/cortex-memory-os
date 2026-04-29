@@ -186,6 +186,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_scope_stale_export_marker,
         case_gateway_self_lesson_review_queue,
         case_gateway_self_lesson_review_actions,
+        case_gateway_review_queue_audit_preview_hint,
         case_gateway_self_lesson_review_flow,
         case_self_lesson_review_flow_safety_summary,
         case_self_lesson_review_flow_audit_preview,
@@ -2104,6 +2105,65 @@ def case_gateway_self_lesson_review_actions() -> BenchmarkCaseResult:
         evidence={
             "queued_ids": queue.get("lesson_ids", []),
             "tool_names": tool_names,
+        },
+    )
+
+
+def case_gateway_review_queue_audit_preview_hint() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        stale = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_stale_queue_audit_hint",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_stale_queue_audit_hint"],
+                "last_validated": date(2025, 1, 1),
+            }
+        )
+        store.add_self_lesson(stale)
+        server = CortexMCPServer(store=store)
+        queue = server.call_tool("self_lesson.review_queue", {})
+
+    queued_lesson = queue.get("lessons", [{}])[0]
+    hint = queued_lesson.get("review_flow_audit_preview_hint", {})
+    serialized_queue = json.dumps(queue, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        queue.get("lesson_ids") == [stale.lesson_id]
+        and hint.get("gateway_tool") == "self_lesson.review_flow"
+        and hint.get("required_inputs") == ["lesson_id"]
+        and hint.get("lesson_id") == stale.lesson_id
+        and hint.get("audit_preview_available") is True
+        and hint.get("audit_shape_id") == "self_lesson_decision_audit_v1"
+        and hint.get("preview_embedded") is False
+        and hint.get("content_redacted") is True
+        and "previews" not in hint
+        and "Before editing auth" not in serialized_queue
+        and "project:alpha" not in serialized_queue
+        and "task_project_stale_queue_audit_hint" not in serialized_queue
+        and "GATEWAY-REVIEW-QUEUE-AUDIT-PREVIEW-001" in docs_text
+        and "GATEWAY-REVIEW-QUEUE-AUDIT-PREVIEW-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-REVIEW-QUEUE-AUDIT-PREVIEW-001/queue_audit_preview_hint",
+        suite="GATEWAY-REVIEW-QUEUE-AUDIT-PREVIEW-001",
+        passed=passed,
+        summary="Gateway review queue entries point to exact-card audit previews without embedding preview content.",
+        metrics={
+            "queue_count": queue.get("count", 0),
+            "hint_count": int(bool(hint)),
+        },
+        evidence={
+            "queued_ids": queue.get("lesson_ids", []),
+            "audit_shape_id": hint.get("audit_shape_id"),
         },
     )
 

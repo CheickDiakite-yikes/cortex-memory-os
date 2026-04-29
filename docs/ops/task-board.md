@@ -6,13 +6,13 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| _None_ |  |  |  |  |
+| GATEWAY-REVIEW-QUEUE-AUDIT-CONSISTENCY-001 | Add review queue audit consistency check | Codex | Contract, tests, benchmark case | Review queue hints should share the same audit shape ID as review-flow audit previews. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-REVIEW-QUEUE-AUDIT-PREVIEW-001 | Add review queue audit preview hint | Codex | Contract, tests, benchmark case | Review queue entries should point to exact-card audit previews without embedding preview content. |
+| _None_ |  |  |  |  |
 
 ## Backlog
 
@@ -101,6 +101,7 @@ Last updated: 2026-04-29
 | SELF-LESSON-REVIEW-FLOW-AUDIT-PREVIEW-001 | Add review flow audit preview | Codex | `uv run pytest` -> 162 passed, `uv run cortex-bench` -> 72/72 passed, `uv run cortex-mcp --smoke` | Review flows preview mutation audit receipt shape before execution without lesson content. |
 | SELF-LESSON-REVIEW-FLOW-AUDIT-CONSISTENCY-001 | Add review flow audit consistency marker | Codex | `uv run pytest` -> 163 passed, `uv run cortex-bench` -> 73/73 passed, `uv run cortex-mcp --smoke` | Review mutation responses expose the same audit shape ID previewed by the review flow. |
 | CONTEXT-PACK-REVIEW-FLOW-AUDIT-HINT-001 | Add context-pack review flow audit hint | Codex | `uv run pytest` -> 163 passed, `uv run cortex-bench` -> 74/74 passed, `uv run cortex-mcp --smoke` | Context-pack review summaries point agents to review-flow audit previews without lesson content. |
+| GATEWAY-REVIEW-QUEUE-AUDIT-PREVIEW-001 | Add review queue audit preview hint | Codex | `uv run pytest` -> 163 passed, `uv run cortex-bench` -> 75/75 passed, `uv run cortex-mcp --smoke` | Review queue entries point to exact-card audit previews without embedding preview content. |
 
 ## Dropped
 

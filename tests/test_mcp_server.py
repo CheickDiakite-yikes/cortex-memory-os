@@ -1424,6 +1424,16 @@ def test_self_lesson_review_queue_lists_only_review_required_lessons_redacted(tm
     )
     assert all(action["mutation"] for action in queued["review_action_plan"][1:])
     assert all(action["content_redacted"] for action in queued["review_action_plan"])
+    assert queued["review_flow_audit_preview_hint"] == {
+        "gateway_tool": "self_lesson.review_flow",
+        "required_inputs": ["lesson_id"],
+        "lesson_id": stale.lesson_id,
+        "audit_preview_available": True,
+        "audit_shape_id": "self_lesson_decision_audit_v1",
+        "preview_embedded": False,
+        "content_redacted": True,
+    }
+    assert "previews" not in queued["review_flow_audit_preview_hint"]
     assert "content" not in queued
     assert "learned_from" not in queued
     assert "rollback_if" not in queued

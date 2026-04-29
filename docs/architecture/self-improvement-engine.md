@@ -303,3 +303,12 @@ one project, agent, or session from silently shaping another.
   or any lesson content;
 - the hint keeps the exact-lesson-ID requirement visible before audit preview
   retrieval.
+
+`GATEWAY-REVIEW-QUEUE-AUDIT-PREVIEW-001` verifies:
+
+- review queue entries point to exact-card audit previews without embedding
+  those previews;
+- queue entries include the audit shape ID and exact lesson ID needed to fetch
+  the review flow;
+- queue-level routing stays redacted and does not copy lesson content or scoped
+  provenance.

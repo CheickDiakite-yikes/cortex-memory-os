@@ -1198,6 +1198,10 @@ def serialize_self_lesson_list_item(
             review_required=item["review_state"]["review_required"],
         )
     ]
+    if item["review_state"]["review_required"]:
+        item["review_flow_audit_preview_hint"] = (
+            serialize_self_lesson_review_flow_audit_preview_hint(lesson)
+        )
     return item
 
 
@@ -1240,6 +1244,20 @@ def summarize_self_lesson_review_flow_safety(
             SELF_LESSON_REVIEW_QUEUE_POLICY_REF,
             SELF_LESSON_REVIEW_FLOW_POLICY_REF,
         ],
+    }
+
+
+def serialize_self_lesson_review_flow_audit_preview_hint(
+    lesson: SelfLesson,
+) -> dict[str, Any]:
+    return {
+        "gateway_tool": "self_lesson.review_flow",
+        "required_inputs": ["lesson_id"],
+        "lesson_id": lesson.lesson_id,
+        "audit_preview_available": True,
+        "audit_shape_id": SELF_LESSON_DECISION_AUDIT_SHAPE_ID,
+        "preview_embedded": False,
+        "content_redacted": True,
     }
 
 
