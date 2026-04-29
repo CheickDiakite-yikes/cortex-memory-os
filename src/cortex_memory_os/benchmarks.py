@@ -110,8 +110,11 @@ from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
 from cortex_memory_os.retrieval import RetrievalScope, rank_memories, score_memory
 from cortex_memory_os.temporal_graph import compile_temporal_edge
 from cortex_memory_os.shadow_pointer import (
+    ShadowPointerControlAction,
+    ShadowPointerControlCommand,
     ShadowPointerSnapshot,
     ShadowPointerState,
+    apply_control,
     default_shadow_pointer_snapshot,
 )
 from cortex_memory_os.scene_segmenter import SegmentableEvent, segment_events
@@ -243,6 +246,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
+        case_shadow_pointer_controls_contract,
         case_scene_segmentation,
         case_memory_compiler_candidate,
         case_temporal_edge_compiler,
@@ -5574,6 +5578,112 @@ def case_shadow_pointer_state_contract() -> BenchmarkCaseResult:
         metrics={"validated_states": 3},
         evidence={
             "states": [observed.state.value, masking.state.value, approval.state.value],
+        },
+    )
+
+
+def case_shadow_pointer_controls_contract() -> BenchmarkCaseResult:
+    observed = default_shadow_pointer_snapshot()
+    pause = apply_control(
+        observed,
+        ShadowPointerControlCommand(
+            action=ShadowPointerControlAction.PAUSE_OBSERVATION,
+            duration_minutes=60,
+        ),
+    )
+    delete_recent = apply_control(
+        observed,
+        ShadowPointerControlCommand(
+            action=ShadowPointerControlAction.DELETE_RECENT,
+            delete_window_minutes=10,
+            user_confirmed=True,
+        ),
+    )
+    ignore_app = apply_control(
+        observed,
+        ShadowPointerControlCommand(
+            action=ShadowPointerControlAction.IGNORE_APP,
+            app_name="Chrome",
+            user_confirmed=True,
+        ),
+    )
+    status = apply_control(
+        observed,
+        ShadowPointerControlCommand(action=ShadowPointerControlAction.STATUS),
+    )
+
+    docs_text = (
+        REPO_ROOT / "docs" / "product" / "shadow-pointer-controls.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    prototype_text = (
+        (REPO_ROOT / "ui" / "shadow-pointer" / "index.html").read_text(encoding="utf-8")
+        + "\n"
+        + (REPO_ROOT / "ui" / "shadow-pointer" / "app.js").read_text(encoding="utf-8")
+    )
+    required_doc_terms = [
+        "SHADOW-POINTER-CONTROLS-001",
+        "pause_observation",
+        "delete_recent",
+        "ignore_app",
+        "ShadowPointerControlReceipt",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    required_prototype_terms = [
+        "Never observe Chrome",
+        "Delete last 10 min",
+        "Last control",
+        "Memory writes blocked",
+    ]
+    missing_prototype_terms = _missing_terms(prototype_text, required_prototype_terms)
+
+    passed = (
+        pause.resulting_snapshot.state == ShadowPointerState.PAUSED
+        and pause.observation_active is False
+        and pause.memory_write_allowed is False
+        and pause.audit_action == "pause_observation"
+        and delete_recent.confirmation_observed is True
+        and delete_recent.deleted_window_minutes == 10
+        and delete_recent.memory_write_allowed is False
+        and delete_recent.audit_action == "delete_recent_observation"
+        and ignore_app.confirmation_observed is True
+        and "Chrome" not in ignore_app.resulting_snapshot.seeing
+        and "Chrome" in ignore_app.resulting_snapshot.ignoring
+        and ignore_app.memory_write_allowed is False
+        and status.audit_required is False
+        and status.resulting_snapshot == observed
+        and not missing_doc_terms
+        and not missing_prototype_terms
+        and "SHADOW-POINTER-CONTROLS-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SHADOW-POINTER-CONTROLS-001/native_ready_controls",
+        suite="SHADOW-POINTER-CONTROLS-001",
+        passed=passed,
+        summary=(
+            "Shadow Pointer controls expose pause, delete-recent, app-ignore, "
+            "and read-only status receipts for native overlay wiring."
+        ),
+        metrics={
+            "mutating_audit_count": sum(
+                int(receipt.audit_required)
+                for receipt in [pause, delete_recent, ignore_app, status]
+            ),
+            "blocked_memory_write_count": sum(
+                int(not receipt.memory_write_allowed)
+                for receipt in [pause, delete_recent, ignore_app]
+            ),
+            "prototype_control_terms": len(required_prototype_terms)
+            - len(missing_prototype_terms),
+        },
+        evidence={
+            "pause_state": pause.resulting_snapshot.state.value,
+            "delete_audit_action": delete_recent.audit_action,
+            "ignored_apps": ignore_app.affected_apps,
+            "missing_doc_terms": missing_doc_terms,
+            "missing_prototype_terms": missing_prototype_terms,
         },
     )
 

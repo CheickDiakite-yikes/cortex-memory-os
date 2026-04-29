@@ -245,7 +245,18 @@ dd {
 .actions {
   display: grid;
   gap: 8px;
-  margin-top: auto;
+}
+
+.receipt {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.receipt p:last-child {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .state-off .halo,
@@ -338,4 +349,3 @@ dd {
     animation: none;
   }
 }
-

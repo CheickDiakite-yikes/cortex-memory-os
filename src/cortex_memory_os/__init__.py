@@ -77,8 +77,12 @@ from cortex_memory_os.evidence_vault import (
     assess_vault_cipher,
 )
 from cortex_memory_os.shadow_pointer import (
+    ShadowPointerControlAction,
+    ShadowPointerControlCommand,
+    ShadowPointerControlReceipt,
     ShadowPointerSnapshot,
     ShadowPointerState,
+    apply_control,
     default_shadow_pointer_snapshot,
     transition,
 )
@@ -249,7 +253,11 @@ __all__ = [
     "VaultRuntimeMode",
     "assess_vault_cipher",
     "ShadowPointerSnapshot",
+    "ShadowPointerControlAction",
+    "ShadowPointerControlCommand",
+    "ShadowPointerControlReceipt",
     "ShadowPointerState",
+    "apply_control",
     "default_shadow_pointer_snapshot",
     "transition",
     "SegmentableEvent",

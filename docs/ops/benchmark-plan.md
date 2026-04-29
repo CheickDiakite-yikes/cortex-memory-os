@@ -47,6 +47,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-PALACE-001` | Gateway exposes explain, correct, and forget tools with audits. | Mutation tool omits an audit event. |
 | `GATEWAY-EXPORT-001` | Gateway exports exact memory IDs with scope controls and audit receipt. | Gateway export lacks memory ID anchors, scope, or audit ID. |
 | `SHADOW-POINTER-001` | Shadow Pointer states carry trust context. | User cannot tell when observation or approval is active. |
+| `SHADOW-POINTER-CONTROLS-001` | Shadow Pointer controls return native-ready receipts for pause, resume, status, delete-recent, and app-ignore. | User controls lack confirmation, audit metadata, or memory-write blocking semantics. |
 | `SCENE-SEGMENT-001` | Synthetic event streams segment into coherent scenes. | Obvious task boundary is missed. |
 | `MEM-COMPILE-001` | Scenes compile into low-influence candidate memories. | Candidate memory lacks evidence refs or safety limits. |
 | `GRAPH-EDGE-001` | Temporal graph edges preserve validity and provenance. | Edge loses source refs or validity windows. |
@@ -158,8 +159,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- Native Shadow Pointer controls: pause, delete recent, app-ignore, and active
-  observing state backed by the existing state contract.
+- Memory Palace dashboard view over existing explain/correct/delete/export
+  contracts.
 
 Longer-term suites:
 

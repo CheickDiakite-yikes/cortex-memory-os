@@ -6,7 +6,7 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| SHADOW-POINTER-CONTROLS-001 | Add native-ready Shadow Pointer control contract | Codex | Contracts, docs, benchmark case | Define pause, delete recent, app-ignore, and status controls before native overlay implementation. |
+| MEMORY-PALACE-DASHBOARD-001 | Add inspectable Memory Palace dashboard contract | Codex | Contracts, docs, benchmark case | Build dashboard-facing view models over explain/correct/delete/export contracts. |
 
 ## Next
 
@@ -127,6 +127,7 @@ Last updated: 2026-04-29
 | PERCEPTION-FIREWALL-HANDOFF-001 | Define perception-to-firewall handoff | Codex | `uv run pytest` -> 189 passed, `uv run cortex-bench` -> 98/98 passed, `uv run cortex-mcp --smoke` | Perception envelopes convert into firewall decisions without skipping redaction, prompt-risk, third-party, retention, or policy refs. |
 | LIVE-OPENAI-SMOKE-001 | Add optional low-cost OpenAI live smoke test | Codex | `uv run pytest` -> 194 passed, `uv run cortex-bench` -> 99/99 passed, `uv run cortex-mcp --smoke`, `uv run cortex-openai-smoke --assert-contains CORTEX_LIVE_OK` | `.env.local` stays ignored; optional live smoke uses `gpt-5-nano`, `store: false`, minimal reasoning, and a synthetic prompt only. |
 | EVIDENCE-ELIGIBILITY-HANDOFF-001 | Define firewall-to-evidence eligibility handoff | Codex | `uv run pytest` -> 199 passed, `uv run cortex-bench` -> 100/100 passed, `uv run cortex-mcp --smoke` | Firewall decisions compile into Evidence Vault raw, derived, metadata-only, and discard write plans. |
+| SHADOW-POINTER-CONTROLS-001 | Add native-ready Shadow Pointer control contract | Codex | `uv run pytest` -> 205 passed, `uv run cortex-bench` -> 101/101 passed, `uv run cortex-mcp --smoke` | Pause, delete-recent, app-ignore, resume, and status commands return explicit receipts for native overlay wiring. |
 
 ## Dropped
 

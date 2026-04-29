@@ -28,7 +28,7 @@ Source documents:
 | Memory Palace | Validated contract | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, self-lesson review flows | Build real dashboard UI beyond contract and gateway flows. |
 | Skill Forge | Validated skeleton | `SKILL-FORGE-002`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add candidate UI, workflow clustering, and skill success metrics. |
 | Agent Gateway | Validated skeleton | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools | Package Codex plugin and bridge additional clients. |
-| Shadow Pointer | Partial | `SHADOW-POINTER-001`, static UI prototype | Build native overlay with live permissions, pause, delete, and app-ignore controls. |
+| Shadow Pointer | Partial with control contract | `SHADOW-POINTER-001`, `SHADOW-POINTER-CONTROLS-001`, static UI prototype | Build native overlay with live permissions and wire controls to real capture adapters. |
 | Native Perception Bus | Envelope, firewall handoff, and evidence eligibility handoff validated; adapters not started | `PERCEPTION-EVENT-ENVELOPE-001`, `PERCEPTION-FIREWALL-HANDOFF-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001`, roadmap, and ADR | Add consented macOS app/window, accessibility, terminal, and browser adapters. |
 | Robot readiness | Safety contract only | `ROBOT-SAFE-001`, initial threat model | Add simulation-first capability gates before physical integrations. |
 
@@ -46,7 +46,8 @@ user-facing pillars remain visible in product and ops docs.
 
 User-facing pillars:
 
-- Shadow Pointer: partial prototype and state contract.
+- Shadow Pointer: partial prototype, state contract, and native-ready control
+  receipts.
 - Memory Palace: validated inspect, explain, correct, delete, export, and
   self-lesson review flows.
 - Skill Forge: validated repeated-workflow detector, maturity gates, rollback,
@@ -59,13 +60,14 @@ User-facing pillars:
 The next useful slices should move from contract depth into product surface and
 capture realism:
 
-1. Shadow Pointer native overlay proof with pause/delete/app-ignore controls.
-2. Memory Palace dashboard view over existing explain/correct/delete/export
+1. Memory Palace dashboard view over existing explain/correct/delete/export
    contracts.
-3. Skill Forge candidate list using existing repeated-workflow and maturity
+2. Skill Forge candidate list using existing repeated-workflow and maturity
    gates.
-4. Codex plugin packaging for the MCP gateway and core skills.
-5. Browser/terminal adapters with source-trust and redaction checks.
+3. Codex plugin packaging for the MCP gateway and core skills.
+4. Browser/terminal adapters with source-trust and redaction checks.
+5. Shadow Pointer native overlay proof wired to live pause/delete/app-ignore
+   commands.
 
 ## Update Rule
 

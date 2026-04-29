@@ -67,6 +67,7 @@ const fields = {
   ignoring: document.querySelector("#ignoring"),
   memory: document.querySelector("#memory"),
   skill: document.querySelector("#skill"),
+  receipt: document.querySelector("#control-receipt"),
 };
 
 function setState(nextState) {
@@ -85,8 +86,15 @@ function setState(nextState) {
   });
 }
 
+function writeReceipt(text) {
+  fields.receipt.textContent = text;
+}
+
 buttons.forEach((button) => {
-  button.addEventListener("click", () => setState(button.dataset.state));
+  button.addEventListener("click", () => {
+    setState(button.dataset.state);
+    writeReceipt(`Status changed to ${stateCopy[button.dataset.state].label}.`);
+  });
 });
 
 pointer.addEventListener("click", () => {
@@ -99,11 +107,22 @@ pointer.addEventListener("click", () => {
 document.querySelector("#delete-recent").addEventListener("click", () => {
   setState("private_masking");
   fields.memory.textContent = "Last 10 minutes marked for deletion";
+  fields.seeing.textContent = "None";
+  fields.ignoring.textContent = "last 10 minutes";
+  writeReceipt("Delete recent confirmed. Memory writes blocked until deletion receipt completes.");
+});
+
+document.querySelector("#ignore-app").addEventListener("click", () => {
+  setState("private_masking");
+  fields.seeing.textContent = "VS Code, Terminal";
+  fields.ignoring.textContent = "Chrome, password fields, private messages";
+  fields.memory.textContent = "Chrome excluded from memory writes";
+  writeReceipt("App ignore confirmed for Chrome. Capture adapters must exclude this app.");
 });
 
 document.querySelector("#open-memory").addEventListener("click", () => {
   setState("agent_contexting");
+  writeReceipt("Memory Palace requested. Status remains scoped to current task.");
 });
 
 setState("observing");
-
