@@ -16,6 +16,7 @@ uv run cortex-bench --no-write
 uv run cortex-bench
 python3 -m compileall src
 uv run cortex-mcp --smoke
+uv run cortex-plugin-install-smoke
 ```
 
 Use `uv run cortex-bench --no-write` for quick local checks. Use
@@ -105,6 +106,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `PRODUCT-TRACEABILITY-REPORT-001` | A concise product traceability report separates validated contracts from partial and not-started product surfaces. | Product state is only discoverable by reading long task logs, or reports overclaim incomplete UI/capture work. |
 | `RESEARCH-FRONTIER-AI-LABS-001` | Frontier AI lab research synthesis is source-grounded, prompt-injection aware, and translated into concrete Cortex architecture follow-ups. | Vendor or repo claims become untracked product assumptions, or external instructions influence repo actions. |
 | `CODEX-PLUGIN-001` | Repo-local Codex plugin skeleton exposes Cortex MCP and progressive-disclosure skills with no committed secrets. | Plugin config references API keys, raw private data, remote install scripts, or skills that bypass memory/skill approval gates. |
+| `PLUGIN-INSTALL-SMOKE-001` | Repo-local Codex plugin installs into a Codex cache-shaped path, discovers skills/references/MCP config, and keeps installed config secret-free. | Installed plugin config contains secrets/raw-data paths, misses skills/references, points MCP at a missing project, or uses the wrong cache shape. |
 | `RUNTIME-TRACE-001` | Agent runtime traces capture tool, shell, browser, artifact, approval, retry, and outcome evidence. | Runtime traces omit approval refs, resurrect hostile content, lose artifacts, or claim success without outcome proof. |
 | `LIVE-OPENAI-SMOKE-001` | Optional live OpenAI smoke uses ignored `.env.local`, a low-cost model default, dry-run mode, and `store: false`. | A local key is tracked, live smoke prints secrets, default tests hit the network, or API payloads store synthetic smoke responses. |
 | `PERCEPTION-EVENT-ENVELOPE-001` | Consented Perception Bus envelopes normalize source kind, consent, scope, trust, route, prompt-risk, and robot-safety metadata. | Native adapters bypass the firewall, raw refs persist without active consent, or robot inputs lack capability and simulation gates. |
@@ -169,7 +171,6 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- Real plugin install/discovery smoke for the repo-local Cortex Codex plugin.
 - Native Shadow Pointer overlay proof using existing controls and pointing
   proposal contracts.
 - Live browser extension and terminal shell-hook adapters using the validated

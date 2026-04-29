@@ -23,3 +23,15 @@ does not reference `.env.local`.
 The MCP config intentionally invokes the local project command instead of a
 remote service. Real private data should not be used until the Evidence Vault,
 policy store, and native capture adapters have production-grade controls.
+
+## Local Install Smoke
+
+From the repo root, run:
+
+```bash
+uv run cortex-plugin-install-smoke
+```
+
+The smoke copies this plugin into a temporary Codex cache-shaped directory,
+rewrites only the installed copy's MCP project path to the current checkout, and
+validates skill, reference, MCP, and no-secret discovery.

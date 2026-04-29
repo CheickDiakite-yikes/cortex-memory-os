@@ -84,6 +84,10 @@ from cortex_memory_os.perception_adapters import (
     handoff_browser_event,
     handoff_terminal_event,
 )
+from cortex_memory_os.plugin_install_smoke import (
+    PLUGIN_INSTALL_POLICY_REF,
+    run_plugin_install_smoke,
+)
 from cortex_memory_os.debug_trace import DebugTraceStatus, make_debug_trace
 from cortex_memory_os.mcp_server import (
     SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
@@ -331,6 +335,7 @@ def run_all() -> BenchmarkRunResult:
         case_product_traceability_report_contract,
         case_frontier_agent_research_synthesis,
         case_codex_plugin_skeleton_contract,
+        case_plugin_install_smoke_contract,
         case_swarm_governance_contract,
         case_agent_runtime_trace_contract,
         case_perception_event_envelope_contract,
@@ -931,6 +936,83 @@ def case_codex_plugin_skeleton_contract() -> BenchmarkCaseResult:
             "missing_skill_terms": missing_skill_terms,
             "missing_reference_terms": missing_reference_terms,
             "missing_research_terms": missing_research_terms,
+        },
+    )
+
+
+def case_plugin_install_smoke_contract() -> BenchmarkCaseResult:
+    docs_path = REPO_ROOT / "docs" / "ops" / "plugin-install-smoke.md"
+    plan_path = REPO_ROOT / "docs" / "ops" / "benchmark-plan.md"
+    registry_path = REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    task_board_path = REPO_ROOT / "docs" / "ops" / "task-board.md"
+    traceability_path = REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+
+    result = run_plugin_install_smoke()
+    docs_text = docs_path.read_text(encoding="utf-8")
+    plan_text = plan_path.read_text(encoding="utf-8")
+    registry_text = registry_path.read_text(encoding="utf-8")
+    task_text = task_board_path.read_text(encoding="utf-8")
+    traceability_text = traceability_path.read_text(encoding="utf-8")
+    benchmark_id = "PLUGIN-INSTALL-SMOKE-001"
+    required_doc_terms = [
+        benchmark_id,
+        "plugins/cache/local/cortex-memory-os/0.1.0",
+        "uv --project ../.. run",
+        "--project",
+        "API-key",
+        "private-key",
+        "raw evidence",
+        "temporary Codex home",
+        PLUGIN_INSTALL_POLICY_REF,
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        result.passed
+        and result.temporary_install
+        and result.install_path_shape_ok
+        and result.plugin_name == "cortex-memory-os"
+        and result.mcp_command == "uv"
+        and result.mcp_args[-2:] == ["run", "cortex-mcp"]
+        and result.mcp_project_path_exists
+        and result.skill_names
+        == ["create-cortex-skill", "postmortem-agent-task", "use-cortex-memory"]
+        and result.reference_files == ["memory_policy.md", "safe_execution.md"]
+        and not result.blocked_config_hits
+        and not result.missing_paths
+        and not missing_doc_terms
+        and benchmark_id in plan_text
+        and benchmark_id in registry_text
+        and benchmark_id in task_text
+        and benchmark_id in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="PLUGIN-INSTALL-SMOKE-001/install_discovery",
+        suite="PLUGIN-INSTALL-SMOKE-001",
+        passed=passed,
+        summary=(
+            "Repo-local Cortex Codex plugin installs into a Codex cache-shaped "
+            "path, rewrites only the installed MCP project path, and discovers "
+            "skills, references, and secret-free config."
+        ),
+        metrics={
+            "skill_count": len(result.skill_names),
+            "reference_count": len(result.reference_files),
+            "blocked_config_hits": len(result.blocked_config_hits),
+            "missing_paths": len(result.missing_paths),
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": PLUGIN_INSTALL_POLICY_REF,
+            "docs_path": str(docs_path.relative_to(REPO_ROOT)),
+            "install_path_shape_ok": result.install_path_shape_ok,
+            "temporary_install": result.temporary_install,
+            "mcp_command": result.mcp_command,
+            "mcp_args_tail": result.mcp_args[-2:],
+            "skill_names": result.skill_names,
+            "reference_files": result.reference_files,
+            "blocked_config_hits": result.blocked_config_hits,
+            "missing_paths": result.missing_paths,
+            "missing_doc_terms": missing_doc_terms,
         },
     )
 
