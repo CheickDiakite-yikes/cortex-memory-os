@@ -246,6 +246,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_methods_only_contract,
         case_self_lesson_audit_events,
         case_product_goal_coverage_contract,
+        case_product_traceability_report_contract,
         case_gateway_self_lesson_proposal_tool,
         case_self_lesson_sqlite_persistence,
         case_gateway_self_lesson_promotion_rollback,
@@ -463,6 +464,104 @@ def case_product_goal_coverage_contract() -> BenchmarkCaseResult:
             "missing_safety_terms": missing_safety,
             "missing_proof_terms": missing_proofs,
             "missing_milestones": missing_milestones,
+        },
+    )
+
+
+def case_product_traceability_report_contract() -> BenchmarkCaseResult:
+    report_path = REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    plan_path = REPO_ROOT / "docs" / "ops" / "benchmark-plan.md"
+    task_board_path = REPO_ROOT / "docs" / "ops" / "task-board.md"
+    registry_path = REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+
+    report_text = report_path.read_text(encoding="utf-8")
+    plan_text = plan_path.read_text(encoding="utf-8")
+    task_text = task_board_path.read_text(encoding="utf-8")
+    registry_text = registry_path.read_text(encoding="utf-8")
+
+    required_sections = [
+        "Current Build Readout",
+        "Coverage Snapshot",
+        "Next Product Gaps",
+        "Update Rule",
+    ]
+    required_status_terms = ["Validated", "Partial", "Not started"]
+    required_source_docs = [
+        "docs/product/vision.md",
+        "docs/product/build-roadmap.md",
+        "docs/product/original-goal-coverage.md",
+        "docs/ops/task-board.md",
+        "docs/ops/benchmark-registry.md",
+    ]
+    required_product_surfaces = [
+        "Shadow Pointer",
+        "Memory Palace",
+        "Skill Forge",
+        "Agent Gateway",
+        "Native Perception Bus",
+        "Robot readiness",
+    ]
+    required_suite_refs = [
+        "PRODUCT-GOAL-COVERAGE-001",
+        "PRODUCT-TRACEABILITY-REPORT-001",
+        "SEC-INJECT-001",
+        "VAULT-RETENTION-001",
+        "MEMORY-PALACE-001",
+        "SKILL-FORGE-002",
+        "GATEWAY-CTX-001",
+        "SHADOW-POINTER-001",
+        "ROBOT-SAFE-001",
+    ]
+    next_gap_terms = [
+        "Native Perception Bus event envelope",
+        "Shadow Pointer native overlay",
+        "Memory Palace dashboard",
+        "Skill Forge candidate list",
+        "Codex plugin packaging",
+        "Browser/terminal adapters",
+    ]
+
+    missing_sections = _missing_terms(report_text, required_sections)
+    missing_status_terms = _missing_terms(report_text, required_status_terms)
+    missing_source_docs = _missing_terms(report_text, required_source_docs)
+    missing_surfaces = _missing_terms(report_text, required_product_surfaces)
+    missing_suite_refs = _missing_terms(report_text, required_suite_refs)
+    missing_next_gaps = _missing_terms(report_text, next_gap_terms)
+    benchmark_id = "PRODUCT-TRACEABILITY-REPORT-001"
+    passed = (
+        not missing_sections
+        and not missing_status_terms
+        and not missing_source_docs
+        and not missing_surfaces
+        and not missing_suite_refs
+        and not missing_next_gaps
+        and benchmark_id in plan_text
+        and benchmark_id in task_text
+        and "Original-goal product coverage" in registry_text
+        and "screen recording -> summary -> vector DB" in report_text
+    )
+    return BenchmarkCaseResult(
+        case_id="PRODUCT-TRACEABILITY-REPORT-001/current_state_report",
+        suite="PRODUCT-TRACEABILITY-REPORT-001",
+        passed=passed,
+        summary=(
+            "Product traceability report exposes validated, partial, and "
+            "not-started Cortex surfaces with benchmark and roadmap refs."
+        ),
+        metrics={
+            "section_count": len(required_sections) - len(missing_sections),
+            "surface_count": len(required_product_surfaces) - len(missing_surfaces),
+            "suite_ref_count": len(required_suite_refs) - len(missing_suite_refs),
+            "next_gap_count": len(next_gap_terms) - len(missing_next_gaps),
+        },
+        evidence={
+            "report_doc": str(report_path.relative_to(REPO_ROOT)),
+            "missing_sections": missing_sections,
+            "missing_status_terms": missing_status_terms,
+            "missing_source_docs": missing_source_docs,
+            "missing_surfaces": missing_surfaces,
+            "missing_suite_refs": missing_suite_refs,
+            "missing_next_gaps": missing_next_gaps,
         },
     )
 
