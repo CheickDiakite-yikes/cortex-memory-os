@@ -1720,6 +1720,72 @@ def test_self_lesson_review_queue_nonempty_cursor_signature_metadata_is_redacted
     assert "task_" not in rendered_metadata
 
 
+def test_self_lesson_review_queue_signature_is_limit_independent(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+
+    def stale_lesson(
+        lesson_id: str,
+        ref: str,
+        last_validated: date | None,
+    ) -> SelfLesson:
+        return active.model_copy(
+            update={
+                "lesson_id": lesson_id,
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": [ref, f"task_{lesson_id}"],
+                "last_validated": last_validated,
+            }
+        )
+
+    for lesson in (
+        stale_lesson("lesson_project_stale_limit_newer", "project:newer", date(2025, 3, 1)),
+        stale_lesson("lesson_project_stale_limit_old_b", "project:old-b", date(2024, 1, 1)),
+        stale_lesson("lesson_project_missing_limit", "project:missing", None),
+        stale_lesson("lesson_project_stale_limit_old_a", "project:old-a", date(2024, 1, 1)),
+    ):
+        store.add_self_lesson(lesson)
+    server = CortexMCPServer(store=store)
+
+    limit_one = server.call_tool("self_lesson.review_queue", {"limit": 1})
+    limit_two = server.call_tool("self_lesson.review_queue", {"limit": 2})
+    limit_three = server.call_tool("self_lesson.review_queue", {"limit": 3})
+
+    one_metadata = limit_one["cursor_metadata"]
+    two_metadata = limit_two["cursor_metadata"]
+    three_metadata = limit_three["cursor_metadata"]
+    signatures = {
+        one_metadata["queue_signature"],
+        two_metadata["queue_signature"],
+        three_metadata["queue_signature"],
+    }
+    assert len(signatures) == 1
+    assert one_metadata["queue_signature"].startswith("sha256:")
+    assert one_metadata["applied_limit"] == 1
+    assert two_metadata["applied_limit"] == 2
+    assert three_metadata["applied_limit"] == 3
+    assert one_metadata["page_end"] == 1
+    assert two_metadata["page_end"] == 2
+    assert three_metadata["page_end"] == 3
+    assert one_metadata["total_review_required_count"] == 4
+    assert two_metadata["total_review_required_count"] == 4
+    assert three_metadata["total_review_required_count"] == 4
+    assert one_metadata["signature_subject"] == "ordered_review_required_self_lessons"
+    assert three_metadata["empty_queue_signature"] is False
+    assert one_metadata["limit_change_hint"]["recommended_arguments"] == {
+        "limit": 1,
+        "cursor": None,
+    }
+    assert three_metadata["limit_change_hint"]["recommended_arguments"] == {
+        "limit": 3,
+        "cursor": None,
+    }
+    rendered_metadata = json.dumps([one_metadata, two_metadata, three_metadata])
+    assert "lesson_project" not in rendered_metadata
+    assert "project:" not in rendered_metadata
+    assert "task_" not in rendered_metadata
+
+
 def test_self_lesson_review_queue_limit_safety_summary_counts_returned_slice(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))

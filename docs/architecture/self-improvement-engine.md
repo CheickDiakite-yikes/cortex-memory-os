@@ -353,6 +353,13 @@ one project, agent, or session from silently shaping another.
 - signature metadata does not leak lesson IDs, learned-from refs, rollback
   text, or scoped provenance used to compute the signature.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-LIMIT-INDEPENDENT-001` verifies:
+
+- changing page size changes pagination metadata but not `queue_signature`;
+- limit-change hints still reflect the applied limit for safe UI reloads;
+- the signature remains tied to the full ordered review-required set, not the
+  visible slice.
+
 `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` verifies:
 
 - review queues expose the applied limit, returned count, total review-required

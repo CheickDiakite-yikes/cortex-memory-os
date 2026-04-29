@@ -533,6 +533,15 @@ non-empty queue is cached or compared by signature:
   IDs, learned-from refs, rollback text, or scoped provenance used as signature
   inputs.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-LIMIT-INDEPENDENT-001` must pass before
+a UI treats page-size changes as a queue drift signal:
+
+- changing page size updates `applied_limit`, offsets, and hint arguments;
+- `cursor_metadata.queue_signature` stays stable when the ordered
+  review-required set is unchanged;
+- page-size changes should use the limit-change hint, not a false drift
+  warning.
+
 `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` must pass before a paged or limited
 queue is shown:
 

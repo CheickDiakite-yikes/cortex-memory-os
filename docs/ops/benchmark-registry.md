@@ -105,6 +105,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Review queue cursor limit-change inspection | `uv run cortex-bench` | 87/87 passed | `benchmarks/runs/bench_20260429T022808Z.json` | Next benchmark: empty queue signature metadata. |
 | 2026-04-29 | Review queue empty cursor signature metadata | `uv run cortex-bench` | 88/88 passed | `benchmarks/runs/bench_20260429T023048Z.json` | Next benchmark: non-empty queue signature metadata. |
 | 2026-04-29 | Review queue non-empty cursor signature metadata | `uv run cortex-bench` | 89/89 passed | `benchmarks/runs/bench_20260429T023303Z.json` | Next benchmark: limit-independent queue signature. |
+| 2026-04-29 | Review queue limit-independent cursor signature | `uv run cortex-bench` | 90/90 passed | `benchmarks/runs/bench_20260429T023541Z.json` | Next benchmark: order-sensitive queue signature. |
 
 ## First Runnable Harness Requirements
 

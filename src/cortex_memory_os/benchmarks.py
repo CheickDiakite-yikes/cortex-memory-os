@@ -200,6 +200,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_empty_safety_summary,
         case_gateway_review_queue_empty_cursor_signature,
         case_gateway_review_queue_nonempty_cursor_signature,
+        case_gateway_review_queue_signature_limit_independent,
         case_gateway_review_queue_limit_safety_summary,
         case_gateway_review_queue_ordering,
         case_gateway_review_queue_paging_cursor,
@@ -2624,6 +2625,135 @@ def case_gateway_review_queue_nonempty_cursor_signature() -> BenchmarkCaseResult
         evidence={
             "queue_signature_version": first_metadata.get("queue_signature_version"),
             "signature_subject": first_metadata.get("signature_subject"),
+        },
+    )
+
+
+def case_gateway_review_queue_signature_limit_independent() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+
+        def stale_lesson(
+            lesson_id: str,
+            ref: str,
+            last_validated: date | None,
+        ) -> SelfLesson:
+            return base.model_copy(
+                update={
+                    "lesson_id": lesson_id,
+                    "scope": ScopeLevel.PROJECT_SPECIFIC,
+                    "learned_from": [ref, f"task_{lesson_id}"],
+                    "last_validated": last_validated,
+                }
+            )
+
+        for lesson in (
+            stale_lesson(
+                "lesson_project_stale_limit_newer",
+                "project:newer",
+                date(2025, 3, 1),
+            ),
+            stale_lesson(
+                "lesson_project_stale_limit_old_b",
+                "project:old-b",
+                date(2024, 1, 1),
+            ),
+            stale_lesson(
+                "lesson_project_missing_limit",
+                "project:missing",
+                None,
+            ),
+            stale_lesson(
+                "lesson_project_stale_limit_old_a",
+                "project:old-a",
+                date(2024, 1, 1),
+            ),
+        ):
+            store.add_self_lesson(lesson)
+
+        server = CortexMCPServer(store=store)
+        limit_one = server.call_tool("self_lesson.review_queue", {"limit": 1})
+        limit_two = server.call_tool("self_lesson.review_queue", {"limit": 2})
+        limit_three = server.call_tool("self_lesson.review_queue", {"limit": 3})
+
+    one_metadata = limit_one.get("cursor_metadata", {})
+    two_metadata = limit_two.get("cursor_metadata", {})
+    three_metadata = limit_three.get("cursor_metadata", {})
+    signatures = {
+        one_metadata.get("queue_signature"),
+        two_metadata.get("queue_signature"),
+        three_metadata.get("queue_signature"),
+    }
+    serialized_metadata = json.dumps(
+        [one_metadata, two_metadata, three_metadata],
+        sort_keys=True,
+    )
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        len(signatures) == 1
+        and isinstance(one_metadata.get("queue_signature"), str)
+        and one_metadata.get("queue_signature", "").startswith("sha256:")
+        and one_metadata.get("applied_limit") == 1
+        and two_metadata.get("applied_limit") == 2
+        and three_metadata.get("applied_limit") == 3
+        and one_metadata.get("page_end") == 1
+        and two_metadata.get("page_end") == 2
+        and three_metadata.get("page_end") == 3
+        and one_metadata.get("total_review_required_count") == 4
+        and two_metadata.get("total_review_required_count") == 4
+        and three_metadata.get("total_review_required_count") == 4
+        and one_metadata.get("signature_subject")
+        == "ordered_review_required_self_lessons"
+        and three_metadata.get("empty_queue_signature") is False
+        and one_metadata.get("limit_change_hint", {}).get("recommended_arguments")
+        == {
+            "limit": 1,
+            "cursor": None,
+        }
+        and three_metadata.get("limit_change_hint", {}).get("recommended_arguments")
+        == {
+            "limit": 3,
+            "cursor": None,
+        }
+        and "lesson_project" not in serialized_metadata
+        and "project:" not in serialized_metadata
+        and "task_" not in serialized_metadata
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-LIMIT-INDEPENDENT-001"
+        in docs_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-LIMIT-INDEPENDENT-001"
+        in product_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-LIMIT-INDEPENDENT-001"
+        in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id=(
+            "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-LIMIT-INDEPENDENT-001/"
+            "limit_independent_signature"
+        ),
+        suite="GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-LIMIT-INDEPENDENT-001",
+        passed=passed,
+        summary=(
+            "Review queue signatures stay stable when only page size changes."
+        ),
+        metrics={
+            "unique_signature_count": len(signatures),
+            "limit_one_page_end": one_metadata.get("page_end", -1),
+            "limit_three_page_end": three_metadata.get("page_end", -1),
+        },
+        evidence={
+            "signature_subject": one_metadata.get("signature_subject"),
+            "limit_compare_key": one_metadata.get("limit_compare_key"),
         },
     )
 
