@@ -521,17 +521,21 @@ class CortexMCPServer:
                 for lesson in _all_self_lessons(self.store, self.self_lessons)
                 if self_lesson_review_state(lesson)["review_required"]
             ][:limit]
+            lesson_items = [
+                serialize_self_lesson_list_item(
+                    lesson,
+                    include_content=False,
+                )
+                for lesson in review_lessons
+            ]
             return {
                 "queue_id": "self_lesson_review_queue",
-                "lessons": [
-                    serialize_self_lesson_list_item(
-                        lesson,
-                        include_content=False,
-                    )
-                    for lesson in review_lessons
-                ],
+                "lessons": lesson_items,
                 "lesson_ids": [lesson.lesson_id for lesson in review_lessons],
                 "count": len(review_lessons),
+                "safety_summary": summarize_self_lesson_review_queue_safety(
+                    lesson_items
+                ),
                 "content_redacted": True,
                 "policy_refs": [SELF_LESSON_REVIEW_QUEUE_POLICY_REF],
             }
@@ -1240,6 +1244,49 @@ def summarize_self_lesson_review_flow_safety(
         "mutation_tools_require_confirmation": all(
             action["requires_confirmation"] for action in mutation_actions
         ),
+        "policy_refs": [
+            SELF_LESSON_REVIEW_QUEUE_POLICY_REF,
+            SELF_LESSON_REVIEW_FLOW_POLICY_REF,
+        ],
+    }
+
+
+def summarize_self_lesson_review_queue_safety(
+    lesson_items: list[dict[str, Any]],
+) -> dict[str, Any]:
+    action_plans = [
+        item.get("review_action_plan", [])
+        for item in lesson_items
+    ]
+    actions = [action for action_plan in action_plans for action in action_plan]
+    mutation_actions = [action for action in actions if action.get("mutation")]
+    return {
+        "lesson_count": len(lesson_items),
+        "content_redacted": True,
+        "learned_from_redacted": True,
+        "rollback_if_redacted": True,
+        "external_effects_allowed": False,
+        "read_only_action_count": sum(
+            1 for action in actions if not action.get("mutation")
+        ),
+        "mutation_action_count": len(mutation_actions),
+        "confirmation_required_action_count": sum(
+            1 for action in actions if action.get("requires_confirmation")
+        ),
+        "mutation_tools_require_confirmation": all(
+            action.get("requires_confirmation") for action in mutation_actions
+        ),
+        "audit_preview_hint_count": sum(
+            1
+            for item in lesson_items
+            if item.get("review_flow_audit_preview_hint", {}).get(
+                "audit_preview_available"
+            )
+            is True
+        ),
+        "audit_preview_embedded": False,
+        "review_queue_tool": "self_lesson.review_queue",
+        "review_flow_tool": "self_lesson.review_flow",
         "policy_refs": [
             SELF_LESSON_REVIEW_QUEUE_POLICY_REF,
             SELF_LESSON_REVIEW_FLOW_POLICY_REF,

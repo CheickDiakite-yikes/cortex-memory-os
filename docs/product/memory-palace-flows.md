@@ -492,3 +492,13 @@ treated as reliable pointers to exact review cards:
 - the queue hint and exact review-flow response share the same audit shape ID;
 - the queue hint points to the same lesson ID used by the review flow;
 - queue hints remain compact and do not embed preview entries or lesson content.
+
+`GATEWAY-REVIEW-QUEUE-SAFETY-SUMMARY-001` must pass before the queue can be
+rendered as an aggregate review surface:
+
+- the queue response includes a `safety_summary` with counts for read-only,
+  mutation, confirmation-required, and audit-preview-hint actions;
+- mutation actions are counted as confirmation-required and external effects
+  remain disallowed from the queue itself;
+- the summary is count-based and does not copy lesson content, learned-from
+  refs, rollback text, or scoped provenance.

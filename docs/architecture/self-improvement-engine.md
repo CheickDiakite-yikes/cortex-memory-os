@@ -319,3 +319,12 @@ one project, agent, or session from silently shaping another.
   shape ID;
 - queue hints anchor to the same lesson ID passed to the review flow;
 - consistency metadata stays redacted and never embeds preview entries.
+
+`GATEWAY-REVIEW-QUEUE-SAFETY-SUMMARY-001` verifies:
+
+- review queues summarize read-only, mutation, confirmation-required, and
+  audit-preview-hint counts before an agent or UI renders the queue;
+- queue-level safety summaries keep mutation tools confirmation-gated and mark
+  external effects as unavailable from the aggregate queue;
+- summaries stay redacted and do not copy lesson content, learned-from refs,
+  rollback text, or scoped provenance.

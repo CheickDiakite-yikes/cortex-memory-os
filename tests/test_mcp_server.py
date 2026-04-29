@@ -1476,6 +1476,52 @@ def test_self_lesson_review_queue_audit_hint_matches_review_flow_preview(tmp_pat
     assert "task_project_stale_queue_audit_consistency" not in rendered_hint
 
 
+def test_self_lesson_review_queue_safety_summary_counts_without_content(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    stale = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_stale_queue_safety_summary",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": [
+                "project:alpha",
+                "task_project_stale_queue_safety_summary",
+            ],
+            "last_validated": date(2025, 1, 1),
+        }
+    )
+    store.add_self_lesson(stale)
+    server = CortexMCPServer(store=store)
+
+    queue = server.call_tool("self_lesson.review_queue", {})
+
+    safety_summary = queue["safety_summary"]
+    assert safety_summary["lesson_count"] == 1
+    assert safety_summary["content_redacted"] is True
+    assert safety_summary["learned_from_redacted"] is True
+    assert safety_summary["rollback_if_redacted"] is True
+    assert safety_summary["external_effects_allowed"] is False
+    assert safety_summary["read_only_action_count"] == 1
+    assert safety_summary["mutation_action_count"] == 3
+    assert safety_summary["confirmation_required_action_count"] == 3
+    assert safety_summary["mutation_tools_require_confirmation"] is True
+    assert safety_summary["audit_preview_hint_count"] == 1
+    assert safety_summary["audit_preview_embedded"] is False
+    assert safety_summary["review_queue_tool"] == "self_lesson.review_queue"
+    assert safety_summary["review_flow_tool"] == "self_lesson.review_flow"
+    assert safety_summary["policy_refs"] == [
+        "policy_self_lesson_review_queue_v1",
+        "policy_self_lesson_review_flow_v1",
+    ]
+    rendered_summary = json.dumps(safety_summary)
+    assert "Before editing auth" not in rendered_summary
+    assert "project:alpha" not in rendered_summary
+    assert "task_project_stale_queue_safety_summary" not in rendered_summary
+    assert "content" not in queue["lessons"][0]
+    assert "learned_from" not in queue["lessons"][0]
+    assert "rollback_if" not in queue["lessons"][0]
+
+
 def test_self_lesson_review_flow_returns_exact_redacted_action_routes(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
