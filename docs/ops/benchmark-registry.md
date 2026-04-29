@@ -117,6 +117,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Optional OpenAI live smoke | `uv run cortex-bench` plus `uv run cortex-openai-smoke --assert-contains CORTEX_LIVE_OK` | 99/99 passed; live smoke passed with 47 total tokens | `benchmarks/runs/bench_20260429T030458Z.json` | Next benchmark: evidence eligibility handoff. |
 | 2026-04-29 | Evidence eligibility handoff | `uv run cortex-bench` | 100/100 passed | `benchmarks/runs/bench_20260429T031215Z.json` | Next benchmark: Shadow Pointer controls. |
 | 2026-04-29 | Shadow Pointer controls | `uv run cortex-bench` | 101/101 passed | `benchmarks/runs/bench_20260429T031953Z.json` | Next benchmark: Memory Palace dashboard. |
+| 2026-04-29 | Frontier AI lab research synthesis | `uv run cortex-bench` plus `uv run cortex-openai-smoke --assert-contains CORTEX_LIVE_OK` | 102/102 passed; live smoke passed with 47 total tokens | `benchmarks/runs/bench_20260429T033138Z.json` | Next benchmark: agent runtime trace. |
 
 ## First Runnable Harness Requirements
 

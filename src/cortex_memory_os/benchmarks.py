@@ -270,6 +270,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_audit_events,
         case_product_goal_coverage_contract,
         case_product_traceability_report_contract,
+        case_frontier_agent_research_synthesis,
         case_perception_event_envelope_contract,
         case_perception_firewall_handoff_contract,
         case_evidence_eligibility_handoff_contract,
@@ -589,6 +590,111 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
             "missing_surfaces": missing_surfaces,
             "missing_suite_refs": missing_suite_refs,
             "missing_next_gaps": missing_next_gaps,
+        },
+    )
+
+
+def case_frontier_agent_research_synthesis() -> BenchmarkCaseResult:
+    research_path = (
+        REPO_ROOT / "docs" / "research" / "frontier-agent-research-2026-04-29.md"
+    )
+    ledger_path = REPO_ROOT / "docs" / "ops" / "research-safety.md"
+    plan_path = REPO_ROOT / "docs" / "ops" / "benchmark-plan.md"
+    task_board_path = REPO_ROOT / "docs" / "ops" / "task-board.md"
+
+    research_text = research_path.read_text(encoding="utf-8")
+    ledger_text = ledger_path.read_text(encoding="utf-8")
+    plan_text = plan_path.read_text(encoding="utf-8")
+    task_text = task_board_path.read_text(encoding="utf-8")
+
+    required_lab_terms = [
+        "OpenAI",
+        "Google DeepMind",
+        "Anthropic",
+        "DeepSeek",
+        "Moonshot",
+        "Kimi",
+        "Clicky",
+    ]
+    required_architecture_terms = [
+        "Agent runtime trace",
+        "Budgeted context packs",
+        "Signed pointing",
+        "Document/workflow-to-skill derivation",
+        "Swarm-ready orchestration",
+        "Robot-readiness",
+    ]
+    required_safety_terms = [
+        "untrusted data",
+        "No external repository code was cloned, installed, or executed",
+        "prompt-injection",
+        "source trust",
+        "approval",
+        "rollback",
+    ]
+    required_followups = [
+        "RUNTIME-TRACE-001",
+        "CONTEXT-BUDGET-001",
+        "POINTER-PROPOSAL-001",
+        "SKILL-DOC-DERIVATION-001",
+        "SWARM-GOVERNANCE-001",
+        "ROBOT-SPATIAL-SAFETY-001",
+    ]
+    required_source_urls = [
+        "https://openai.com/index/gpt-5-5-system-card/",
+        "https://deepmind.google/models/model-cards/gemini-3-1-pro",
+        "https://www.anthropic.com/news/claude-opus-4-7",
+        "https://api-docs.deepseek.com/news/news260424",
+        "https://www.kimi.com/blog/kimi-k2-6",
+        "https://github.com/farzaa/clicky",
+    ]
+    benchmark_id = "RESEARCH-FRONTIER-AI-LABS-001"
+
+    missing_lab_terms = _missing_terms(research_text, required_lab_terms)
+    missing_architecture_terms = _missing_terms(
+        research_text,
+        required_architecture_terms,
+    )
+    missing_safety_terms = _missing_terms(research_text, required_safety_terms)
+    missing_followups = _missing_terms(research_text, required_followups)
+    missing_source_urls = _missing_terms(research_text, required_source_urls)
+    missing_ledger_sources = _missing_terms(ledger_text, required_source_urls)
+
+    passed = (
+        not missing_lab_terms
+        and not missing_architecture_terms
+        and not missing_safety_terms
+        and not missing_followups
+        and not missing_source_urls
+        and not missing_ledger_sources
+        and benchmark_id in plan_text
+        and benchmark_id in task_text
+        and benchmark_id in ledger_text
+    )
+    return BenchmarkCaseResult(
+        case_id="RESEARCH-FRONTIER-AI-LABS-001/source_grounded_synthesis",
+        suite="RESEARCH-FRONTIER-AI-LABS-001",
+        passed=passed,
+        summary=(
+            "Frontier-agent research remains source-grounded, injection-aware, "
+            "and tied to concrete Cortex architecture follow-ups."
+        ),
+        metrics={
+            "lab_count": len(required_lab_terms) - len(missing_lab_terms),
+            "architecture_term_count": (
+                len(required_architecture_terms) - len(missing_architecture_terms)
+            ),
+            "followup_count": len(required_followups) - len(missing_followups),
+            "source_url_count": len(required_source_urls) - len(missing_source_urls),
+        },
+        evidence={
+            "research_doc": str(research_path.relative_to(REPO_ROOT)),
+            "missing_lab_terms": missing_lab_terms,
+            "missing_architecture_terms": missing_architecture_terms,
+            "missing_safety_terms": missing_safety_terms,
+            "missing_followups": missing_followups,
+            "missing_source_urls": missing_source_urls,
+            "missing_ledger_sources": missing_ledger_sources,
         },
     )
 

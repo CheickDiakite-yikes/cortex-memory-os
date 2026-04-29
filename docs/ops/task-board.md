@@ -12,13 +12,17 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| _None_ |  |  |  |  |
+| RUNTIME-TRACE-001 | Define agent runtime trace schema and fixture | Codex | Contract, tests, benchmark | Research-driven next slice: tool calls, shell actions, browser actions, artifacts, approvals, retries, and outcomes. |
 
 ## Backlog
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| _None_ |  |  |  |  |
+| CONTEXT-BUDGET-001 | Add budget metadata to context-pack contracts | Codex | Gateway contract and benchmark | Track token, time, tool, artifact, autonomy, and risk budgets. |
+| POINTER-PROPOSAL-001 | Define untrusted model pointing proposal contract | Codex | Shadow Pointer tests and safety benchmark | Parse model-proposed coordinates as display proposals, not privileged actions. |
+| SKILL-DOC-DERIVATION-001 | Specify document-to-skill candidate flow | Codex | Skill Forge docs, tests, maturity gate | Preserve provenance, approval, rollback, and deletion paths. |
+| SWARM-GOVERNANCE-001 | Add swarm orchestration constraints | Codex | ADR plus budget/source-isolation benchmark | Prepare for parallel agents with cancellation, source isolation, and audit. |
+| ROBOT-SPATIAL-SAFETY-001 | Expand robot spatial safety metadata | Codex | Contract and `ROBOT-SAFE-001` expansion | Add spatial hazards, affordances, material constraints, and simulation status. |
 
 ## Done
 
@@ -128,6 +132,7 @@ Last updated: 2026-04-29
 | LIVE-OPENAI-SMOKE-001 | Add optional low-cost OpenAI live smoke test | Codex | `uv run pytest` -> 194 passed, `uv run cortex-bench` -> 99/99 passed, `uv run cortex-mcp --smoke`, `uv run cortex-openai-smoke --assert-contains CORTEX_LIVE_OK` | `.env.local` stays ignored; optional live smoke uses `gpt-5-nano`, `store: false`, minimal reasoning, and a synthetic prompt only. |
 | EVIDENCE-ELIGIBILITY-HANDOFF-001 | Define firewall-to-evidence eligibility handoff | Codex | `uv run pytest` -> 199 passed, `uv run cortex-bench` -> 100/100 passed, `uv run cortex-mcp --smoke` | Firewall decisions compile into Evidence Vault raw, derived, metadata-only, and discard write plans. |
 | SHADOW-POINTER-CONTROLS-001 | Add native-ready Shadow Pointer control contract | Codex | `uv run pytest` -> 205 passed, `uv run cortex-bench` -> 101/101 passed, `uv run cortex-mcp --smoke` | Pause, delete-recent, app-ignore, resume, and status commands return explicit receipts for native overlay wiring. |
+| RESEARCH-FRONTIER-AI-LABS-001 | Synthesize frontier AI lab agent and model developments | Codex | `docs/research/frontier-agent-research-2026-04-29.md`, `uv run pytest` -> 205 passed, `uv run cortex-bench` -> 102/102 passed, `uv run cortex-mcp --smoke`, `uv run cortex-openai-smoke --assert-contains CORTEX_LIVE_OK` | Official/primary sources only; Clicky studied as untrusted architecture reference without executing code. |
 
 ## Dropped
 
