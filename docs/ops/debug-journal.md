@@ -16,6 +16,7 @@ Use this file for failures that teach us something. Keep entries reproducible, c
 | --- | --- | --- | --- | --- |
 | DBG-001 | 2026-04-28 | Vault tests and benchmark fixture reads used wall-clock `now`, so synthetic evidence from 2026-04-27 expired when run on 2026-04-28. | Pass fixture timestamps into raw reads that are intended to verify storage/cipher behavior rather than retention expiry. | `uv run pytest tests/test_evidence_vault.py tests/test_mcp_server.py tests/test_benchmarks.py tests/test_contracts.py` -> 62 passed; `uv run pytest` -> 152 passed; `uv run cortex-bench` -> 60/60 passed. |
 | DBG-002 | 2026-04-29 | Product traceability benchmark still required the exact phrase "Shadow Pointer native overlay" after the roadmap wording was updated. | Restored the expected phrase while keeping the new next-step order. | `uv run pytest tests/test_shadow_pointer.py tests/test_benchmarks.py` -> 12 passed; `uv run cortex-bench --no-write` -> 101/101 passed. |
+| DBG-003 | 2026-04-29 | `POINTER-PROPOSAL-001` initially failed because the benchmark looked for the exact phrase "not privileged actions" and the docs line wrapped between words. | Reworded the architecture doc to keep the safety boundary phrase contiguous. | `uv run pytest tests/test_shadow_pointer.py tests/test_benchmarks.py` -> 16 passed; `uv run cortex-bench --no-write` -> 106/106 passed. |
 
 ## Incident Template
 

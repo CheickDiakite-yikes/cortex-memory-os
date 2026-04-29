@@ -49,6 +49,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-EXPORT-001` | Gateway exports exact memory IDs with scope controls and audit receipt. | Gateway export lacks memory ID anchors, scope, or audit ID. |
 | `SHADOW-POINTER-001` | Shadow Pointer states carry trust context. | User cannot tell when observation or approval is active. |
 | `SHADOW-POINTER-CONTROLS-001` | Shadow Pointer controls return native-ready receipts for pause, resume, status, delete-recent, and app-ignore. | User controls lack confirmation, audit metadata, or memory-write blocking semantics. |
+| `POINTER-PROPOSAL-001` | Model-proposed Shadow Pointer coordinates stay display-only. | Coordinates become clicks, tool calls, memory writes, or trusted instructions. |
 | `SCENE-SEGMENT-001` | Synthetic event streams segment into coherent scenes. | Obvious task boundary is missed. |
 | `MEM-COMPILE-001` | Scenes compile into low-influence candidate memories. | Candidate memory lacks evidence refs or safety limits. |
 | `GRAPH-EDGE-001` | Temporal graph edges preserve validity and provenance. | Edge loses source refs or validity windows. |
@@ -163,7 +164,6 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- Untrusted pointing proposal contract for Shadow Pointer / cursor-overlay UX.
 - Skill Forge candidate list using existing repeated-workflow and maturity
   gates.
 

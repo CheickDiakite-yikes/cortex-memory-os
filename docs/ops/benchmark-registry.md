@@ -121,6 +121,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Memory Palace dashboard contract | `uv run cortex-bench` | 103/103 passed | `benchmarks/runs/bench_20260429T033914Z.json` | Next benchmark: agent runtime trace. |
 | 2026-04-29 | Agent runtime trace contract | `uv run cortex-bench` | 104/104 passed | `benchmarks/runs/bench_20260429T034825Z.json` | Next benchmark: budgeted context packs. |
 | 2026-04-29 | Budgeted context-pack contract | `uv run cortex-bench` | 105/105 passed | `benchmarks/runs/bench_20260429T035544Z.json` | Next benchmark: untrusted pointing proposal. |
+| 2026-04-29 | Untrusted Shadow Pointer pointing proposal | `uv run cortex-bench` | 106/106 passed | `benchmarks/runs/bench_20260429T040200Z.json` | Next benchmark: document-to-skill candidate derivation. |
 
 ## First Runnable Harness Requirements
 

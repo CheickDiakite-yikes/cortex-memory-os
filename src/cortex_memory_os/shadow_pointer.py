@@ -5,7 +5,12 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from cortex_memory_os.contracts import SourceTrust
+
+
+SHADOW_POINTER_POINTING_POLICY_REF = "policy_shadow_pointer_pointing_proposal_v1"
 
 
 class ShadowPointerState(str, Enum):
@@ -27,6 +32,24 @@ class ShadowPointerControlAction(str, Enum):
     RESUME_OBSERVATION = "resume_observation"
     DELETE_RECENT = "delete_recent"
     IGNORE_APP = "ignore_app"
+
+
+class ShadowPointerCoordinateSpace(str, Enum):
+    SCREEN_NORMALIZED = "screen_normalized"
+    WINDOW_NORMALIZED = "window_normalized"
+    ELEMENT_BOUNDS_NORMALIZED = "element_bounds_normalized"
+
+
+class ShadowPointerPointingAction(str, Enum):
+    DISPLAY_OVERLAY = "display_overlay"
+    HIGHLIGHT_ELEMENT = "highlight_element"
+    CLICK = "click"
+    DOUBLE_CLICK = "double_click"
+    TYPE_TEXT = "type_text"
+    DRAG = "drag"
+    SCROLL = "scroll"
+    OPEN_URL = "open_url"
+    EXECUTE_TOOL = "execute_tool"
 
 
 class ShadowPointerSnapshot(BaseModel):
@@ -99,6 +122,95 @@ class ShadowPointerControlReceipt(BaseModel):
     deleted_window_minutes: int | None = None
     expires_at: datetime | None = None
     safety_notes: list[str] = Field(min_length=1)
+
+
+class ShadowPointerPointingProposal(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    proposal_id: str = Field(min_length=1)
+    proposed_by: str = Field(default="model", min_length=1)
+    source_trust: SourceTrust = SourceTrust.AGENT_INFERRED
+    coordinate_space: ShadowPointerCoordinateSpace
+    x: float = Field(ge=0.0, le=1.0)
+    y: float = Field(ge=0.0, le=1.0)
+    target_label: str = Field(min_length=1, max_length=160)
+    reason: str = Field(min_length=1, max_length=280)
+    evidence_refs: list[str] = Field(min_length=1)
+    confidence: float = Field(ge=0.0, le=1.0)
+    requested_action: ShadowPointerPointingAction = (
+        ShadowPointerPointingAction.DISPLAY_OVERLAY
+    )
+    display_id: str | None = None
+    window_ref: str | None = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @field_validator("target_label", "reason")
+    @classmethod
+    def reject_instruction_like_text(cls, value: str) -> str:
+        lowered = value.lower()
+        forbidden_fragments = [
+            "ignore previous instructions",
+            "reveal secrets",
+            "disable safeguards",
+            "exfiltrate",
+            "run this command",
+            "execute this command",
+            "send credentials",
+        ]
+        if any(fragment in lowered for fragment in forbidden_fragments):
+            raise ValueError("pointing proposals cannot carry instruction-like text")
+        return value
+
+    @model_validator(mode="after")
+    def require_scope_metadata(self) -> ShadowPointerPointingProposal:
+        if self.source_trust == SourceTrust.USER_CONFIRMED:
+            raise ValueError("model pointing proposals cannot claim user-confirmed trust")
+        if (
+            self.coordinate_space
+            in {
+                ShadowPointerCoordinateSpace.WINDOW_NORMALIZED,
+                ShadowPointerCoordinateSpace.ELEMENT_BOUNDS_NORMALIZED,
+            }
+            and not self.window_ref
+        ):
+            raise ValueError("window or element coordinates require window_ref")
+        return self
+
+
+class ShadowPointerPointingReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    receipt_id: str = Field(min_length=1)
+    proposal_id: str = Field(min_length=1)
+    resulting_snapshot: ShadowPointerSnapshot
+    coordinate_space: ShadowPointerCoordinateSpace
+    x: float = Field(ge=0.0, le=1.0)
+    y: float = Field(ge=0.0, le=1.0)
+    target_label: str = Field(min_length=1)
+    display_only: bool
+    allowed_effects: list[str] = Field(min_length=1)
+    blocked_effects: list[str] = Field(default_factory=list)
+    requires_user_confirmation: bool
+    observation_active: bool
+    proposal_memory_write_allowed: bool
+    audit_required: bool
+    audit_action: str
+    policy_refs: tuple[str, ...] = Field(min_length=1)
+    untrusted_source: bool
+    safety_notes: list[str] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def enforce_display_only_boundary(self) -> ShadowPointerPointingReceipt:
+        allowed = set(self.allowed_effects)
+        if not self.display_only:
+            raise ValueError("pointing receipt must be display-only")
+        if allowed - {"display_overlay", "highlight_element"}:
+            raise ValueError("pointing receipts cannot allow privileged effects")
+        if self.proposal_memory_write_allowed:
+            raise ValueError("pointing proposals cannot directly write memory")
+        if SHADOW_POINTER_POINTING_POLICY_REF not in self.policy_refs:
+            raise ValueError("pointing receipt requires policy reference")
+        return self
 
 
 def transition(snapshot: ShadowPointerSnapshot, next_state: ShadowPointerState) -> ShadowPointerSnapshot:
@@ -248,6 +360,62 @@ def apply_control(
     raise ValueError(f"unsupported Shadow Pointer control action: {command.action}")
 
 
+def evaluate_pointing_proposal(
+    snapshot: ShadowPointerSnapshot,
+    proposal: ShadowPointerPointingProposal,
+) -> ShadowPointerPointingReceipt:
+    """Convert model-proposed coordinates into a display-only overlay receipt."""
+
+    created_at = _ensure_utc(proposal.created_at)
+    receipt_id = f"shadow_pointing_{proposal.proposal_id}_{int(created_at.timestamp())}"
+    privileged_effects = _privileged_pointing_effects(proposal.requested_action)
+    untrusted_source = proposal.source_trust in {
+        SourceTrust.AGENT_INFERRED,
+        SourceTrust.EXTERNAL_UNTRUSTED,
+        SourceTrust.HOSTILE_UNTIL_SAFE,
+    }
+    blocking_notes = list(privileged_effects)
+    if proposal.source_trust in {
+        SourceTrust.EXTERNAL_UNTRUSTED,
+        SourceTrust.HOSTILE_UNTIL_SAFE,
+    }:
+        blocking_notes.append("trusted_instruction_promotion")
+
+    overlay = ShadowPointerSnapshot(
+        state=ShadowPointerState.NEEDS_APPROVAL,
+        workstream_label=snapshot.workstream_label,
+        seeing=_append_unique(snapshot.seeing, f"pointer proposal: {proposal.target_label}"),
+        ignoring=_append_unique(snapshot.ignoring, "model-proposed pointer is display-only"),
+        possible_memory=snapshot.possible_memory,
+        possible_skill=snapshot.possible_skill,
+        approval_reason="Review model-proposed pointer before any action.",
+    )
+    return ShadowPointerPointingReceipt(
+        receipt_id=receipt_id,
+        proposal_id=proposal.proposal_id,
+        resulting_snapshot=overlay,
+        coordinate_space=proposal.coordinate_space,
+        x=proposal.x,
+        y=proposal.y,
+        target_label=proposal.target_label,
+        display_only=True,
+        allowed_effects=["display_overlay"],
+        blocked_effects=blocking_notes,
+        requires_user_confirmation=True,
+        observation_active=_observation_active(snapshot.state),
+        proposal_memory_write_allowed=False,
+        audit_required=True,
+        audit_action="shadow_pointer_pointing_proposal",
+        policy_refs=(SHADOW_POINTER_POINTING_POLICY_REF,),
+        untrusted_source=untrusted_source,
+        safety_notes=[
+            "coordinates may be rendered as an overlay only",
+            "model-proposed coordinates cannot click, type, drag, open URLs, or call tools",
+            "durable memory writes require a separate governed memory proposal",
+        ],
+    )
+
+
 def default_shadow_pointer_snapshot() -> ShadowPointerSnapshot:
     return ShadowPointerSnapshot(
         state=ShadowPointerState.OBSERVING,
@@ -288,3 +456,12 @@ def _minutes_from(start: datetime, minutes: int | None) -> datetime | None:
     if minutes is None:
         return None
     return start + timedelta(minutes=minutes)
+
+
+def _privileged_pointing_effects(action: ShadowPointerPointingAction) -> list[str]:
+    if action in {
+        ShadowPointerPointingAction.DISPLAY_OVERLAY,
+        ShadowPointerPointingAction.HIGHLIGHT_ELEMENT,
+    }:
+        return []
+    return [action.value]
