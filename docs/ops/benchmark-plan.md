@@ -1,6 +1,6 @@
 # Benchmark Plan
 
-Last updated: 2026-04-28
+Last updated: 2026-04-29
 
 This plan defines the minimum quality gates for Cortex Memory OS slices. The
 benchmark runner is intentionally synthetic-first so it can run locally without
@@ -96,6 +96,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-CONTENT-INDEPENDENT-001` | Review queue signatures ignore lesson content/provenance when membership and ordering stay unchanged. | Content edits cause false queue drift, or hidden prose/provenance leaks through signature metadata. |
 | `PRODUCT-GOAL-COVERAGE-001` | Product docs and benchmarks keep the original Cortex brain-loop and pillars visible. | Implementation drifts into a narrow recorder/search tool, loses pillar ownership, or hides safety/ops contracts. |
 | `PRODUCT-TRACEABILITY-REPORT-001` | A concise product traceability report separates validated contracts from partial and not-started product surfaces. | Product state is only discoverable by reading long task logs, or reports overclaim incomplete UI/capture work. |
+| `LIVE-OPENAI-SMOKE-001` | Optional live OpenAI smoke uses ignored `.env.local`, a low-cost model default, dry-run mode, and `store: false`. | A local key is tracked, live smoke prints secrets, default tests hit the network, or API payloads store synthetic smoke responses. |
 | `PERCEPTION-EVENT-ENVELOPE-001` | Consented Perception Bus envelopes normalize source kind, consent, scope, trust, route, prompt-risk, and robot-safety metadata. | Native adapters bypass the firewall, raw refs persist without active consent, or robot inputs lack capability and simulation gates. |
 | `PERCEPTION-FIREWALL-HANDOFF-001` | Perception envelopes become firewall decisions without losing consent, prompt-risk, third-party, redaction, retention, or policy refs. | Capture adapters skip firewall gating, third-party content becomes memory-eligible, or prompt-risk metadata is ignored. |
 | `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` | Review queue safety summaries expose applied limit, returned count, total review-required count, and truncation state. | Limited queues hide truncation state, count omitted actions, or leak omitted lesson provenance. |

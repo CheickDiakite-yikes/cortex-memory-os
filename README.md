@@ -19,3 +19,15 @@ The project is intentionally starting with an engineering control plane before i
 - [Architecture decisions](docs/adr/)
 
 Core design work should keep memory provenance, user consent, deletion, auditability, privacy, prompt-injection resistance, and embodied safety in view from the first prototype.
+
+## Optional Live Smoke
+
+For local API validation, copy `.env.example` to `.env.local` and set
+`OPENAI_API_KEY`. `.env.local` is ignored by git. Then run:
+
+```bash
+uv run cortex-openai-smoke --dry-run
+uv run cortex-openai-smoke --assert-contains CORTEX_LIVE_OK
+```
+
+The smoke command defaults to `gpt-5-nano` and sends a tiny non-private prompt.

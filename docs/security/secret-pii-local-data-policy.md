@@ -1,6 +1,6 @@
 # Secret, PII, and Local Data Handling Policy
 
-Last updated: 2026-04-27
+Last updated: 2026-04-29
 
 Policy ref: `policy_secret_pii_local_data_v1`
 
@@ -31,6 +31,8 @@ This policy applies before durable storage, before agent context release, before
 - Audit summaries must describe the action without copying sensitive payload content.
 - Context packs must include only task-scoped memories, source refs, warnings, and compact score summaries.
 - Local stores, generated benchmark runs, logs, model files, and private config must stay out of source control.
+- `.env.local` can be used for optional live smoke testing, but it must remain
+  ignored and untracked.
 
 ## Required Non-Commit Patterns
 
@@ -39,6 +41,7 @@ The root `.gitignore` must cover at least:
 ```text
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 secrets/

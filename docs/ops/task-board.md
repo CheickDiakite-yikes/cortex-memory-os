@@ -125,6 +125,7 @@ Last updated: 2026-04-29
 | PRODUCT-TRACEABILITY-REPORT-001 | Add product traceability report | Codex | `uv run pytest` -> 182 passed, `uv run cortex-bench` -> 96/96 passed, `uv run cortex-mcp --smoke` | Report separates validated contracts from partial and not-started product surfaces. |
 | PERCEPTION-EVENT-ENVELOPE-001 | Define consented perception event envelope | Codex | `uv run pytest` -> 186 passed, `uv run cortex-bench` -> 97/97 passed, `uv run cortex-mcp --smoke` | Perception envelopes normalize source kind, consent, scope, trust, firewall route, prompt risk, and robot simulation gates. |
 | PERCEPTION-FIREWALL-HANDOFF-001 | Define perception-to-firewall handoff | Codex | `uv run pytest` -> 189 passed, `uv run cortex-bench` -> 98/98 passed, `uv run cortex-mcp --smoke` | Perception envelopes convert into firewall decisions without skipping redaction, prompt-risk, third-party, retention, or policy refs. |
+| LIVE-OPENAI-SMOKE-001 | Add optional low-cost OpenAI live smoke test | Codex | `uv run pytest` -> 194 passed, `uv run cortex-bench` -> 99/99 passed, `uv run cortex-mcp --smoke`, `uv run cortex-openai-smoke --assert-contains CORTEX_LIVE_OK` | `.env.local` stays ignored; optional live smoke uses `gpt-5-nano`, `store: false`, minimal reasoning, and a synthetic prompt only. |
 
 ## Dropped
 

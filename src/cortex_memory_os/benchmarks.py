@@ -56,6 +56,12 @@ from cortex_memory_os.firewall import (
 )
 from cortex_memory_os.fixtures import load_json
 from cortex_memory_os.governance import gate_action
+from cortex_memory_os.live_openai_smoke import (
+    DEFAULT_OPENAI_MODEL,
+    build_responses_payload,
+    load_live_openai_config,
+    run_smoke,
+)
 from cortex_memory_os.evidence_vault import (
     EVIDENCE_VAULT_ENCRYPTION_POLICY_REF,
     EvidenceVault,
@@ -257,6 +263,7 @@ def run_all() -> BenchmarkRunResult:
         case_product_traceability_report_contract,
         case_perception_event_envelope_contract,
         case_perception_firewall_handoff_contract,
+        case_live_openai_smoke_contract,
         case_gateway_self_lesson_proposal_tool,
         case_self_lesson_sqlite_persistence,
         case_gateway_self_lesson_promotion_rollback,
@@ -749,6 +756,76 @@ def case_perception_firewall_handoff_contract() -> BenchmarkCaseResult:
             "prompt_decision": prompt_assessment.decision.decision.value,
             "third_party_decision": third_party_assessment.decision.decision.value,
             "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_live_openai_smoke_contract() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        env_file = Path(temp_dir) / ".env.local"
+        env_file.write_text("OPENAI_API_KEY=test-key-secret\n", encoding="utf-8")
+        config = load_live_openai_config(env_file=env_file)
+        dry_run = run_smoke(env_file=env_file, dry_run=True)
+        payload = build_responses_payload(config)
+
+    docs_text = (REPO_ROOT / "docs" / "ops" / "live-openai-smoke.md").read_text(
+        encoding="utf-8"
+    )
+    readme_text = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    policy_text = (
+        REPO_ROOT / "docs" / "security" / "secret-pii-local-data-policy.md"
+    ).read_text(encoding="utf-8")
+    research_text = (
+        REPO_ROOT / "docs" / "ops" / "research-safety.md"
+    ).read_text(encoding="utf-8")
+    pyproject_text = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    gitignore_lines = {
+        line.strip()
+        for line in (REPO_ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    }
+    example_text = (REPO_ROOT / ".env.example").read_text(encoding="utf-8")
+    serialized_dry_run = json.dumps(dry_run, sort_keys=True)
+
+    passed = (
+        config.model == DEFAULT_OPENAI_MODEL
+        and dry_run.get("ok") is True
+        and dry_run.get("live") is False
+        and "test-key-secret" not in serialized_dry_run
+        and payload.get("store") is False
+        and payload.get("reasoning") == {"effort": "minimal"}
+        and payload.get("max_output_tokens") == 24
+        and ".env.*" in gitignore_lines
+        and "!.env.example" in gitignore_lines
+        and "OPENAI_API_KEY=" in example_text
+        and "CORTEX_LIVE_OPENAI_MODEL=gpt-5-nano" in example_text
+        and "cortex-openai-smoke" in pyproject_text
+        and "LIVE-OPENAI-SMOKE-001" in docs_text
+        and "gpt-5-nano" in docs_text
+        and ".env.local" in readme_text
+        and "ignored by git" in readme_text
+        and ".env.local" in policy_text
+        and "gpt-5-nano" in research_text
+    )
+    return BenchmarkCaseResult(
+        case_id="LIVE-OPENAI-SMOKE-001/secret_safe_dry_run",
+        suite="LIVE-OPENAI-SMOKE-001",
+        passed=passed,
+        summary=(
+            "Optional OpenAI live smoke uses an ignored .env.local, "
+            "low-cost default model, dry-run guard, and store=false payload."
+        ),
+        metrics={
+            "dry_run_ok": int(dry_run.get("ok") is True),
+            "store_false": int(payload.get("store") is False),
+            "secret_returned": int("test-key-secret" in serialized_dry_run),
+        },
+        evidence={
+            "default_model": config.model,
+            "command": "uv run cortex-openai-smoke --dry-run",
+            "env_example_tracked": True,
         },
     )
 

@@ -114,6 +114,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Product traceability report | `uv run cortex-bench` | 96/96 passed | `benchmarks/runs/bench_20260429T025344Z.json` | Next benchmark: perception event envelope. |
 | 2026-04-29 | Perception event envelope | `uv run cortex-bench` | 97/97 passed | `benchmarks/runs/bench_20260429T025631Z.json` | Next benchmark: perception-to-firewall handoff. |
 | 2026-04-29 | Perception-to-firewall handoff | `uv run cortex-bench` | 98/98 passed | `benchmarks/runs/bench_20260429T025935Z.json` | Next benchmark: evidence eligibility handoff. |
+| 2026-04-29 | Optional OpenAI live smoke | `uv run cortex-bench` plus `uv run cortex-openai-smoke --assert-contains CORTEX_LIVE_OK` | 99/99 passed; live smoke passed with 47 total tokens | `benchmarks/runs/bench_20260429T030458Z.json` | Next benchmark: evidence eligibility handoff. |
 
 ## First Runnable Harness Requirements
 

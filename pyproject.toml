@@ -12,6 +12,7 @@ dependencies = [
 cortex-bench = "cortex_memory_os.benchmarks:main"
 cortex-bench-history = "cortex_memory_os.benchmark_history:main"
 cortex-mcp = "cortex_memory_os.mcp_server:main"
+cortex-openai-smoke = "cortex_memory_os.live_openai_smoke:main"
 
 [build-system]
 requires = ["setuptools>=69"]
