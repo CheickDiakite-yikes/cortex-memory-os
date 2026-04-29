@@ -187,6 +187,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_self_lesson_review_queue,
         case_gateway_self_lesson_review_actions,
         case_gateway_review_queue_audit_preview_hint,
+        case_gateway_review_queue_audit_consistency,
         case_gateway_self_lesson_review_flow,
         case_self_lesson_review_flow_safety_summary,
         case_self_lesson_review_flow_audit_preview,
@@ -2164,6 +2165,69 @@ def case_gateway_review_queue_audit_preview_hint() -> BenchmarkCaseResult:
         evidence={
             "queued_ids": queue.get("lesson_ids", []),
             "audit_shape_id": hint.get("audit_shape_id"),
+        },
+    )
+
+
+def case_gateway_review_queue_audit_consistency() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        stale = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_stale_queue_audit_consistency",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": [
+                    "project:alpha",
+                    "task_project_stale_queue_audit_consistency",
+                ],
+                "last_validated": date(2025, 1, 1),
+            }
+        )
+        store.add_self_lesson(stale)
+        server = CortexMCPServer(store=store)
+        queue = server.call_tool("self_lesson.review_queue", {})
+        flow = server.call_tool("self_lesson.review_flow", {"lesson_id": stale.lesson_id})
+
+    hint = queue.get("lessons", [{}])[0].get("review_flow_audit_preview_hint", {})
+    serialized_hint = json.dumps(hint, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        hint.get("lesson_id") == flow.get("lesson_id") == stale.lesson_id
+        and hint.get("gateway_tool") == "self_lesson.review_flow"
+        and hint.get("audit_shape_id")
+        == flow.get("audit_preview", {}).get("audit_shape_id")
+        == "self_lesson_decision_audit_v1"
+        and hint.get("preview_embedded") is False
+        and "previews" not in hint
+        and "Before editing auth" not in serialized_hint
+        and "project:alpha" not in serialized_hint
+        and "task_project_stale_queue_audit_consistency" not in serialized_hint
+        and "GATEWAY-REVIEW-QUEUE-AUDIT-CONSISTENCY-001" in docs_text
+        and "GATEWAY-REVIEW-QUEUE-AUDIT-CONSISTENCY-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-REVIEW-QUEUE-AUDIT-CONSISTENCY-001/queue_flow_shape_match",
+        suite="GATEWAY-REVIEW-QUEUE-AUDIT-CONSISTENCY-001",
+        passed=passed,
+        summary="Review queue audit-preview hints share the same audit shape ID as exact review-flow previews.",
+        metrics={
+            "queue_hint_count": int(bool(hint)),
+            "shape_match": int(
+                hint.get("audit_shape_id")
+                == flow.get("audit_preview", {}).get("audit_shape_id")
+            ),
+        },
+        evidence={
+            "queue_audit_shape_id": hint.get("audit_shape_id"),
+            "flow_audit_shape_id": flow.get("audit_preview", {}).get("audit_shape_id"),
         },
     )
 

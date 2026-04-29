@@ -91,6 +91,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Review flow audit consistency | `uv run cortex-bench` | 73/73 passed | `benchmarks/runs/bench_20260429T013806Z.json` | Next benchmark: context-pack review flow audit hint. |
 | 2026-04-29 | Context-pack review flow audit hint | `uv run cortex-bench` | 74/74 passed | `benchmarks/runs/bench_20260429T013949Z.json` | Next benchmark: review queue audit preview hint. |
 | 2026-04-29 | Review queue audit preview hint | `uv run cortex-bench` | 75/75 passed | `benchmarks/runs/bench_20260429T015037Z.json` | Next benchmark: review queue audit consistency. |
+| 2026-04-29 | Review queue audit consistency | `uv run cortex-bench` | 76/76 passed | `benchmarks/runs/bench_20260429T015355Z.json` | Next benchmark: review queue safety summary. |
 
 ## First Runnable Harness Requirements
 

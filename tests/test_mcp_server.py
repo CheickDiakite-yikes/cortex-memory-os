@@ -1444,6 +1444,38 @@ def test_self_lesson_review_queue_lists_only_review_required_lessons_redacted(tm
     assert "task_project_stale_queue" not in rendered_queue
 
 
+def test_self_lesson_review_queue_audit_hint_matches_review_flow_preview(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    stale = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_stale_queue_audit_consistency",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": [
+                "project:alpha",
+                "task_project_stale_queue_audit_consistency",
+            ],
+            "last_validated": date(2025, 1, 1),
+        }
+    )
+    store.add_self_lesson(stale)
+    server = CortexMCPServer(store=store)
+
+    queue = server.call_tool("self_lesson.review_queue", {})
+    flow = server.call_tool("self_lesson.review_flow", {"lesson_id": stale.lesson_id})
+
+    hint = queue["lessons"][0]["review_flow_audit_preview_hint"]
+    assert hint["lesson_id"] == flow["lesson_id"]
+    assert hint["gateway_tool"] == "self_lesson.review_flow"
+    assert hint["audit_shape_id"] == flow["audit_preview"]["audit_shape_id"]
+    assert hint["preview_embedded"] is False
+    assert "previews" not in hint
+    rendered_hint = json.dumps(hint)
+    assert "Before editing auth" not in rendered_hint
+    assert "project:alpha" not in rendered_hint
+    assert "task_project_stale_queue_audit_consistency" not in rendered_hint
+
+
 def test_self_lesson_review_flow_returns_exact_redacted_action_routes(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))

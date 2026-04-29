@@ -312,3 +312,10 @@ one project, agent, or session from silently shaping another.
   the review flow;
 - queue-level routing stays redacted and does not copy lesson content or scoped
   provenance.
+
+`GATEWAY-REVIEW-QUEUE-AUDIT-CONSISTENCY-001` verifies:
+
+- review queue hints and exact review-flow audit previews use the same audit
+  shape ID;
+- queue hints anchor to the same lesson ID passed to the review flow;
+- consistency metadata stays redacted and never embeds preview entries.

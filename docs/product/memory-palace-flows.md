@@ -485,3 +485,10 @@ claim audit-preview routing:
   not embedded;
 - the queue still omits lesson content, learned-from refs, rollback text, and
   scoped provenance.
+
+`GATEWAY-REVIEW-QUEUE-AUDIT-CONSISTENCY-001` must pass before queue hints can be
+treated as reliable pointers to exact review cards:
+
+- the queue hint and exact review-flow response share the same audit shape ID;
+- the queue hint points to the same lesson ID used by the review flow;
+- queue hints remain compact and do not embed preview entries or lesson content.
