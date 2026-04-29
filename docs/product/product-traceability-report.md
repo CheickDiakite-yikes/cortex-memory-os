@@ -15,6 +15,7 @@ Source documents:
 - `docs/research/frontier-agent-plugin-lessons-2026-04-29.md`
 - `docs/ops/plugin-install-smoke.md`
 - `docs/architecture/native-shadow-pointer-overlay.md`
+- `docs/architecture/live-browser-terminal-adapters.md`
 - `docs/architecture/browser-terminal-adapter-contracts.md`
 - `docs/architecture/context-pack-templates.md`
 - `docs/architecture/document-to-skill-derivation.md`
@@ -43,8 +44,9 @@ Source documents:
 | Agent Runtime Trace | Validated contract | `RUNTIME-TRACE-001`, `docs/architecture/agent-runtime-trace.md`, runtime trace fixture | Persist real agent traces through the gateway and outcome engine. |
 | Swarm Governance | Validated contract | `SWARM-GOVERNANCE-001`, `docs/adr/0005-swarm-governance-boundary.md` | Wire future parallel agents through governed gateway execution instead of direct delegation. |
 | Shadow Pointer | Validated native proof plus static prototype | `SHADOW-POINTER-001`, `SHADOW-POINTER-CONTROLS-001`, `POINTER-PROPOSAL-001`, `SHADOW-POINTER-NATIVE-001`, static UI prototype, `native/macos-shadow-pointer` | Wire native overlay to live permissions and real capture adapters. |
-| Native Perception Bus | Envelope, firewall handoff, evidence eligibility, and browser/terminal adapter contracts validated; live adapters not started | `PERCEPTION-EVENT-ENVELOPE-001`, `PERCEPTION-FIREWALL-HANDOFF-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001`, `BROWSER-TERMINAL-ADAPTERS-001`, roadmap, and ADR | Add consented macOS app/window, accessibility, live terminal shell hooks, and browser extension adapters. |
+| Native Perception Bus | Envelope, firewall handoff, evidence eligibility, browser/terminal contracts, and Live browser/terminal adapter smoke artifacts validated | `PERCEPTION-EVENT-ENVELOPE-001`, `PERCEPTION-FIREWALL-HANDOFF-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001`, `BROWSER-TERMINAL-ADAPTERS-001`, `LIVE-BROWSER-TERMINAL-ADAPTERS-001`, roadmap, and ADR | Add the local adapter endpoint and consented macOS app/window and accessibility adapters. |
 | Robot readiness | Spatial safety contract validated | `ROBOT-SAFE-001`, `docs/architecture/robot-spatial-safety.md`, initial threat model | Keep physical integrations blocked until real simulation, capability, emergency-stop, and audit adapters exist. |
+| Production autonomy and real capture | Not started | No production capture daemon, no autonomous skill runner, and no robot executor are enabled | Keep disabled until consent UI, local endpoint, audit, rollback, and emergency-stop boundaries exist. |
 
 ## Coverage Snapshot
 
@@ -87,7 +89,8 @@ User-facing pillars:
 The next useful slices should move from contract depth into product surface and
 capture realism:
 
-1. Real browser/terminal adapters with source-trust and redaction checks.
+1. Real browser/terminal adapters now have live smoke artifacts; next is the
+   local endpoint and manual browser/terminal proof.
 2. Wire the Shadow Pointer native overlay proof to live permissions and capture
    adapter receipts.
 3. Skill Forge candidate list UI shell using the safe candidate-card view model.

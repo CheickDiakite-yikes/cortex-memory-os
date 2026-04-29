@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Cortex Memory OS Browser Adapter",
+  "version": "0.1.0",
+  "description": "Opt-in visible-page adapter for local Cortex Memory OS development.",
+  "action": {
+    "default_title": "Send visible page context to Cortex"
+  },
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"]
+}

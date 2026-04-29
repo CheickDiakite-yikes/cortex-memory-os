@@ -7,7 +7,7 @@ def test_synthetic_benchmarks_pass():
     result = run_all()
 
     assert result.passed
-    assert len(result.case_results) == 114
+    assert len(result.case_results) == 115
     assert {case.suite for case in result.case_results} >= {
         "MEM-RECALL-001",
         "RETRIEVAL-SCORE-001",
@@ -110,6 +110,7 @@ def test_synthetic_benchmarks_pass():
         "PERCEPTION-FIREWALL-HANDOFF-001",
         "EVIDENCE-ELIGIBILITY-HANDOFF-001",
         "BROWSER-TERMINAL-ADAPTERS-001",
+        "LIVE-BROWSER-TERMINAL-ADAPTERS-001",
         "LIVE-OPENAI-SMOKE-001",
         "GATEWAY-SELF-LESSON-001",
         "SELF-LESSON-STORE-001",

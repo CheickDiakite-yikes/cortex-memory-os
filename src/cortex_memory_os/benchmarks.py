@@ -65,6 +65,10 @@ from cortex_memory_os.live_openai_smoke import (
     load_live_openai_config,
     run_smoke,
 )
+from cortex_memory_os.live_adapters import (
+    LIVE_ADAPTER_POLICY_REF,
+    run_live_adapter_smoke,
+)
 from cortex_memory_os.evidence_vault import (
     EVIDENCE_VAULT_ENCRYPTION_POLICY_REF,
     EvidenceVault,
@@ -343,6 +347,7 @@ def run_all() -> BenchmarkRunResult:
         case_perception_firewall_handoff_contract,
         case_evidence_eligibility_handoff_contract,
         case_browser_terminal_adapter_contract,
+        case_live_browser_terminal_adapter_smoke,
         case_live_openai_smoke_contract,
         case_gateway_self_lesson_proposal_tool,
         case_self_lesson_sqlite_persistence,
@@ -626,6 +631,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "GATEWAY-CTX-001",
         "CODEX-PLUGIN-001",
         "BROWSER-TERMINAL-ADAPTERS-001",
+        "LIVE-BROWSER-TERMINAL-ADAPTERS-001",
         "SWARM-GOVERNANCE-001",
         "SHADOW-POINTER-001",
         "POINTER-PROPOSAL-001",
@@ -633,6 +639,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
     ]
     next_gap_terms = [
         "Real browser/terminal adapters",
+        "Live browser/terminal adapter smoke artifacts",
         "plugin install/discovery smoke",
         "Shadow Pointer native overlay",
         "Persist real agent runtime traces",
@@ -1803,6 +1810,76 @@ def case_browser_terminal_adapter_contract() -> BenchmarkCaseResult:
             "attack_decision": attack_result.firewall.decision.value,
             "paused_route": paused_result.envelope.route.value,
             "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_live_browser_terminal_adapter_smoke() -> BenchmarkCaseResult:
+    smoke = run_live_adapter_smoke()
+    benchmark_id = "LIVE-BROWSER-TERMINAL-ADAPTERS-001"
+    docs_path = REPO_ROOT / "docs" / "architecture" / "live-browser-terminal-adapters.md"
+    plan_path = REPO_ROOT / "docs" / "ops" / "benchmark-plan.md"
+    registry_path = REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    task_board_path = REPO_ROOT / "docs" / "ops" / "task-board.md"
+    traceability_path = REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    pyproject_path = REPO_ROOT / "pyproject.toml"
+
+    docs_text = docs_path.read_text(encoding="utf-8")
+    plan_text = plan_path.read_text(encoding="utf-8")
+    registry_text = registry_path.read_text(encoding="utf-8")
+    task_text = task_board_path.read_text(encoding="utf-8")
+    traceability_text = traceability_path.read_text(encoding="utf-8")
+    pyproject_text = pyproject_path.read_text(encoding="utf-8")
+
+    required_doc_terms = [
+        benchmark_id,
+        LIVE_ADAPTER_POLICY_REF,
+        "adapters/browser-extension",
+        "adapters/terminal-shell",
+        "external_untrusted",
+        "third_party_content",
+        "raw-ref-free",
+        "terminal secret text is masked",
+        "uv run cortex-live-adapter-smoke",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        smoke.passed
+        and not smoke.browser_memory_eligible
+        and not smoke.browser_raw_ref_retained
+        and smoke.browser_attack_discarded
+        and not smoke.terminal_secret_retained
+        and not smoke.terminal_raw_ref_retained
+        and not missing_doc_terms
+        and benchmark_id in plan_text
+        and benchmark_id in registry_text
+        and benchmark_id in task_text
+        and benchmark_id in traceability_text
+        and "cortex-live-adapter-smoke" in pyproject_text
+    )
+    return BenchmarkCaseResult(
+        case_id="LIVE-BROWSER-TERMINAL-ADAPTERS-001/artifact_smoke",
+        suite="LIVE-BROWSER-TERMINAL-ADAPTERS-001",
+        passed=passed,
+        summary=(
+            "Dormant browser extension and terminal shell-hook artifacts pass a "
+            "local smoke proving no raw web memory eligibility and no terminal "
+            "secret retention."
+        ),
+        metrics={
+            "missing_paths": len(smoke.missing_paths),
+            "missing_terms": len(smoke.missing_terms) + len(missing_doc_terms),
+            "blocked_host_permissions": len(smoke.blocked_host_permissions),
+            "browser_memory_eligible": int(smoke.browser_memory_eligible),
+            "terminal_secret_retained": int(smoke.terminal_secret_retained),
+        },
+        evidence={
+            "policy_ref": LIVE_ADAPTER_POLICY_REF,
+            "browser_manifest_path": smoke.browser_manifest_path,
+            "terminal_hook_path": smoke.terminal_hook_path,
+            "missing_paths": smoke.missing_paths,
+            "missing_terms": smoke.missing_terms + missing_doc_terms,
+            "blocked_host_permissions": smoke.blocked_host_permissions,
         },
     )
 
