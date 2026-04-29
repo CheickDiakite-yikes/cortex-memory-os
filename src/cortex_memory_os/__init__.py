@@ -62,6 +62,11 @@ from cortex_memory_os.context_templates import (
     select_context_self_lessons,
     select_context_pack_template,
 )
+from cortex_memory_os.firewall import (
+    PERCEPTION_FIREWALL_HANDOFF_POLICY_REF,
+    assess_observation_text,
+    assess_perception_envelope,
+)
 from cortex_memory_os.evidence_vault import (
     EVIDENCE_VAULT_ENCRYPTION_POLICY_REF,
     EvidenceVault,
@@ -233,6 +238,9 @@ __all__ = [
     "effective_context_limit",
     "select_context_self_lessons",
     "select_context_pack_template",
+    "PERCEPTION_FIREWALL_HANDOFF_POLICY_REF",
+    "assess_observation_text",
+    "assess_perception_envelope",
     "EVIDENCE_VAULT_ENCRYPTION_POLICY_REF",
     "EvidenceVault",
     "EvidenceVaultMetadata",

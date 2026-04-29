@@ -49,7 +49,11 @@ from cortex_memory_os.context_templates import (
     select_context_self_lessons,
     select_context_pack_template,
 )
-from cortex_memory_os.firewall import assess_observation_text
+from cortex_memory_os.firewall import (
+    PERCEPTION_FIREWALL_HANDOFF_POLICY_REF,
+    assess_observation_text,
+    assess_perception_envelope,
+)
 from cortex_memory_os.fixtures import load_json
 from cortex_memory_os.governance import gate_action
 from cortex_memory_os.evidence_vault import (
@@ -252,6 +256,7 @@ def run_all() -> BenchmarkRunResult:
         case_product_goal_coverage_contract,
         case_product_traceability_report_contract,
         case_perception_event_envelope_contract,
+        case_perception_firewall_handoff_contract,
         case_gateway_self_lesson_proposal_tool,
         case_self_lesson_sqlite_persistence,
         case_gateway_self_lesson_promotion_rollback,
@@ -518,7 +523,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "ROBOT-SAFE-001",
     ]
     next_gap_terms = [
-        "Perception firewall handoff",
+        "Evidence eligibility handoff",
         "Shadow Pointer native overlay",
         "Memory Palace dashboard",
         "Skill Forge candidate list",
@@ -656,6 +661,93 @@ def case_perception_event_envelope_contract() -> BenchmarkCaseResult:
             "schema_version": envelope.schema_version,
             "source_kind": envelope.source_kind.value,
             "route": envelope.route.value,
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_perception_firewall_handoff_contract() -> BenchmarkCaseResult:
+    fixture_payload = load_json(TEST_FIXTURES / "perception_terminal_envelope.json")
+    envelope = PerceptionEventEnvelope.model_validate(fixture_payload)
+    secret = "CORTEX_FAKE_TOKEN_handoffSECRET123"
+    secret_assessment = assess_perception_envelope(envelope, f"token={secret}")
+
+    prompt_payload = json.loads(json.dumps(fixture_payload))
+    prompt_payload["raw_ref"] = None
+    prompt_payload["prompt_injection_risk"] = True
+    prompt_envelope = PerceptionEventEnvelope.model_validate(prompt_payload)
+    prompt_assessment = assess_perception_envelope(
+        prompt_envelope,
+        "ordinary copied page text",
+    )
+
+    third_party_payload = json.loads(json.dumps(fixture_payload))
+    third_party_payload["raw_ref"] = None
+    third_party_payload["third_party_content"] = True
+    third_party_envelope = PerceptionEventEnvelope.model_validate(third_party_payload)
+    third_party_assessment = assess_perception_envelope(
+        third_party_envelope,
+        "benign newsletter text",
+    )
+
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "perception-firewall-handoff.md"
+    ).read_text(encoding="utf-8")
+    envelope_docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "perception-event-envelope.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    required_terms = [
+        "PERCEPTION-FIREWALL-HANDOFF-001",
+        "PerceptionEventEnvelope",
+        "FirewallDecisionRecord",
+        "prompt-injection risk",
+        "third-party content",
+        "memory eligible",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_terms)
+    passed = (
+        secret_assessment.decision.decision == FirewallDecision.MASK
+        and secret_assessment.decision.eligible_for_memory is False
+        and PERCEPTION_FIREWALL_HANDOFF_POLICY_REF
+        in secret_assessment.decision.policy_refs
+        and "policy_firewall_synthetic_v1" in secret_assessment.decision.policy_refs
+        and secret not in secret_assessment.redacted_text
+        and REDACTED_SECRET_PLACEHOLDER in secret_assessment.redacted_text
+        and prompt_assessment.decision.decision == FirewallDecision.QUARANTINE
+        and "prompt_injection" in prompt_assessment.decision.detected_risks
+        and prompt_assessment.decision.eligible_for_memory is False
+        and third_party_assessment.decision.decision
+        == FirewallDecision.EPHEMERAL_ONLY
+        and "third_party_content"
+        in third_party_assessment.decision.detected_risks
+        and third_party_assessment.decision.eligible_for_memory is False
+        and not missing_doc_terms
+        and "PERCEPTION-FIREWALL-HANDOFF-001" in envelope_docs_text
+        and "PERCEPTION-FIREWALL-HANDOFF-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="PERCEPTION-FIREWALL-HANDOFF-001/envelope_to_decision",
+        suite="PERCEPTION-FIREWALL-HANDOFF-001",
+        passed=passed,
+        summary=(
+            "Perception envelopes route through firewall decisions with "
+            "redaction, prompt-risk, third-party, retention, and policy refs."
+        ),
+        metrics={
+            "secret_redaction_count": len(secret_assessment.decision.redactions),
+            "prompt_risk_count": len(prompt_assessment.decision.detected_risks),
+            "third_party_risk_count": len(
+                third_party_assessment.decision.detected_risks
+            ),
+        },
+        evidence={
+            "handoff_policy_ref": PERCEPTION_FIREWALL_HANDOFF_POLICY_REF,
+            "secret_decision": secret_assessment.decision.decision.value,
+            "prompt_decision": prompt_assessment.decision.decision.value,
+            "third_party_decision": third_party_assessment.decision.decision.value,
             "missing_doc_terms": missing_doc_terms,
         },
     )

@@ -11,6 +11,8 @@ from cortex_memory_os.contracts import (
     FirewallDecisionRecord,
     FirewallRedaction,
     ObservationEvent,
+    PerceptionEventEnvelope,
+    PerceptionRoute,
     RetentionPolicy,
     Sensitivity,
     SourceTrust,
@@ -20,6 +22,8 @@ from cortex_memory_os.sensitive_data_policy import (
     REDACTED_SECRET_PLACEHOLDER,
     SECRET_PII_POLICY_REF,
 )
+
+PERCEPTION_FIREWALL_HANDOFF_POLICY_REF = "policy_perception_firewall_handoff_v1"
 
 PROMPT_INJECTION_PATTERNS = [
     re.compile(r"\bignore (all )?(previous|prior) instructions\b", re.IGNORECASE),
@@ -126,3 +130,106 @@ def assess_observation_text(
         audit_event_id=f"audit_{event.event_id}_{int(timestamp.timestamp())}",
     )
     return FirewallAssessment(decision=record, redacted_text=redacted_text)
+
+
+def _ordered_policy_refs(*groups: list[str]) -> list[str]:
+    refs: list[str] = []
+    for group in groups:
+        for ref in group:
+            if ref not in refs:
+                refs.append(ref)
+    return refs
+
+
+def assess_perception_envelope(
+    envelope: PerceptionEventEnvelope,
+    text: str,
+    *,
+    now: datetime | None = None,
+) -> FirewallAssessment:
+    """Convert a validated Perception Bus envelope into a firewall decision."""
+
+    timestamp = now or envelope.observation.timestamp
+    policy_refs = _ordered_policy_refs(
+        [
+            PERCEPTION_FIREWALL_HANDOFF_POLICY_REF,
+            FIREWALL_POLICY_REF,
+            SECRET_PII_POLICY_REF,
+        ],
+        envelope.required_policy_refs,
+    )
+
+    if envelope.route == PerceptionRoute.DISCARD:
+        record = FirewallDecisionRecord(
+            decision_id=f"fw_{envelope.observation.event_id}",
+            event_id=envelope.observation.event_id,
+            decision=FirewallDecision.DISCARD,
+            sensitivity=envelope.sensitivity_hint,
+            detected_risks=["perception_route_discard"],
+            redactions=[],
+            retention_policy=RetentionPolicy.DISCARD,
+            eligible_for_memory=False,
+            eligible_for_model_training=False,
+            policy_refs=policy_refs,
+            audit_event_id=f"audit_{envelope.observation.event_id}_{int(timestamp.timestamp())}",
+        )
+        return FirewallAssessment(decision=record, redacted_text="")
+
+    if envelope.route == PerceptionRoute.EPHEMERAL_ONLY:
+        record = FirewallDecisionRecord(
+            decision_id=f"fw_{envelope.observation.event_id}",
+            event_id=envelope.observation.event_id,
+            decision=FirewallDecision.EPHEMERAL_ONLY,
+            sensitivity=envelope.sensitivity_hint,
+            detected_risks=["perception_route_ephemeral"],
+            redactions=[],
+            retention_policy=RetentionPolicy.EPHEMERAL_SESSION,
+            eligible_for_memory=False,
+            eligible_for_model_training=False,
+            policy_refs=policy_refs,
+            audit_event_id=f"audit_{envelope.observation.event_id}_{int(timestamp.timestamp())}",
+        )
+        return FirewallAssessment(decision=record, redacted_text=text)
+
+    assessment = assess_observation_text(envelope.observation, text, now=timestamp)
+    redactions = assessment.decision.redactions
+    risks = list(assessment.decision.detected_risks)
+    decision = assessment.decision.decision
+    retention = assessment.decision.retention_policy
+    eligible = assessment.decision.eligible_for_memory
+
+    if envelope.prompt_injection_risk and "prompt_injection" not in risks:
+        risks.append("prompt_injection")
+    if envelope.third_party_content and "third_party_content" not in risks:
+        risks.append("third_party_content")
+
+    if "prompt_injection" in risks:
+        decision = FirewallDecision.QUARANTINE
+        retention = RetentionPolicy.DISCARD
+        eligible = False
+    elif envelope.third_party_content and decision == FirewallDecision.MEMORY_ELIGIBLE:
+        decision = FirewallDecision.EPHEMERAL_ONLY
+        retention = RetentionPolicy.EPHEMERAL_SESSION
+        eligible = False
+
+    sensitivity = Sensitivity.SECRET if redactions else envelope.sensitivity_hint
+    if sensitivity == Sensitivity.SECRET and not redactions:
+        risks.append("secret_sensitivity_hint")
+        decision = FirewallDecision.DISCARD
+        retention = RetentionPolicy.DISCARD
+        eligible = False
+
+    record = FirewallDecisionRecord(
+        decision_id=assessment.decision.decision_id,
+        event_id=assessment.decision.event_id,
+        decision=decision,
+        sensitivity=sensitivity,
+        detected_risks=risks,
+        redactions=redactions,
+        retention_policy=retention,
+        eligible_for_memory=eligible,
+        eligible_for_model_training=False,
+        policy_refs=_ordered_policy_refs(policy_refs, assessment.decision.policy_refs),
+        audit_event_id=assessment.decision.audit_event_id,
+    )
+    return FirewallAssessment(decision=record, redacted_text=assessment.redacted_text)

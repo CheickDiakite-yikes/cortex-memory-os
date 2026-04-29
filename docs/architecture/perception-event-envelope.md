@@ -59,3 +59,7 @@ needs before anything becomes durable:
 - robot sensor events require explicit capability and simulation-first
   validation;
 - this document and the benchmark plan name the contract.
+
+The next layer is `PERCEPTION-FIREWALL-HANDOFF-001`, which converts valid
+envelopes into `FirewallDecisionRecord` objects before evidence or memory
+eligibility.

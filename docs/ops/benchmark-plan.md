@@ -97,6 +97,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `PRODUCT-GOAL-COVERAGE-001` | Product docs and benchmarks keep the original Cortex brain-loop and pillars visible. | Implementation drifts into a narrow recorder/search tool, loses pillar ownership, or hides safety/ops contracts. |
 | `PRODUCT-TRACEABILITY-REPORT-001` | A concise product traceability report separates validated contracts from partial and not-started product surfaces. | Product state is only discoverable by reading long task logs, or reports overclaim incomplete UI/capture work. |
 | `PERCEPTION-EVENT-ENVELOPE-001` | Consented Perception Bus envelopes normalize source kind, consent, scope, trust, route, prompt-risk, and robot-safety metadata. | Native adapters bypass the firewall, raw refs persist without active consent, or robot inputs lack capability and simulation gates. |
+| `PERCEPTION-FIREWALL-HANDOFF-001` | Perception envelopes become firewall decisions without losing consent, prompt-risk, third-party, redaction, retention, or policy refs. | Capture adapters skip firewall gating, third-party content becomes memory-eligible, or prompt-risk metadata is ignored. |
 | `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` | Review queue safety summaries expose applied limit, returned count, total review-required count, and truncation state. | Limited queues hide truncation state, count omitted actions, or leak omitted lesson provenance. |
 | `GATEWAY-REVIEW-QUEUE-ORDERING-001` | Review queues sort missing validation dates first, then oldest validation date, then lesson ID before limits. | Queue ordering depends on insertion order, hidden store order, or leaks provenance while exposing order metadata. |
 | `GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001` | Limited review queues expose stable cursors tied to deterministic ordering. | Cursors leak lesson IDs/provenance, repeat cards, or drift from the advertised ordering contract. |
@@ -153,8 +154,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `PERCEPTION-FIREWALL-HANDOFF-001`: Define the handoff from perception
-  envelopes into firewall decisions and evidence eligibility.
+- `EVIDENCE-ELIGIBILITY-HANDOFF-001`: Define the handoff from firewall
+  decisions into Evidence Vault write eligibility and retention.
 
 Longer-term suites:
 
