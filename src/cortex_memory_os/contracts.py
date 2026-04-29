@@ -442,6 +442,37 @@ class RetrievalScoreSummary(StrictModel):
     reason_tags: list[str] = Field(default_factory=list)
 
 
+CONTEXT_BUDGET_POLICY_REF = "policy_context_pack_budget_v1"
+
+
+class ContextBudget(StrictModel):
+    max_prompt_tokens: int = Field(default=1200, ge=1, le=200_000)
+    estimated_prompt_tokens: int = Field(default=0, ge=0)
+    max_wall_clock_ms: int = Field(default=300_000, ge=1, le=86_400_000)
+    max_tool_calls: int = Field(default=0, ge=0, le=1000)
+    max_artifacts: int = Field(default=0, ge=0, le=1000)
+    memory_budget: int = Field(default=3, ge=0, le=50)
+    self_lesson_budget: int = Field(default=0, ge=0, le=10)
+    max_action_risk: ActionRisk = ActionRisk.LOW
+    autonomy_ceiling: ExecutionMode = ExecutionMode.ASSISTIVE
+    policy_refs: list[str] = Field(default_factory=lambda: [CONTEXT_BUDGET_POLICY_REF])
+
+    @model_validator(mode="after")
+    def keep_context_budget_bounded(self) -> ContextBudget:
+        if self.estimated_prompt_tokens > self.max_prompt_tokens:
+            raise ValueError("estimated context tokens cannot exceed budget")
+        if self.max_action_risk in {ActionRisk.HIGH, ActionRisk.CRITICAL}:
+            raise ValueError("context-pack budgets cannot authorize high or critical risk")
+        if self.autonomy_ceiling in {
+            ExecutionMode.BOUNDED_AUTONOMY,
+            ExecutionMode.RECURRING_AUTOMATION,
+        }:
+            raise ValueError("context-pack budgets cannot grant autonomous execution")
+        if not self.policy_refs:
+            raise ValueError("context-pack budgets require policy refs")
+        return self
+
+
 class AuditMetadata(StrictModel):
     audit_event_id: str = Field(min_length=1)
     action: str = Field(min_length=1)
@@ -455,6 +486,7 @@ class ContextPack(StrictModel):
     context_pack_id: str = Field(min_length=1)
     goal: str = Field(min_length=1)
     active_project: str | None = None
+    budget: ContextBudget = Field(default_factory=ContextBudget)
     relevant_files: list[str] = Field(default_factory=list)
     recent_events: list[str] = Field(default_factory=list)
     relevant_memories: list[RelevantMemory] = Field(default_factory=list)
@@ -480,6 +512,14 @@ class ContextPack(StrictModel):
             if "ignore previous" in warning.lower():
                 raise ValueError("context warnings cannot echo prompt-injection instructions")
         return warnings
+
+    @model_validator(mode="after")
+    def keep_context_pack_inside_budget(self) -> ContextPack:
+        if len(self.relevant_memories) > self.budget.memory_budget:
+            raise ValueError("context pack exceeds memory budget")
+        if len(self.relevant_self_lessons) > self.budget.self_lesson_budget:
+            raise ValueError("context pack exceeds self-lesson budget")
+        return self
 
 
 class OutcomeRecord(StrictModel):

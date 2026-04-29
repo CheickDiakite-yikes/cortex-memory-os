@@ -120,6 +120,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Frontier AI lab research synthesis | `uv run cortex-bench` plus `uv run cortex-openai-smoke --assert-contains CORTEX_LIVE_OK` | 102/102 passed; live smoke passed with 47 total tokens | `benchmarks/runs/bench_20260429T033138Z.json` | Next benchmark: agent runtime trace. |
 | 2026-04-29 | Memory Palace dashboard contract | `uv run cortex-bench` | 103/103 passed | `benchmarks/runs/bench_20260429T033914Z.json` | Next benchmark: agent runtime trace. |
 | 2026-04-29 | Agent runtime trace contract | `uv run cortex-bench` | 104/104 passed | `benchmarks/runs/bench_20260429T034825Z.json` | Next benchmark: budgeted context packs. |
+| 2026-04-29 | Budgeted context-pack contract | `uv run cortex-bench` | 105/105 passed | `benchmarks/runs/bench_20260429T035544Z.json` | Next benchmark: untrusted pointing proposal. |
 
 ## First Runnable Harness Requirements
 

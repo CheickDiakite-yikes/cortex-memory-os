@@ -21,6 +21,8 @@ from cortex_memory_os.benchmark_history import (
 from cortex_memory_os.contracts import (
     ActionRisk,
     ConsentState,
+    CONTEXT_BUDGET_POLICY_REF,
+    ContextBudget,
     ContextPack,
     EvidenceType,
     ExecutionMode,
@@ -214,6 +216,7 @@ def run_all() -> BenchmarkRunResult:
         case_vault_encryption_boundary,
         case_gateway_context_pack,
         case_context_pack_scored_retrieval,
+        case_context_pack_budget_contract,
         case_hostile_source_context_pack_policy,
         case_context_template_registry,
         case_context_pack_self_lesson_routing,
@@ -535,6 +538,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "docs/product/build-roadmap.md",
         "docs/product/original-goal-coverage.md",
         "docs/product/memory-palace-dashboard.md",
+        "docs/architecture/context-pack-templates.md",
         "docs/architecture/agent-runtime-trace.md",
         "docs/ops/task-board.md",
         "docs/ops/benchmark-registry.md",
@@ -551,6 +555,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
     required_suite_refs = [
         "PRODUCT-GOAL-COVERAGE-001",
         "PRODUCT-TRACEABILITY-REPORT-001",
+        "CONTEXT-BUDGET-001",
         "RUNTIME-TRACE-001",
         "SEC-INJECT-001",
         "VAULT-RETENTION-001",
@@ -562,11 +567,11 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "ROBOT-SAFE-001",
     ]
     next_gap_terms = [
-        "Budgeted context packs",
         "Skill Forge candidate list",
         "Codex plugin packaging",
         "Browser/terminal adapters",
         "Shadow Pointer native overlay",
+        "Persist real agent runtime traces",
     ]
 
     missing_sections = _missing_terms(report_text, required_sections)
@@ -1857,6 +1862,107 @@ def case_context_pack_scored_retrieval() -> BenchmarkCaseResult:
             "context_pack_id": result.get("context_pack_id"),
             "memory_ids": memory_ids,
             "score_ids": score_ids,
+        },
+    )
+
+
+def case_context_pack_budget_contract() -> BenchmarkCaseResult:
+    debugging = select_context_pack_template("continue fixing onboarding auth bug")
+    response = default_server().handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 161,
+            "method": "tools/call",
+            "params": {
+                "name": "memory.get_context_pack",
+                "arguments": {
+                    "goal": "continue fixing onboarding auth bug",
+                    "limit": 20,
+                    "max_prompt_tokens": 999999,
+                    "max_wall_clock_ms": 99999999,
+                    "max_tool_calls": 999,
+                    "max_artifacts": 999,
+                    "max_action_risk": "high",
+                    "autonomy_ceiling": "bounded_autonomy",
+                },
+            },
+        }
+    )
+    result = response.get("result", {})
+    budget = result.get("budget", {})
+
+    def rejects_over_budget_tokens() -> bool:
+        try:
+            ContextBudget(max_prompt_tokens=10, estimated_prompt_tokens=11)
+        except Exception as exc:
+            return "estimated context tokens" in str(exc)
+        return False
+
+    def rejects_high_risk_or_autonomy() -> bool:
+        try:
+            ContextBudget(max_action_risk=ActionRisk.HIGH)
+        except Exception as exc:
+            high_risk_rejected = "high or critical" in str(exc)
+        else:
+            high_risk_rejected = False
+
+        try:
+            ContextBudget(autonomy_ceiling=ExecutionMode.BOUNDED_AUTONOMY)
+        except Exception as exc:
+            autonomy_rejected = "autonomous execution" in str(exc)
+        else:
+            autonomy_rejected = False
+        return high_risk_rejected and autonomy_rejected
+
+    policy_text = (
+        REPO_ROOT / "docs" / "architecture" / "context-pack-templates.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    report_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    passed = (
+        CONTEXT_BUDGET_POLICY_REF in budget.get("policy_refs", [])
+        and budget.get("max_prompt_tokens") == debugging.max_prompt_tokens
+        and budget.get("max_wall_clock_ms") == debugging.max_wall_clock_ms
+        and budget.get("max_tool_calls") == debugging.max_tool_calls
+        and budget.get("max_artifacts") == debugging.max_artifacts
+        and budget.get("memory_budget") == debugging.max_memories
+        and budget.get("self_lesson_budget") == debugging.max_self_lessons
+        and budget.get("max_action_risk") == ActionRisk.MEDIUM.value
+        and budget.get("autonomy_ceiling") == ExecutionMode.ASSISTIVE.value
+        and budget.get("estimated_prompt_tokens", 0) <= budget.get("max_prompt_tokens", -1)
+        and rejects_over_budget_tokens()
+        and rejects_high_risk_or_autonomy()
+        and "CONTEXT-BUDGET-001" in policy_text
+        and "CONTEXT-BUDGET-001" in plan_text
+        and "CONTEXT-BUDGET-001" in task_text
+        and "CONTEXT-BUDGET-001" in report_text
+    )
+    return BenchmarkCaseResult(
+        case_id="CONTEXT-BUDGET-001/context_pack_budget_envelope",
+        suite="CONTEXT-BUDGET-001",
+        passed=passed,
+        summary=(
+            "Context packs expose token, time, tool, artifact, memory, "
+            "self-lesson, risk, and autonomy budget metadata."
+        ),
+        metrics={
+            "estimated_prompt_tokens": budget.get("estimated_prompt_tokens", 0),
+            "max_prompt_tokens": budget.get("max_prompt_tokens", 0),
+            "max_tool_calls": budget.get("max_tool_calls", 0),
+            "max_artifacts": budget.get("max_artifacts", 0),
+        },
+        evidence={
+            "context_pack_id": result.get("context_pack_id"),
+            "policy_ref": CONTEXT_BUDGET_POLICY_REF,
+            "max_action_risk": budget.get("max_action_risk"),
+            "autonomy_ceiling": budget.get("autonomy_ceiling"),
         },
     )
 

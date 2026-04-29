@@ -97,6 +97,11 @@ def test_context_pack_is_task_scoped_and_warned():
     assert pack["retrieval_scores"][0]["score"] > 0
     assert "Use Cortex memory only within the current task scope." in pack["warnings"]
     assert "policy_context_template_compact_scope_v1" in pack["context_policy_refs"]
+    assert "policy_context_pack_budget_v1" in pack["budget"]["policy_refs"]
+    assert pack["budget"]["max_prompt_tokens"] == 1600
+    assert pack["budget"]["estimated_prompt_tokens"] <= 1600
+    assert pack["budget"]["max_action_risk"] == "low"
+    assert pack["budget"]["autonomy_ceiling"] == "assistive"
     assert "template_research_synthesis_v1" in pack["context_policy_refs"]
     assert "skill_research_synthesis_v1" in pack["relevant_skills"]
     assert pack["evidence_refs"]
@@ -128,6 +133,42 @@ def test_context_pack_template_changes_debugging_next_steps():
     assert len(pack["relevant_memories"]) <= 5
     assert [lesson["lesson_id"] for lesson in pack["relevant_self_lessons"]] == ["lesson_044"]
     assert "task_332_failure" in pack["evidence_refs"]
+
+
+def test_context_pack_budget_caps_requested_operating_envelope():
+    server = default_server()
+
+    response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 35,
+            "method": "tools/call",
+            "params": {
+                "name": "memory.get_context_pack",
+                "arguments": {
+                    "goal": "continue fixing onboarding auth bug",
+                    "limit": 20,
+                    "max_prompt_tokens": 999999,
+                    "max_wall_clock_ms": 99999999,
+                    "max_tool_calls": 999,
+                    "max_artifacts": 999,
+                    "max_action_risk": "high",
+                    "autonomy_ceiling": "bounded_autonomy",
+                },
+            },
+        }
+    )
+
+    budget = response["result"]["budget"]
+    assert budget["max_prompt_tokens"] == 1800
+    assert budget["max_wall_clock_ms"] == 900000
+    assert budget["max_tool_calls"] == 8
+    assert budget["max_artifacts"] == 3
+    assert budget["memory_budget"] == 5
+    assert budget["self_lesson_budget"] == 2
+    assert budget["max_action_risk"] == "medium"
+    assert budget["autonomy_ceiling"] == "assistive"
+    assert budget["estimated_prompt_tokens"] <= budget["max_prompt_tokens"]
 
 
 def test_context_pack_excludes_revoked_self_lessons():

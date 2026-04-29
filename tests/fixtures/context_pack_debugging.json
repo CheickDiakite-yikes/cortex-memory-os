@@ -2,6 +2,18 @@
   "context_pack_id": "ctx_001",
   "goal": "Continue fixing onboarding bug",
   "active_project": "web_app",
+  "budget": {
+    "max_prompt_tokens": 1800,
+    "estimated_prompt_tokens": 86,
+    "max_wall_clock_ms": 900000,
+    "max_tool_calls": 8,
+    "max_artifacts": 3,
+    "memory_budget": 5,
+    "self_lesson_budget": 2,
+    "max_action_risk": "medium",
+    "autonomy_ceiling": "assistive",
+    "policy_refs": ["policy_context_pack_budget_v1"]
+  },
   "relevant_files": ["src/auth/callback.ts", "src/pages/onboarding.tsx"],
   "recent_events": [
     "User reproduced bug in Chrome",
@@ -19,4 +31,3 @@
   "evidence_refs": ["ev_terminal_11", "ev_browser_22"],
   "recommended_next_steps": ["Inspect callback route", "Check env redirect URI", "Run local login flow"]
 }
-

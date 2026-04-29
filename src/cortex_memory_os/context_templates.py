@@ -6,7 +6,7 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from cortex_memory_os.contracts import MemoryStatus, SelfLesson
+from cortex_memory_os.contracts import ActionRisk, ExecutionMode, MemoryStatus, SelfLesson
 from cortex_memory_os.retrieval import RetrievalScope, self_lesson_scope_allowed
 
 CONTEXT_TEMPLATE_POLICY_REF = "policy_context_template_compact_scope_v1"
@@ -36,6 +36,12 @@ class ContextPackTemplate(BaseModel):
     memory_lanes: tuple[ContextMemoryLane, ...] = Field(min_length=1)
     max_memories: int = Field(ge=1, le=8)
     max_self_lessons: int = Field(default=2, ge=0, le=3)
+    max_prompt_tokens: int = Field(default=1200, ge=256, le=8000)
+    max_wall_clock_ms: int = Field(default=300_000, ge=1000, le=3_600_000)
+    max_tool_calls: int = Field(default=4, ge=0, le=20)
+    max_artifacts: int = Field(default=1, ge=0, le=10)
+    max_action_risk: ActionRisk = ActionRisk.LOW
+    autonomy_ceiling: ExecutionMode = ExecutionMode.ASSISTIVE
     suggested_skills: tuple[str, ...] = ()
     warnings: tuple[str, ...] = Field(min_length=1)
     recommended_next_steps: tuple[str, ...] = Field(min_length=1)
@@ -62,6 +68,13 @@ class ContextPackTemplate(BaseModel):
         )
         if any(phrase in joined for phrase in forbidden):
             raise ValueError("context templates cannot widen scope or request secrets")
+        if self.max_action_risk in {ActionRisk.HIGH, ActionRisk.CRITICAL}:
+            raise ValueError("context templates cannot authorize high or critical risk")
+        if self.autonomy_ceiling in {
+            ExecutionMode.BOUNDED_AUTONOMY,
+            ExecutionMode.RECURRING_AUTOMATION,
+        }:
+            raise ValueError("context templates cannot grant autonomous execution")
         return self
 
 
@@ -79,6 +92,11 @@ def default_context_pack_templates() -> tuple[ContextPackTemplate, ...]:
                 ContextMemoryLane.POLICY_WARNING,
             ),
             max_memories=5,
+            max_prompt_tokens=1800,
+            max_wall_clock_ms=900_000,
+            max_tool_calls=8,
+            max_artifacts=3,
+            max_action_risk=ActionRisk.MEDIUM,
             suggested_skills=("skill_frontend_debugging_v2",),
             warnings=(
                 "Use Cortex memory only within the current task scope.",
@@ -102,6 +120,10 @@ def default_context_pack_templates() -> tuple[ContextPackTemplate, ...]:
                 ContextMemoryLane.POLICY_WARNING,
             ),
             max_memories=4,
+            max_prompt_tokens=1600,
+            max_wall_clock_ms=1_200_000,
+            max_tool_calls=5,
+            max_artifacts=2,
             suggested_skills=("skill_research_synthesis_v1",),
             warnings=(
                 "Use Cortex memory only within the current task scope.",
@@ -123,6 +145,10 @@ def default_context_pack_templates() -> tuple[ContextPackTemplate, ...]:
                 ContextMemoryLane.POLICY_WARNING,
             ),
             max_memories=3,
+            max_prompt_tokens=1000,
+            max_wall_clock_ms=300_000,
+            max_tool_calls=3,
+            max_artifacts=1,
             warnings=(
                 "Use Cortex memory only within the current task scope.",
                 "Ask for approval before external effects.",

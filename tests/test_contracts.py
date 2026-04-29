@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from cortex_memory_os.contracts import (
     ActionRisk,
     AuditEvent,
+    ContextBudget,
     ContextPack,
     EvidenceRecord,
     EvidenceType,
@@ -189,6 +190,29 @@ def test_context_pack_cannot_echo_prompt_injection_warning():
 
     with pytest.raises(ValidationError, match="cannot echo prompt-injection"):
         ContextPack.model_validate(payload)
+
+
+def test_context_pack_budget_stays_inside_safe_bounds():
+    payload = load_json(FIXTURES / "context_pack_debugging.json")
+    pack = ContextPack.model_validate(payload)
+
+    assert pack.budget.max_action_risk == ActionRisk.MEDIUM
+    assert pack.budget.autonomy_ceiling == ExecutionMode.ASSISTIVE
+
+    payload["budget"]["memory_budget"] = 0
+    with pytest.raises(ValidationError, match="exceeds memory budget"):
+        ContextPack.model_validate(payload)
+
+
+def test_context_budget_rejects_overflow_high_risk_and_autonomy():
+    with pytest.raises(ValidationError, match="estimated context tokens"):
+        ContextBudget(max_prompt_tokens=10, estimated_prompt_tokens=11)
+
+    with pytest.raises(ValidationError, match="high or critical"):
+        ContextBudget(max_action_risk=ActionRisk.HIGH)
+
+    with pytest.raises(ValidationError, match="autonomous execution"):
+        ContextBudget(autonomy_ceiling=ExecutionMode.BOUNDED_AUTONOMY)
 
 
 def test_scene_end_cannot_precede_start():

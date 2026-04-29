@@ -15,6 +15,8 @@ Templates define:
 - memory lanes;
 - maximum memory count;
 - maximum self-lesson count;
+- token, time, tool-call, and artifact budgets;
+- maximum action risk and autonomy ceiling;
 - suggested skills;
 - warnings;
 - recommended next steps;
@@ -25,11 +27,11 @@ is still enforced separately by the retrieval policy.
 
 ## MVP Templates
 
-| Template | Task Type | Memory Budget | Primary Lanes |
-| --- | --- | --- | --- |
-| `template_coding_debugging_v1` | coding/debugging | 5 | project, recent, procedural, self-lesson, policy |
-| `template_research_synthesis_v1` | research/synthesis | 4 | project, procedural, self-lesson, policy |
-| `template_general_v1` | general | 3 | project, recent, policy |
+| Template | Task Type | Memory Budget | Token Budget | Tool / Artifact Budget | Risk / Autonomy |
+| --- | --- | --- | --- | --- | --- |
+| `template_coding_debugging_v1` | coding/debugging | 5 | 1800 | 8 tools / 3 artifacts | medium / assistive |
+| `template_research_synthesis_v1` | research/synthesis | 4 | 1600 | 5 tools / 2 artifacts | low / assistive |
+| `template_general_v1` | general | 3 | 1000 | 3 tools / 1 artifact | low / assistive |
 
 ## Safety Rules
 
@@ -43,6 +45,29 @@ Templates must not:
 
 Templates should keep warnings stable and plain so they can be rendered directly
 to agent context without becoming another prompt-injection channel.
+
+## Budget Envelope
+
+`CONTEXT-BUDGET-001` makes every gateway context pack carry a `budget` object.
+This object is metadata for the receiving agent and UI; it is not permission to
+act outside existing policy.
+
+The budget records:
+
+- maximum prompt tokens and estimated prompt tokens;
+- wall-clock time budget;
+- tool-call budget;
+- artifact budget;
+- memory and self-lesson lane budgets;
+- maximum action risk;
+- autonomy ceiling;
+- budget policy refs.
+
+Requested budgets can only narrow the selected template. If an agent asks for a
+higher token, time, tool, artifact, risk, or autonomy budget than the template
+allows, Cortex returns the template ceiling. Context-pack budgets cannot
+authorize high-risk or critical actions, and they cannot grant bounded autonomy
+or recurring automation.
 
 ## Self-Lesson Lane
 
@@ -77,6 +102,14 @@ instructions or user preferences.
 - requested limits cannot exceed the template memory budget;
 - template text cannot widen scope or request secrets;
 - gateway context packs include template policy refs and suggested skills.
+
+`CONTEXT-BUDGET-001` verifies:
+
+- gateway context packs expose token, time, tool-call, artifact, memory,
+  self-lesson, risk, and autonomy budget metadata;
+- requested budgets cannot exceed selected-template ceilings;
+- estimated prompt tokens cannot exceed the prompt budget;
+- high-risk, critical-risk, and autonomous budgets are rejected by the contract.
 
 `CONTEXT-PACK-SELF-LESSON-001` verifies:
 

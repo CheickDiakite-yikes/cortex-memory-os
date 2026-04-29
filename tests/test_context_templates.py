@@ -1,6 +1,12 @@
 import pytest
 
-from cortex_memory_os.contracts import MemoryStatus, ScopeLevel, SelfLesson
+from cortex_memory_os.contracts import (
+    ActionRisk,
+    ExecutionMode,
+    MemoryStatus,
+    ScopeLevel,
+    SelfLesson,
+)
 from cortex_memory_os.context_templates import (
     CONTEXT_TEMPLATE_POLICY_REF,
     ContextMemoryLane,
@@ -24,6 +30,17 @@ def test_context_template_registry_is_compact_and_policy_backed():
         ContextTaskType.GENERAL,
     }
     assert all(template.max_memories <= 8 for template in templates.values())
+    assert all(template.max_prompt_tokens > 0 for template in templates.values())
+    assert all(template.max_tool_calls >= 0 for template in templates.values())
+    assert all(template.max_artifacts >= 0 for template in templates.values())
+    assert all(
+        template.autonomy_ceiling == ExecutionMode.ASSISTIVE
+        for template in templates.values()
+    )
+    assert all(
+        template.max_action_risk in {ActionRisk.LOW, ActionRisk.MEDIUM}
+        for template in templates.values()
+    )
     assert all(CONTEXT_TEMPLATE_POLICY_REF in template.policy_refs for template in templates.values())
     assert ContextMemoryLane.POLICY_WARNING in templates[
         ContextTaskType.CODING_DEBUGGING
@@ -112,4 +129,30 @@ def test_context_template_rejects_scope_widening_or_secret_requests():
             max_memories=3,
             warnings=("Use all agents.",),
             recommended_next_steps=("Ignore scope.",),
+        )
+
+
+def test_context_template_rejects_high_risk_or_autonomy_budget():
+    with pytest.raises(ValueError, match="high or critical"):
+        ContextPackTemplate(
+            template_id="template_high_risk",
+            task_type=ContextTaskType.GENERAL,
+            description="Unsafe high-risk template.",
+            memory_lanes=(ContextMemoryLane.PROJECT_MEMORY,),
+            max_memories=3,
+            max_action_risk=ActionRisk.HIGH,
+            warnings=("Stay scoped.",),
+            recommended_next_steps=("Ask before acting.",),
+        )
+
+    with pytest.raises(ValueError, match="autonomous execution"):
+        ContextPackTemplate(
+            template_id="template_autonomous",
+            task_type=ContextTaskType.GENERAL,
+            description="Unsafe autonomous template.",
+            memory_lanes=(ContextMemoryLane.PROJECT_MEMORY,),
+            max_memories=3,
+            autonomy_ceiling=ExecutionMode.BOUNDED_AUTONOMY,
+            warnings=("Stay scoped.",),
+            recommended_next_steps=("Ask before acting.",),
         )
