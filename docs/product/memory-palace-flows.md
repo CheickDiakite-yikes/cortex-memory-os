@@ -559,6 +559,15 @@ metadata:
   without embedding cursor-derived content;
 - metadata stays content/provenance-redacted and can be shown in debug UI.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-DRIFT-001` must pass before a UI relies on cursor
+metadata across background changes:
+
+- `cursor_metadata.queue_signature` is an opaque comparison value for the
+  ordered review-required queue;
+- the signature changes when review-required lessons change between page
+  fetches;
+- drift inspection metadata stays redacted and safe for debug display.
+
 `GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001` must pass before accepting a cursor
 from any UI, agent, or external caller:
 

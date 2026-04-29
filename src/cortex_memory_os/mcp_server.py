@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from dataclasses import dataclass, field
@@ -78,6 +79,9 @@ SELF_LESSON_REVIEW_QUEUE_ORDERING = (
     "last_validated_missing_first_oldest_first_lesson_id_asc"
 )
 SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX = "self_lesson_review_queue_v1"
+SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION = (
+    "self_lesson_review_queue_signature_v1"
+)
 
 
 class JsonRpcError(ValueError):
@@ -542,12 +546,17 @@ class CortexMCPServer:
                 if has_more
                 else None
             )
+            queue_signature = summarize_self_lesson_review_queue_signature(
+                all_review_lessons
+            )
             cursor_metadata = summarize_self_lesson_review_queue_cursor_metadata(
                 cursor=cursor,
                 next_cursor=next_cursor,
                 page_start=page_start,
                 page_end=returned_end,
                 has_more=has_more,
+                total_review_required_count=len(all_review_lessons),
+                queue_signature=queue_signature,
             )
             lesson_items = [
                 serialize_self_lesson_list_item(
@@ -1362,21 +1371,53 @@ def summarize_self_lesson_review_queue_cursor_metadata(
     page_start: int,
     page_end: int,
     has_more: bool,
+    total_review_required_count: int,
+    queue_signature: str,
 ) -> dict[str, Any]:
     return {
         "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
+        "queue_signature_version": SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION,
+        "queue_signature": queue_signature,
         "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
         "current_cursor_present": cursor is not None,
         "next_cursor_present": next_cursor is not None,
+        "total_review_required_count": total_review_required_count,
         "current_offset": page_start,
         "next_offset": page_end if has_more else None,
         "page_start": page_start,
         "page_end": page_end,
         "has_more": has_more,
         "stable_when_ordering_unchanged": True,
+        "drift_compare_key": "queue_signature",
+        "drift_detection_supported": True,
+        "signature_inputs_redacted": True,
         "content_redacted": True,
         "provenance_redacted": True,
     }
+
+
+def summarize_self_lesson_review_queue_signature(lessons: list[SelfLesson]) -> str:
+    payload = [
+        {
+            "lesson_id": lesson.lesson_id,
+            "last_validated": (
+                lesson.last_validated.isoformat()
+                if lesson.last_validated
+                else None
+            ),
+            "scope": lesson.scope.value,
+            "status": lesson.status.value,
+        }
+        for lesson in lessons
+    ]
+    digest = hashlib.sha256(
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    return f"sha256:{digest[:16]}"
 
 
 def order_self_lesson_review_queue(lessons: list[SelfLesson]) -> list[SelfLesson]:

@@ -6,7 +6,7 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-REVIEW-QUEUE-CURSOR-DRIFT-001 | Add cursor drift inspection contract | Codex | Contract, tests, benchmark case | Cursor responses should make queue ordering drift inspectable when review-required lessons change between pages. |
+| GATEWAY-REVIEW-QUEUE-CURSOR-REFRESH-HINT-001 | Add cursor drift refresh hint | Codex | Contract, tests, benchmark case | Cursor metadata should guide UIs to refresh from the first page when signatures drift. |
 
 ## Next
 
@@ -111,6 +111,7 @@ Last updated: 2026-04-29
 | GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001 | Add redacted invalid cursor handling | Codex | `uv run pytest` -> 170 passed, `uv run cortex-bench` -> 82/82 passed, `uv run cortex-mcp --smoke` | Malformed review queue cursors fail with a fixed non-leaky error. |
 | GATEWAY-REVIEW-QUEUE-CURSOR-EXHAUSTED-001 | Add exhausted cursor empty page contract | Codex | `uv run pytest` -> 171 passed, `uv run cortex-bench` -> 83/83 passed, `uv run cortex-mcp --smoke` | Exhausted review queue cursors return an empty redacted page with no next cursor. |
 | GATEWAY-REVIEW-QUEUE-CURSOR-STABILITY-001 | Add stable cursor metadata contract | Codex | `uv run pytest` -> 172 passed, `uv run cortex-bench` -> 84/84 passed, `uv run cortex-mcp --smoke` | Cursor metadata stays stable when queue ordering has not changed. |
+| GATEWAY-REVIEW-QUEUE-CURSOR-DRIFT-001 | Add cursor drift inspection contract | Codex | `uv run pytest` -> 173 passed, `uv run cortex-bench` -> 85/85 passed, `uv run cortex-mcp --smoke` | Cursor responses make queue ordering drift inspectable when review-required lessons change between pages. |
 
 ## Dropped
 

@@ -375,6 +375,15 @@ one project, agent, or session from silently shaping another.
 - cursor metadata remains redacted and never carries lesson content or scoped
   provenance.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-DRIFT-001` verifies:
+
+- cursor metadata includes an opaque queue signature for client-side drift
+  comparison;
+- the queue signature changes when review-required lessons change between page
+  fetches;
+- drift inspection metadata stays redacted and does not expose lesson content,
+  learned-from refs, rollback text, or scoped provenance.
+
 `GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001` verifies:
 
 - malformed review queue cursors fail with a fixed redacted error;

@@ -100,6 +100,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Review queue invalid cursor handling | `uv run cortex-bench` | 82/82 passed | `benchmarks/runs/bench_20260429T020924Z.json` | Next benchmark: exhausted cursor empty page. |
 | 2026-04-29 | Review queue exhausted cursor | `uv run cortex-bench` | 83/83 passed | `benchmarks/runs/bench_20260429T021418Z.json` | Next benchmark: cursor stability metadata. |
 | 2026-04-29 | Review queue cursor metadata stability | `uv run cortex-bench` | 84/84 passed | `benchmarks/runs/bench_20260429T021711Z.json` | Next benchmark: cursor drift inspection. |
+| 2026-04-29 | Review queue cursor drift inspection | `uv run cortex-bench` | 85/85 passed | `benchmarks/runs/bench_20260429T022020Z.json` | Next benchmark: cursor drift refresh hint. |
 
 ## First Runnable Harness Requirements
 

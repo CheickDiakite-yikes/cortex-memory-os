@@ -59,6 +59,7 @@ from cortex_memory_os.debug_trace import DebugTraceStatus, make_debug_trace
 from cortex_memory_os.mcp_server import (
     SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
     SELF_LESSON_REVIEW_QUEUE_ORDERING,
+    SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION,
     CortexMCPServer,
     JsonRpcError,
     default_server,
@@ -202,6 +203,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_paging_cursor,
         case_gateway_review_queue_exhausted_cursor,
         case_gateway_review_queue_cursor_metadata_stability,
+        case_gateway_review_queue_cursor_drift_inspection,
         case_gateway_review_queue_invalid_cursor,
         case_gateway_self_lesson_review_flow,
         case_self_lesson_review_flow_safety_summary,
@@ -2883,6 +2885,8 @@ def case_gateway_review_queue_cursor_metadata_stability() -> BenchmarkCaseResult
 
     first_metadata = first_page.get("cursor_metadata", {})
     second_metadata = second_page.get("cursor_metadata", {})
+    first_signature = first_metadata.get("queue_signature")
+    second_signature = second_metadata.get("queue_signature")
     serialized_metadata = json.dumps(
         [first_metadata, second_metadata],
         sort_keys=True,
@@ -2900,33 +2904,48 @@ def case_gateway_review_queue_cursor_metadata_stability() -> BenchmarkCaseResult
         first_page.get("next_cursor") == first_page_again.get("next_cursor")
         and first_metadata == first_page_again.get("cursor_metadata")
         and second_metadata == second_page_again.get("cursor_metadata")
+        and first_signature == second_signature
+        and isinstance(first_signature, str)
+        and first_signature.startswith("sha256:")
         and first_metadata
         == {
             "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
+            "queue_signature_version": SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION,
+            "queue_signature": first_signature,
             "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
             "current_cursor_present": False,
             "next_cursor_present": True,
+            "total_review_required_count": 4,
             "current_offset": 0,
             "next_offset": 2,
             "page_start": 0,
             "page_end": 2,
             "has_more": True,
             "stable_when_ordering_unchanged": True,
+            "drift_compare_key": "queue_signature",
+            "drift_detection_supported": True,
+            "signature_inputs_redacted": True,
             "content_redacted": True,
             "provenance_redacted": True,
         }
         and second_metadata
         == {
             "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
+            "queue_signature_version": SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION,
+            "queue_signature": second_signature,
             "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
             "current_cursor_present": True,
             "next_cursor_present": False,
+            "total_review_required_count": 4,
             "current_offset": 2,
             "next_offset": None,
             "page_start": 2,
             "page_end": 4,
             "has_more": False,
             "stable_when_ordering_unchanged": True,
+            "drift_compare_key": "queue_signature",
+            "drift_detection_supported": True,
+            "signature_inputs_redacted": True,
             "content_redacted": True,
             "provenance_redacted": True,
         }
@@ -2958,6 +2977,117 @@ def case_gateway_review_queue_cursor_metadata_stability() -> BenchmarkCaseResult
         evidence={
             "first_metadata": first_metadata,
             "second_metadata": second_metadata,
+        },
+    )
+
+
+def case_gateway_review_queue_cursor_drift_inspection() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+
+        def stale_lesson(
+            lesson_id: str,
+            ref: str,
+            last_validated: date | None,
+        ) -> SelfLesson:
+            return base.model_copy(
+                update={
+                    "lesson_id": lesson_id,
+                    "scope": ScopeLevel.PROJECT_SPECIFIC,
+                    "learned_from": [ref, f"task_{lesson_id}"],
+                    "last_validated": last_validated,
+                }
+            )
+
+        for lesson in (
+            stale_lesson(
+                "lesson_project_stale_newer",
+                "project:newer",
+                date(2025, 3, 1),
+            ),
+            stale_lesson(
+                "lesson_project_stale_old_b",
+                "project:old-b",
+                date(2024, 1, 1),
+            ),
+            stale_lesson(
+                "lesson_project_missing_validation",
+                "project:missing",
+                None,
+            ),
+            stale_lesson(
+                "lesson_project_stale_old_a",
+                "project:old-a",
+                date(2024, 1, 1),
+            ),
+        ):
+            store.add_self_lesson(lesson)
+
+        server = CortexMCPServer(store=store)
+        first_page = server.call_tool("self_lesson.review_queue", {"limit": 2})
+        store.add_self_lesson(
+            stale_lesson("lesson_project_added_missing", "project:added", None)
+        )
+        drifted_page = server.call_tool(
+            "self_lesson.review_queue",
+            {"limit": 2, "cursor": first_page.get("next_cursor")},
+        )
+
+    first_metadata = first_page.get("cursor_metadata", {})
+    drifted_metadata = drifted_page.get("cursor_metadata", {})
+    serialized_metadata = json.dumps(drifted_metadata, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        first_metadata.get("queue_signature")
+        != drifted_metadata.get("queue_signature")
+        and isinstance(drifted_metadata.get("queue_signature"), str)
+        and drifted_metadata.get("queue_signature", "").startswith("sha256:")
+        and drifted_metadata.get("queue_signature_version")
+        == SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION
+        and drifted_metadata.get("drift_compare_key") == "queue_signature"
+        and drifted_metadata.get("drift_detection_supported") is True
+        and drifted_metadata.get("signature_inputs_redacted") is True
+        and first_metadata.get("total_review_required_count") == 4
+        and drifted_metadata.get("total_review_required_count") == 5
+        and drifted_metadata.get("current_cursor_present") is True
+        and drifted_metadata.get("current_offset") == 2
+        and "project:" not in serialized_metadata
+        and "task_" not in serialized_metadata
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-DRIFT-001" in docs_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-DRIFT-001" in product_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-DRIFT-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-REVIEW-QUEUE-CURSOR-DRIFT-001/signature_change",
+        suite="GATEWAY-REVIEW-QUEUE-CURSOR-DRIFT-001",
+        passed=passed,
+        summary=(
+            "Review queue cursor metadata exposes an opaque signature so "
+            "queue drift is inspectable between pages."
+        ),
+        metrics={
+            "signature_changed": int(
+                first_metadata.get("queue_signature")
+                != drifted_metadata.get("queue_signature")
+            ),
+            "first_total": first_metadata.get("total_review_required_count", -1),
+            "drifted_total": drifted_metadata.get("total_review_required_count", -1),
+        },
+        evidence={
+            "first_signature": first_metadata.get("queue_signature"),
+            "drifted_signature": drifted_metadata.get("queue_signature"),
+            "drift_compare_key": drifted_metadata.get("drift_compare_key"),
         },
     )
 

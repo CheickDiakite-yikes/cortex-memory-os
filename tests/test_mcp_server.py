@@ -12,6 +12,7 @@ from cortex_memory_os.fixtures import load_json
 from cortex_memory_os.mcp_server import (
     SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
     SELF_LESSON_REVIEW_QUEUE_ORDERING,
+    SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION,
     CortexMCPServer,
     default_server,
     encode_self_lesson_review_queue_cursor,
@@ -1828,37 +1829,109 @@ def test_self_lesson_review_queue_cursor_metadata_is_stable(tmp_path):
     assert first_page["next_cursor"] == first_page_again["next_cursor"]
     assert first_page["cursor_metadata"] == first_page_again["cursor_metadata"]
     assert second_page["cursor_metadata"] == second_page_again["cursor_metadata"]
+    first_signature = first_page["cursor_metadata"]["queue_signature"]
+    second_signature = second_page["cursor_metadata"]["queue_signature"]
+    assert first_signature == second_signature
+    assert first_signature.startswith("sha256:")
     assert first_page["cursor_metadata"] == {
         "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
+        "queue_signature_version": SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION,
+        "queue_signature": first_signature,
         "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
         "current_cursor_present": False,
         "next_cursor_present": True,
+        "total_review_required_count": 4,
         "current_offset": 0,
         "next_offset": 2,
         "page_start": 0,
         "page_end": 2,
         "has_more": True,
         "stable_when_ordering_unchanged": True,
+        "drift_compare_key": "queue_signature",
+        "drift_detection_supported": True,
+        "signature_inputs_redacted": True,
         "content_redacted": True,
         "provenance_redacted": True,
     }
     assert second_page["cursor_metadata"] == {
         "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
+        "queue_signature_version": SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION,
+        "queue_signature": second_signature,
         "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
         "current_cursor_present": True,
         "next_cursor_present": False,
+        "total_review_required_count": 4,
         "current_offset": 2,
         "next_offset": None,
         "page_start": 2,
         "page_end": 4,
         "has_more": False,
         "stable_when_ordering_unchanged": True,
+        "drift_compare_key": "queue_signature",
+        "drift_detection_supported": True,
+        "signature_inputs_redacted": True,
         "content_redacted": True,
         "provenance_redacted": True,
     }
     rendered_metadata = json.dumps(
         [first_page["cursor_metadata"], second_page["cursor_metadata"]]
     )
+    assert "project:" not in rendered_metadata
+    assert "task_" not in rendered_metadata
+    assert "Before editing auth" not in rendered_metadata
+
+
+def test_self_lesson_review_queue_cursor_metadata_exposes_drift_key(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+
+    def stale_lesson(
+        lesson_id: str,
+        ref: str,
+        last_validated: date | None,
+    ) -> SelfLesson:
+        return active.model_copy(
+            update={
+                "lesson_id": lesson_id,
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": [ref, f"task_{lesson_id}"],
+                "last_validated": last_validated,
+            }
+        )
+
+    for lesson in (
+        stale_lesson("lesson_project_stale_newer", "project:newer", date(2025, 3, 1)),
+        stale_lesson("lesson_project_stale_old_b", "project:old-b", date(2024, 1, 1)),
+        stale_lesson("lesson_project_missing_validation", "project:missing", None),
+        stale_lesson("lesson_project_stale_old_a", "project:old-a", date(2024, 1, 1)),
+    ):
+        store.add_self_lesson(lesson)
+    server = CortexMCPServer(store=store)
+
+    first_page = server.call_tool("self_lesson.review_queue", {"limit": 2})
+    store.add_self_lesson(
+        stale_lesson("lesson_project_added_missing", "project:added", None)
+    )
+    drifted_page = server.call_tool(
+        "self_lesson.review_queue",
+        {"limit": 2, "cursor": first_page["next_cursor"]},
+    )
+
+    first_metadata = first_page["cursor_metadata"]
+    drifted_metadata = drifted_page["cursor_metadata"]
+    assert first_metadata["queue_signature"] != drifted_metadata["queue_signature"]
+    assert drifted_metadata["queue_signature"].startswith("sha256:")
+    assert drifted_metadata["queue_signature_version"] == (
+        SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION
+    )
+    assert drifted_metadata["drift_compare_key"] == "queue_signature"
+    assert drifted_metadata["drift_detection_supported"] is True
+    assert drifted_metadata["signature_inputs_redacted"] is True
+    assert first_metadata["total_review_required_count"] == 4
+    assert drifted_metadata["total_review_required_count"] == 5
+    assert drifted_metadata["current_cursor_present"] is True
+    assert drifted_metadata["current_offset"] == 2
+    rendered_metadata = json.dumps(drifted_metadata)
     assert "project:" not in rendered_metadata
     assert "task_" not in rendered_metadata
     assert "Before editing auth" not in rendered_metadata
