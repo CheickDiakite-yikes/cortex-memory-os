@@ -94,6 +94,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONREVIEW-STABILITY-001` | Review queue signatures ignore self-lessons that are not review-required. | Current, global, candidate, or revoked lessons change review-queue signatures or leak through signature metadata. |
 | `GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-MEMBERSHIP-SENSITIVE-001` | Review queue signatures change when review-required membership changes. | Lessons enter or exit the review-required set without signature drift, or removed lesson metadata leaks through signatures. |
 | `GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-CONTENT-INDEPENDENT-001` | Review queue signatures ignore lesson content/provenance when membership and ordering stay unchanged. | Content edits cause false queue drift, or hidden prose/provenance leaks through signature metadata. |
+| `PRODUCT-GOAL-COVERAGE-001` | Product docs and benchmarks keep the original Cortex brain-loop and pillars visible. | Implementation drifts into a narrow recorder/search tool, loses pillar ownership, or hides safety/ops contracts. |
 | `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` | Review queue safety summaries expose applied limit, returned count, total review-required count, and truncation state. | Limited queues hide truncation state, count omitted actions, or leak omitted lesson provenance. |
 | `GATEWAY-REVIEW-QUEUE-ORDERING-001` | Review queues sort missing validation dates first, then oldest validation date, then lesson ID before limits. | Queue ordering depends on insertion order, hidden store order, or leaks provenance while exposing order metadata. |
 | `GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001` | Limited review queues expose stable cursors tied to deterministic ordering. | Cursors leak lesson IDs/provenance, repeat cards, or drift from the advertised ordering contract. |
@@ -150,8 +151,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `PRODUCT-GOAL-COVERAGE-001`: Track original Cortex thesis coverage across
-  perception, evidence, memory, skill, gateway, outcome, safety, and ops.
+- `PRODUCT-TRACEABILITY-REPORT-001`: Generate a concise product traceability
+  report from benchmark, task-board, and roadmap state.
 
 Longer-term suites:
 

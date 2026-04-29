@@ -245,6 +245,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_draft_skill_execution_tool,
         case_self_lesson_methods_only_contract,
         case_self_lesson_audit_events,
+        case_product_goal_coverage_contract,
         case_gateway_self_lesson_proposal_tool,
         case_self_lesson_sqlite_persistence,
         case_gateway_self_lesson_promotion_rollback,
@@ -354,6 +355,114 @@ def case_retrieval_scoring() -> BenchmarkCaseResult:
         evidence={
             "ranked_memory_ids": [item.memory.memory_id for item in ranked],
             "deleted_reasons": list(deleted_score.reasons),
+        },
+    )
+
+
+def _missing_terms(text: str, terms: list[str]) -> list[str]:
+    lower_text = text.lower()
+    return [term for term in terms if term.lower() not in lower_text]
+
+
+def case_product_goal_coverage_contract() -> BenchmarkCaseResult:
+    coverage_path = REPO_ROOT / "docs" / "product" / "original-goal-coverage.md"
+    vision_path = REPO_ROOT / "docs" / "product" / "vision.md"
+    blueprint_path = REPO_ROOT / "docs" / "architecture" / "system-blueprint.md"
+    roadmap_path = REPO_ROOT / "docs" / "product" / "build-roadmap.md"
+    plan_path = REPO_ROOT / "docs" / "ops" / "benchmark-plan.md"
+    task_board_path = REPO_ROOT / "docs" / "ops" / "task-board.md"
+
+    docs = {
+        "coverage": coverage_path.read_text(encoding="utf-8"),
+        "vision": vision_path.read_text(encoding="utf-8"),
+        "blueprint": blueprint_path.read_text(encoding="utf-8"),
+        "roadmap": roadmap_path.read_text(encoding="utf-8"),
+        "plan": plan_path.read_text(encoding="utf-8"),
+        "task_board": task_board_path.read_text(encoding="utf-8"),
+    }
+    all_text = "\n".join(docs.values())
+
+    loop_terms = [
+        "Perception",
+        "Evidence",
+        "Memory",
+        "Skill",
+        "Agent Action",
+        "Outcome",
+        "Self-Improvement",
+    ]
+    pillar_terms = [
+        "Shadow Pointer",
+        "Memory Palace",
+        "Skill Forge",
+        "Agent Gateway",
+    ]
+    safety_terms = [
+        "Privacy + Safety Firewall",
+        "prompt-injection",
+        "auditability",
+        "Revocation and deletion",
+        "Robot readiness",
+        "Operating loop",
+    ]
+    proof_terms = [
+        "SHADOW-POINTER-001",
+        "MEMORY-PALACE-001",
+        "SKILL-FORGE-002",
+        "GATEWAY-CTX-001",
+        "SEC-INJECT-001",
+        "MEM-FORGET-001",
+        "ROBOT-SAFE-001",
+    ]
+    milestone_terms = ["v0.1", "v0.2", "v0.3", "v0.4", "v0.5", "v1.0"]
+
+    missing_loop = _missing_terms(docs["coverage"], loop_terms)
+    missing_pillars = _missing_terms(docs["coverage"], pillar_terms)
+    missing_safety = _missing_terms(docs["coverage"], safety_terms)
+    missing_proofs = _missing_terms(docs["coverage"], proof_terms)
+    missing_milestones = _missing_terms(docs["roadmap"], milestone_terms)
+    missing_source_docs = [
+        name
+        for name, text in docs.items()
+        if not text.strip()
+    ]
+    benchmark_id = "PRODUCT-GOAL-COVERAGE-001"
+    passed = (
+        not missing_loop
+        and not missing_pillars
+        and not missing_safety
+        and not missing_proofs
+        and not missing_milestones
+        and not missing_source_docs
+        and benchmark_id in docs["coverage"]
+        and benchmark_id in docs["plan"]
+        and benchmark_id in docs["task_board"]
+        and "screen recording -> summary -> vector DB" in all_text
+        and "Perception -> Evidence -> Memory -> Skill -> Agent Action"
+        in all_text
+    )
+    return BenchmarkCaseResult(
+        case_id="PRODUCT-GOAL-COVERAGE-001/original_thesis_trace",
+        suite="PRODUCT-GOAL-COVERAGE-001",
+        passed=passed,
+        summary=(
+            "Product docs and benchmarks preserve the original Cortex brain-loop, "
+            "pillars, safety controls, and ops trace."
+        ),
+        metrics={
+            "loop_term_count": len(loop_terms) - len(missing_loop),
+            "pillar_term_count": len(pillar_terms) - len(missing_pillars),
+            "safety_term_count": len(safety_terms) - len(missing_safety),
+            "proof_term_count": len(proof_terms) - len(missing_proofs),
+            "milestone_count": len(milestone_terms) - len(missing_milestones),
+        },
+        evidence={
+            "coverage_doc": str(coverage_path.relative_to(REPO_ROOT)),
+            "missing_loop_terms": missing_loop,
+            "missing_pillars": missing_pillars,
+            "missing_safety_terms": missing_safety,
+            "missing_proof_terms": missing_proofs,
+            "missing_milestones": missing_milestones,
         },
     )
 
