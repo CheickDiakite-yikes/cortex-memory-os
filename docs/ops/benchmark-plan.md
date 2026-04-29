@@ -93,6 +93,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-REVIEW-QUEUE-CURSOR-EXHAUSTED-001` | Exhausted review queue cursors return an empty redacted page with no next cursor. | Exhausted cursors return an error, repeat cards, leak provenance, or mark the page as still truncated. |
 | `GATEWAY-REVIEW-QUEUE-CURSOR-STABILITY-001` | Cursor metadata stays stable when queue ordering has not changed. | Repeated calls return drifting metadata, leak content/provenance, or omit version/ordering/offset fields. |
 | `GATEWAY-REVIEW-QUEUE-CURSOR-DRIFT-001` | Cursor metadata exposes an opaque queue signature so ordering drift is inspectable between pages. | Queue changes between page fetches are invisible, signatures leak content/provenance, or signature metadata is missing. |
+| `GATEWAY-REVIEW-QUEUE-CURSOR-REFRESH-HINT-001` | Cursor metadata guides UIs to refresh from the first page when queue signatures drift. | Drift hints are missing, mutating, require external effects, or leak lesson content/provenance. |
 | `GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001` | Malformed review queue cursors fail with a fixed redacted error. | Cursor errors echo attacker-controlled cursor text, provenance, or instruction-like content. |
 | `GATEWAY-SELF-LESSON-REVIEW-FLOW-001` | Gateway returns an exact-ID self-lesson review flow with queue metadata and follow-up tool routes. | Review flow can run from vague search, omits policy refs, or leaks content/provenance. |
 | `SELF-LESSON-REVIEW-FLOW-SAFETY-SUMMARY-001` | Review flows summarize confirmation, mutation, and redaction safety without lesson content. | Safety summary omits mutation confirmation requirements or leaks content/provenance. |
@@ -141,8 +142,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `GATEWAY-REVIEW-QUEUE-CURSOR-REFRESH-HINT-001`: Cursor metadata should guide
-  UIs to refresh from the first page when signatures drift.
+- `GATEWAY-REVIEW-QUEUE-CURSOR-LIMIT-CHANGE-001`: Cursor metadata should make
+  limit changes inspectable when users change page size between requests.
 
 Longer-term suites:
 

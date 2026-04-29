@@ -568,6 +568,15 @@ metadata across background changes:
   fetches;
 - drift inspection metadata stays redacted and safe for debug display.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-REFRESH-HINT-001` must pass before a UI handles
+signature drift:
+
+- `cursor_metadata.drift_refresh_hint` tells the UI to compare
+  `queue_signature`;
+- when signatures differ, the UI should discard the cursor and reload
+  `self_lesson.review_queue` from the first page;
+- the hint is read-only, non-mutating, no-confirmation, and no-external-effects.
+
 `GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001` must pass before accepting a cursor
 from any UI, agent, or external caller:
 

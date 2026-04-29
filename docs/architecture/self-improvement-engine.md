@@ -384,6 +384,14 @@ one project, agent, or session from silently shaping another.
 - drift inspection metadata stays redacted and does not expose lesson content,
   learned-from refs, rollback text, or scoped provenance.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-REFRESH-HINT-001` verifies:
+
+- cursor metadata tells UIs to compare `queue_signature`;
+- if signatures drift, the safe recommended action is to discard the cursor and
+  reload `self_lesson.review_queue` from the first page;
+- the hint is read-only, requires no confirmation, and permits no external
+  effects.
+
 `GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001` verifies:
 
 - malformed review queue cursors fail with a fixed redacted error;

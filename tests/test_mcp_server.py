@@ -1831,6 +1831,21 @@ def test_self_lesson_review_queue_cursor_metadata_is_stable(tmp_path):
     assert second_page["cursor_metadata"] == second_page_again["cursor_metadata"]
     first_signature = first_page["cursor_metadata"]["queue_signature"]
     second_signature = second_page["cursor_metadata"]["queue_signature"]
+    expected_refresh_hint = {
+        "when": "queue_signature_changed",
+        "compare_key": "queue_signature",
+        "recommended_action": "discard_cursor_and_reload_first_page",
+        "reload_tool": "self_lesson.review_queue",
+        "recommended_arguments": {
+            "limit": 2,
+            "cursor": None,
+        },
+        "mutation": False,
+        "requires_confirmation": False,
+        "external_effects_allowed": False,
+        "content_redacted": True,
+        "provenance_redacted": True,
+    }
     assert first_signature == second_signature
     assert first_signature.startswith("sha256:")
     assert first_page["cursor_metadata"] == {
@@ -1840,6 +1855,7 @@ def test_self_lesson_review_queue_cursor_metadata_is_stable(tmp_path):
         "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
         "current_cursor_present": False,
         "next_cursor_present": True,
+        "applied_limit": 2,
         "total_review_required_count": 4,
         "current_offset": 0,
         "next_offset": 2,
@@ -1849,6 +1865,7 @@ def test_self_lesson_review_queue_cursor_metadata_is_stable(tmp_path):
         "stable_when_ordering_unchanged": True,
         "drift_compare_key": "queue_signature",
         "drift_detection_supported": True,
+        "drift_refresh_hint": expected_refresh_hint,
         "signature_inputs_redacted": True,
         "content_redacted": True,
         "provenance_redacted": True,
@@ -1860,6 +1877,7 @@ def test_self_lesson_review_queue_cursor_metadata_is_stable(tmp_path):
         "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
         "current_cursor_present": True,
         "next_cursor_present": False,
+        "applied_limit": 2,
         "total_review_required_count": 4,
         "current_offset": 2,
         "next_offset": None,
@@ -1869,6 +1887,7 @@ def test_self_lesson_review_queue_cursor_metadata_is_stable(tmp_path):
         "stable_when_ordering_unchanged": True,
         "drift_compare_key": "queue_signature",
         "drift_detection_supported": True,
+        "drift_refresh_hint": expected_refresh_hint,
         "signature_inputs_redacted": True,
         "content_redacted": True,
         "provenance_redacted": True,
@@ -1926,6 +1945,9 @@ def test_self_lesson_review_queue_cursor_metadata_exposes_drift_key(tmp_path):
     )
     assert drifted_metadata["drift_compare_key"] == "queue_signature"
     assert drifted_metadata["drift_detection_supported"] is True
+    assert drifted_metadata["drift_refresh_hint"]["recommended_action"] == (
+        "discard_cursor_and_reload_first_page"
+    )
     assert drifted_metadata["signature_inputs_redacted"] is True
     assert first_metadata["total_review_required_count"] == 4
     assert drifted_metadata["total_review_required_count"] == 5
@@ -1935,6 +1957,44 @@ def test_self_lesson_review_queue_cursor_metadata_exposes_drift_key(tmp_path):
     assert "project:" not in rendered_metadata
     assert "task_" not in rendered_metadata
     assert "Before editing auth" not in rendered_metadata
+
+
+def test_self_lesson_review_queue_cursor_metadata_refresh_hint_is_safe(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    stale = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_stale_refresh_hint",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_stale_refresh_hint"],
+            "last_validated": date(2025, 1, 1),
+        }
+    )
+    store.add_self_lesson(stale)
+    server = CortexMCPServer(store=store)
+
+    page = server.call_tool("self_lesson.review_queue", {"limit": 2})
+
+    hint = page["cursor_metadata"]["drift_refresh_hint"]
+    assert hint == {
+        "when": "queue_signature_changed",
+        "compare_key": "queue_signature",
+        "recommended_action": "discard_cursor_and_reload_first_page",
+        "reload_tool": "self_lesson.review_queue",
+        "recommended_arguments": {
+            "limit": 2,
+            "cursor": None,
+        },
+        "mutation": False,
+        "requires_confirmation": False,
+        "external_effects_allowed": False,
+        "content_redacted": True,
+        "provenance_redacted": True,
+    }
+    rendered_hint = json.dumps(hint)
+    assert "Before editing auth" not in rendered_hint
+    assert "project:alpha" not in rendered_hint
+    assert "task_project_stale_refresh_hint" not in rendered_hint
 
 
 def test_self_lesson_review_queue_invalid_cursor_error_is_redacted(tmp_path):

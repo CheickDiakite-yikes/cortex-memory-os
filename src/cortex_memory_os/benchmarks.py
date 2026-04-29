@@ -204,6 +204,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_exhausted_cursor,
         case_gateway_review_queue_cursor_metadata_stability,
         case_gateway_review_queue_cursor_drift_inspection,
+        case_gateway_review_queue_cursor_refresh_hint,
         case_gateway_review_queue_invalid_cursor,
         case_gateway_self_lesson_review_flow,
         case_self_lesson_review_flow_safety_summary,
@@ -2887,6 +2888,21 @@ def case_gateway_review_queue_cursor_metadata_stability() -> BenchmarkCaseResult
     second_metadata = second_page.get("cursor_metadata", {})
     first_signature = first_metadata.get("queue_signature")
     second_signature = second_metadata.get("queue_signature")
+    expected_refresh_hint = {
+        "when": "queue_signature_changed",
+        "compare_key": "queue_signature",
+        "recommended_action": "discard_cursor_and_reload_first_page",
+        "reload_tool": "self_lesson.review_queue",
+        "recommended_arguments": {
+            "limit": 2,
+            "cursor": None,
+        },
+        "mutation": False,
+        "requires_confirmation": False,
+        "external_effects_allowed": False,
+        "content_redacted": True,
+        "provenance_redacted": True,
+    }
     serialized_metadata = json.dumps(
         [first_metadata, second_metadata],
         sort_keys=True,
@@ -2915,6 +2931,7 @@ def case_gateway_review_queue_cursor_metadata_stability() -> BenchmarkCaseResult
             "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
             "current_cursor_present": False,
             "next_cursor_present": True,
+            "applied_limit": 2,
             "total_review_required_count": 4,
             "current_offset": 0,
             "next_offset": 2,
@@ -2924,6 +2941,7 @@ def case_gateway_review_queue_cursor_metadata_stability() -> BenchmarkCaseResult
             "stable_when_ordering_unchanged": True,
             "drift_compare_key": "queue_signature",
             "drift_detection_supported": True,
+            "drift_refresh_hint": expected_refresh_hint,
             "signature_inputs_redacted": True,
             "content_redacted": True,
             "provenance_redacted": True,
@@ -2936,6 +2954,7 @@ def case_gateway_review_queue_cursor_metadata_stability() -> BenchmarkCaseResult
             "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
             "current_cursor_present": True,
             "next_cursor_present": False,
+            "applied_limit": 2,
             "total_review_required_count": 4,
             "current_offset": 2,
             "next_offset": None,
@@ -2945,6 +2964,7 @@ def case_gateway_review_queue_cursor_metadata_stability() -> BenchmarkCaseResult
             "stable_when_ordering_unchanged": True,
             "drift_compare_key": "queue_signature",
             "drift_detection_supported": True,
+            "drift_refresh_hint": expected_refresh_hint,
             "signature_inputs_redacted": True,
             "content_redacted": True,
             "provenance_redacted": True,
@@ -3057,6 +3077,10 @@ def case_gateway_review_queue_cursor_drift_inspection() -> BenchmarkCaseResult:
         == SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION
         and drifted_metadata.get("drift_compare_key") == "queue_signature"
         and drifted_metadata.get("drift_detection_supported") is True
+        and drifted_metadata.get("drift_refresh_hint", {}).get(
+            "recommended_action"
+        )
+        == "discard_cursor_and_reload_first_page"
         and drifted_metadata.get("signature_inputs_redacted") is True
         and first_metadata.get("total_review_required_count") == 4
         and drifted_metadata.get("total_review_required_count") == 5
@@ -3088,6 +3112,83 @@ def case_gateway_review_queue_cursor_drift_inspection() -> BenchmarkCaseResult:
             "first_signature": first_metadata.get("queue_signature"),
             "drifted_signature": drifted_metadata.get("queue_signature"),
             "drift_compare_key": drifted_metadata.get("drift_compare_key"),
+        },
+    )
+
+
+def case_gateway_review_queue_cursor_refresh_hint() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        stale = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_stale_refresh_hint",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": [
+                    "project:alpha",
+                    "task_project_stale_refresh_hint",
+                ],
+                "last_validated": date(2025, 1, 1),
+            }
+        )
+        store.add_self_lesson(stale)
+        server = CortexMCPServer(store=store)
+        page = server.call_tool("self_lesson.review_queue", {"limit": 2})
+
+    hint = page.get("cursor_metadata", {}).get("drift_refresh_hint", {})
+    serialized_hint = json.dumps(hint, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        hint
+        == {
+            "when": "queue_signature_changed",
+            "compare_key": "queue_signature",
+            "recommended_action": "discard_cursor_and_reload_first_page",
+            "reload_tool": "self_lesson.review_queue",
+            "recommended_arguments": {
+                "limit": 2,
+                "cursor": None,
+            },
+            "mutation": False,
+            "requires_confirmation": False,
+            "external_effects_allowed": False,
+            "content_redacted": True,
+            "provenance_redacted": True,
+        }
+        and "project:alpha" not in serialized_hint
+        and "task_project_stale_refresh_hint" not in serialized_hint
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-REFRESH-HINT-001" in docs_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-REFRESH-HINT-001" in product_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-REFRESH-HINT-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-REVIEW-QUEUE-CURSOR-REFRESH-HINT-001/safe_hint",
+        suite="GATEWAY-REVIEW-QUEUE-CURSOR-REFRESH-HINT-001",
+        passed=passed,
+        summary=(
+            "Cursor metadata guides UIs to refresh from the first page when "
+            "queue signatures drift."
+        ),
+        metrics={
+            "hint_present": int(bool(hint)),
+            "external_effects_allowed": int(
+                hint.get("external_effects_allowed") is True
+            ),
+            "mutation": int(hint.get("mutation") is True),
+        },
+        evidence={
+            "recommended_action": hint.get("recommended_action"),
+            "reload_tool": hint.get("reload_tool"),
         },
     )
 
