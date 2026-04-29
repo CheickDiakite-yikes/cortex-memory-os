@@ -199,6 +199,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_safety_summary,
         case_gateway_review_queue_empty_safety_summary,
         case_gateway_review_queue_empty_cursor_signature,
+        case_gateway_review_queue_nonempty_cursor_signature,
         case_gateway_review_queue_limit_safety_summary,
         case_gateway_review_queue_ordering,
         case_gateway_review_queue_paging_cursor,
@@ -2498,6 +2499,131 @@ def case_gateway_review_queue_empty_cursor_signature() -> BenchmarkCaseResult:
         evidence={
             "queue_signature_version": metadata.get("queue_signature_version"),
             "signature_subject": metadata.get("signature_subject"),
+        },
+    )
+
+
+def case_gateway_review_queue_nonempty_cursor_signature() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+
+        def stale_lesson(
+            lesson_id: str,
+            ref: str,
+            last_validated: date | None,
+        ) -> SelfLesson:
+            return base.model_copy(
+                update={
+                    "lesson_id": lesson_id,
+                    "scope": ScopeLevel.PROJECT_SPECIFIC,
+                    "learned_from": [ref, f"task_{lesson_id}"],
+                    "last_validated": last_validated,
+                }
+            )
+
+        for lesson in (
+            stale_lesson(
+                "lesson_project_stale_signature_newer",
+                "project:newer",
+                date(2025, 3, 1),
+            ),
+            stale_lesson(
+                "lesson_project_stale_signature_old_b",
+                "project:old-b",
+                date(2024, 1, 1),
+            ),
+            stale_lesson(
+                "lesson_project_missing_signature",
+                "project:missing",
+                None,
+            ),
+            stale_lesson(
+                "lesson_project_stale_signature_old_a",
+                "project:old-a",
+                date(2024, 1, 1),
+            ),
+        ):
+            store.add_self_lesson(lesson)
+
+        server = CortexMCPServer(store=store)
+        first_page = server.call_tool("self_lesson.review_queue", {"limit": 2})
+        second_page = server.call_tool(
+            "self_lesson.review_queue",
+            {"limit": 2, "cursor": first_page.get("next_cursor")},
+        )
+
+    first_metadata = first_page.get("cursor_metadata", {})
+    second_metadata = second_page.get("cursor_metadata", {})
+    serialized_metadata = json.dumps(
+        [first_metadata, second_metadata],
+        sort_keys=True,
+    )
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    signature = first_metadata.get("queue_signature")
+    passed = (
+        first_page.get("count") == 2
+        and second_page.get("count") == 2
+        and first_metadata.get("queue_signature")
+        == second_metadata.get("queue_signature")
+        and isinstance(signature, str)
+        and signature.startswith("sha256:")
+        and first_metadata.get("queue_signature_version")
+        == SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION
+        and first_metadata.get("signature_subject")
+        == "ordered_review_required_self_lessons"
+        and first_metadata.get("empty_queue_signature") is False
+        and first_metadata.get("total_review_required_count") == 4
+        and first_metadata.get("signature_inputs_redacted") is True
+        and first_metadata.get("content_redacted") is True
+        and first_metadata.get("provenance_redacted") is True
+        and second_metadata.get("current_cursor_present") is True
+        and second_metadata.get("empty_queue_signature") is False
+        and "Before editing auth" not in serialized_metadata
+        and "lesson_project" not in serialized_metadata
+        and "project:" not in serialized_metadata
+        and "task_" not in serialized_metadata
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONEMPTY-001" in docs_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONEMPTY-001"
+        in product_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONEMPTY-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id=(
+            "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONEMPTY-001/"
+            "nonempty_signature"
+        ),
+        suite="GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONEMPTY-001",
+        passed=passed,
+        summary=(
+            "Non-empty review queues expose signature subject metadata without "
+            "leaking signature inputs."
+        ),
+        metrics={
+            "total_review_required_count": first_metadata.get(
+                "total_review_required_count", -1
+            ),
+            "empty_queue_signature": int(
+                first_metadata.get("empty_queue_signature") is True
+            ),
+            "signature_stable_across_pages": int(
+                first_metadata.get("queue_signature")
+                == second_metadata.get("queue_signature")
+            ),
+        },
+        evidence={
+            "queue_signature_version": first_metadata.get("queue_signature_version"),
+            "signature_subject": first_metadata.get("signature_subject"),
         },
     )
 

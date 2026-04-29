@@ -1663,6 +1663,63 @@ def test_self_lesson_review_queue_empty_cursor_signature_metadata_is_stable(tmp_
     assert "task_project_current_empty_signature" not in rendered_metadata
 
 
+def test_self_lesson_review_queue_nonempty_cursor_signature_metadata_is_redacted(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+
+    def stale_lesson(
+        lesson_id: str,
+        ref: str,
+        last_validated: date | None,
+    ) -> SelfLesson:
+        return active.model_copy(
+            update={
+                "lesson_id": lesson_id,
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": [ref, f"task_{lesson_id}"],
+                "last_validated": last_validated,
+            }
+        )
+
+    for lesson in (
+        stale_lesson("lesson_project_stale_signature_newer", "project:newer", date(2025, 3, 1)),
+        stale_lesson("lesson_project_stale_signature_old_b", "project:old-b", date(2024, 1, 1)),
+        stale_lesson("lesson_project_missing_signature", "project:missing", None),
+        stale_lesson("lesson_project_stale_signature_old_a", "project:old-a", date(2024, 1, 1)),
+    ):
+        store.add_self_lesson(lesson)
+    server = CortexMCPServer(store=store)
+
+    first_page = server.call_tool("self_lesson.review_queue", {"limit": 2})
+    second_page = server.call_tool(
+        "self_lesson.review_queue",
+        {"limit": 2, "cursor": first_page["next_cursor"]},
+    )
+
+    first_metadata = first_page["cursor_metadata"]
+    second_metadata = second_page["cursor_metadata"]
+    assert first_page["count"] == 2
+    assert second_page["count"] == 2
+    assert first_metadata["queue_signature"] == second_metadata["queue_signature"]
+    assert first_metadata["queue_signature"].startswith("sha256:")
+    assert first_metadata["queue_signature_version"] == (
+        SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION
+    )
+    assert first_metadata["signature_subject"] == "ordered_review_required_self_lessons"
+    assert first_metadata["empty_queue_signature"] is False
+    assert first_metadata["total_review_required_count"] == 4
+    assert first_metadata["signature_inputs_redacted"] is True
+    assert first_metadata["content_redacted"] is True
+    assert first_metadata["provenance_redacted"] is True
+    assert second_metadata["current_cursor_present"] is True
+    assert second_metadata["empty_queue_signature"] is False
+    rendered_metadata = json.dumps([first_metadata, second_metadata])
+    assert "Before editing auth" not in rendered_metadata
+    assert "lesson_project" not in rendered_metadata
+    assert "project:" not in rendered_metadata
+    assert "task_" not in rendered_metadata
+
+
 def test_self_lesson_review_queue_limit_safety_summary_counts_returned_slice(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))

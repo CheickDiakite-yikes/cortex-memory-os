@@ -522,6 +522,17 @@ queue is cached or compared by signature:
   current lesson content, learned-from refs, rollback text, or scoped
   provenance.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONEMPTY-001` must pass before a
+non-empty queue is cached or compared by signature:
+
+- non-empty queues expose the same `cursor_metadata.signature_subject` and set
+  `empty_queue_signature` to false;
+- signatures compare the full ordered review-required set across cursor pages,
+  not just the visible page;
+- signature metadata stays safe for debug display and does not expose lesson
+  IDs, learned-from refs, rollback text, or scoped provenance used as signature
+  inputs.
+
 `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` must pass before a paged or limited
 queue is shown:
 

@@ -7,7 +7,7 @@ def test_synthetic_benchmarks_pass():
     result = run_all()
 
     assert result.passed
-    assert len(result.case_results) == 88
+    assert len(result.case_results) == 89
     assert {case.suite for case in result.case_results} >= {
         "MEM-RECALL-001",
         "RETRIEVAL-SCORE-001",
@@ -46,6 +46,7 @@ def test_synthetic_benchmarks_pass():
         "GATEWAY-REVIEW-QUEUE-SAFETY-SUMMARY-001",
         "GATEWAY-REVIEW-QUEUE-EMPTY-SAFETY-001",
         "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-EMPTY-001",
+        "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONEMPTY-001",
         "GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001",
         "GATEWAY-REVIEW-QUEUE-ORDERING-001",
         "GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001",

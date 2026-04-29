@@ -6,7 +6,7 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONEMPTY-001 | Add non-empty queue signature metadata contract | Codex | Contract, tests, benchmark case | Non-empty review queues should expose redacted signature subject metadata without leaking inputs. |
+| GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-LIMIT-INDEPENDENT-001 | Add limit-independent queue signature contract | Codex | Contract, tests, benchmark case | Queue signatures should stay stable when only page size changes. |
 
 ## Next
 
@@ -115,6 +115,7 @@ Last updated: 2026-04-29
 | GATEWAY-REVIEW-QUEUE-CURSOR-REFRESH-HINT-001 | Add cursor drift refresh hint | Codex | `uv run pytest` -> 174 passed, `uv run cortex-bench` -> 86/86 passed, `uv run cortex-mcp --smoke` | Cursor metadata guides UIs to refresh from the first page when signatures drift. |
 | GATEWAY-REVIEW-QUEUE-CURSOR-LIMIT-CHANGE-001 | Add cursor limit-change inspection contract | Codex | `uv run pytest` -> 175 passed, `uv run cortex-bench` -> 87/87 passed, `uv run cortex-mcp --smoke` | Cursor metadata makes limit changes inspectable when users change page size between requests. |
 | GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-EMPTY-001 | Add empty queue signature metadata contract | Codex | `uv run pytest` -> 176 passed, `uv run cortex-bench` -> 88/88 passed, `uv run cortex-mcp --smoke` | Empty review queues expose stable, opaque, redacted signature metadata. |
+| GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONEMPTY-001 | Add non-empty queue signature metadata contract | Codex | `uv run pytest` -> 177 passed, `uv run cortex-bench` -> 89/89 passed, `uv run cortex-mcp --smoke` | Non-empty review queues expose redacted signature subject metadata without leaking inputs. |
 
 ## Dropped
 

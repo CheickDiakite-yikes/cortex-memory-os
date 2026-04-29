@@ -344,6 +344,15 @@ one project, agent, or session from silently shaping another.
 - empty signature metadata stays opaque, redacted, and free of current lesson
   content or scoped provenance.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONEMPTY-001` verifies:
+
+- non-empty review queues mark the same signature subject while setting
+  `empty_queue_signature` to false;
+- queue signatures stay tied to the full ordered review-required set across
+  cursor pages;
+- signature metadata does not leak lesson IDs, learned-from refs, rollback
+  text, or scoped provenance used to compute the signature.
+
 `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` verifies:
 
 - review queues expose the applied limit, returned count, total review-required

@@ -88,6 +88,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-REVIEW-QUEUE-SAFETY-SUMMARY-001` | Review queues summarize read-only, mutation, confirmation, and audit-preview counts without content. | Queue summaries leak content/provenance, omit confirmation counts, or imply external effects are allowed. |
 | `GATEWAY-REVIEW-QUEUE-EMPTY-SAFETY-001` | Empty review queues return a zeroed, redacted safety summary for safe UI rendering. | Empty queues omit safety metadata, return non-zero action counts, or leak current lesson provenance. |
 | `GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-EMPTY-001` | Empty review queues expose stable, opaque, redacted signature metadata. | Empty queues omit signatures, unstable signatures, or leak current lesson provenance through signature metadata. |
+| `GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONEMPTY-001` | Non-empty review queues expose signature subject metadata without leaking signature inputs. | Non-empty signatures omit subject metadata, depend only on the visible page, or leak lesson/provenance inputs. |
 | `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` | Review queue safety summaries expose applied limit, returned count, total review-required count, and truncation state. | Limited queues hide truncation state, count omitted actions, or leak omitted lesson provenance. |
 | `GATEWAY-REVIEW-QUEUE-ORDERING-001` | Review queues sort missing validation dates first, then oldest validation date, then lesson ID before limits. | Queue ordering depends on insertion order, hidden store order, or leaks provenance while exposing order metadata. |
 | `GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001` | Limited review queues expose stable cursors tied to deterministic ordering. | Cursors leak lesson IDs/provenance, repeat cards, or drift from the advertised ordering contract. |
@@ -144,8 +145,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONEMPTY-001`: Non-empty review queues
-  should expose redacted signature subject metadata without leaking inputs.
+- `GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-LIMIT-INDEPENDENT-001`: Queue
+  signatures should stay stable when only page size changes.
 
 Longer-term suites:
 
