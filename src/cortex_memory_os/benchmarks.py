@@ -202,6 +202,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_nonempty_cursor_signature,
         case_gateway_review_queue_signature_limit_independent,
         case_gateway_review_queue_signature_order_sensitive,
+        case_gateway_review_queue_signature_nonreview_stability,
         case_gateway_review_queue_limit_safety_summary,
         case_gateway_review_queue_ordering,
         case_gateway_review_queue_paging_cursor,
@@ -2894,6 +2895,154 @@ def case_gateway_review_queue_signature_order_sensitive() -> BenchmarkCaseResult
             "signature_subject": changed_metadata.get("signature_subject"),
             "initial_page_end": initial_metadata.get("page_end"),
             "changed_page_end": changed_metadata.get("page_end"),
+        },
+    )
+
+
+def case_gateway_review_queue_signature_nonreview_stability() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+
+        def lesson(
+            lesson_id: str,
+            ref: str,
+            *,
+            scope: ScopeLevel,
+            last_validated: date | None,
+            status: MemoryStatus = MemoryStatus.ACTIVE,
+        ) -> SelfLesson:
+            return base.model_copy(
+                update={
+                    "lesson_id": lesson_id,
+                    "scope": scope,
+                    "status": status,
+                    "learned_from": [ref, f"task_{lesson_id}"],
+                    "last_validated": last_validated,
+                }
+            )
+
+        store.add_self_lesson(
+            lesson(
+                "lesson_project_missing_nonreview_anchor",
+                "project:anchor-missing",
+                scope=ScopeLevel.PROJECT_SPECIFIC,
+                last_validated=None,
+            )
+        )
+        store.add_self_lesson(
+            lesson(
+                "lesson_project_stale_nonreview_anchor",
+                "project:anchor-stale",
+                scope=ScopeLevel.PROJECT_SPECIFIC,
+                last_validated=date(2024, 1, 1),
+            )
+        )
+        server = CortexMCPServer(store=store)
+        initial_queue = server.call_tool("self_lesson.review_queue", {"limit": 10})
+
+        for non_review_lesson in (
+            lesson(
+                "lesson_project_current_nonreview",
+                "project:current",
+                scope=ScopeLevel.PROJECT_SPECIFIC,
+                last_validated=datetime.now(UTC).date(),
+            ),
+            lesson(
+                "lesson_global_stale_nonreview",
+                "global:stale",
+                scope=ScopeLevel.WORK_GLOBAL,
+                last_validated=date(2024, 1, 1),
+            ),
+            lesson(
+                "lesson_candidate_stale_nonreview",
+                "project:candidate",
+                scope=ScopeLevel.PROJECT_SPECIFIC,
+                status=MemoryStatus.CANDIDATE,
+                last_validated=None,
+            ),
+            lesson(
+                "lesson_revoked_stale_nonreview",
+                "project:revoked",
+                scope=ScopeLevel.PROJECT_SPECIFIC,
+                status=MemoryStatus.REVOKED,
+                last_validated=None,
+            ),
+        ):
+            store.add_self_lesson(non_review_lesson)
+
+        expanded_queue = server.call_tool("self_lesson.review_queue", {"limit": 10})
+
+    initial_metadata = initial_queue.get("cursor_metadata", {})
+    expanded_metadata = expanded_queue.get("cursor_metadata", {})
+    serialized_metadata = json.dumps(
+        [initial_metadata, expanded_metadata],
+        sort_keys=True,
+    )
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    non_review_ids = [
+        "lesson_project_current_nonreview",
+        "lesson_global_stale_nonreview",
+        "lesson_candidate_stale_nonreview",
+        "lesson_revoked_stale_nonreview",
+    ]
+    passed = (
+        expanded_queue.get("lesson_ids") == initial_queue.get("lesson_ids")
+        and expanded_queue.get("total_review_required_count") == 2
+        and expanded_metadata.get("queue_signature")
+        == initial_metadata.get("queue_signature")
+        and expanded_metadata.get("total_review_required_count") == 2
+        and expanded_metadata.get("empty_queue_signature") is False
+        and expanded_metadata.get("signature_subject")
+        == "ordered_review_required_self_lessons"
+        and expanded_metadata.get("signature_inputs_redacted") is True
+        and all(lesson_id not in serialized_metadata for lesson_id in non_review_ids)
+        and "project:" not in serialized_metadata
+        and "global:" not in serialized_metadata
+        and "task_" not in serialized_metadata
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONREVIEW-STABILITY-001"
+        in docs_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONREVIEW-STABILITY-001"
+        in product_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONREVIEW-STABILITY-001"
+        in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id=(
+            "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONREVIEW-STABILITY-001/"
+            "nonreview_lessons_ignored"
+        ),
+        suite="GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONREVIEW-STABILITY-001",
+        passed=passed,
+        summary=(
+            "Review queue signatures ignore self-lessons that are not review "
+            "required."
+        ),
+        metrics={
+            "signature_stable": int(
+                expanded_metadata.get("queue_signature")
+                == initial_metadata.get("queue_signature")
+            ),
+            "review_required_count": expanded_metadata.get(
+                "total_review_required_count",
+                -1,
+            ),
+            "non_review_added_count": len(non_review_ids),
+        },
+        evidence={
+            "signature_subject": expanded_metadata.get("signature_subject"),
+            "lesson_ids_stable": expanded_queue.get("lesson_ids")
+            == initial_queue.get("lesson_ids"),
         },
     )
 

@@ -368,6 +368,14 @@ one project, agent, or session from silently shaping another.
 - signature metadata remains redacted and does not expose lesson IDs, content,
   learned-from refs, or scoped provenance.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONREVIEW-STABILITY-001` verifies:
+
+- current scoped, global, candidate, and revoked self-lessons do not affect the
+  review queue signature;
+- `queue_signature` remains tied only to ordered review-required self-lessons;
+- signature metadata stays redacted even when ignored lessons carry scoped
+  provenance.
+
 `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` verifies:
 
 - review queues expose the applied limit, returned count, total review-required

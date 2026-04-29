@@ -552,6 +552,15 @@ UI trusts a cursor after review metadata changes:
 - signature metadata remains safe to render in debug panels because inputs stay
   redacted.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONREVIEW-STABILITY-001` must pass
+before a UI uses signatures as review-queue drift signals:
+
+- adding current scoped, global, candidate, or revoked self-lessons does not
+  change `cursor_metadata.queue_signature`;
+- the signature compares only the ordered set of lessons that currently require
+  review;
+- ignored lessons must not leak through signature metadata.
+
 `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` must pass before a paged or limited
 queue is shown:
 

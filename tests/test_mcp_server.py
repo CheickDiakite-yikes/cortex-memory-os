@@ -1853,6 +1853,100 @@ def test_self_lesson_review_queue_signature_changes_with_ordering_metadata(tmp_p
     assert "task_" not in rendered_metadata
 
 
+def test_self_lesson_review_queue_signature_ignores_non_review_lessons(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+
+    def lesson(
+        lesson_id: str,
+        ref: str,
+        *,
+        scope: ScopeLevel,
+        last_validated: date | None,
+        status: MemoryStatus = MemoryStatus.ACTIVE,
+    ) -> SelfLesson:
+        return active.model_copy(
+            update={
+                "lesson_id": lesson_id,
+                "scope": scope,
+                "status": status,
+                "learned_from": [ref, f"task_{lesson_id}"],
+                "last_validated": last_validated,
+            }
+        )
+
+    store.add_self_lesson(
+        lesson(
+            "lesson_project_missing_nonreview_anchor",
+            "project:anchor-missing",
+            scope=ScopeLevel.PROJECT_SPECIFIC,
+            last_validated=None,
+        )
+    )
+    store.add_self_lesson(
+        lesson(
+            "lesson_project_stale_nonreview_anchor",
+            "project:anchor-stale",
+            scope=ScopeLevel.PROJECT_SPECIFIC,
+            last_validated=date(2024, 1, 1),
+        )
+    )
+    server = CortexMCPServer(store=store)
+    initial_queue = server.call_tool("self_lesson.review_queue", {"limit": 10})
+
+    for non_review_lesson in (
+        lesson(
+            "lesson_project_current_nonreview",
+            "project:current",
+            scope=ScopeLevel.PROJECT_SPECIFIC,
+            last_validated=date.today(),
+        ),
+        lesson(
+            "lesson_global_stale_nonreview",
+            "global:stale",
+            scope=ScopeLevel.WORK_GLOBAL,
+            last_validated=date(2024, 1, 1),
+        ),
+        lesson(
+            "lesson_candidate_stale_nonreview",
+            "project:candidate",
+            scope=ScopeLevel.PROJECT_SPECIFIC,
+            status=MemoryStatus.CANDIDATE,
+            last_validated=None,
+        ),
+        lesson(
+            "lesson_revoked_stale_nonreview",
+            "project:revoked",
+            scope=ScopeLevel.PROJECT_SPECIFIC,
+            status=MemoryStatus.REVOKED,
+            last_validated=None,
+        ),
+    ):
+        store.add_self_lesson(non_review_lesson)
+
+    expanded_queue = server.call_tool("self_lesson.review_queue", {"limit": 10})
+    initial_metadata = initial_queue["cursor_metadata"]
+    expanded_metadata = expanded_queue["cursor_metadata"]
+
+    assert expanded_queue["lesson_ids"] == initial_queue["lesson_ids"]
+    assert expanded_queue["total_review_required_count"] == 2
+    assert expanded_metadata["queue_signature"] == initial_metadata["queue_signature"]
+    assert expanded_metadata["total_review_required_count"] == 2
+    assert expanded_metadata["empty_queue_signature"] is False
+    assert expanded_metadata["signature_subject"] == (
+        "ordered_review_required_self_lessons"
+    )
+    assert expanded_metadata["signature_inputs_redacted"] is True
+    rendered_metadata = json.dumps([initial_metadata, expanded_metadata])
+    assert "lesson_project_current_nonreview" not in rendered_metadata
+    assert "lesson_global_stale_nonreview" not in rendered_metadata
+    assert "lesson_candidate_stale_nonreview" not in rendered_metadata
+    assert "lesson_revoked_stale_nonreview" not in rendered_metadata
+    assert "project:" not in rendered_metadata
+    assert "global:" not in rendered_metadata
+    assert "task_" not in rendered_metadata
+
+
 def test_self_lesson_review_queue_limit_safety_summary_counts_returned_slice(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))

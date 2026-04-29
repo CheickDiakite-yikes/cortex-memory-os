@@ -6,7 +6,7 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONREVIEW-STABILITY-001 | Add non-review signature stability contract | Codex | Contract, tests, benchmark case | Queue signatures should ignore non-review-required self-lessons. |
+| GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-MEMBERSHIP-SENSITIVE-001 | Add membership-sensitive queue signature contract | Codex | Contract, tests, benchmark case | Queue signatures should change when review-required membership changes. |
 
 ## Next
 
@@ -118,6 +118,7 @@ Last updated: 2026-04-29
 | GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONEMPTY-001 | Add non-empty queue signature metadata contract | Codex | `uv run pytest` -> 177 passed, `uv run cortex-bench` -> 89/89 passed, `uv run cortex-mcp --smoke` | Non-empty review queues expose redacted signature subject metadata without leaking inputs. |
 | GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-LIMIT-INDEPENDENT-001 | Add limit-independent queue signature contract | Codex | `uv run pytest` -> 178 passed, `uv run cortex-bench` -> 90/90 passed, `uv run cortex-mcp --smoke` | Queue signatures stay stable when only page size changes. |
 | GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-ORDER-SENSITIVE-001 | Add order-sensitive queue signature contract | Codex | `uv run pytest` -> 179 passed, `uv run cortex-bench` -> 91/91 passed, `uv run cortex-mcp --smoke` | Queue signatures change when ordering-relevant lesson metadata changes. |
+| GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONREVIEW-STABILITY-001 | Add non-review signature stability contract | Codex | `uv run pytest` -> 180 passed, `uv run cortex-bench` -> 92/92 passed, `uv run cortex-mcp --smoke` | Queue signatures ignore non-review-required self-lessons. |
 
 ## Dropped
 
