@@ -1,0 +1,89 @@
+import XCTest
+@testable import CortexShadowPointerNative
+
+final class ShadowPointerNativeTests: XCTestCase {
+    func testOverlaySpecIsTransparentNonActivatingAndPointerSafe() {
+        let spec = NativeOverlayWindowSpec.shadowPointerDefault
+
+        XCTAssertEqual(spec.policyRef, shadowPointerNativePolicyRef)
+        XCTAssertEqual(spec.level, "floating")
+        XCTAssertTrue(spec.styleMasks.contains("nonactivatingPanel"))
+        XCTAssertTrue(spec.styleMasks.contains("borderless"))
+        XCTAssertTrue(spec.collectionBehaviors.contains("canJoinAllSpaces"))
+        XCTAssertTrue(spec.collectionBehaviors.contains("fullScreenAuxiliary"))
+        XCTAssertFalse(spec.isOpaque)
+        XCTAssertEqual(spec.backgroundColor, "clear")
+        XCTAssertTrue(spec.ignoresMouseEventsByDefault)
+        XCTAssertFalse(spec.canBecomeKey)
+        XCTAssertFalse(spec.canBecomeMain)
+    }
+
+    func testPauseObservationBlocksObservationAndMemoryWrites() throws {
+        let receipt = try ShadowPointerNativeControlBridge.apply(
+            snapshot: .observingDefault,
+            action: .pauseObservation,
+            durationMinutes: 60
+        )
+
+        XCTAssertEqual(receipt.resultingSnapshot.state, .paused)
+        XCTAssertFalse(receipt.observationActive)
+        XCTAssertFalse(receipt.memoryWriteAllowed)
+        XCTAssertTrue(receipt.auditRequired)
+        XCTAssertEqual(receipt.auditAction, "pause_observation")
+    }
+
+    func testDeleteRecentRequiresConfirmationAndBlocksMemoryWrites() throws {
+        XCTAssertThrowsError(
+            try ShadowPointerNativeControlBridge.apply(
+                snapshot: .observingDefault,
+                action: .deleteRecent,
+                deleteWindowMinutes: 10
+            )
+        )
+
+        let receipt = try ShadowPointerNativeControlBridge.apply(
+            snapshot: .observingDefault,
+            action: .deleteRecent,
+            deleteWindowMinutes: 10,
+            userConfirmed: true
+        )
+
+        XCTAssertEqual(receipt.resultingSnapshot.state, .privateMasking)
+        XCTAssertEqual(receipt.deletedWindowMinutes, 10)
+        XCTAssertFalse(receipt.memoryWriteAllowed)
+        XCTAssertEqual(receipt.auditAction, "delete_recent_observation")
+    }
+
+    func testIgnoreAppRequiresConfirmationAndRemovesAppFromSeeing() throws {
+        XCTAssertThrowsError(
+            try ShadowPointerNativeControlBridge.apply(
+                snapshot: .observingDefault,
+                action: .ignoreApp,
+                appName: "Chrome"
+            )
+        )
+
+        let receipt = try ShadowPointerNativeControlBridge.apply(
+            snapshot: .observingDefault,
+            action: .ignoreApp,
+            appName: "Chrome",
+            userConfirmed: true
+        )
+
+        XCTAssertEqual(receipt.resultingSnapshot.state, .privateMasking)
+        XCTAssertFalse(receipt.resultingSnapshot.seeing.contains("Chrome"))
+        XCTAssertTrue(receipt.resultingSnapshot.ignoring.contains("Chrome"))
+        XCTAssertEqual(receipt.affectedApps, ["Chrome"])
+        XCTAssertFalse(receipt.memoryWriteAllowed)
+    }
+
+    func testSmokeResultCoversControlAndDisplayOnlyBoundaries() throws {
+        let result = try ShadowPointerNativeSmokeResult.run()
+
+        XCTAssertTrue(result.passed)
+        XCTAssertTrue(result.pauseBlocksMemory)
+        XCTAssertTrue(result.deleteRecentBlocksMemory)
+        XCTAssertTrue(result.ignoreAppBlocksMemory)
+        XCTAssertTrue(result.displayOnlyPointing)
+    }
+}

@@ -307,6 +307,7 @@ def run_all() -> BenchmarkRunResult:
         case_shadow_pointer_state_contract,
         case_shadow_pointer_controls_contract,
         case_shadow_pointer_pointing_proposal_contract,
+        case_shadow_pointer_native_overlay_contract,
         case_scene_segmentation,
         case_memory_compiler_candidate,
         case_temporal_edge_compiler,
@@ -6789,6 +6790,100 @@ def case_shadow_pointer_pointing_proposal_contract() -> BenchmarkCaseResult:
             "state": receipt.resulting_snapshot.state.value,
             "blocked_effects": receipt.blocked_effects,
             "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_shadow_pointer_native_overlay_contract() -> BenchmarkCaseResult:
+    package_root = REPO_ROOT / "native" / "macos-shadow-pointer"
+    package_path = package_root / "Package.swift"
+    source_path = (
+        package_root
+        / "Sources"
+        / "CortexShadowPointerNative"
+        / "ShadowPointerNative.swift"
+    )
+    smoke_path = (
+        package_root
+        / "Sources"
+        / "CortexShadowPointerSmoke"
+        / "main.swift"
+    )
+    test_path = (
+        package_root
+        / "Tests"
+        / "CortexShadowPointerNativeTests"
+        / "ShadowPointerNativeTests.swift"
+    )
+    readme_path = package_root / "README.md"
+    docs_path = REPO_ROOT / "docs" / "architecture" / "native-shadow-pointer-overlay.md"
+    plan_path = REPO_ROOT / "docs" / "ops" / "benchmark-plan.md"
+    registry_path = REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    task_board_path = REPO_ROOT / "docs" / "ops" / "task-board.md"
+    traceability_path = REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+
+    required_paths = [package_path, source_path, smoke_path, test_path, readme_path, docs_path]
+    missing_paths = [
+        str(path.relative_to(REPO_ROOT)) for path in required_paths if not path.exists()
+    ]
+    combined_text = "\n".join(
+        path.read_text(encoding="utf-8") for path in required_paths if path.exists()
+    )
+    plan_text = plan_path.read_text(encoding="utf-8")
+    registry_text = registry_path.read_text(encoding="utf-8")
+    task_text = task_board_path.read_text(encoding="utf-8")
+    traceability_text = traceability_path.read_text(encoding="utf-8")
+    benchmark_id = "SHADOW-POINTER-NATIVE-001"
+    required_terms = [
+        benchmark_id,
+        "Package.swift",
+        "NSPanel",
+        ".nonactivatingPanel",
+        ".borderless",
+        ".floating",
+        "canJoinAllSpaces",
+        "fullScreenAuxiliary",
+        "ignoresMouseEvents",
+        "canBecomeKey",
+        "pauseObservation",
+        "deleteRecent",
+        "ignoreApp",
+        "memoryWriteAllowed",
+        "displayOnlyPointing",
+        "policy_shadow_pointer_native_overlay_v1",
+        "swift build --package-path native/macos-shadow-pointer",
+        "swift test --package-path native/macos-shadow-pointer",
+        "swift run --package-path native/macos-shadow-pointer cortex-shadow-pointer-smoke",
+    ]
+    missing_terms = _missing_terms(combined_text, required_terms)
+    passed = (
+        not missing_paths
+        and not missing_terms
+        and benchmark_id in plan_text
+        and benchmark_id in registry_text
+        and benchmark_id in task_text
+        and benchmark_id in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SHADOW-POINTER-NATIVE-001/swiftpm_overlay_proof",
+        suite="SHADOW-POINTER-NATIVE-001",
+        passed=passed,
+        summary=(
+            "Native macOS Shadow Pointer proof defines a transparent non-activating "
+            "overlay boundary, control receipts, and SwiftPM smoke tests without "
+            "starting capture or writing memory."
+        ),
+        metrics={
+            "missing_paths": len(missing_paths),
+            "missing_terms": len(missing_terms),
+            "swift_test_command_count": 3,
+        },
+        evidence={
+            "package_path": str(package_path.relative_to(REPO_ROOT)),
+            "source_path": str(source_path.relative_to(REPO_ROOT)),
+            "docs_path": str(docs_path.relative_to(REPO_ROOT)),
+            "missing_paths": missing_paths,
+            "missing_terms": missing_terms,
         },
     )
 

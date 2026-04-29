@@ -45,6 +45,8 @@ __pycache__/
 *.py[cod]
 .ruff_cache/
 .mypy_cache/
+.build/
+.swiftpm/
 .venv/
 venv/
 *.egg-info/

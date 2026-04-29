@@ -6,13 +6,13 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| SHADOW-POINTER-NATIVE-001 | Prototype native Shadow Pointer overlay integration | Codex | Native overlay proof with pause/delete/app-ignore controls | Clicky research reinforces cursor-adjacent UX, but Cortex must show consent and memory state. |
+| LIVE-BROWSER-TERMINAL-ADAPTERS-001 | Implement live browser extension and terminal shell-hook adapters | Codex | Live adapter smoke with no raw third-party memory eligibility and no secret retention | Follows `BROWSER-TERMINAL-ADAPTERS-001`; keep real capture opt-in and local-first. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| LIVE-BROWSER-TERMINAL-ADAPTERS-001 | Implement live browser extension and terminal shell-hook adapters | Codex | Live adapter smoke with no raw third-party memory eligibility and no secret retention | Follows `BROWSER-TERMINAL-ADAPTERS-001`; keep real capture opt-in and local-first. |
+| MEMORY-PALACE-SKILL-FORGE-UI-001 | Build real dashboard shell for Memory Palace and Skill Forge view models | Codex | Local UI proof over existing safe view models | Keep UI inspectable and action-plan driven; no raw private memories in fixtures. |
 
 ## Backlog
 
@@ -140,6 +140,7 @@ Last updated: 2026-04-29
 | CODEX-PLUGIN-001 | Package first Cortex Codex plugin skeleton | Codex | `plugins/cortex-memory-os/*`, `docs/research/frontier-agent-plugin-lessons-2026-04-29.md`, `uv run pytest` -> 237 passed, `uv run cortex-bench` -> 111/111 passed, `uv run cortex-mcp --smoke` | Bundled local MCP config, progressive-disclosure skills, and policy refs after official/primary research refresh. |
 | BROWSER-TERMINAL-ADAPTERS-001 | Define first browser and terminal adapter contracts | Codex | `src/cortex_memory_os/perception_adapters.py`, `docs/architecture/browser-terminal-adapter-contracts.md`, `uv run pytest` -> 243 passed, `uv run cortex-bench` -> 112/112 passed, `uv run cortex-mcp --smoke`, `uvx ruff check` | Browser DOM is Class D/third-party by default; terminal events are Class B; both must pass firewall and evidence eligibility handoff. |
 | PLUGIN-INSTALL-SMOKE-001 | Validate Cortex plugin discovery in a real Codex plugin install path shape | Codex | `src/cortex_memory_os/plugin_install_smoke.py`, `docs/ops/plugin-install-smoke.md`, `uv run cortex-plugin-install-smoke`, `uv run pytest` -> 246 passed, `uv run cortex-bench` -> 113/113 passed, `uvx ruff check` | Installs into a temporary `plugins/cache/local/cortex-memory-os/0.1.0` shape by default; installed config must stay secret-free. |
+| SHADOW-POINTER-NATIVE-001 | Prototype native Shadow Pointer overlay integration | Codex | `native/macos-shadow-pointer`, `docs/architecture/native-shadow-pointer-overlay.md`, `swift build --package-path native/macos-shadow-pointer`, `swift test --package-path native/macos-shadow-pointer` -> 5 passed, `swift run --package-path native/macos-shadow-pointer cortex-shadow-pointer-smoke` -> `passed: true`, `uv run pytest` -> 246 passed, `uv run cortex-bench` -> 114/114 passed | SwiftPM proof uses a transparent non-activating `NSPanel`, display-only pointer boundary, and pause/delete/app-ignore receipts without starting capture. |
 
 ## Dropped
 

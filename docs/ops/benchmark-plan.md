@@ -51,6 +51,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `SHADOW-POINTER-001` | Shadow Pointer states carry trust context. | User cannot tell when observation or approval is active. |
 | `SHADOW-POINTER-CONTROLS-001` | Shadow Pointer controls return native-ready receipts for pause, resume, status, delete-recent, and app-ignore. | User controls lack confirmation, audit metadata, or memory-write blocking semantics. |
 | `POINTER-PROPOSAL-001` | Model-proposed Shadow Pointer coordinates stay display-only. | Coordinates become clicks, tool calls, memory writes, or trusted instructions. |
+| `SHADOW-POINTER-NATIVE-001` | SwiftPM native macOS proof exposes a transparent non-activating overlay boundary plus pause, delete-recent, and app-ignore receipts. | Native overlay can become key/main, accepts mouse input by default, starts capture, writes memory, or lacks tested control receipts. |
 | `SCENE-SEGMENT-001` | Synthetic event streams segment into coherent scenes. | Obvious task boundary is missed. |
 | `MEM-COMPILE-001` | Scenes compile into low-influence candidate memories. | Candidate memory lacks evidence refs or safety limits. |
 | `GRAPH-EDGE-001` | Temporal graph edges preserve validity and provenance. | Edge loses source refs or validity windows. |
@@ -171,10 +172,10 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- Native Shadow Pointer overlay proof using existing controls and pointing
-  proposal contracts.
 - Live browser extension and terminal shell-hook adapters using the validated
   adapter contracts.
+- User-approved real Codex plugin enable/rollback path beyond temporary smoke.
+- Real dashboard shell for Memory Palace and Skill Forge view models.
 
 Longer-term suites:
 
