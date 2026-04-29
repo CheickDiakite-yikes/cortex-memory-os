@@ -69,6 +69,11 @@ from cortex_memory_os.evidence_vault import (
     VaultRuntimeMode,
     assess_vault_cipher,
 )
+from cortex_memory_os.evidence_eligibility import (
+    EVIDENCE_ELIGIBILITY_HANDOFF_POLICY_REF,
+    EvidenceWriteMode,
+    build_evidence_eligibility_plan,
+)
 from cortex_memory_os.debug_trace import DebugTraceStatus, make_debug_trace
 from cortex_memory_os.mcp_server import (
     SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
@@ -263,6 +268,7 @@ def run_all() -> BenchmarkRunResult:
         case_product_traceability_report_contract,
         case_perception_event_envelope_contract,
         case_perception_firewall_handoff_contract,
+        case_evidence_eligibility_handoff_contract,
         case_live_openai_smoke_contract,
         case_gateway_self_lesson_proposal_tool,
         case_self_lesson_sqlite_persistence,
@@ -755,6 +761,127 @@ def case_perception_firewall_handoff_contract() -> BenchmarkCaseResult:
             "secret_decision": secret_assessment.decision.decision.value,
             "prompt_decision": prompt_assessment.decision.decision.value,
             "third_party_decision": third_party_assessment.decision.decision.value,
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_evidence_eligibility_handoff_contract() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    fixture_payload = load_json(TEST_FIXTURES / "perception_terminal_envelope.json")
+    envelope = PerceptionEventEnvelope.model_validate(fixture_payload)
+    benign_assessment = assess_perception_envelope(envelope, "uv run pytest passed")
+    benign_plan = build_evidence_eligibility_plan(envelope, benign_assessment.decision)
+
+    secret_assessment = assess_perception_envelope(
+        envelope,
+        "token=CORTEX_FAKE_TOKEN_handoffSECRET123",
+    )
+    secret_plan = build_evidence_eligibility_plan(
+        envelope,
+        secret_assessment.decision,
+        redacted_text_ref="derived://redacted/obs_001",
+    )
+
+    prompt_payload = json.loads(json.dumps(fixture_payload))
+    prompt_payload["raw_ref"] = None
+    prompt_payload["prompt_injection_risk"] = True
+    prompt_envelope = PerceptionEventEnvelope.model_validate(prompt_payload)
+    prompt_assessment = assess_perception_envelope(
+        prompt_envelope,
+        "ordinary copied page text",
+    )
+    prompt_plan = build_evidence_eligibility_plan(
+        prompt_envelope,
+        prompt_assessment.decision,
+    )
+
+    third_party_payload = json.loads(json.dumps(fixture_payload))
+    third_party_payload["third_party_content"] = True
+    third_party_envelope = PerceptionEventEnvelope.model_validate(third_party_payload)
+    third_party_assessment = assess_perception_envelope(
+        third_party_envelope,
+        "benign newsletter text",
+    )
+    third_party_plan = build_evidence_eligibility_plan(
+        third_party_envelope,
+        third_party_assessment.decision,
+    )
+
+    with TemporaryDirectory() as temp_dir:
+        vault = EvidenceVault(Path(temp_dir))
+        raw_metadata = vault.store(
+            benign_plan.to_evidence_record(),
+            b"synthetic raw terminal event",
+        )
+        secret_metadata = vault.store_metadata_only(secret_plan.to_evidence_record())
+        prompt_metadata = vault.store_metadata_only(prompt_plan.to_evidence_record())
+        blob_count = len(list((Path(temp_dir) / "blobs").glob("*")))
+
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "evidence-eligibility-handoff.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_terms = [
+        "EVIDENCE-ELIGIBILITY-HANDOFF-001",
+        "EvidenceEligibilityPlan",
+        "raw_blob_write_allowed",
+        "metadata_only",
+        "third-party content",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_terms)
+
+    passed = (
+        benign_plan.write_mode == EvidenceWriteMode.RAW_AND_DERIVED
+        and benign_plan.raw_blob_write_allowed is True
+        and benign_plan.eligible_for_memory is True
+        and raw_metadata.raw_ref == "vault://evidence/ev_obs_001"
+        and secret_plan.write_mode == EvidenceWriteMode.DERIVED_ONLY
+        and secret_plan.raw_ref is None
+        and secret_plan.raw_blob_write_allowed is False
+        and secret_plan.eligible_for_memory is False
+        and secret_plan.derived_text_refs == ["derived://redacted/obs_001"]
+        and secret_metadata.raw_ref is None
+        and prompt_plan.write_mode == EvidenceWriteMode.DISCARD
+        and prompt_plan.retention_policy == RetentionPolicy.DISCARD
+        and prompt_plan.derived_text_refs == []
+        and prompt_metadata.raw_ref is None
+        and third_party_plan.write_mode == EvidenceWriteMode.DERIVED_ONLY
+        and third_party_plan.raw_ref is None
+        and third_party_plan.contains_third_party_content is True
+        and third_party_plan.eligible_for_memory is False
+        and blob_count == 1
+        and EVIDENCE_ELIGIBILITY_HANDOFF_POLICY_REF in secret_plan.policy_refs
+        and not missing_doc_terms
+        and "EVIDENCE-ELIGIBILITY-HANDOFF-001" in plan_text
+        and "EVIDENCE-ELIGIBILITY-HANDOFF-001" in product_text
+    )
+    return BenchmarkCaseResult(
+        case_id="EVIDENCE-ELIGIBILITY-HANDOFF-001/firewall_to_vault_plan",
+        suite="EVIDENCE-ELIGIBILITY-HANDOFF-001",
+        passed=passed,
+        summary=(
+            "Firewall decisions compile into explicit Evidence Vault write "
+            "plans for raw, derived, metadata-only, and discard handling."
+        ),
+        metrics={
+            "raw_write_allowed": int(benign_plan.raw_blob_write_allowed),
+            "secret_raw_write_allowed": int(secret_plan.raw_blob_write_allowed),
+            "third_party_memory_eligible": int(third_party_plan.eligible_for_memory),
+            "blob_count": blob_count,
+        },
+        evidence={
+            "handoff_policy_ref": EVIDENCE_ELIGIBILITY_HANDOFF_POLICY_REF,
+            "benign_mode": benign_plan.write_mode.value,
+            "secret_mode": secret_plan.write_mode.value,
+            "prompt_mode": prompt_plan.write_mode.value,
+            "third_party_mode": third_party_plan.write_mode.value,
             "missing_doc_terms": missing_doc_terms,
         },
     )

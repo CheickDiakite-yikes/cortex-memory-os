@@ -142,6 +142,31 @@ class EvidenceVault:
         self._upsert_metadata(metadata)
         return metadata
 
+    def store_metadata_only(
+        self,
+        evidence: EvidenceRecord,
+        *,
+        now: datetime | None = None,
+    ) -> EvidenceVaultMetadata:
+        """Persist an evidence receipt without writing a raw blob."""
+
+        created_at = _ensure_utc(now or evidence.timestamp)
+        expires_at = expires_at_for(evidence.retention_policy, created_at)
+        metadata = EvidenceVaultMetadata(
+            evidence_id=evidence.evidence_id,
+            raw_ref=None,
+            blob_path=None,
+            sha256=None,
+            byte_count=0,
+            retention_policy=evidence.retention_policy,
+            created_at=created_at,
+            expires_at=expires_at,
+            raw_deleted_at=created_at,
+            cipher=self.cipher.name,
+        )
+        self._upsert_metadata(metadata)
+        return metadata
+
     def read_raw(self, evidence_id: str, *, now: datetime | None = None) -> bytes | None:
         metadata = self.get_metadata(evidence_id)
         if metadata is None or metadata.raw_deleted_at is not None or metadata.blob_path is None:

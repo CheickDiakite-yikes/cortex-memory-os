@@ -22,14 +22,14 @@ Source documents:
 | Engineering control plane | Validated | Task board, benchmark registry, research safety ledger, ADRs | Keep reports current after each slice. |
 | Contract layer | Validated | Typed contracts, fixtures, `tests/test_contracts.py` | Add migration/versioning policy as schemas evolve. |
 | Privacy + Safety Firewall | Validated | `SEC-INJECT-001`, `SEC-PII-001`, `CTX-HOSTILE-001` | Expand from synthetic text to app/browser/source classifiers. |
-| Evidence Vault | Validated skeleton | `VAULT-RETENTION-001`, `VAULT-ENCRYPT-001` | Replace dev cipher with production key management before real private data. |
+| Evidence Vault | Validated skeleton | `VAULT-RETENTION-001`, `VAULT-ENCRYPT-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001` | Replace dev cipher with production key management before real private data. |
 | Scene, memory, and graph pipeline | Validated skeleton | `SCENE-SEGMENT-001`, `MEM-COMPILE-001`, `GRAPH-EDGE-001` | Add richer multimodal segmentation and contradiction handling. |
 | Retrieval and context packs | Validated skeleton | `RETRIEVAL-SCORE-001`, `CONTEXT-PACK-001`, scoped self-lesson suites | Add vector/sparse/graph fusion behind stable interfaces. |
 | Memory Palace | Validated contract | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, self-lesson review flows | Build real dashboard UI beyond contract and gateway flows. |
 | Skill Forge | Validated skeleton | `SKILL-FORGE-002`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add candidate UI, workflow clustering, and skill success metrics. |
 | Agent Gateway | Validated skeleton | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools | Package Codex plugin and bridge additional clients. |
 | Shadow Pointer | Partial | `SHADOW-POINTER-001`, static UI prototype | Build native overlay with live permissions, pause, delete, and app-ignore controls. |
-| Native Perception Bus | Envelope and firewall handoff validated; adapters not started | `PERCEPTION-EVENT-ENVELOPE-001`, `PERCEPTION-FIREWALL-HANDOFF-001`, roadmap, and ADR | Add evidence eligibility handoff, then consented macOS app/window, accessibility, terminal, and browser adapters. |
+| Native Perception Bus | Envelope, firewall handoff, and evidence eligibility handoff validated; adapters not started | `PERCEPTION-EVENT-ENVELOPE-001`, `PERCEPTION-FIREWALL-HANDOFF-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001`, roadmap, and ADR | Add consented macOS app/window, accessibility, terminal, and browser adapters. |
 | Robot readiness | Safety contract only | `ROBOT-SAFE-001`, initial threat model | Add simulation-first capability gates before physical integrations. |
 
 ## Coverage Snapshot
@@ -59,15 +59,13 @@ User-facing pillars:
 The next useful slices should move from contract depth into product surface and
 capture realism:
 
-1. Evidence eligibility handoff from firewall decisions to Evidence Vault
-   retention and write decisions.
-2. Shadow Pointer native overlay proof with pause/delete/app-ignore controls.
-3. Memory Palace dashboard view over existing explain/correct/delete/export
+1. Shadow Pointer native overlay proof with pause/delete/app-ignore controls.
+2. Memory Palace dashboard view over existing explain/correct/delete/export
    contracts.
-4. Skill Forge candidate list using existing repeated-workflow and maturity
+3. Skill Forge candidate list using existing repeated-workflow and maturity
    gates.
-5. Codex plugin packaging for the MCP gateway and core skills.
-6. Browser/terminal adapters with source-trust and redaction checks.
+4. Codex plugin packaging for the MCP gateway and core skills.
+5. Browser/terminal adapters with source-trust and redaction checks.
 
 ## Update Rule
 

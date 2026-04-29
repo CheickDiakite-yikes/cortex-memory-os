@@ -26,8 +26,9 @@ redaction, quarantine, retention, or evidence eligibility checks.
 
 ## Boundary
 
-The handoff still does not store evidence. It only creates the decision that the
-Evidence Vault, Scene Segmenter, and Memory Compiler must obey.
+The handoff still does not store evidence. It creates the decision consumed by
+`EVIDENCE-ELIGIBILITY-HANDOFF-001`, which then decides Evidence Vault raw-write,
+metadata-write, retention, and derived-ref eligibility.
 
 ## Benchmark Contract
 

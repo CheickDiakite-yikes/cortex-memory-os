@@ -99,6 +99,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `LIVE-OPENAI-SMOKE-001` | Optional live OpenAI smoke uses ignored `.env.local`, a low-cost model default, dry-run mode, and `store: false`. | A local key is tracked, live smoke prints secrets, default tests hit the network, or API payloads store synthetic smoke responses. |
 | `PERCEPTION-EVENT-ENVELOPE-001` | Consented Perception Bus envelopes normalize source kind, consent, scope, trust, route, prompt-risk, and robot-safety metadata. | Native adapters bypass the firewall, raw refs persist without active consent, or robot inputs lack capability and simulation gates. |
 | `PERCEPTION-FIREWALL-HANDOFF-001` | Perception envelopes become firewall decisions without losing consent, prompt-risk, third-party, redaction, retention, or policy refs. | Capture adapters skip firewall gating, third-party content becomes memory-eligible, or prompt-risk metadata is ignored. |
+| `EVIDENCE-ELIGIBILITY-HANDOFF-001` | Firewall decisions become explicit Evidence Vault write plans for raw, derived, metadata-only, and discard handling. | Secret, third-party, quarantined, or discarded observations can write raw blobs or become memory eligible. |
 | `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` | Review queue safety summaries expose applied limit, returned count, total review-required count, and truncation state. | Limited queues hide truncation state, count omitted actions, or leak omitted lesson provenance. |
 | `GATEWAY-REVIEW-QUEUE-ORDERING-001` | Review queues sort missing validation dates first, then oldest validation date, then lesson ID before limits. | Queue ordering depends on insertion order, hidden store order, or leaks provenance while exposing order metadata. |
 | `GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001` | Limited review queues expose stable cursors tied to deterministic ordering. | Cursors leak lesson IDs/provenance, repeat cards, or drift from the advertised ordering contract. |
@@ -149,14 +150,16 @@ The following failures block merge, release, or wider use:
   autonomy.
 - Any unredacted fake secret in tests, traces, benchmark artifacts, logs, or
   docs outside explicitly synthetic source fixtures.
+- Any Evidence Vault write plan that allows raw blobs for secret, third-party,
+  quarantined, discarded, or non-memory-eligible observations.
 - Any high-risk or critical action allowed without the required review gate.
 
 ## Expansion Roadmap
 
 Near-term suites:
 
-- `EVIDENCE-ELIGIBILITY-HANDOFF-001`: Define the handoff from firewall
-  decisions into Evidence Vault write eligibility and retention.
+- Native Shadow Pointer controls: pause, delete recent, app-ignore, and active
+  observing state backed by the existing state contract.
 
 Longer-term suites:
 
