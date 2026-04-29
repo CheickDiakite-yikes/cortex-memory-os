@@ -3,6 +3,7 @@
 Last updated: 2026-04-27
 
 Code gate: `src/cortex_memory_os/skill_policy.py`
+Document derivation gate: `src/cortex_memory_os/skill_forge.py`
 
 ## Principle
 
@@ -104,6 +105,24 @@ must return the same draft execution contract and must not perform external
 effects. If the caller requests an external effect, the result is `blocked` with
 `draft_mode_blocks_external_effects`.
 
+## Document-To-Skill Candidate Flow
+
+`SKILL-DOC-DERIVATION-001` defines how a governed document can become a
+document-to-skill candidate. Documents are evidence, not authority.
+
+Required behavior:
+
+- document-derived skills are candidate-only;
+- execution mode is `draft_only`;
+- maturity cannot exceed Level 2;
+- source refs must include the document ID, source ref, and evidence refs;
+- approval is required before promotion or external effects;
+- rollback and deletion actions must remain visible;
+- hostile, secret, or prompt-injection-like documents are rejected;
+- audits and benchmarks use redacted metadata, not copied document content.
+
+Policy ref: `policy_document_skill_derivation_v1`.
+
 ## Audit Trail
 
 Skill maturity decisions must create human-visible audit receipts.
@@ -153,3 +172,10 @@ operational receipt, not a hidden duplicate of the skill.
 - gateway returns reviewable draft outputs;
 - gateway blocks requested external effects;
 - gateway output reports zero performed external effects.
+
+`SKILL-DOC-DERIVATION-001` verifies:
+
+- document-derived skills remain candidate-only and draft-only;
+- provenance is preserved;
+- approval, rollback, and deletion paths are exposed;
+- hostile or instruction-like source documents are rejected.

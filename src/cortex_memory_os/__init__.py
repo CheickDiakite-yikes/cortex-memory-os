@@ -102,7 +102,13 @@ from cortex_memory_os.memory_compiler import (
 )
 from cortex_memory_os.temporal_graph import compile_temporal_edge
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
-from cortex_memory_os.skill_forge import detect_skill_candidates
+from cortex_memory_os.skill_forge import (
+    DOCUMENT_SKILL_DERIVATION_POLICY_REF,
+    DocumentSkillDerivationRequest,
+    DocumentSkillDerivationResult,
+    derive_skill_candidate_from_document,
+    detect_skill_candidates,
+)
 from cortex_memory_os.memory_palace import (
     MemoryCorrection,
     MemoryExplanation,
@@ -305,6 +311,10 @@ __all__ = [
     "compile_scene_memory",
     "compile_temporal_edge",
     "SQLiteMemoryGraphStore",
+    "DOCUMENT_SKILL_DERIVATION_POLICY_REF",
+    "DocumentSkillDerivationRequest",
+    "DocumentSkillDerivationResult",
+    "derive_skill_candidate_from_document",
     "detect_skill_candidates",
     "MemoryCorrection",
     "MemoryExplanation",

@@ -12,6 +12,7 @@ Source documents:
 - `docs/product/original-goal-coverage.md`
 - `docs/product/memory-palace-dashboard.md`
 - `docs/architecture/context-pack-templates.md`
+- `docs/architecture/document-to-skill-derivation.md`
 - `docs/architecture/agent-runtime-trace.md`
 - `docs/architecture/shadow-pointer-pointing.md`
 - `docs/architecture/system-blueprint.md`
@@ -30,7 +31,7 @@ Source documents:
 | Scene, memory, and graph pipeline | Validated skeleton | `SCENE-SEGMENT-001`, `MEM-COMPILE-001`, `GRAPH-EDGE-001` | Add richer multimodal segmentation and contradiction handling. |
 | Retrieval and context packs | Validated budgeted skeleton | `RETRIEVAL-SCORE-001`, `CONTEXT-PACK-001`, `CONTEXT-BUDGET-001`, scoped self-lesson suites | Add vector/sparse/graph fusion behind stable interfaces. |
 | Memory Palace | Validated dashboard contract | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, `MEMORY-PALACE-DASHBOARD-001`, self-lesson review flows | Build real dashboard UI shell over the safe view model. |
-| Skill Forge | Validated skeleton | `SKILL-FORGE-002`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add candidate UI, workflow clustering, and skill success metrics. |
+| Skill Forge | Validated skeleton plus document derivation | `SKILL-FORGE-002`, `SKILL-DOC-DERIVATION-001`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add candidate UI, workflow clustering, and skill success metrics. |
 | Agent Gateway | Validated skeleton | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools | Package Codex plugin and bridge additional clients. |
 | Agent Runtime Trace | Validated contract | `RUNTIME-TRACE-001`, `docs/architecture/agent-runtime-trace.md`, runtime trace fixture | Persist real agent traces through the gateway and outcome engine. |
 | Shadow Pointer | Partial with controls and pointing contract | `SHADOW-POINTER-001`, `SHADOW-POINTER-CONTROLS-001`, `POINTER-PROPOSAL-001`, static UI prototype | Build native overlay with live permissions and wire controls/proposals to real capture adapters. |
@@ -55,8 +56,8 @@ User-facing pillars:
   receipts, and display-only model pointing proposals.
 - Memory Palace: validated inspect, explain, correct, delete, export,
   dashboard cards, export previews, action plans, and self-lesson review flows.
-- Skill Forge: validated repeated-workflow detector, maturity gates, rollback,
-  audits, and draft-only execution.
+- Skill Forge: validated repeated-workflow detector, document-to-skill candidate
+  derivation, maturity gates, rollback, audits, and draft-only execution.
 - Agent Gateway: validated budgeted context packs, scoped actions, audit
   receipts, review queues, and draft skill execution.
 - Agent Runtime Trace: validated tool calls, shell actions, browser actions,
@@ -67,8 +68,8 @@ User-facing pillars:
 The next useful slices should move from contract depth into product surface and
 capture realism:
 
-1. Skill Forge candidate list using existing repeated-workflow and maturity
-   gates.
+1. Skill Forge candidate list using repeated-workflow, document-derivation, and
+   maturity gates.
 2. Codex plugin packaging for the MCP gateway and core skills.
 3. Browser/terminal adapters with source-trust and redaction checks.
 4. Shadow Pointer native overlay proof wired to live pause/delete/app-ignore
