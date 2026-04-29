@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from cortex_memory_os.contracts import InfluenceLevel, MemoryRecord, MemoryStatus, ScopeLevel
+from cortex_memory_os.contracts import InfluenceLevel, MemoryRecord, MemoryStatus
 from cortex_memory_os.fixtures import load_json
 from cortex_memory_os.memory_lifecycle import transition_memory
 from cortex_memory_os.memory_palace import MemoryPalaceService

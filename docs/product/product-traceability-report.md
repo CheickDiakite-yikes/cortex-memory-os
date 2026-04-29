@@ -13,6 +13,7 @@ Source documents:
 - `docs/product/memory-palace-dashboard.md`
 - `docs/product/skill-forge-candidate-list.md`
 - `docs/research/frontier-agent-plugin-lessons-2026-04-29.md`
+- `docs/architecture/browser-terminal-adapter-contracts.md`
 - `docs/architecture/context-pack-templates.md`
 - `docs/architecture/document-to-skill-derivation.md`
 - `docs/architecture/swarm-governance.md`
@@ -40,7 +41,7 @@ Source documents:
 | Agent Runtime Trace | Validated contract | `RUNTIME-TRACE-001`, `docs/architecture/agent-runtime-trace.md`, runtime trace fixture | Persist real agent traces through the gateway and outcome engine. |
 | Swarm Governance | Validated contract | `SWARM-GOVERNANCE-001`, `docs/adr/0005-swarm-governance-boundary.md` | Wire future parallel agents through governed gateway execution instead of direct delegation. |
 | Shadow Pointer | Partial with controls and pointing contract | `SHADOW-POINTER-001`, `SHADOW-POINTER-CONTROLS-001`, `POINTER-PROPOSAL-001`, static UI prototype | Build native overlay with live permissions and wire controls/proposals to real capture adapters. |
-| Native Perception Bus | Envelope, firewall handoff, and evidence eligibility handoff validated; adapters not started | `PERCEPTION-EVENT-ENVELOPE-001`, `PERCEPTION-FIREWALL-HANDOFF-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001`, roadmap, and ADR | Add consented macOS app/window, accessibility, terminal, and browser adapters. |
+| Native Perception Bus | Envelope, firewall handoff, evidence eligibility, and browser/terminal adapter contracts validated; live adapters not started | `PERCEPTION-EVENT-ENVELOPE-001`, `PERCEPTION-FIREWALL-HANDOFF-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001`, `BROWSER-TERMINAL-ADAPTERS-001`, roadmap, and ADR | Add consented macOS app/window, accessibility, live terminal shell hooks, and browser extension adapters. |
 | Robot readiness | Spatial safety contract validated | `ROBOT-SAFE-001`, `docs/architecture/robot-spatial-safety.md`, initial threat model | Keep physical integrations blocked until real simulation, capability, emergency-stop, and audit adapters exist. |
 
 ## Coverage Snapshot
@@ -74,6 +75,9 @@ User-facing pillars:
 - Robot readiness: validated capability refs, workspace bounds, affordances,
   material constraints, spatial hazards, simulation status, emergency stop,
   approval, and bounded force/speed metadata for future embodied actions.
+- Native Perception Bus: validated terminal/browser adapter contracts that
+  preserve consent, source trust, prompt-injection flags, redaction, firewall
+  handoff, and Evidence Vault eligibility before real capture exists.
 
 ## Next Product Gaps
 
@@ -81,7 +85,7 @@ The next useful slices should move from contract depth into product surface and
 capture realism:
 
 1. Skill Forge candidate list UI shell using the safe candidate-card view model.
-2. Browser/terminal adapters with source-trust and redaction checks.
+2. Real browser/terminal adapters with source-trust and redaction checks.
 3. Real Codex plugin install/discovery smoke from the repo-local skeleton.
 4. Shadow Pointer native overlay proof wired to live pause/delete/app-ignore
    commands and display-only pointing proposals.

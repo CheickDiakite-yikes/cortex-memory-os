@@ -110,6 +110,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `PERCEPTION-EVENT-ENVELOPE-001` | Consented Perception Bus envelopes normalize source kind, consent, scope, trust, route, prompt-risk, and robot-safety metadata. | Native adapters bypass the firewall, raw refs persist without active consent, or robot inputs lack capability and simulation gates. |
 | `PERCEPTION-FIREWALL-HANDOFF-001` | Perception envelopes become firewall decisions without losing consent, prompt-risk, third-party, redaction, retention, or policy refs. | Capture adapters skip firewall gating, third-party content becomes memory-eligible, or prompt-risk metadata is ignored. |
 | `EVIDENCE-ELIGIBILITY-HANDOFF-001` | Firewall decisions become explicit Evidence Vault write plans for raw, derived, metadata-only, and discard handling. | Secret, third-party, quarantined, or discarded observations can write raw blobs or become memory eligible. |
+| `BROWSER-TERMINAL-ADAPTERS-001` | Browser and terminal adapter events compile into governed perception envelopes, firewall decisions, and evidence plans. | Webpage content becomes trusted memory, terminal secrets keep raw refs, paused consent keeps refs, or adapters bypass firewall/evidence planning. |
 | `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` | Review queue safety summaries expose applied limit, returned count, total review-required count, and truncation state. | Limited queues hide truncation state, count omitted actions, or leak omitted lesson provenance. |
 | `GATEWAY-REVIEW-QUEUE-ORDERING-001` | Review queues sort missing validation dates first, then oldest validation date, then lesson ID before limits. | Queue ordering depends on insertion order, hidden store order, or leaks provenance while exposing order metadata. |
 | `GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001` | Limited review queues expose stable cursors tied to deterministic ordering. | Cursors leak lesson IDs/provenance, repeat cards, or drift from the advertised ordering contract. |
@@ -168,9 +169,11 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- Browser and terminal adapter contracts using existing perception envelopes,
-  firewall handoff, and evidence eligibility plans.
 - Real plugin install/discovery smoke for the repo-local Cortex Codex plugin.
+- Native Shadow Pointer overlay proof using existing controls and pointing
+  proposal contracts.
+- Live browser extension and terminal shell-hook adapters using the validated
+  adapter contracts.
 
 Longer-term suites:
 

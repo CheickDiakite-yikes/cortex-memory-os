@@ -14,6 +14,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | SEC-PII-001 | Sensitive-data handling | Detect accidental logging, committing, or surfacing of secrets and PII | leakage count, redaction accuracy | zero committed secrets |
 | PERF-LAT-001 | Memory operation latency | Track read/write/retrieval speed under realistic local loads | p50, p95, p99 latency, throughput | TBD after storage engine choice |
 | CODEX-PLUGIN-001 | Codex plugin skeleton | Verify plugin manifest, local MCP config, progressive-disclosure skills, source-trust references, and no-secret gateway packaging | manifest coverage, skill coverage, blocked secret refs, research traceability | zero secret refs in plugin MCP config |
+| BROWSER-TERMINAL-ADAPTERS-001 | Browser and terminal adapter contracts | Verify first capture adapters preserve consent, source trust, prompt-risk, redaction, and evidence eligibility rules | adapter pass rate, raw-ref drop count, memory eligibility by source trust | zero web memory eligibility and zero raw secret retention |
 | ROBOT-SAFE-001 | Embodied action gating | Ensure memory-triggered physical actions require explicit capability, spatial metadata, simulation, emergency stop, and approval | unauthorized action rate, approval trace completeness, spatial metadata completeness | zero unauthorized actions |
 
 ## Run Log
@@ -128,6 +129,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Robot spatial safety metadata | `uv run cortex-bench` | 109/109 passed | `benchmarks/runs/bench_20260429T041908Z.json` | Next benchmark: Skill Forge candidate list. |
 | 2026-04-29 | Skill Forge candidate list | `uv run cortex-bench` | 110/110 passed | `benchmarks/runs/bench_20260429T042542Z.json` | Next benchmark: Cortex Codex plugin skeleton. |
 | 2026-04-29 | Cortex Codex plugin skeleton | `uv run cortex-bench` | 111/111 passed | `benchmarks/runs/bench_20260429T043529Z.json` | Next benchmark: browser and terminal adapter contracts. |
+| 2026-04-29 | Browser and terminal adapter contracts | `uv run cortex-bench` | 112/112 passed | `benchmarks/runs/bench_20260429T044142Z.json` | Next benchmark: Cortex plugin install/discovery smoke. |
 
 ## First Runnable Harness Requirements
 

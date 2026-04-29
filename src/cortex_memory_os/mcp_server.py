@@ -46,7 +46,6 @@ from cortex_memory_os.memory_palace_flows import (
     SelfLessonReviewAction,
     self_lesson_review_action_plan,
 )
-from cortex_memory_os.memory_store import InMemoryMemoryStore
 from cortex_memory_os.retrieval import RankedMemory, RetrievalScope, self_lesson_scope_allowed
 from cortex_memory_os.self_lesson_audit import (
     SELF_LESSON_AUDIT_POLICY_REF,
