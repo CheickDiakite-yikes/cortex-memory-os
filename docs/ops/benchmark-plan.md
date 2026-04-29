@@ -70,6 +70,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-SKILL-AUDIT-001` | Gateway records structured skill audit receipts. | Gateway skill audit accepts or returns procedure text. |
 | `SKILL-EXECUTION-001` | Draft-only skill execution returns reviewable outputs with no external effects. | Draft execution performs or permits an external effect. |
 | `GATEWAY-SKILL-EXECUTION-001` | Gateway draft skill execution returns reviewable outputs and blocks external effects. | Gateway performs or permits requested external effects. |
+| `SWARM-GOVERNANCE-001` | Swarm plans enforce source isolation, cancellation, budget enforcement, disjoint write scopes, and non-autonomous task ceilings. | Parallel agents share hostile sources, exceed budget, write the same scope, ignore cancellation, or gain autonomy. |
 | `SELF-LESSON-001` | Self-lessons can update methods only, require confirmation, and roll back. | Lesson changes permissions, boundaries, values, scope, or autonomy. |
 | `SELF-LESSON-AUDIT-001` | Self-lesson promotion and rollback create redacted audit receipts. | Audit receipt copies lesson content or source task details. |
 | `CONTEXT-PACK-SELF-LESSON-001` | Active self-lessons appear in scoped context packs while revoked lessons stay excluded. | Revoked or candidate self-lesson enters context. |
@@ -172,6 +173,4 @@ Longer-term suites:
 
 - Multimodal OCR and accessibility-tree consistency.
 - Browser extension source-trust classification.
-- Document/workflow-to-skill derivation with approval, rollback, and deletion.
-- Swarm governance with source isolation, cancellation, and budget enforcement.
 - Robot action gating with simulated physical capability boundaries.

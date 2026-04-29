@@ -125,6 +125,16 @@ from cortex_memory_os.runtime_trace import (
     trace_evidence_refs,
 )
 from cortex_memory_os.temporal_graph import compile_temporal_edge
+from cortex_memory_os.swarm_governance import (
+    SWARM_GOVERNANCE_POLICY_REF,
+    SwarmPlan,
+    SwarmTaskBudget,
+    SwarmTaskRole,
+    SwarmTaskSpec,
+    cancel_swarm_plan,
+    evaluate_swarm_plan,
+    evaluate_swarm_source_access,
+)
 from cortex_memory_os.shadow_pointer import (
     SHADOW_POINTER_POINTING_POLICY_REF,
     ShadowPointerCoordinateSpace,
@@ -301,6 +311,7 @@ def run_all() -> BenchmarkRunResult:
         case_product_goal_coverage_contract,
         case_product_traceability_report_contract,
         case_frontier_agent_research_synthesis,
+        case_swarm_governance_contract,
         case_agent_runtime_trace_contract,
         case_perception_event_envelope_contract,
         case_perception_firewall_handoff_contract,
@@ -552,6 +563,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "docs/product/memory-palace-dashboard.md",
         "docs/architecture/context-pack-templates.md",
         "docs/architecture/document-to-skill-derivation.md",
+        "docs/architecture/swarm-governance.md",
         "docs/architecture/agent-runtime-trace.md",
         "docs/architecture/shadow-pointer-pointing.md",
         "docs/ops/task-board.md",
@@ -563,6 +575,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "Skill Forge",
         "Agent Gateway",
         "Agent Runtime Trace",
+        "Swarm Governance",
         "Native Perception Bus",
         "Robot readiness",
     ]
@@ -578,6 +591,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "SKILL-FORGE-002",
         "SKILL-DOC-DERIVATION-001",
         "GATEWAY-CTX-001",
+        "SWARM-GOVERNANCE-001",
         "SHADOW-POINTER-001",
         "POINTER-PROPOSAL-001",
         "ROBOT-SAFE-001",
@@ -736,6 +750,175 @@ def case_frontier_agent_research_synthesis() -> BenchmarkCaseResult:
             "missing_followups": missing_followups,
             "missing_source_urls": missing_source_urls,
             "missing_ledger_sources": missing_ledger_sources,
+        },
+    )
+
+
+def case_swarm_governance_contract() -> BenchmarkCaseResult:
+    first = SwarmTaskSpec(
+        task_id="swarm_task_research",
+        agent_id="agent_researcher",
+        role=SwarmTaskRole.WORKER,
+        goal="Summarize scoped research evidence.",
+        source_trust=SourceTrust.LOCAL_OBSERVED,
+        allowed_source_refs=["source:research_notes"],
+        blocked_source_refs=["external:hostile_page"],
+        read_scope_refs=["repo:docs:read"],
+        write_scope_refs=["repo:docs/swarm.md"],
+        budget=SwarmTaskBudget(max_prompt_tokens=1400, max_tool_calls=3),
+        cancellation_token="cancel_swarm_bench",
+    )
+    second = SwarmTaskSpec(
+        task_id="swarm_task_review",
+        agent_id="agent_reviewer",
+        role=SwarmTaskRole.REVIEWER,
+        goal="Review the draft without writing files.",
+        source_trust=SourceTrust.AGENT_INFERRED,
+        allowed_source_refs=["source:research_notes"],
+        blocked_source_refs=["external:hostile_page"],
+        read_scope_refs=["repo:docs:read"],
+        budget=SwarmTaskBudget(max_prompt_tokens=800, max_tool_calls=1),
+        depends_on=["swarm_task_research"],
+        cancellation_token="cancel_swarm_bench",
+    )
+    plan = SwarmPlan(
+        plan_id="swarm_plan_bench",
+        coordinator_agent_id="agent_coord",
+        tasks=[first, second],
+        shared_context_refs=["ctx:swarm_brief"],
+        cancellation_token="cancel_swarm_bench",
+    )
+    decision = evaluate_swarm_plan(plan)
+    allowed_access = evaluate_swarm_source_access(first, "source:research_notes")
+    blocked_access = evaluate_swarm_source_access(first, "external:hostile_page")
+    cancellation = cancel_swarm_plan(
+        plan,
+        requested_by="user",
+        reason="stop parallel work",
+    )
+
+    budget_overflow = evaluate_swarm_plan(
+        SwarmPlan(
+            plan_id="swarm_plan_overflow",
+            coordinator_agent_id="agent_coord",
+            tasks=[
+                SwarmTaskSpec(
+                    task_id="swarm_task_overflow",
+                    agent_id="agent_big",
+                    role=SwarmTaskRole.WORKER,
+                    goal="Attempt too much work.",
+                    source_trust=SourceTrust.LOCAL_OBSERVED,
+                    allowed_source_refs=["source:big"],
+                    write_scope_refs=["repo:big"],
+                    budget=SwarmTaskBudget(max_prompt_tokens=5000, max_tool_calls=10),
+                    cancellation_token="cancel_swarm_overflow",
+                )
+            ],
+            max_total_prompt_tokens=1000,
+            max_total_tool_calls=2,
+            cancellation_token="cancel_swarm_overflow",
+        )
+    )
+
+    rejected_overlap = False
+    rejected_autonomy = False
+    try:
+        SwarmPlan(
+            plan_id="swarm_plan_overlap",
+            coordinator_agent_id="agent_coord",
+            tasks=[
+                SwarmTaskSpec(
+                    task_id="swarm_task_a",
+                    agent_id="agent_a",
+                    role=SwarmTaskRole.WORKER,
+                    goal="A",
+                    source_trust=SourceTrust.LOCAL_OBSERVED,
+                    allowed_source_refs=["source:a"],
+                    write_scope_refs=["repo:same"],
+                    cancellation_token="cancel_overlap",
+                ),
+                SwarmTaskSpec(
+                    task_id="swarm_task_b",
+                    agent_id="agent_b",
+                    role=SwarmTaskRole.WORKER,
+                    goal="B",
+                    source_trust=SourceTrust.LOCAL_OBSERVED,
+                    allowed_source_refs=["source:b"],
+                    write_scope_refs=["repo:same"],
+                    cancellation_token="cancel_overlap",
+                ),
+            ],
+            cancellation_token="cancel_overlap",
+        )
+    except ValueError:
+        rejected_overlap = True
+    try:
+        SwarmTaskBudget(autonomy_ceiling=ExecutionMode.BOUNDED_AUTONOMY)
+    except ValueError:
+        rejected_autonomy = True
+
+    adr_text = (
+        REPO_ROOT / "docs" / "adr" / "0005-swarm-governance-boundary.md"
+    ).read_text(encoding="utf-8")
+    architecture_text = (
+        REPO_ROOT / "docs" / "architecture" / "swarm-governance.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    required_doc_terms = [
+        "SWARM-GOVERNANCE-001",
+        "source isolation",
+        "cancellation",
+        "budget enforcement",
+        "disjoint write scopes",
+        SWARM_GOVERNANCE_POLICY_REF,
+    ]
+    missing_doc_terms = _missing_terms(
+        adr_text + "\n" + architecture_text,
+        required_doc_terms,
+    )
+
+    passed = (
+        decision.allowed
+        and decision.allowed_task_ids == ["swarm_task_research", "swarm_task_review"]
+        and decision.audit_required
+        and SWARM_GOVERNANCE_POLICY_REF in decision.policy_refs
+        and allowed_access.allowed
+        and not blocked_access.allowed
+        and blocked_access.reason == "source_explicitly_blocked"
+        and cancellation.cancelled_task_ids == [
+            "swarm_task_research",
+            "swarm_task_review",
+        ]
+        and not cancellation.external_effects_allowed_after_cancel
+        and not budget_overflow.allowed
+        and "prompt_budget_exceeded" in budget_overflow.reason
+        and rejected_overlap
+        and rejected_autonomy
+        and not missing_doc_terms
+        and "SWARM-GOVERNANCE-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SWARM-GOVERNANCE-001/budget_source_cancel_contract",
+        suite="SWARM-GOVERNANCE-001",
+        passed=passed,
+        summary=(
+            "Swarm plans enforce source isolation, budget ceilings, disjoint "
+            "write scopes, cancellation receipts, and non-autonomous task modes."
+        ),
+        metrics={
+            "task_count": len(plan.tasks),
+            "total_prompt_tokens": decision.total_prompt_tokens,
+            "cancelled_task_count": len(cancellation.cancelled_task_ids),
+        },
+        evidence={
+            "policy_ref": SWARM_GOVERNANCE_POLICY_REF,
+            "blocked_access_reason": blocked_access.reason,
+            "budget_overflow_reason": budget_overflow.reason,
+            "rejected_overlap": rejected_overlap,
+            "rejected_autonomy": rejected_autonomy,
+            "missing_doc_terms": missing_doc_terms,
         },
     )
 

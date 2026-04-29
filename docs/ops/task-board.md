@@ -6,13 +6,13 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| SWARM-GOVERNANCE-001 | Add swarm orchestration constraints | Codex | ADR plus budget/source-isolation benchmark | Prepare for parallel agents with cancellation, source isolation, and audit. |
+| ROBOT-SPATIAL-SAFETY-001 | Expand robot spatial safety metadata | Codex | Contract and `ROBOT-SAFE-001` expansion | Add spatial hazards, affordances, material constraints, and simulation status. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| ROBOT-SPATIAL-SAFETY-001 | Expand robot spatial safety metadata | Codex | Contract and `ROBOT-SAFE-001` expansion | Add spatial hazards, affordances, material constraints, and simulation status. |
+| _None_ |  |  |  |  |
 
 ## Backlog
 
@@ -134,6 +134,7 @@ Last updated: 2026-04-29
 | CONTEXT-BUDGET-001 | Add budget metadata to context-pack contracts | Codex | `src/cortex_memory_os/contracts.py`, `src/cortex_memory_os/context_templates.py`, `src/cortex_memory_os/mcp_server.py`, `uv run pytest` -> 217 passed, `uv run cortex-bench` -> 105/105 passed, `uv run cortex-mcp --smoke` | Tracks token, time, tool, artifact, memory, self-lesson, risk, and autonomy budgets without expanding template ceilings. |
 | POINTER-PROPOSAL-001 | Define untrusted model pointing proposal contract | Codex | `src/cortex_memory_os/shadow_pointer.py`, `docs/adr/0004-untrusted-pointing-proposals.md`, `uv run pytest` -> 220 passed, `uv run cortex-bench` -> 106/106 passed, `uv run cortex-mcp --smoke` | Parses model-proposed coordinates as display-only overlays, not clicks, tool calls, trusted instructions, or memory writes. |
 | SKILL-DOC-DERIVATION-001 | Specify document-to-skill candidate flow | Codex | `src/cortex_memory_os/skill_forge.py`, `docs/architecture/document-to-skill-derivation.md`, `uv run pytest` -> 223 passed, `uv run cortex-bench` -> 107/107 passed, `uv run cortex-mcp --smoke` | Document workflows derive candidate-only draft skills with provenance, approval, rollback, deletion, and hostile-source gates. |
+| SWARM-GOVERNANCE-001 | Add swarm orchestration constraints | Codex | `docs/adr/0005-swarm-governance-boundary.md`, `docs/architecture/swarm-governance.md`, `uv run pytest` -> 228 passed, `uv run cortex-bench` -> 108/108 passed, `uv run cortex-mcp --smoke` | Swarm plans enforce budget ceilings, source isolation, disjoint write scopes, cancellation receipts, and non-autonomous task modes. |
 
 ## Dropped
 

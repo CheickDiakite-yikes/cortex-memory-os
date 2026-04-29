@@ -13,6 +13,7 @@ Source documents:
 - `docs/product/memory-palace-dashboard.md`
 - `docs/architecture/context-pack-templates.md`
 - `docs/architecture/document-to-skill-derivation.md`
+- `docs/architecture/swarm-governance.md`
 - `docs/architecture/agent-runtime-trace.md`
 - `docs/architecture/shadow-pointer-pointing.md`
 - `docs/architecture/system-blueprint.md`
@@ -34,6 +35,7 @@ Source documents:
 | Skill Forge | Validated skeleton plus document derivation | `SKILL-FORGE-002`, `SKILL-DOC-DERIVATION-001`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add candidate UI, workflow clustering, and skill success metrics. |
 | Agent Gateway | Validated skeleton | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools | Package Codex plugin and bridge additional clients. |
 | Agent Runtime Trace | Validated contract | `RUNTIME-TRACE-001`, `docs/architecture/agent-runtime-trace.md`, runtime trace fixture | Persist real agent traces through the gateway and outcome engine. |
+| Swarm Governance | Validated contract | `SWARM-GOVERNANCE-001`, `docs/adr/0005-swarm-governance-boundary.md` | Wire future parallel agents through governed gateway execution instead of direct delegation. |
 | Shadow Pointer | Partial with controls and pointing contract | `SHADOW-POINTER-001`, `SHADOW-POINTER-CONTROLS-001`, `POINTER-PROPOSAL-001`, static UI prototype | Build native overlay with live permissions and wire controls/proposals to real capture adapters. |
 | Native Perception Bus | Envelope, firewall handoff, and evidence eligibility handoff validated; adapters not started | `PERCEPTION-EVENT-ENVELOPE-001`, `PERCEPTION-FIREWALL-HANDOFF-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001`, roadmap, and ADR | Add consented macOS app/window, accessibility, terminal, and browser adapters. |
 | Robot readiness | Safety contract only | `ROBOT-SAFE-001`, initial threat model | Add simulation-first capability gates before physical integrations. |
@@ -62,6 +64,8 @@ User-facing pillars:
   receipts, review queues, and draft skill execution.
 - Agent Runtime Trace: validated tool calls, shell actions, browser actions,
   artifacts, approvals, retries, blocked hostile content, and outcome checks.
+- Swarm Governance: validated source isolation, disjoint write scopes, budget
+  enforcement, cancellation receipts, and non-autonomous task ceilings.
 
 ## Next Product Gaps
 
