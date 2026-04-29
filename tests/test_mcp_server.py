@@ -1498,6 +1498,10 @@ def test_self_lesson_review_queue_safety_summary_counts_without_content(tmp_path
     safety_summary = queue["safety_summary"]
     assert safety_summary["lesson_count"] == 1
     assert safety_summary["empty_queue"] is False
+    assert safety_summary["applied_limit"] == 50
+    assert safety_summary["returned_count"] == 1
+    assert safety_summary["total_review_required_count"] == 1
+    assert safety_summary["truncated"] is False
     assert safety_summary["content_redacted"] is True
     assert safety_summary["learned_from_redacted"] is True
     assert safety_summary["rollback_if_redacted"] is True
@@ -1545,6 +1549,10 @@ def test_self_lesson_review_queue_empty_safety_summary_is_zeroed(tmp_path):
     safety_summary = queue["safety_summary"]
     assert safety_summary["lesson_count"] == 0
     assert safety_summary["empty_queue"] is True
+    assert safety_summary["applied_limit"] == 50
+    assert safety_summary["returned_count"] == 0
+    assert safety_summary["total_review_required_count"] == 0
+    assert safety_summary["truncated"] is False
     assert safety_summary["read_only_action_count"] == 0
     assert safety_summary["mutation_action_count"] == 0
     assert safety_summary["confirmation_required_action_count"] == 0
@@ -1559,6 +1567,55 @@ def test_self_lesson_review_queue_empty_safety_summary_is_zeroed(tmp_path):
     assert "Before editing auth" not in rendered_summary
     assert "project:alpha" not in rendered_summary
     assert "task_project_current_empty_queue" not in rendered_summary
+
+
+def test_self_lesson_review_queue_limit_safety_summary_counts_returned_slice(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    stale_one = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_stale_limit_one",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_stale_limit_one"],
+            "last_validated": date(2025, 1, 1),
+        }
+    )
+    stale_two = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_stale_limit_two",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:beta", "task_project_stale_limit_two"],
+            "last_validated": date(2025, 1, 1),
+        }
+    )
+    store.add_self_lesson(stale_one)
+    store.add_self_lesson(stale_two)
+    server = CortexMCPServer(store=store)
+
+    queue = server.call_tool("self_lesson.review_queue", {"limit": 1})
+
+    assert queue["applied_limit"] == 1
+    assert queue["returned_count"] == 1
+    assert queue["count"] == 1
+    assert queue["total_review_required_count"] == 2
+    assert queue["truncated"] is True
+    assert len(queue["lessons"]) == 1
+    safety_summary = queue["safety_summary"]
+    assert safety_summary["applied_limit"] == 1
+    assert safety_summary["returned_count"] == 1
+    assert safety_summary["lesson_count"] == 1
+    assert safety_summary["total_review_required_count"] == 2
+    assert safety_summary["truncated"] is True
+    assert safety_summary["read_only_action_count"] == 1
+    assert safety_summary["mutation_action_count"] == 3
+    assert safety_summary["confirmation_required_action_count"] == 3
+    assert safety_summary["audit_preview_hint_count"] == 1
+    rendered_queue = json.dumps(queue)
+    assert "Before editing auth" not in rendered_queue
+    assert "project:alpha" not in rendered_queue
+    assert "project:beta" not in rendered_queue
+    assert "task_project_stale_limit_one" not in rendered_queue
+    assert "task_project_stale_limit_two" not in rendered_queue
 
 
 def test_self_lesson_review_flow_returns_exact_redacted_action_routes(tmp_path):

@@ -335,3 +335,10 @@ one project, agent, or session from silently shaping another.
 - empty summaries keep the same no-external-effects and policy boundary markers
   as non-empty queues;
 - current non-review lessons do not leak through empty queue summaries.
+
+`GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` verifies:
+
+- review queues expose the applied limit, returned count, total review-required
+  count, and truncation state;
+- safety-summary action counts apply to the returned queue slice only;
+- omitted review-required lesson content and scoped provenance stay redacted.

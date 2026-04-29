@@ -516,11 +516,12 @@ class CortexMCPServer:
             }
         if name == "self_lesson.review_queue":
             limit = _optional_int_range(arguments, "limit", default=50, minimum=1, maximum=100)
-            review_lessons = [
+            all_review_lessons = [
                 lesson
                 for lesson in _all_self_lessons(self.store, self.self_lessons)
                 if self_lesson_review_state(lesson)["review_required"]
-            ][:limit]
+            ]
+            review_lessons = all_review_lessons[:limit]
             lesson_items = [
                 serialize_self_lesson_list_item(
                     lesson,
@@ -534,8 +535,14 @@ class CortexMCPServer:
                 "lesson_ids": [lesson.lesson_id for lesson in review_lessons],
                 "count": len(review_lessons),
                 "safety_summary": summarize_self_lesson_review_queue_safety(
-                    lesson_items
+                    lesson_items,
+                    applied_limit=limit,
+                    total_review_required_count=len(all_review_lessons),
                 ),
+                "applied_limit": limit,
+                "returned_count": len(review_lessons),
+                "total_review_required_count": len(all_review_lessons),
+                "truncated": len(review_lessons) < len(all_review_lessons),
                 "content_redacted": True,
                 "policy_refs": [SELF_LESSON_REVIEW_QUEUE_POLICY_REF],
             }
@@ -1253,6 +1260,9 @@ def summarize_self_lesson_review_flow_safety(
 
 def summarize_self_lesson_review_queue_safety(
     lesson_items: list[dict[str, Any]],
+    *,
+    applied_limit: int,
+    total_review_required_count: int,
 ) -> dict[str, Any]:
     action_plans = [
         item.get("review_action_plan", [])
@@ -1263,6 +1273,10 @@ def summarize_self_lesson_review_queue_safety(
     return {
         "lesson_count": len(lesson_items),
         "empty_queue": len(lesson_items) == 0,
+        "applied_limit": applied_limit,
+        "returned_count": len(lesson_items),
+        "total_review_required_count": total_review_required_count,
+        "truncated": len(lesson_items) < total_review_required_count,
         "content_redacted": True,
         "learned_from_redacted": True,
         "rollback_if_redacted": True,

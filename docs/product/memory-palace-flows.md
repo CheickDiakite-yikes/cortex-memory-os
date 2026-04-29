@@ -511,3 +511,12 @@ rendered without special-case risk:
   effects markers remain present;
 - the summary marks `empty_queue` and does not leak current lesson content,
   learned-from refs, rollback text, or scoped provenance.
+
+`GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` must pass before a paged or limited
+queue is shown:
+
+- the queue response and `safety_summary` both name the applied limit, returned
+  count, total review-required count, and truncation state;
+- action counts summarize only the returned queue slice;
+- limit metadata stays numeric and does not leak lesson content, learned-from
+  refs, rollback text, or scoped provenance from omitted lessons.
