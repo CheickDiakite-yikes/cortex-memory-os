@@ -542,6 +542,16 @@ a UI treats page-size changes as a queue drift signal:
 - page-size changes should use the limit-change hint, not a false drift
   warning.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-ORDER-SENSITIVE-001` must pass before a
+UI trusts a cursor after review metadata changes:
+
+- changing ordering-relevant metadata changes `cursor_metadata.queue_signature`
+  even when the total review-required count stays the same;
+- UIs should treat that signature change as queue drift and reload from the
+  first page;
+- signature metadata remains safe to render in debug panels because inputs stay
+  redacted.
+
 `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` must pass before a paged or limited
 queue is shown:
 

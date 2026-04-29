@@ -201,6 +201,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_empty_cursor_signature,
         case_gateway_review_queue_nonempty_cursor_signature,
         case_gateway_review_queue_signature_limit_independent,
+        case_gateway_review_queue_signature_order_sensitive,
         case_gateway_review_queue_limit_safety_summary,
         case_gateway_review_queue_ordering,
         case_gateway_review_queue_paging_cursor,
@@ -2754,6 +2755,145 @@ def case_gateway_review_queue_signature_limit_independent() -> BenchmarkCaseResu
         evidence={
             "signature_subject": one_metadata.get("signature_subject"),
             "limit_compare_key": one_metadata.get("limit_compare_key"),
+        },
+    )
+
+
+def case_gateway_review_queue_signature_order_sensitive() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+
+        def stale_lesson(
+            lesson_id: str,
+            ref: str,
+            last_validated: date | None,
+        ) -> SelfLesson:
+            return base.model_copy(
+                update={
+                    "lesson_id": lesson_id,
+                    "scope": ScopeLevel.PROJECT_SPECIFIC,
+                    "learned_from": [ref, f"task_{lesson_id}"],
+                    "last_validated": last_validated,
+                }
+            )
+
+        for lesson in (
+            stale_lesson(
+                "lesson_project_stale_order_newer",
+                "project:newer",
+                date(2025, 3, 1),
+            ),
+            stale_lesson(
+                "lesson_project_stale_order_old_b",
+                "project:old-b",
+                date(2024, 2, 1),
+            ),
+            stale_lesson(
+                "lesson_project_missing_order",
+                "project:missing",
+                None,
+            ),
+            stale_lesson(
+                "lesson_project_stale_order_old_a",
+                "project:old-a",
+                date(2024, 1, 1),
+            ),
+        ):
+            store.add_self_lesson(lesson)
+
+        server = CortexMCPServer(store=store)
+        initial_queue = server.call_tool("self_lesson.review_queue", {"limit": 4})
+        store.add_self_lesson(
+            stale_lesson(
+                "lesson_project_stale_order_old_a",
+                "project:old-a",
+                date(2025, 6, 1),
+            )
+        )
+        changed_queue = server.call_tool("self_lesson.review_queue", {"limit": 4})
+
+    initial_metadata = initial_queue.get("cursor_metadata", {})
+    changed_metadata = changed_queue.get("cursor_metadata", {})
+    serialized_metadata = json.dumps(
+        [initial_metadata, changed_metadata],
+        sort_keys=True,
+    )
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    expected_initial_ids = [
+        "lesson_project_missing_order",
+        "lesson_project_stale_order_old_a",
+        "lesson_project_stale_order_old_b",
+        "lesson_project_stale_order_newer",
+    ]
+    expected_changed_ids = [
+        "lesson_project_missing_order",
+        "lesson_project_stale_order_old_b",
+        "lesson_project_stale_order_newer",
+        "lesson_project_stale_order_old_a",
+    ]
+    passed = (
+        initial_metadata.get("queue_signature")
+        != changed_metadata.get("queue_signature")
+        and isinstance(changed_metadata.get("queue_signature"), str)
+        and changed_metadata.get("queue_signature", "").startswith("sha256:")
+        and initial_metadata.get("total_review_required_count") == 4
+        and changed_metadata.get("total_review_required_count") == 4
+        and initial_metadata.get("empty_queue_signature") is False
+        and changed_metadata.get("empty_queue_signature") is False
+        and initial_queue.get("lesson_ids") == expected_initial_ids
+        and changed_queue.get("lesson_ids") == expected_changed_ids
+        and changed_metadata.get("signature_subject")
+        == "ordered_review_required_self_lessons"
+        and changed_metadata.get("signature_inputs_redacted") is True
+        and "lesson_project" not in serialized_metadata
+        and "project:" not in serialized_metadata
+        and "task_" not in serialized_metadata
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-ORDER-SENSITIVE-001"
+        in docs_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-ORDER-SENSITIVE-001"
+        in product_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-ORDER-SENSITIVE-001"
+        in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id=(
+            "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-ORDER-SENSITIVE-001/"
+            "ordering_metadata_change"
+        ),
+        suite="GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-ORDER-SENSITIVE-001",
+        passed=passed,
+        summary=(
+            "Review queue signatures change when ordering-relevant lesson "
+            "metadata changes."
+        ),
+        metrics={
+            "signature_changed": int(
+                initial_metadata.get("queue_signature")
+                != changed_metadata.get("queue_signature")
+            ),
+            "same_total_count": int(
+                initial_metadata.get("total_review_required_count")
+                == changed_metadata.get("total_review_required_count")
+            ),
+            "order_changed": int(
+                initial_queue.get("lesson_ids") != changed_queue.get("lesson_ids")
+            ),
+        },
+        evidence={
+            "signature_subject": changed_metadata.get("signature_subject"),
+            "initial_page_end": initial_metadata.get("page_end"),
+            "changed_page_end": changed_metadata.get("page_end"),
         },
     )
 

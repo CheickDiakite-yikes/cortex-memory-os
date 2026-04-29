@@ -360,6 +360,14 @@ one project, agent, or session from silently shaping another.
 - the signature remains tied to the full ordered review-required set, not the
   visible slice.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-ORDER-SENSITIVE-001` verifies:
+
+- changing ordering-relevant lesson metadata changes `queue_signature`;
+- the review-required count can stay unchanged while the opaque signature still
+  detects queue reorder drift;
+- signature metadata remains redacted and does not expose lesson IDs, content,
+  learned-from refs, or scoped provenance.
+
 `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` verifies:
 
 - review queues expose the applied limit, returned count, total review-required
