@@ -1262,6 +1262,7 @@ def summarize_self_lesson_review_queue_safety(
     mutation_actions = [action for action in actions if action.get("mutation")]
     return {
         "lesson_count": len(lesson_items),
+        "empty_queue": len(lesson_items) == 0,
         "content_redacted": True,
         "learned_from_redacted": True,
         "rollback_if_redacted": True,

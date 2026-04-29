@@ -1497,6 +1497,7 @@ def test_self_lesson_review_queue_safety_summary_counts_without_content(tmp_path
 
     safety_summary = queue["safety_summary"]
     assert safety_summary["lesson_count"] == 1
+    assert safety_summary["empty_queue"] is False
     assert safety_summary["content_redacted"] is True
     assert safety_summary["learned_from_redacted"] is True
     assert safety_summary["rollback_if_redacted"] is True
@@ -1520,6 +1521,44 @@ def test_self_lesson_review_queue_safety_summary_counts_without_content(tmp_path
     assert "content" not in queue["lessons"][0]
     assert "learned_from" not in queue["lessons"][0]
     assert "rollback_if" not in queue["lessons"][0]
+
+
+def test_self_lesson_review_queue_empty_safety_summary_is_zeroed(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    current = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_current_empty_queue",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_current_empty_queue"],
+            "last_validated": date(2026, 4, 28),
+        }
+    )
+    store.add_self_lesson(current)
+    server = CortexMCPServer(store=store)
+
+    queue = server.call_tool("self_lesson.review_queue", {})
+
+    assert queue["lessons"] == []
+    assert queue["lesson_ids"] == []
+    assert queue["count"] == 0
+    safety_summary = queue["safety_summary"]
+    assert safety_summary["lesson_count"] == 0
+    assert safety_summary["empty_queue"] is True
+    assert safety_summary["read_only_action_count"] == 0
+    assert safety_summary["mutation_action_count"] == 0
+    assert safety_summary["confirmation_required_action_count"] == 0
+    assert safety_summary["audit_preview_hint_count"] == 0
+    assert safety_summary["audit_preview_embedded"] is False
+    assert safety_summary["content_redacted"] is True
+    assert safety_summary["learned_from_redacted"] is True
+    assert safety_summary["rollback_if_redacted"] is True
+    assert safety_summary["external_effects_allowed"] is False
+    assert safety_summary["mutation_tools_require_confirmation"] is True
+    rendered_summary = json.dumps(safety_summary)
+    assert "Before editing auth" not in rendered_summary
+    assert "project:alpha" not in rendered_summary
+    assert "task_project_current_empty_queue" not in rendered_summary
 
 
 def test_self_lesson_review_flow_returns_exact_redacted_action_routes(tmp_path):

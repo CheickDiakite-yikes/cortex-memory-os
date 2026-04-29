@@ -6,7 +6,7 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-REVIEW-QUEUE-EMPTY-SAFETY-001 | Add empty review queue safety summary | Codex | Contract, tests, benchmark case | Empty review queues should still return a zeroed, redacted safety summary for safe UI rendering. |
+| GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001 | Add review queue limit safety summary | Codex | Contract, tests, benchmark case | Review queue safety summaries should make the applied limit and returned count explicit. |
 
 ## Next
 
@@ -104,6 +104,7 @@ Last updated: 2026-04-29
 | GATEWAY-REVIEW-QUEUE-AUDIT-PREVIEW-001 | Add review queue audit preview hint | Codex | `uv run pytest` -> 163 passed, `uv run cortex-bench` -> 75/75 passed, `uv run cortex-mcp --smoke` | Review queue entries point to exact-card audit previews without embedding preview content. |
 | GATEWAY-REVIEW-QUEUE-AUDIT-CONSISTENCY-001 | Add review queue audit consistency check | Codex | `uv run pytest` -> 164 passed, `uv run cortex-bench` -> 76/76 passed, `uv run cortex-mcp --smoke` | Review queue hints share the same audit shape ID as review-flow audit previews. |
 | GATEWAY-REVIEW-QUEUE-SAFETY-SUMMARY-001 | Add review queue safety summary | Codex | `uv run pytest` -> 165 passed, `uv run cortex-bench` -> 77/77 passed, `uv run cortex-mcp --smoke` | Review queues summarize read-only, mutation, confirmation, and audit-preview counts without content. |
+| GATEWAY-REVIEW-QUEUE-EMPTY-SAFETY-001 | Add empty review queue safety summary | Codex | `uv run pytest` -> 166 passed, `uv run cortex-bench` -> 78/78 passed, `uv run cortex-mcp --smoke` | Empty review queues still return a zeroed, redacted safety summary for safe UI rendering. |
 
 ## Dropped
 

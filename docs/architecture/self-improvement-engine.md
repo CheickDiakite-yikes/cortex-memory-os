@@ -328,3 +328,10 @@ one project, agent, or session from silently shaping another.
   external effects as unavailable from the aggregate queue;
 - summaries stay redacted and do not copy lesson content, learned-from refs,
   rollback text, or scoped provenance.
+
+`GATEWAY-REVIEW-QUEUE-EMPTY-SAFETY-001` verifies:
+
+- empty review queues still return a zeroed, redacted safety summary;
+- empty summaries keep the same no-external-effects and policy boundary markers
+  as non-empty queues;
+- current non-review lessons do not leak through empty queue summaries.

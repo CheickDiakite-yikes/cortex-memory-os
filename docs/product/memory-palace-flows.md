@@ -502,3 +502,12 @@ rendered as an aggregate review surface:
   remain disallowed from the queue itself;
 - the summary is count-based and does not copy lesson content, learned-from
   refs, rollback text, or scoped provenance.
+
+`GATEWAY-REVIEW-QUEUE-EMPTY-SAFETY-001` must pass before an empty queue can be
+rendered without special-case risk:
+
+- empty queues still return a `safety_summary`;
+- all action and audit-preview counts are zero while redaction and no-external-
+  effects markers remain present;
+- the summary marks `empty_queue` and does not leak current lesson content,
+  learned-from refs, rollback text, or scoped provenance.

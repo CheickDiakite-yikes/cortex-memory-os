@@ -86,6 +86,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-REVIEW-QUEUE-AUDIT-PREVIEW-001` | Review queue entries point to exact-card audit previews without embedding preview content. | Queue entries embed previews directly, omit audit-preview hints, or leak content/provenance. |
 | `GATEWAY-REVIEW-QUEUE-AUDIT-CONSISTENCY-001` | Review queue hints share the same audit shape ID as review-flow audit previews. | Queue hints drift from exact review-flow preview contracts or embed preview content. |
 | `GATEWAY-REVIEW-QUEUE-SAFETY-SUMMARY-001` | Review queues summarize read-only, mutation, confirmation, and audit-preview counts without content. | Queue summaries leak content/provenance, omit confirmation counts, or imply external effects are allowed. |
+| `GATEWAY-REVIEW-QUEUE-EMPTY-SAFETY-001` | Empty review queues return a zeroed, redacted safety summary for safe UI rendering. | Empty queues omit safety metadata, return non-zero action counts, or leak current lesson provenance. |
 | `GATEWAY-SELF-LESSON-REVIEW-FLOW-001` | Gateway returns an exact-ID self-lesson review flow with queue metadata and follow-up tool routes. | Review flow can run from vague search, omits policy refs, or leaks content/provenance. |
 | `SELF-LESSON-REVIEW-FLOW-SAFETY-SUMMARY-001` | Review flows summarize confirmation, mutation, and redaction safety without lesson content. | Safety summary omits mutation confirmation requirements or leaks content/provenance. |
 | `SELF-LESSON-REVIEW-FLOW-AUDIT-PREVIEW-001` | Review flows preview mutation audit receipt shape before execution. | Audit previews require mutation execution, omit confirmation metadata, or leak content/provenance. |
@@ -133,8 +134,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `GATEWAY-REVIEW-QUEUE-EMPTY-SAFETY-001`: Empty review queues should still
-  return a zeroed, redacted safety summary for safe UI rendering.
+- `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001`: Review queue safety summaries should
+  make the applied limit and returned count explicit.
 
 Longer-term suites:
 

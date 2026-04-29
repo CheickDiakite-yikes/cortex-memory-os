@@ -189,6 +189,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_audit_preview_hint,
         case_gateway_review_queue_audit_consistency,
         case_gateway_review_queue_safety_summary,
+        case_gateway_review_queue_empty_safety_summary,
         case_gateway_self_lesson_review_flow,
         case_self_lesson_review_flow_safety_summary,
         case_self_lesson_review_flow_audit_preview,
@@ -2265,6 +2266,7 @@ def case_gateway_review_queue_safety_summary() -> BenchmarkCaseResult:
     passed = (
         queue.get("lesson_ids") == [stale.lesson_id]
         and safety_summary.get("lesson_count") == 1
+        and safety_summary.get("empty_queue") is False
         and safety_summary.get("content_redacted") is True
         and safety_summary.get("learned_from_redacted") is True
         and safety_summary.get("rollback_if_redacted") is True
@@ -2311,6 +2313,81 @@ def case_gateway_review_queue_safety_summary() -> BenchmarkCaseResult:
         evidence={
             "review_queue_tool": safety_summary.get("review_queue_tool"),
             "review_flow_tool": safety_summary.get("review_flow_tool"),
+        },
+    )
+
+
+def case_gateway_review_queue_empty_safety_summary() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        current = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_current_empty_queue",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_current_empty_queue"],
+                "last_validated": date(2026, 4, 28),
+            }
+        )
+        store.add_self_lesson(current)
+        server = CortexMCPServer(store=store)
+        queue = server.call_tool("self_lesson.review_queue", {})
+
+    safety_summary = queue.get("safety_summary", {})
+    serialized_summary = json.dumps(safety_summary, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        queue.get("lessons") == []
+        and queue.get("lesson_ids") == []
+        and queue.get("count") == 0
+        and safety_summary.get("lesson_count") == 0
+        and safety_summary.get("empty_queue") is True
+        and safety_summary.get("read_only_action_count") == 0
+        and safety_summary.get("mutation_action_count") == 0
+        and safety_summary.get("confirmation_required_action_count") == 0
+        and safety_summary.get("audit_preview_hint_count") == 0
+        and safety_summary.get("audit_preview_embedded") is False
+        and safety_summary.get("content_redacted") is True
+        and safety_summary.get("learned_from_redacted") is True
+        and safety_summary.get("rollback_if_redacted") is True
+        and safety_summary.get("external_effects_allowed") is False
+        and safety_summary.get("mutation_tools_require_confirmation") is True
+        and "Before editing auth" not in serialized_summary
+        and "project:alpha" not in serialized_summary
+        and "task_project_current_empty_queue" not in serialized_summary
+        and "GATEWAY-REVIEW-QUEUE-EMPTY-SAFETY-001" in docs_text
+        and "GATEWAY-REVIEW-QUEUE-EMPTY-SAFETY-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-REVIEW-QUEUE-EMPTY-SAFETY-001/empty_queue_safety_summary",
+        suite="GATEWAY-REVIEW-QUEUE-EMPTY-SAFETY-001",
+        passed=passed,
+        summary="Empty review queues return a zeroed, redacted safety summary for safe UI rendering.",
+        metrics={
+            "lesson_count": safety_summary.get("lesson_count", -1),
+            "read_only_action_count": safety_summary.get(
+                "read_only_action_count", -1
+            ),
+            "mutation_action_count": safety_summary.get(
+                "mutation_action_count", -1
+            ),
+            "confirmation_required_action_count": safety_summary.get(
+                "confirmation_required_action_count", -1
+            ),
+            "audit_preview_hint_count": safety_summary.get(
+                "audit_preview_hint_count", -1
+            ),
+        },
+        evidence={
+            "empty_queue": safety_summary.get("empty_queue"),
+            "review_queue_tool": safety_summary.get("review_queue_tool"),
         },
     )
 
