@@ -577,6 +577,16 @@ signature drift:
   `self_lesson.review_queue` from the first page;
 - the hint is read-only, non-mutating, no-confirmation, and no-external-effects.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-LIMIT-CHANGE-001` must pass before a UI supports
+page-size changes during cursor paging:
+
+- `cursor_metadata.applied_limit` is the comparison value for page-size changes;
+- when a user changes page size between cursor requests, the UI should discard
+  the cursor and reload `self_lesson.review_queue` from the first page with the
+  selected limit;
+- the limit-change hint is read-only, non-mutating, no-confirmation, and safe
+  for debug display.
+
 `GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001` must pass before accepting a cursor
 from any UI, agent, or external caller:
 

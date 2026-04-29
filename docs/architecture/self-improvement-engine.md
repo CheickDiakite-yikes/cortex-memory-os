@@ -392,6 +392,13 @@ one project, agent, or session from silently shaping another.
 - the hint is read-only, requires no confirmation, and permits no external
   effects.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-LIMIT-CHANGE-001` verifies:
+
+- cursor metadata exposes `applied_limit` as the page-size comparison key;
+- if users change page size between cursor requests, the safe recommended
+  action is to discard the cursor and reload from the first page;
+- limit-change metadata stays read-only, redacted, and no-external-effects.
+
 `GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001` verifies:
 
 - malformed review queue cursors fail with a fixed redacted error;

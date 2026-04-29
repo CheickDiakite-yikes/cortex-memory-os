@@ -1,6 +1,6 @@
 # Benchmark Registry
 
-Last updated: 2026-04-28
+Last updated: 2026-04-29
 
 Benchmarks should become runnable as soon as implementation begins. Until then, this registry defines what must be measurable.
 
@@ -102,6 +102,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Review queue cursor metadata stability | `uv run cortex-bench` | 84/84 passed | `benchmarks/runs/bench_20260429T021711Z.json` | Next benchmark: cursor drift inspection. |
 | 2026-04-29 | Review queue cursor drift inspection | `uv run cortex-bench` | 85/85 passed | `benchmarks/runs/bench_20260429T022020Z.json` | Next benchmark: cursor drift refresh hint. |
 | 2026-04-29 | Review queue cursor refresh hint | `uv run cortex-bench` | 86/86 passed | `benchmarks/runs/bench_20260429T022254Z.json` | Next benchmark: cursor limit-change inspection. |
+| 2026-04-29 | Review queue cursor limit-change inspection | `uv run cortex-bench` | 87/87 passed | `benchmarks/runs/bench_20260429T022808Z.json` | Next benchmark: empty queue signature metadata. |
 
 ## First Runnable Harness Requirements
 

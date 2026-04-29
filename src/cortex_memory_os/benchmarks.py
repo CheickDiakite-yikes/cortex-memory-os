@@ -205,6 +205,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_cursor_metadata_stability,
         case_gateway_review_queue_cursor_drift_inspection,
         case_gateway_review_queue_cursor_refresh_hint,
+        case_gateway_review_queue_cursor_limit_change,
         case_gateway_review_queue_invalid_cursor,
         case_gateway_self_lesson_review_flow,
         case_self_lesson_review_flow_safety_summary,
@@ -2903,6 +2904,21 @@ def case_gateway_review_queue_cursor_metadata_stability() -> BenchmarkCaseResult
         "content_redacted": True,
         "provenance_redacted": True,
     }
+    expected_limit_hint = {
+        "when": "applied_limit_changed_between_requests",
+        "compare_key": "applied_limit",
+        "recommended_action": "discard_cursor_and_reload_first_page",
+        "reload_tool": "self_lesson.review_queue",
+        "recommended_arguments": {
+            "limit": 2,
+            "cursor": None,
+        },
+        "mutation": False,
+        "requires_confirmation": False,
+        "external_effects_allowed": False,
+        "content_redacted": True,
+        "provenance_redacted": True,
+    }
     serialized_metadata = json.dumps(
         [first_metadata, second_metadata],
         sort_keys=True,
@@ -2942,6 +2958,9 @@ def case_gateway_review_queue_cursor_metadata_stability() -> BenchmarkCaseResult
             "drift_compare_key": "queue_signature",
             "drift_detection_supported": True,
             "drift_refresh_hint": expected_refresh_hint,
+            "limit_compare_key": "applied_limit",
+            "limit_change_detection_supported": True,
+            "limit_change_hint": expected_limit_hint,
             "signature_inputs_redacted": True,
             "content_redacted": True,
             "provenance_redacted": True,
@@ -2965,6 +2984,9 @@ def case_gateway_review_queue_cursor_metadata_stability() -> BenchmarkCaseResult
             "drift_compare_key": "queue_signature",
             "drift_detection_supported": True,
             "drift_refresh_hint": expected_refresh_hint,
+            "limit_compare_key": "applied_limit",
+            "limit_change_detection_supported": True,
+            "limit_change_hint": expected_limit_hint,
             "signature_inputs_redacted": True,
             "content_redacted": True,
             "provenance_redacted": True,
@@ -3189,6 +3211,121 @@ def case_gateway_review_queue_cursor_refresh_hint() -> BenchmarkCaseResult:
         evidence={
             "recommended_action": hint.get("recommended_action"),
             "reload_tool": hint.get("reload_tool"),
+        },
+    )
+
+
+def case_gateway_review_queue_cursor_limit_change() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+
+        def stale_lesson(
+            lesson_id: str,
+            ref: str,
+            last_validated: date | None,
+        ) -> SelfLesson:
+            return base.model_copy(
+                update={
+                    "lesson_id": lesson_id,
+                    "scope": ScopeLevel.PROJECT_SPECIFIC,
+                    "learned_from": [ref, f"task_{lesson_id}"],
+                    "last_validated": last_validated,
+                }
+            )
+
+        for lesson in (
+            stale_lesson(
+                "lesson_project_stale_newer",
+                "project:newer",
+                date(2025, 3, 1),
+            ),
+            stale_lesson(
+                "lesson_project_stale_old_b",
+                "project:old-b",
+                date(2024, 1, 1),
+            ),
+            stale_lesson(
+                "lesson_project_missing_validation",
+                "project:missing",
+                None,
+            ),
+            stale_lesson(
+                "lesson_project_stale_old_a",
+                "project:old-a",
+                date(2024, 1, 1),
+            ),
+        ):
+            store.add_self_lesson(lesson)
+
+        server = CortexMCPServer(store=store)
+        first_page = server.call_tool("self_lesson.review_queue", {"limit": 2})
+        changed_limit_page = server.call_tool(
+            "self_lesson.review_queue",
+            {"limit": 3, "cursor": first_page.get("next_cursor")},
+        )
+
+    first_metadata = first_page.get("cursor_metadata", {})
+    changed_metadata = changed_limit_page.get("cursor_metadata", {})
+    hint = changed_metadata.get("limit_change_hint", {})
+    serialized_metadata = json.dumps(changed_metadata, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        first_metadata.get("applied_limit") == 2
+        and changed_metadata.get("applied_limit") == 3
+        and changed_metadata.get("limit_compare_key") == "applied_limit"
+        and changed_metadata.get("limit_change_detection_supported") is True
+        and hint
+        == {
+            "when": "applied_limit_changed_between_requests",
+            "compare_key": "applied_limit",
+            "recommended_action": "discard_cursor_and_reload_first_page",
+            "reload_tool": "self_lesson.review_queue",
+            "recommended_arguments": {
+                "limit": 3,
+                "cursor": None,
+            },
+            "mutation": False,
+            "requires_confirmation": False,
+            "external_effects_allowed": False,
+            "content_redacted": True,
+            "provenance_redacted": True,
+        }
+        and changed_metadata.get("current_offset") == 2
+        and changed_metadata.get("page_start") == 2
+        and changed_metadata.get("current_cursor_present") is True
+        and "project:" not in serialized_metadata
+        and "task_" not in serialized_metadata
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-LIMIT-CHANGE-001" in docs_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-LIMIT-CHANGE-001" in product_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-LIMIT-CHANGE-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-REVIEW-QUEUE-CURSOR-LIMIT-CHANGE-001/limit_hint",
+        suite="GATEWAY-REVIEW-QUEUE-CURSOR-LIMIT-CHANGE-001",
+        passed=passed,
+        summary=(
+            "Cursor metadata makes page-size changes inspectable and guides "
+            "UIs to restart paging safely."
+        ),
+        metrics={
+            "first_limit": first_metadata.get("applied_limit", -1),
+            "changed_limit": changed_metadata.get("applied_limit", -1),
+            "hint_present": int(bool(hint)),
+        },
+        evidence={
+            "limit_compare_key": changed_metadata.get("limit_compare_key"),
+            "recommended_action": hint.get("recommended_action"),
         },
     )
 
