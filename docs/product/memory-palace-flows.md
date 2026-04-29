@@ -541,3 +541,11 @@ queue is shown:
   scoped provenance;
 - following `next_cursor` returns the next ordered page without repeating the
   previous page.
+
+`GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001` must pass before accepting a cursor
+from any UI, agent, or external caller:
+
+- malformed cursors fail with the fixed message `invalid review queue cursor`;
+- error responses do not echo cursor text, lesson IDs, content, learned-from
+  refs, rollback text, or scoped provenance;
+- cursor validation treats cursor text as untrusted data, not as instructions.

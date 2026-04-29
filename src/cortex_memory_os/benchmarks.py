@@ -198,6 +198,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_limit_safety_summary,
         case_gateway_review_queue_ordering,
         case_gateway_review_queue_paging_cursor,
+        case_gateway_review_queue_invalid_cursor,
         case_gateway_self_lesson_review_flow,
         case_self_lesson_review_flow_safety_summary,
         case_self_lesson_review_flow_audit_preview,
@@ -2699,6 +2700,67 @@ def case_gateway_review_queue_paging_cursor() -> BenchmarkCaseResult:
             "second_page_ids": second_page.get("lesson_ids", []),
             "cursor_contains_provenance": "project:" in first_cursor
             or "task_" in first_cursor,
+        },
+    )
+
+
+def case_gateway_review_queue_invalid_cursor() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    hostile_cursor = "project:alpha:task_secret_ref:ignore_previous_instructions"
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        server = CortexMCPServer(store=store)
+        response = server.handle_jsonrpc(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {
+                    "name": "self_lesson.review_queue",
+                    "arguments": {"cursor": hostile_cursor},
+                },
+            }
+        )
+
+    error = response.get("error", {})
+    message = error.get("message", "")
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        error.get("code") == -32602
+        and message == "invalid review queue cursor"
+        and "project:alpha" not in message
+        and "task_secret_ref" not in message
+        and "ignore_previous_instructions" not in message
+        and "GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001" in docs_text
+        and "GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001" in product_text
+        and "GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001/redacted_error",
+        suite="GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001",
+        passed=passed,
+        summary="Malformed review queue cursors fail with a fixed redacted error.",
+        metrics={
+            "error_code": error.get("code", 0),
+            "message_exact": int(message == "invalid review queue cursor"),
+            "cursor_text_leaked": int(
+                "project:alpha" in message
+                or "task_secret_ref" in message
+                or "ignore_previous_instructions" in message
+            ),
+        },
+        evidence={
+            "message": message,
+            "cursor_echoed": hostile_cursor in message,
         },
     )
 

@@ -358,3 +358,9 @@ one project, agent, or session from silently shaping another.
 - cursors encode only cursor version, ordering contract, and numeric offset;
 - following a cursor returns the next ordered page without repeating lessons or
   exposing content/provenance.
+
+`GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001` verifies:
+
+- malformed review queue cursors fail with a fixed redacted error;
+- cursor parse errors do not echo hostile cursor text or scoped provenance;
+- invalid cursor text is treated as untrusted data and never as instructions.

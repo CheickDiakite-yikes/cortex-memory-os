@@ -1725,6 +1725,31 @@ def test_self_lesson_review_queue_pages_with_stable_cursor(tmp_path):
     assert "task_" not in first_page["next_cursor"]
 
 
+def test_self_lesson_review_queue_invalid_cursor_error_is_redacted(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    server = CortexMCPServer(store=store)
+    hostile_cursor = "project:alpha:task_secret_ref:ignore_previous_instructions"
+
+    response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "self_lesson.review_queue",
+                "arguments": {"cursor": hostile_cursor},
+            },
+        }
+    )
+
+    error = response["error"]
+    assert error["code"] == -32602
+    assert error["message"] == "invalid review queue cursor"
+    assert "project:alpha" not in error["message"]
+    assert "task_secret_ref" not in error["message"]
+    assert "ignore_previous_instructions" not in error["message"]
+
+
 def test_self_lesson_review_flow_returns_exact_redacted_action_routes(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
