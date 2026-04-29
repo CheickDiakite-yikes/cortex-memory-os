@@ -198,6 +198,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_audit_consistency,
         case_gateway_review_queue_safety_summary,
         case_gateway_review_queue_empty_safety_summary,
+        case_gateway_review_queue_empty_cursor_signature,
         case_gateway_review_queue_limit_safety_summary,
         case_gateway_review_queue_ordering,
         case_gateway_review_queue_paging_cursor,
@@ -2417,6 +2418,90 @@ def case_gateway_review_queue_empty_safety_summary() -> BenchmarkCaseResult:
     )
 
 
+def case_gateway_review_queue_empty_cursor_signature() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        current = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_current_empty_signature",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_current_empty_signature"],
+                "last_validated": date(2026, 4, 28),
+            }
+        )
+        store.add_self_lesson(current)
+        server = CortexMCPServer(store=store)
+        queue = server.call_tool("self_lesson.review_queue", {})
+        queue_again = server.call_tool("self_lesson.review_queue", {})
+
+    metadata = queue.get("cursor_metadata", {})
+    signature = metadata.get("queue_signature")
+    serialized_metadata = json.dumps(metadata, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        queue.get("lessons") == []
+        and queue.get("lesson_ids") == []
+        and queue.get("next_cursor") is None
+        and metadata == queue_again.get("cursor_metadata")
+        and isinstance(signature, str)
+        and signature.startswith("sha256:")
+        and metadata.get("queue_signature_version")
+        == SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION
+        and metadata.get("signature_subject") == "ordered_review_required_self_lessons"
+        and metadata.get("empty_queue_signature") is True
+        and metadata.get("total_review_required_count") == 0
+        and metadata.get("current_offset") == 0
+        and metadata.get("next_offset") is None
+        and metadata.get("page_start") == 0
+        and metadata.get("page_end") == 0
+        and metadata.get("has_more") is False
+        and metadata.get("current_cursor_present") is False
+        and metadata.get("next_cursor_present") is False
+        and metadata.get("signature_inputs_redacted") is True
+        and metadata.get("content_redacted") is True
+        and metadata.get("provenance_redacted") is True
+        and "Before editing auth" not in serialized_metadata
+        and "project:alpha" not in serialized_metadata
+        and "task_project_current_empty_signature" not in serialized_metadata
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-EMPTY-001" in docs_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-EMPTY-001" in product_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-EMPTY-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-EMPTY-001/empty_signature",
+        suite="GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-EMPTY-001",
+        passed=passed,
+        summary=(
+            "Empty review queues expose stable, opaque, redacted signature "
+            "metadata."
+        ),
+        metrics={
+            "total_review_required_count": metadata.get(
+                "total_review_required_count", -1
+            ),
+            "empty_queue_signature": int(
+                metadata.get("empty_queue_signature") is True
+            ),
+            "metadata_stable": int(metadata == queue_again.get("cursor_metadata")),
+        },
+        evidence={
+            "queue_signature_version": metadata.get("queue_signature_version"),
+            "signature_subject": metadata.get("signature_subject"),
+        },
+    )
+
+
 def case_gateway_review_queue_limit_safety_summary() -> BenchmarkCaseResult:
     from tempfile import TemporaryDirectory
 
@@ -2944,6 +3029,8 @@ def case_gateway_review_queue_cursor_metadata_stability() -> BenchmarkCaseResult
             "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
             "queue_signature_version": SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION,
             "queue_signature": first_signature,
+            "signature_subject": "ordered_review_required_self_lessons",
+            "empty_queue_signature": False,
             "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
             "current_cursor_present": False,
             "next_cursor_present": True,
@@ -2970,6 +3057,8 @@ def case_gateway_review_queue_cursor_metadata_stability() -> BenchmarkCaseResult
             "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
             "queue_signature_version": SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION,
             "queue_signature": second_signature,
+            "signature_subject": "ordered_review_required_self_lessons",
+            "empty_queue_signature": False,
             "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
             "current_cursor_present": True,
             "next_cursor_present": False,

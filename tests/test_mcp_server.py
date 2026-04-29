@@ -1576,6 +1576,93 @@ def test_self_lesson_review_queue_empty_safety_summary_is_zeroed(tmp_path):
     assert "task_project_current_empty_queue" not in rendered_summary
 
 
+def test_self_lesson_review_queue_empty_cursor_signature_metadata_is_stable(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+    current = active.model_copy(
+        update={
+            "lesson_id": "lesson_project_current_empty_signature",
+            "scope": ScopeLevel.PROJECT_SPECIFIC,
+            "learned_from": ["project:alpha", "task_project_current_empty_signature"],
+            "last_validated": date(2026, 4, 28),
+        }
+    )
+    store.add_self_lesson(current)
+    server = CortexMCPServer(store=store)
+
+    queue = server.call_tool("self_lesson.review_queue", {})
+    queue_again = server.call_tool("self_lesson.review_queue", {})
+
+    metadata = queue["cursor_metadata"]
+    signature = metadata["queue_signature"]
+    expected_refresh_hint = {
+        "when": "queue_signature_changed",
+        "compare_key": "queue_signature",
+        "recommended_action": "discard_cursor_and_reload_first_page",
+        "reload_tool": "self_lesson.review_queue",
+        "recommended_arguments": {
+            "limit": 50,
+            "cursor": None,
+        },
+        "mutation": False,
+        "requires_confirmation": False,
+        "external_effects_allowed": False,
+        "content_redacted": True,
+        "provenance_redacted": True,
+    }
+    expected_limit_hint = {
+        "when": "applied_limit_changed_between_requests",
+        "compare_key": "applied_limit",
+        "recommended_action": "discard_cursor_and_reload_first_page",
+        "reload_tool": "self_lesson.review_queue",
+        "recommended_arguments": {
+            "limit": 50,
+            "cursor": None,
+        },
+        "mutation": False,
+        "requires_confirmation": False,
+        "external_effects_allowed": False,
+        "content_redacted": True,
+        "provenance_redacted": True,
+    }
+    assert queue["lessons"] == []
+    assert queue["lesson_ids"] == []
+    assert queue["next_cursor"] is None
+    assert queue["cursor_metadata"] == queue_again["cursor_metadata"]
+    assert signature.startswith("sha256:")
+    assert metadata == {
+        "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
+        "queue_signature_version": SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION,
+        "queue_signature": signature,
+        "signature_subject": "ordered_review_required_self_lessons",
+        "empty_queue_signature": True,
+        "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
+        "current_cursor_present": False,
+        "next_cursor_present": False,
+        "applied_limit": 50,
+        "total_review_required_count": 0,
+        "current_offset": 0,
+        "next_offset": None,
+        "page_start": 0,
+        "page_end": 0,
+        "has_more": False,
+        "stable_when_ordering_unchanged": True,
+        "drift_compare_key": "queue_signature",
+        "drift_detection_supported": True,
+        "drift_refresh_hint": expected_refresh_hint,
+        "limit_compare_key": "applied_limit",
+        "limit_change_detection_supported": True,
+        "limit_change_hint": expected_limit_hint,
+        "signature_inputs_redacted": True,
+        "content_redacted": True,
+        "provenance_redacted": True,
+    }
+    rendered_metadata = json.dumps(metadata)
+    assert "Before editing auth" not in rendered_metadata
+    assert "project:alpha" not in rendered_metadata
+    assert "task_project_current_empty_signature" not in rendered_metadata
+
+
 def test_self_lesson_review_queue_limit_safety_summary_counts_returned_slice(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
@@ -1867,6 +1954,8 @@ def test_self_lesson_review_queue_cursor_metadata_is_stable(tmp_path):
         "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
         "queue_signature_version": SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION,
         "queue_signature": first_signature,
+        "signature_subject": "ordered_review_required_self_lessons",
+        "empty_queue_signature": False,
         "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
         "current_cursor_present": False,
         "next_cursor_present": True,
@@ -1892,6 +1981,8 @@ def test_self_lesson_review_queue_cursor_metadata_is_stable(tmp_path):
         "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
         "queue_signature_version": SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION,
         "queue_signature": second_signature,
+        "signature_subject": "ordered_review_required_self_lessons",
+        "empty_queue_signature": False,
         "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
         "current_cursor_present": True,
         "next_cursor_present": False,

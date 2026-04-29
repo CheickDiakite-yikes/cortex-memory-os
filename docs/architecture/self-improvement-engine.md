@@ -336,6 +336,14 @@ one project, agent, or session from silently shaping another.
   as non-empty queues;
 - current non-review lessons do not leak through empty queue summaries.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-EMPTY-001` verifies:
+
+- empty review queues still return stable `cursor_metadata.queue_signature`;
+- signature metadata marks the subject as ordered review-required self-lessons
+  and identifies the signature as an empty-queue signature;
+- empty signature metadata stays opaque, redacted, and free of current lesson
+  content or scoped provenance.
+
 `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` verifies:
 
 - review queues expose the applied limit, returned count, total review-required

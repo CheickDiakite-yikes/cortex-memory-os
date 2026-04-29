@@ -512,6 +512,16 @@ rendered without special-case risk:
 - the summary marks `empty_queue` and does not leak current lesson content,
   learned-from refs, rollback text, or scoped provenance.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-EMPTY-001` must pass before an empty
+queue is cached or compared by signature:
+
+- empty queues still return `cursor_metadata.queue_signature`;
+- `cursor_metadata.signature_subject` names the ordered review-required lesson
+  set, and `empty_queue_signature` is true;
+- the signature and metadata are safe for debug display and do not expose
+  current lesson content, learned-from refs, rollback text, or scoped
+  provenance.
+
 `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` must pass before a paged or limited
 queue is shown:
 

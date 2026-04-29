@@ -1380,6 +1380,8 @@ def summarize_self_lesson_review_queue_cursor_metadata(
         "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
         "queue_signature_version": SELF_LESSON_REVIEW_QUEUE_SIGNATURE_VERSION,
         "queue_signature": queue_signature,
+        "signature_subject": "ordered_review_required_self_lessons",
+        "empty_queue_signature": total_review_required_count == 0,
         "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
         "current_cursor_present": cursor is not None,
         "next_cursor_present": next_cursor is not None,
