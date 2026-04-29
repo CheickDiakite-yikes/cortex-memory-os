@@ -96,6 +96,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-CONTENT-INDEPENDENT-001` | Review queue signatures ignore lesson content/provenance when membership and ordering stay unchanged. | Content edits cause false queue drift, or hidden prose/provenance leaks through signature metadata. |
 | `PRODUCT-GOAL-COVERAGE-001` | Product docs and benchmarks keep the original Cortex brain-loop and pillars visible. | Implementation drifts into a narrow recorder/search tool, loses pillar ownership, or hides safety/ops contracts. |
 | `PRODUCT-TRACEABILITY-REPORT-001` | A concise product traceability report separates validated contracts from partial and not-started product surfaces. | Product state is only discoverable by reading long task logs, or reports overclaim incomplete UI/capture work. |
+| `PERCEPTION-EVENT-ENVELOPE-001` | Consented Perception Bus envelopes normalize source kind, consent, scope, trust, route, prompt-risk, and robot-safety metadata. | Native adapters bypass the firewall, raw refs persist without active consent, or robot inputs lack capability and simulation gates. |
 | `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` | Review queue safety summaries expose applied limit, returned count, total review-required count, and truncation state. | Limited queues hide truncation state, count omitted actions, or leak omitted lesson provenance. |
 | `GATEWAY-REVIEW-QUEUE-ORDERING-001` | Review queues sort missing validation dates first, then oldest validation date, then lesson ID before limits. | Queue ordering depends on insertion order, hidden store order, or leaks provenance while exposing order metadata. |
 | `GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001` | Limited review queues expose stable cursors tied to deterministic ordering. | Cursors leak lesson IDs/provenance, repeat cards, or drift from the advertised ordering contract. |
@@ -152,8 +153,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `PERCEPTION-EVENT-ENVELOPE-001`: Define the consented native perception event
-  envelope for app/window, terminal, browser, and future robot inputs.
+- `PERCEPTION-FIREWALL-HANDOFF-001`: Define the handoff from perception
+  envelopes into firewall decisions and evidence eligibility.
 
 Longer-term suites:
 

@@ -31,6 +31,24 @@ class ObservationEventType(str, Enum):
     OUTCOME = "outcome"
 
 
+class PerceptionSourceKind(str, Enum):
+    SCREEN = "screen"
+    APP_WINDOW = "app_window"
+    ACCESSIBILITY = "accessibility"
+    TERMINAL = "terminal"
+    BROWSER = "browser"
+    IDE = "ide"
+    FILE_SYSTEM = "file_system"
+    AGENT = "agent"
+    ROBOT_SENSOR = "robot_sensor"
+
+
+class PerceptionRoute(str, Enum):
+    FIREWALL_REQUIRED = "firewall_required"
+    EPHEMERAL_ONLY = "ephemeral_only"
+    DISCARD = "discard"
+
+
 class SourceTrust(str, Enum):
     USER_CONFIRMED = "A"
     LOCAL_OBSERVED = "B"
@@ -164,6 +182,54 @@ class ObservationEvent(StrictModel):
     def require_active_consent_for_observation(self) -> ObservationEvent:
         if self.consent_state != ConsentState.ACTIVE and self.payload_ref.startswith("raw://"):
             raise ValueError("raw observations require active consent")
+        return self
+
+
+class PerceptionEventEnvelope(StrictModel):
+    envelope_id: str = Field(min_length=1)
+    schema_version: str = "perception_event_envelope.v1"
+    source_kind: PerceptionSourceKind
+    observation: ObservationEvent
+    observed_at: datetime
+    sequence: int = Field(ge=0)
+    consent_state: ConsentState
+    capture_scope: ScopeLevel
+    source_trust: SourceTrust
+    sensitivity_hint: Sensitivity
+    route: PerceptionRoute = PerceptionRoute.FIREWALL_REQUIRED
+    raw_ref: str | None = None
+    derived_refs: list[str] = Field(default_factory=list)
+    third_party_content: bool = False
+    prompt_injection_risk: bool = False
+    required_policy_refs: list[str] = Field(default_factory=list)
+    robot_capability: str | None = None
+    simulation_required: bool = False
+
+    @model_validator(mode="after")
+    def keep_envelope_aligned_with_observation(self) -> PerceptionEventEnvelope:
+        if self.consent_state != self.observation.consent_state:
+            raise ValueError("envelope consent_state must match observation consent_state")
+        if self.capture_scope != self.observation.capture_scope:
+            raise ValueError("envelope capture_scope must match observation capture_scope")
+        if self.source_trust != self.observation.source_trust:
+            raise ValueError("envelope source_trust must match observation source_trust")
+        if self.raw_ref and self.raw_ref.startswith("raw://"):
+            if self.consent_state != ConsentState.ACTIVE:
+                raise ValueError("raw perception refs require active consent")
+            if self.route != PerceptionRoute.FIREWALL_REQUIRED:
+                raise ValueError("raw perception refs must route through the firewall")
+        if self.prompt_injection_risk and self.route != PerceptionRoute.FIREWALL_REQUIRED:
+            raise ValueError("prompt-injection risk must route through the firewall")
+        if self.third_party_content and self.route == PerceptionRoute.DISCARD:
+            if self.derived_refs:
+                raise ValueError("discarded third-party content cannot keep derived refs")
+        if self.source_kind == PerceptionSourceKind.ROBOT_SENSOR:
+            if not self.robot_capability:
+                raise ValueError("robot sensor events require explicit capability")
+            if not self.simulation_required:
+                raise ValueError("robot sensor events require simulation-first validation")
+        elif self.robot_capability:
+            raise ValueError("robot capability is only valid for robot sensor events")
         return self
 
 

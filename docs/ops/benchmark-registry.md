@@ -112,6 +112,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Review queue content-independent cursor signature | `uv run cortex-bench` | 94/94 passed | `benchmarks/runs/bench_20260429T024912Z.json` | Next benchmark: original-goal product coverage. |
 | 2026-04-29 | Original-goal product coverage | `uv run cortex-bench` | 95/95 passed | `benchmarks/runs/bench_20260429T025140Z.json` | Next benchmark: product traceability report. |
 | 2026-04-29 | Product traceability report | `uv run cortex-bench` | 96/96 passed | `benchmarks/runs/bench_20260429T025344Z.json` | Next benchmark: perception event envelope. |
+| 2026-04-29 | Perception event envelope | `uv run cortex-bench` | 97/97 passed | `benchmarks/runs/bench_20260429T025631Z.json` | Next benchmark: perception-to-firewall handoff. |
 
 ## First Runnable Harness Requirements
 

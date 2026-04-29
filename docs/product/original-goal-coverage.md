@@ -20,7 +20,7 @@ screen recording -> summary -> vector DB
 
 | Goal area | Current product contract | Proof path |
 | --- | --- | --- |
-| Perception | Consented local observations are modeled as structured events, not durable memories. | `ObservationEvent`, `SCENE-SEGMENT-001`, `SHADOW-POINTER-001` |
+| Perception | Consented local observations are modeled as structured events and envelopes, not durable memories. | `ObservationEvent`, `PerceptionEventEnvelope`, `PERCEPTION-EVENT-ENVELOPE-001`, `SCENE-SEGMENT-001`, `SHADOW-POINTER-001` |
 | Evidence | Evidence remains distinct from memory, with retention, provenance, and vault boundaries. | `EvidenceRecord`, `VAULT-RETENTION-001`, `VAULT-ENCRYPT-001` |
 | Memory | Memory records carry source refs, confidence, status, validity, influence limits, and deletion semantics. | `MemoryRecord`, `MEM-COMPILE-001`, `MEM-LIFECYCLE-001`, `MEM-FORGET-001` |
 | Skill | Repeated work becomes draft-only skills first, with maturity gates and rollback. | `SkillRecord`, `SKILL-FORGE-002`, `SKILL-GATE-001`, `SKILL-ROLLBACK-001` |

@@ -29,7 +29,7 @@ Source documents:
 | Skill Forge | Validated skeleton | `SKILL-FORGE-002`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add candidate UI, workflow clustering, and skill success metrics. |
 | Agent Gateway | Validated skeleton | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools | Package Codex plugin and bridge additional clients. |
 | Shadow Pointer | Partial | `SHADOW-POINTER-001`, static UI prototype | Build native overlay with live permissions, pause, delete, and app-ignore controls. |
-| Native Perception Bus | Not started | Roadmap and ADR only | Add consented macOS app/window, accessibility, terminal, and browser adapters. |
+| Native Perception Bus | Envelope validated; adapters not started | `PERCEPTION-EVENT-ENVELOPE-001`, roadmap, and ADR | Add firewall handoff, then consented macOS app/window, accessibility, terminal, and browser adapters. |
 | Robot readiness | Safety contract only | `ROBOT-SAFE-001`, initial threat model | Add simulation-first capability gates before physical integrations. |
 
 ## Coverage Snapshot
@@ -59,7 +59,8 @@ User-facing pillars:
 The next useful slices should move from contract depth into product surface and
 capture realism:
 
-1. Native Perception Bus event envelope and consent state.
+1. Perception firewall handoff from validated event envelopes to eligibility
+   decisions.
 2. Shadow Pointer native overlay proof with pause/delete/app-ignore controls.
 3. Memory Palace dashboard view over existing explain/correct/delete/export
    contracts.

@@ -20,6 +20,7 @@ from cortex_memory_os.benchmark_history import (
 )
 from cortex_memory_os.contracts import (
     ActionRisk,
+    ConsentState,
     ContextPack,
     EvidenceType,
     ExecutionMode,
@@ -28,6 +29,9 @@ from cortex_memory_os.contracts import (
     MemoryRecord,
     MemoryStatus,
     ObservationEvent,
+    PerceptionEventEnvelope,
+    PerceptionRoute,
+    PerceptionSourceKind,
     RetentionPolicy,
     ScopeLevel,
     SelfLesson,
@@ -247,6 +251,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_audit_events,
         case_product_goal_coverage_contract,
         case_product_traceability_report_contract,
+        case_perception_event_envelope_contract,
         case_gateway_self_lesson_proposal_tool,
         case_self_lesson_sqlite_persistence,
         case_gateway_self_lesson_promotion_rollback,
@@ -513,7 +518,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "ROBOT-SAFE-001",
     ]
     next_gap_terms = [
-        "Native Perception Bus event envelope",
+        "Perception firewall handoff",
         "Shadow Pointer native overlay",
         "Memory Palace dashboard",
         "Skill Forge candidate list",
@@ -562,6 +567,96 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
             "missing_surfaces": missing_surfaces,
             "missing_suite_refs": missing_suite_refs,
             "missing_next_gaps": missing_next_gaps,
+        },
+    )
+
+
+def _validation_error_contains(payload: dict[str, Any], expected: str) -> bool:
+    try:
+        PerceptionEventEnvelope.model_validate(payload)
+    except Exception as exc:
+        return expected in str(exc)
+    return False
+
+
+def case_perception_event_envelope_contract() -> BenchmarkCaseResult:
+    fixture_payload = load_json(TEST_FIXTURES / "perception_terminal_envelope.json")
+    envelope = PerceptionEventEnvelope.model_validate(fixture_payload)
+
+    paused_raw = json.loads(json.dumps(fixture_payload))
+    paused_raw["consent_state"] = ConsentState.PAUSED.value
+    paused_raw["observation"]["consent_state"] = ConsentState.PAUSED.value
+
+    prompt_bypass = json.loads(json.dumps(fixture_payload))
+    prompt_bypass["raw_ref"] = None
+    prompt_bypass["prompt_injection_risk"] = True
+    prompt_bypass["route"] = PerceptionRoute.EPHEMERAL_ONLY.value
+
+    robot_missing_capability = json.loads(json.dumps(fixture_payload))
+    robot_missing_capability["source_kind"] = PerceptionSourceKind.ROBOT_SENSOR.value
+
+    robot_missing_sim = json.loads(json.dumps(robot_missing_capability))
+    robot_missing_sim["robot_capability"] = "robot.camera.depth.v1"
+
+    robot_ready = json.loads(json.dumps(robot_missing_sim))
+    robot_ready["simulation_required"] = True
+    robot_envelope = PerceptionEventEnvelope.model_validate(robot_ready)
+
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "perception-event-envelope.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+
+    required_terms = [
+        "PERCEPTION-EVENT-ENVELOPE-001",
+        "Privacy + Safety Firewall",
+        "active consent",
+        "prompt-injection risk",
+        "robot sensor",
+        "simulation-first",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_terms)
+    passed = (
+        envelope.schema_version == "perception_event_envelope.v1"
+        and envelope.source_kind == PerceptionSourceKind.TERMINAL
+        and envelope.route == PerceptionRoute.FIREWALL_REQUIRED
+        and envelope.consent_state == envelope.observation.consent_state
+        and envelope.raw_ref == "raw://terminal/obs_001"
+        and _validation_error_contains(paused_raw, "raw perception refs")
+        and _validation_error_contains(prompt_bypass, "prompt-injection risk")
+        and _validation_error_contains(
+            robot_missing_capability,
+            "explicit capability",
+        )
+        and _validation_error_contains(robot_missing_sim, "simulation-first")
+        and robot_envelope.robot_capability == "robot.camera.depth.v1"
+        and not missing_doc_terms
+        and "PERCEPTION-EVENT-ENVELOPE-001" in plan_text
+        and "PERCEPTION-EVENT-ENVELOPE-001" in product_text
+    )
+    return BenchmarkCaseResult(
+        case_id="PERCEPTION-EVENT-ENVELOPE-001/consent_scope_route_contract",
+        suite="PERCEPTION-EVENT-ENVELOPE-001",
+        passed=passed,
+        summary=(
+            "Perception envelopes preserve consent, scope, trust, firewall "
+            "routing, prompt-risk, and robot simulation gates before memory."
+        ),
+        metrics={
+            "derived_ref_count": len(envelope.derived_refs),
+            "required_policy_ref_count": len(envelope.required_policy_refs),
+            "robot_simulation_required": int(robot_envelope.simulation_required),
+        },
+        evidence={
+            "schema_version": envelope.schema_version,
+            "source_kind": envelope.source_kind.value,
+            "route": envelope.route.value,
+            "missing_doc_terms": missing_doc_terms,
         },
     )
 

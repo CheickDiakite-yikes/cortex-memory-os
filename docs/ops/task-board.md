@@ -6,7 +6,7 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| PERCEPTION-EVENT-ENVELOPE-001 | Define consented perception event envelope | Codex | Contracts, docs, benchmark case | Normalize app/window, terminal, browser, agent, and future robot inputs before durable evidence or memory. |
+| PERCEPTION-FIREWALL-HANDOFF-001 | Define perception-to-firewall handoff | Codex | Contracts, docs, benchmark case | Convert perception envelopes into firewall-ready decisions without skipping consent, redaction, or evidence eligibility. |
 
 ## Next
 
@@ -123,6 +123,7 @@ Last updated: 2026-04-29
 | GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-CONTENT-INDEPENDENT-001 | Add content-independent queue signature contract | Codex | `uv run pytest` -> 182 passed, `uv run cortex-bench` -> 94/94 passed, `uv run cortex-mcp --smoke` | Queue signatures ignore lesson content/provenance when membership and ordering stay unchanged. |
 | PRODUCT-GOAL-COVERAGE-001 | Add original-goal coverage benchmark | Codex | `uv run pytest` -> 182 passed, `uv run cortex-bench` -> 95/95 passed, `uv run cortex-mcp --smoke` | Original Cortex brain loop, pillars, safety controls, and ops trace are benchmarked against drift. |
 | PRODUCT-TRACEABILITY-REPORT-001 | Add product traceability report | Codex | `uv run pytest` -> 182 passed, `uv run cortex-bench` -> 96/96 passed, `uv run cortex-mcp --smoke` | Report separates validated contracts from partial and not-started product surfaces. |
+| PERCEPTION-EVENT-ENVELOPE-001 | Define consented perception event envelope | Codex | `uv run pytest` -> 186 passed, `uv run cortex-bench` -> 97/97 passed, `uv run cortex-mcp --smoke` | Perception envelopes normalize source kind, consent, scope, trust, firewall route, prompt risk, and robot simulation gates. |
 
 ## Dropped
 

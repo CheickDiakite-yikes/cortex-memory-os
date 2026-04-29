@@ -1,0 +1,37 @@
+{
+  "envelope_id": "perception_env_001",
+  "schema_version": "perception_event_envelope.v1",
+  "source_kind": "terminal",
+  "observation": {
+    "event_id": "obs_001",
+    "event_type": "terminal_command",
+    "timestamp": "2026-04-27T15:47:13-04:00",
+    "device": "macbook",
+    "app": "Terminal",
+    "window_title": "cortex-memory-os",
+    "project_id": "cortex-memory-os",
+    "payload_ref": "volatile://obs_001",
+    "source_trust": "B",
+    "capture_scope": "project_specific",
+    "consent_state": "active",
+    "raw_contains_user_input": true
+  },
+  "observed_at": "2026-04-27T15:47:13-04:00",
+  "sequence": 1,
+  "consent_state": "active",
+  "capture_scope": "project_specific",
+  "source_trust": "B",
+  "sensitivity_hint": "private_work",
+  "route": "firewall_required",
+  "raw_ref": "raw://terminal/obs_001",
+  "derived_refs": [
+    "ocr_001"
+  ],
+  "third_party_content": false,
+  "prompt_injection_risk": false,
+  "required_policy_refs": [
+    "policy_firewall_synthetic_v1"
+  ],
+  "robot_capability": null,
+  "simulation_required": false
+}

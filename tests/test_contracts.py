@@ -17,6 +17,9 @@ from cortex_memory_os.contracts import (
     MemoryType,
     ObservationEvent,
     OutcomeRecord,
+    PerceptionEventEnvelope,
+    PerceptionRoute,
+    PerceptionSourceKind,
     Scene,
     ScopeLevel,
     SelfLesson,
@@ -34,6 +37,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
     ("filename", "model_type"),
     [
         ("observation_benign.json", ObservationEvent),
+        ("perception_terminal_envelope.json", PerceptionEventEnvelope),
         ("firewall_secret_masked.json", FirewallDecisionRecord),
         ("scene_research.json", Scene),
         ("evidence_screen.json", EvidenceRecord),
@@ -58,6 +62,42 @@ def test_secret_firewall_decision_requires_redaction():
 
     with pytest.raises(ValidationError, match="secret content must be redacted"):
         FirewallDecisionRecord.model_validate(payload)
+
+
+def test_perception_envelope_requires_raw_refs_to_have_active_consent():
+    payload = load_json(FIXTURES / "perception_terminal_envelope.json")
+    payload["consent_state"] = "paused"
+    payload["observation"]["consent_state"] = "paused"
+
+    with pytest.raises(ValidationError, match="raw perception refs require active"):
+        PerceptionEventEnvelope.model_validate(payload)
+
+
+def test_perception_envelope_routes_prompt_risk_through_firewall():
+    payload = load_json(FIXTURES / "perception_terminal_envelope.json")
+    payload["raw_ref"] = None
+    payload["prompt_injection_risk"] = True
+    payload["route"] = PerceptionRoute.EPHEMERAL_ONLY.value
+
+    with pytest.raises(ValidationError, match="prompt-injection risk"):
+        PerceptionEventEnvelope.model_validate(payload)
+
+
+def test_robot_sensor_envelope_requires_capability_and_simulation_gate():
+    payload = load_json(FIXTURES / "perception_terminal_envelope.json")
+    payload["source_kind"] = PerceptionSourceKind.ROBOT_SENSOR.value
+
+    with pytest.raises(ValidationError, match="explicit capability"):
+        PerceptionEventEnvelope.model_validate(payload)
+
+    payload["robot_capability"] = "robot.camera.depth.v1"
+    with pytest.raises(ValidationError, match="simulation-first"):
+        PerceptionEventEnvelope.model_validate(payload)
+
+    payload["simulation_required"] = True
+    envelope = PerceptionEventEnvelope.model_validate(payload)
+
+    assert envelope.robot_capability == "robot.camera.depth.v1"
 
 
 def test_quarantined_content_cannot_be_memory_eligible():
