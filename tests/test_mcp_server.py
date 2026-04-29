@@ -9,7 +9,11 @@ from cortex_memory_os.contracts import (
     SelfLesson,
 )
 from cortex_memory_os.fixtures import load_json
-from cortex_memory_os.mcp_server import CortexMCPServer, default_server
+from cortex_memory_os.mcp_server import (
+    SELF_LESSON_REVIEW_QUEUE_ORDERING,
+    CortexMCPServer,
+    default_server,
+)
 from cortex_memory_os.memory_store import InMemoryMemoryStore
 from cortex_memory_os.contracts import MemoryRecord
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
@@ -1616,6 +1620,52 @@ def test_self_lesson_review_queue_limit_safety_summary_counts_returned_slice(tmp
     assert "project:beta" not in rendered_queue
     assert "task_project_stale_limit_one" not in rendered_queue
     assert "task_project_stale_limit_two" not in rendered_queue
+
+
+def test_self_lesson_review_queue_orders_before_limit(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+
+    def stale_lesson(
+        lesson_id: str,
+        ref: str,
+        last_validated: date | None,
+    ) -> SelfLesson:
+        return active.model_copy(
+            update={
+                "lesson_id": lesson_id,
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": [ref, f"task_{lesson_id}"],
+                "last_validated": last_validated,
+            }
+        )
+
+    store.add_self_lesson(
+        stale_lesson("lesson_project_stale_newer", "project:newer", date(2025, 3, 1))
+    )
+    store.add_self_lesson(
+        stale_lesson("lesson_project_stale_old_b", "project:old-b", date(2024, 1, 1))
+    )
+    store.add_self_lesson(
+        stale_lesson("lesson_project_missing_validation", "project:missing", None)
+    )
+    store.add_self_lesson(
+        stale_lesson("lesson_project_stale_old_a", "project:old-a", date(2024, 1, 1))
+    )
+    server = CortexMCPServer(store=store)
+
+    queue = server.call_tool("self_lesson.review_queue", {"limit": 3})
+
+    assert queue["ordering"] == SELF_LESSON_REVIEW_QUEUE_ORDERING
+    assert queue["safety_summary"]["ordering"] == SELF_LESSON_REVIEW_QUEUE_ORDERING
+    assert queue["lesson_ids"] == [
+        "lesson_project_missing_validation",
+        "lesson_project_stale_old_a",
+        "lesson_project_stale_old_b",
+    ]
+    assert queue["total_review_required_count"] == 4
+    assert queue["returned_count"] == 3
+    assert queue["truncated"] is True
 
 
 def test_self_lesson_review_flow_returns_exact_redacted_action_routes(tmp_path):

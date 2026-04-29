@@ -342,3 +342,11 @@ one project, agent, or session from silently shaping another.
   count, and truncation state;
 - safety-summary action counts apply to the returned queue slice only;
 - omitted review-required lesson content and scoped provenance stay redacted.
+
+`GATEWAY-REVIEW-QUEUE-ORDERING-001` verifies:
+
+- review queues sort missing validation dates first, then oldest validation
+  date, then `lesson_id` ascending;
+- ordering is applied before the queue limit trims returned lessons;
+- queue and safety-summary ordering metadata does not expose lesson content or
+  scoped provenance.

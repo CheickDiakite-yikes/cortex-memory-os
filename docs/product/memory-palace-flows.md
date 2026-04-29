@@ -520,3 +520,13 @@ queue is shown:
 - action counts summarize only the returned queue slice;
 - limit metadata stays numeric and does not leak lesson content, learned-from
   refs, rollback text, or scoped provenance from omitted lessons.
+
+`GATEWAY-REVIEW-QUEUE-ORDERING-001` must pass before queue limits drive UI
+pagination:
+
+- the queue orders missing validation dates first, then oldest validation date,
+  then `lesson_id` ascending;
+- ordering is applied before the limit slices returned lessons;
+- the queue and `safety_summary` both expose the ordering contract without
+  exposing lesson content, learned-from refs, rollback text, or scoped
+  provenance.

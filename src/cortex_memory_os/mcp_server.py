@@ -74,6 +74,9 @@ SELF_LESSON_REVIEW_QUEUE_POLICY_REF = "policy_self_lesson_review_queue_v1"
 SELF_LESSON_REVIEW_FLOW_POLICY_REF = "policy_self_lesson_review_flow_v1"
 SELF_LESSON_DECISION_AUDIT_SHAPE_ID = "self_lesson_decision_audit_v1"
 SELF_LESSON_REVIEW_AFTER_DAYS = 90
+SELF_LESSON_REVIEW_QUEUE_ORDERING = (
+    "last_validated_missing_first_oldest_first_lesson_id_asc"
+)
 
 
 class JsonRpcError(ValueError):
@@ -516,11 +519,13 @@ class CortexMCPServer:
             }
         if name == "self_lesson.review_queue":
             limit = _optional_int_range(arguments, "limit", default=50, minimum=1, maximum=100)
-            all_review_lessons = [
-                lesson
-                for lesson in _all_self_lessons(self.store, self.self_lessons)
-                if self_lesson_review_state(lesson)["review_required"]
-            ]
+            all_review_lessons = order_self_lesson_review_queue(
+                [
+                    lesson
+                    for lesson in _all_self_lessons(self.store, self.self_lessons)
+                    if self_lesson_review_state(lesson)["review_required"]
+                ]
+            )
             review_lessons = all_review_lessons[:limit]
             lesson_items = [
                 serialize_self_lesson_list_item(
@@ -543,6 +548,7 @@ class CortexMCPServer:
                 "returned_count": len(review_lessons),
                 "total_review_required_count": len(all_review_lessons),
                 "truncated": len(review_lessons) < len(all_review_lessons),
+                "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
                 "content_redacted": True,
                 "policy_refs": [SELF_LESSON_REVIEW_QUEUE_POLICY_REF],
             }
@@ -1277,6 +1283,7 @@ def summarize_self_lesson_review_queue_safety(
         "returned_count": len(lesson_items),
         "total_review_required_count": total_review_required_count,
         "truncated": len(lesson_items) < total_review_required_count,
+        "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
         "content_redacted": True,
         "learned_from_redacted": True,
         "rollback_if_redacted": True,
@@ -1307,6 +1314,16 @@ def summarize_self_lesson_review_queue_safety(
             SELF_LESSON_REVIEW_FLOW_POLICY_REF,
         ],
     }
+
+
+def order_self_lesson_review_queue(lessons: list[SelfLesson]) -> list[SelfLesson]:
+    return sorted(
+        lessons,
+        key=lambda lesson: (
+            lesson.last_validated or date.min,
+            lesson.lesson_id,
+        ),
+    )
 
 
 def serialize_self_lesson_review_flow_audit_preview_hint(

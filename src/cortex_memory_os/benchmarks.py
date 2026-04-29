@@ -56,7 +56,12 @@ from cortex_memory_os.evidence_vault import (
     assess_vault_cipher,
 )
 from cortex_memory_os.debug_trace import DebugTraceStatus, make_debug_trace
-from cortex_memory_os.mcp_server import CortexMCPServer, JsonRpcError, default_server
+from cortex_memory_os.mcp_server import (
+    SELF_LESSON_REVIEW_QUEUE_ORDERING,
+    CortexMCPServer,
+    JsonRpcError,
+    default_server,
+)
 from cortex_memory_os.memory_compiler import compile_scene_memory
 from cortex_memory_os.memory_lifecycle import (
     evaluate_memory_transition,
@@ -191,6 +196,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_safety_summary,
         case_gateway_review_queue_empty_safety_summary,
         case_gateway_review_queue_limit_safety_summary,
+        case_gateway_review_queue_ordering,
         case_gateway_self_lesson_review_flow,
         case_self_lesson_review_flow_safety_summary,
         case_self_lesson_review_flow_audit_preview,
@@ -2475,6 +2481,106 @@ def case_gateway_review_queue_limit_safety_summary() -> BenchmarkCaseResult:
         evidence={
             "queue_truncated": queue.get("truncated"),
             "summary_truncated": safety_summary.get("truncated"),
+        },
+    )
+
+
+def case_gateway_review_queue_ordering() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+
+        def stale_lesson(
+            lesson_id: str,
+            ref: str,
+            last_validated: date | None,
+        ) -> SelfLesson:
+            return base.model_copy(
+                update={
+                    "lesson_id": lesson_id,
+                    "scope": ScopeLevel.PROJECT_SPECIFIC,
+                    "learned_from": [ref, f"task_{lesson_id}"],
+                    "last_validated": last_validated,
+                }
+            )
+
+        for lesson in (
+            stale_lesson(
+                "lesson_project_stale_newer",
+                "project:newer",
+                date(2025, 3, 1),
+            ),
+            stale_lesson(
+                "lesson_project_stale_old_b",
+                "project:old-b",
+                date(2024, 1, 1),
+            ),
+            stale_lesson(
+                "lesson_project_missing_validation",
+                "project:missing",
+                None,
+            ),
+            stale_lesson(
+                "lesson_project_stale_old_a",
+                "project:old-a",
+                date(2024, 1, 1),
+            ),
+        ):
+            store.add_self_lesson(lesson)
+
+        server = CortexMCPServer(store=store)
+        queue = server.call_tool("self_lesson.review_queue", {"limit": 3})
+
+    safety_summary = queue.get("safety_summary", {})
+    lesson_ids = queue.get("lesson_ids", [])
+    serialized_queue = json.dumps(queue, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    expected_ids = [
+        "lesson_project_missing_validation",
+        "lesson_project_stale_old_a",
+        "lesson_project_stale_old_b",
+    ]
+    passed = (
+        lesson_ids == expected_ids
+        and queue.get("ordering") == SELF_LESSON_REVIEW_QUEUE_ORDERING
+        and safety_summary.get("ordering") == SELF_LESSON_REVIEW_QUEUE_ORDERING
+        and queue.get("returned_count") == 3
+        and queue.get("total_review_required_count") == 4
+        and queue.get("truncated") is True
+        and "project:missing" not in serialized_queue
+        and "project:old-a" not in serialized_queue
+        and "project:old-b" not in serialized_queue
+        and "project:newer" not in serialized_queue
+        and "GATEWAY-REVIEW-QUEUE-ORDERING-001" in docs_text
+        and "GATEWAY-REVIEW-QUEUE-ORDERING-001" in product_text
+        and "GATEWAY-REVIEW-QUEUE-ORDERING-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-REVIEW-QUEUE-ORDERING-001/deterministic_ordering",
+        suite="GATEWAY-REVIEW-QUEUE-ORDERING-001",
+        passed=passed,
+        summary="Review queues sort missing validation first, then oldest validation date, then lesson ID before applying limits.",
+        metrics={
+            "returned_count": queue.get("returned_count", -1),
+            "total_review_required_count": queue.get(
+                "total_review_required_count", -1
+            ),
+            "ordered_expected": int(lesson_ids == expected_ids),
+            "truncated": int(queue.get("truncated") is True),
+        },
+        evidence={
+            "ordering": queue.get("ordering"),
+            "lesson_ids": lesson_ids,
         },
     )
 

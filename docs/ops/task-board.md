@@ -6,7 +6,7 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-REVIEW-QUEUE-ORDERING-001 | Add deterministic review queue ordering | Codex | Contract, tests, benchmark case | Review queues should order stale scoped lessons deterministically for repeatable review. |
+| GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001 | Add stable review queue paging cursor | Codex | Contract, tests, benchmark case | Limited review queues need a next-page cursor tied to deterministic ordering. |
 
 ## Next
 
@@ -106,6 +106,7 @@ Last updated: 2026-04-29
 | GATEWAY-REVIEW-QUEUE-SAFETY-SUMMARY-001 | Add review queue safety summary | Codex | `uv run pytest` -> 165 passed, `uv run cortex-bench` -> 77/77 passed, `uv run cortex-mcp --smoke` | Review queues summarize read-only, mutation, confirmation, and audit-preview counts without content. |
 | GATEWAY-REVIEW-QUEUE-EMPTY-SAFETY-001 | Add empty review queue safety summary | Codex | `uv run pytest` -> 166 passed, `uv run cortex-bench` -> 78/78 passed, `uv run cortex-mcp --smoke` | Empty review queues still return a zeroed, redacted safety summary for safe UI rendering. |
 | GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001 | Add review queue limit safety summary | Codex | `uv run pytest` -> 167 passed, `uv run cortex-bench` -> 79/79 passed, `uv run cortex-mcp --smoke` | Review queue safety summaries make the applied limit, returned count, total review-required count, and truncation state explicit. |
+| GATEWAY-REVIEW-QUEUE-ORDERING-001 | Add deterministic review queue ordering | Codex | `uv run pytest` -> 168 passed, `uv run cortex-bench` -> 80/80 passed, `uv run cortex-mcp --smoke` | Review queues sort stale scoped lessons deterministically before applying limits. |
 
 ## Dropped
 
