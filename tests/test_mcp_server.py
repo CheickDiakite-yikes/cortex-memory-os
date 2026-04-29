@@ -10,6 +10,7 @@ from cortex_memory_os.contracts import (
 )
 from cortex_memory_os.fixtures import load_json
 from cortex_memory_os.mcp_server import (
+    SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
     SELF_LESSON_REVIEW_QUEUE_ORDERING,
     CortexMCPServer,
     default_server,
@@ -1784,6 +1785,83 @@ def test_self_lesson_review_queue_exhausted_cursor_returns_empty_page(tmp_path):
     assert "Before editing auth" not in rendered_page
     assert "project:" not in rendered_page
     assert "task_" not in rendered_page
+
+
+def test_self_lesson_review_queue_cursor_metadata_is_stable(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+
+    def stale_lesson(
+        lesson_id: str,
+        ref: str,
+        last_validated: date | None,
+    ) -> SelfLesson:
+        return active.model_copy(
+            update={
+                "lesson_id": lesson_id,
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": [ref, f"task_{lesson_id}"],
+                "last_validated": last_validated,
+            }
+        )
+
+    for lesson in (
+        stale_lesson("lesson_project_stale_newer", "project:newer", date(2025, 3, 1)),
+        stale_lesson("lesson_project_stale_old_b", "project:old-b", date(2024, 1, 1)),
+        stale_lesson("lesson_project_missing_validation", "project:missing", None),
+        stale_lesson("lesson_project_stale_old_a", "project:old-a", date(2024, 1, 1)),
+    ):
+        store.add_self_lesson(lesson)
+    server = CortexMCPServer(store=store)
+
+    first_page = server.call_tool("self_lesson.review_queue", {"limit": 2})
+    first_page_again = server.call_tool("self_lesson.review_queue", {"limit": 2})
+    second_page = server.call_tool(
+        "self_lesson.review_queue",
+        {"limit": 2, "cursor": first_page["next_cursor"]},
+    )
+    second_page_again = server.call_tool(
+        "self_lesson.review_queue",
+        {"limit": 2, "cursor": first_page["next_cursor"]},
+    )
+
+    assert first_page["next_cursor"] == first_page_again["next_cursor"]
+    assert first_page["cursor_metadata"] == first_page_again["cursor_metadata"]
+    assert second_page["cursor_metadata"] == second_page_again["cursor_metadata"]
+    assert first_page["cursor_metadata"] == {
+        "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
+        "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
+        "current_cursor_present": False,
+        "next_cursor_present": True,
+        "current_offset": 0,
+        "next_offset": 2,
+        "page_start": 0,
+        "page_end": 2,
+        "has_more": True,
+        "stable_when_ordering_unchanged": True,
+        "content_redacted": True,
+        "provenance_redacted": True,
+    }
+    assert second_page["cursor_metadata"] == {
+        "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
+        "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
+        "current_cursor_present": True,
+        "next_cursor_present": False,
+        "current_offset": 2,
+        "next_offset": None,
+        "page_start": 2,
+        "page_end": 4,
+        "has_more": False,
+        "stable_when_ordering_unchanged": True,
+        "content_redacted": True,
+        "provenance_redacted": True,
+    }
+    rendered_metadata = json.dumps(
+        [first_page["cursor_metadata"], second_page["cursor_metadata"]]
+    )
+    assert "project:" not in rendered_metadata
+    assert "task_" not in rendered_metadata
+    assert "Before editing auth" not in rendered_metadata
 
 
 def test_self_lesson_review_queue_invalid_cursor_error_is_redacted(tmp_path):

@@ -542,6 +542,13 @@ class CortexMCPServer:
                 if has_more
                 else None
             )
+            cursor_metadata = summarize_self_lesson_review_queue_cursor_metadata(
+                cursor=cursor,
+                next_cursor=next_cursor,
+                page_start=page_start,
+                page_end=returned_end,
+                has_more=has_more,
+            )
             lesson_items = [
                 serialize_self_lesson_list_item(
                     lesson,
@@ -569,6 +576,7 @@ class CortexMCPServer:
                 "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
                 "cursor": cursor,
                 "next_cursor": next_cursor,
+                "cursor_metadata": cursor_metadata,
                 "has_more": has_more,
                 "page_start": page_start,
                 "page_end": returned_end,
@@ -1344,6 +1352,30 @@ def summarize_self_lesson_review_queue_safety(
             SELF_LESSON_REVIEW_QUEUE_POLICY_REF,
             SELF_LESSON_REVIEW_FLOW_POLICY_REF,
         ],
+    }
+
+
+def summarize_self_lesson_review_queue_cursor_metadata(
+    *,
+    cursor: str | None,
+    next_cursor: str | None,
+    page_start: int,
+    page_end: int,
+    has_more: bool,
+) -> dict[str, Any]:
+    return {
+        "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
+        "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
+        "current_cursor_present": cursor is not None,
+        "next_cursor_present": next_cursor is not None,
+        "current_offset": page_start,
+        "next_offset": page_end if has_more else None,
+        "page_start": page_start,
+        "page_end": page_end,
+        "has_more": has_more,
+        "stable_when_ordering_unchanged": True,
+        "content_redacted": True,
+        "provenance_redacted": True,
     }
 
 

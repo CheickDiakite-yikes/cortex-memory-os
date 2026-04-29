@@ -91,6 +91,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-REVIEW-QUEUE-ORDERING-001` | Review queues sort missing validation dates first, then oldest validation date, then lesson ID before limits. | Queue ordering depends on insertion order, hidden store order, or leaks provenance while exposing order metadata. |
 | `GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001` | Limited review queues expose stable cursors tied to deterministic ordering. | Cursors leak lesson IDs/provenance, repeat cards, or drift from the advertised ordering contract. |
 | `GATEWAY-REVIEW-QUEUE-CURSOR-EXHAUSTED-001` | Exhausted review queue cursors return an empty redacted page with no next cursor. | Exhausted cursors return an error, repeat cards, leak provenance, or mark the page as still truncated. |
+| `GATEWAY-REVIEW-QUEUE-CURSOR-STABILITY-001` | Cursor metadata stays stable when queue ordering has not changed. | Repeated calls return drifting metadata, leak content/provenance, or omit version/ordering/offset fields. |
 | `GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001` | Malformed review queue cursors fail with a fixed redacted error. | Cursor errors echo attacker-controlled cursor text, provenance, or instruction-like content. |
 | `GATEWAY-SELF-LESSON-REVIEW-FLOW-001` | Gateway returns an exact-ID self-lesson review flow with queue metadata and follow-up tool routes. | Review flow can run from vague search, omits policy refs, or leaks content/provenance. |
 | `SELF-LESSON-REVIEW-FLOW-SAFETY-SUMMARY-001` | Review flows summarize confirmation, mutation, and redaction safety without lesson content. | Safety summary omits mutation confirmation requirements or leaks content/provenance. |
@@ -139,8 +140,8 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `GATEWAY-REVIEW-QUEUE-CURSOR-STABILITY-001`: Cursor metadata should stay
-  stable when queue ordering has not changed.
+- `GATEWAY-REVIEW-QUEUE-CURSOR-DRIFT-001`: Cursor responses should make queue
+  ordering drift inspectable when review-required lessons change between pages.
 
 Longer-term suites:
 

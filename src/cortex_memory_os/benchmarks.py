@@ -57,6 +57,7 @@ from cortex_memory_os.evidence_vault import (
 )
 from cortex_memory_os.debug_trace import DebugTraceStatus, make_debug_trace
 from cortex_memory_os.mcp_server import (
+    SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
     SELF_LESSON_REVIEW_QUEUE_ORDERING,
     CortexMCPServer,
     JsonRpcError,
@@ -200,6 +201,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_ordering,
         case_gateway_review_queue_paging_cursor,
         case_gateway_review_queue_exhausted_cursor,
+        case_gateway_review_queue_cursor_metadata_stability,
         case_gateway_review_queue_invalid_cursor,
         case_gateway_self_lesson_review_flow,
         case_self_lesson_review_flow_safety_summary,
@@ -2815,6 +2817,147 @@ def case_gateway_review_queue_exhausted_cursor() -> BenchmarkCaseResult:
             "total_review_required_count": page.get(
                 "total_review_required_count"
             ),
+        },
+    )
+
+
+def case_gateway_review_queue_cursor_metadata_stability() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+
+        def stale_lesson(
+            lesson_id: str,
+            ref: str,
+            last_validated: date | None,
+        ) -> SelfLesson:
+            return base.model_copy(
+                update={
+                    "lesson_id": lesson_id,
+                    "scope": ScopeLevel.PROJECT_SPECIFIC,
+                    "learned_from": [ref, f"task_{lesson_id}"],
+                    "last_validated": last_validated,
+                }
+            )
+
+        for lesson in (
+            stale_lesson(
+                "lesson_project_stale_newer",
+                "project:newer",
+                date(2025, 3, 1),
+            ),
+            stale_lesson(
+                "lesson_project_stale_old_b",
+                "project:old-b",
+                date(2024, 1, 1),
+            ),
+            stale_lesson(
+                "lesson_project_missing_validation",
+                "project:missing",
+                None,
+            ),
+            stale_lesson(
+                "lesson_project_stale_old_a",
+                "project:old-a",
+                date(2024, 1, 1),
+            ),
+        ):
+            store.add_self_lesson(lesson)
+
+        server = CortexMCPServer(store=store)
+        first_page = server.call_tool("self_lesson.review_queue", {"limit": 2})
+        first_page_again = server.call_tool(
+            "self_lesson.review_queue",
+            {"limit": 2},
+        )
+        second_page = server.call_tool(
+            "self_lesson.review_queue",
+            {"limit": 2, "cursor": first_page.get("next_cursor")},
+        )
+        second_page_again = server.call_tool(
+            "self_lesson.review_queue",
+            {"limit": 2, "cursor": first_page.get("next_cursor")},
+        )
+
+    first_metadata = first_page.get("cursor_metadata", {})
+    second_metadata = second_page.get("cursor_metadata", {})
+    serialized_metadata = json.dumps(
+        [first_metadata, second_metadata],
+        sort_keys=True,
+    )
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        first_page.get("next_cursor") == first_page_again.get("next_cursor")
+        and first_metadata == first_page_again.get("cursor_metadata")
+        and second_metadata == second_page_again.get("cursor_metadata")
+        and first_metadata
+        == {
+            "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
+            "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
+            "current_cursor_present": False,
+            "next_cursor_present": True,
+            "current_offset": 0,
+            "next_offset": 2,
+            "page_start": 0,
+            "page_end": 2,
+            "has_more": True,
+            "stable_when_ordering_unchanged": True,
+            "content_redacted": True,
+            "provenance_redacted": True,
+        }
+        and second_metadata
+        == {
+            "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
+            "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
+            "current_cursor_present": True,
+            "next_cursor_present": False,
+            "current_offset": 2,
+            "next_offset": None,
+            "page_start": 2,
+            "page_end": 4,
+            "has_more": False,
+            "stable_when_ordering_unchanged": True,
+            "content_redacted": True,
+            "provenance_redacted": True,
+        }
+        and "project:" not in serialized_metadata
+        and "task_" not in serialized_metadata
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-STABILITY-001" in docs_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-STABILITY-001" in product_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-STABILITY-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-REVIEW-QUEUE-CURSOR-STABILITY-001/stable_metadata",
+        suite="GATEWAY-REVIEW-QUEUE-CURSOR-STABILITY-001",
+        passed=passed,
+        summary=(
+            "Review queue cursor metadata stays stable when ordering has not "
+            "changed."
+        ),
+        metrics={
+            "first_metadata_stable": int(
+                first_metadata == first_page_again.get("cursor_metadata")
+            ),
+            "second_metadata_stable": int(
+                second_metadata == second_page_again.get("cursor_metadata")
+            ),
+            "next_cursor_stable": int(
+                first_page.get("next_cursor") == first_page_again.get("next_cursor")
+            ),
+        },
+        evidence={
+            "first_metadata": first_metadata,
+            "second_metadata": second_metadata,
         },
     )
 

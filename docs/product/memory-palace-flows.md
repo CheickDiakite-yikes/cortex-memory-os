@@ -550,6 +550,15 @@ cursor page as complete:
 - the empty page preserves total review-required count and pagination metadata
   without leaking lesson content/provenance.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-STABILITY-001` must pass before a UI caches cursor
+metadata:
+
+- repeated calls for the same queue, ordering, and limit return identical
+  `cursor_metadata`;
+- metadata names cursor version, ordering, offsets, and next-cursor presence
+  without embedding cursor-derived content;
+- metadata stays content/provenance-redacted and can be shown in debug UI.
+
 `GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001` must pass before accepting a cursor
 from any UI, agent, or external caller:
 
