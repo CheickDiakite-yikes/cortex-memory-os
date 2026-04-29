@@ -197,6 +197,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_empty_safety_summary,
         case_gateway_review_queue_limit_safety_summary,
         case_gateway_review_queue_ordering,
+        case_gateway_review_queue_paging_cursor,
         case_gateway_self_lesson_review_flow,
         case_self_lesson_review_flow_safety_summary,
         case_self_lesson_review_flow_audit_preview,
@@ -2581,6 +2582,123 @@ def case_gateway_review_queue_ordering() -> BenchmarkCaseResult:
         evidence={
             "ordering": queue.get("ordering"),
             "lesson_ids": lesson_ids,
+        },
+    )
+
+
+def case_gateway_review_queue_paging_cursor() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+
+        def stale_lesson(
+            lesson_id: str,
+            ref: str,
+            last_validated: date | None,
+        ) -> SelfLesson:
+            return base.model_copy(
+                update={
+                    "lesson_id": lesson_id,
+                    "scope": ScopeLevel.PROJECT_SPECIFIC,
+                    "learned_from": [ref, f"task_{lesson_id}"],
+                    "last_validated": last_validated,
+                }
+            )
+
+        for lesson in (
+            stale_lesson(
+                "lesson_project_stale_newer",
+                "project:newer",
+                date(2025, 3, 1),
+            ),
+            stale_lesson(
+                "lesson_project_stale_old_b",
+                "project:old-b",
+                date(2024, 1, 1),
+            ),
+            stale_lesson(
+                "lesson_project_missing_validation",
+                "project:missing",
+                None,
+            ),
+            stale_lesson(
+                "lesson_project_stale_old_a",
+                "project:old-a",
+                date(2024, 1, 1),
+            ),
+        ):
+            store.add_self_lesson(lesson)
+
+        server = CortexMCPServer(store=store)
+        first_page = server.call_tool("self_lesson.review_queue", {"limit": 2})
+        second_page = server.call_tool(
+            "self_lesson.review_queue",
+            {"limit": 2, "cursor": first_page.get("next_cursor")},
+        )
+
+    first_cursor = first_page.get("next_cursor") or ""
+    serialized_pages = json.dumps([first_page, second_page], sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        first_page.get("lesson_ids")
+        == [
+            "lesson_project_missing_validation",
+            "lesson_project_stale_old_a",
+        ]
+        and second_page.get("lesson_ids")
+        == [
+            "lesson_project_stale_old_b",
+            "lesson_project_stale_newer",
+        ]
+        and first_page.get("has_more") is True
+        and second_page.get("has_more") is False
+        and first_page.get("page_start") == 0
+        and first_page.get("page_end") == 2
+        and second_page.get("page_start") == 2
+        and second_page.get("page_end") == 4
+        and isinstance(first_page.get("next_cursor"), str)
+        and second_page.get("next_cursor") is None
+        and first_page.get("safety_summary", {}).get("next_cursor_present") is True
+        and second_page.get("safety_summary", {}).get("next_cursor_present") is False
+        and first_page.get("ordering") == second_page.get("ordering")
+        and first_page.get("ordering") == SELF_LESSON_REVIEW_QUEUE_ORDERING
+        and "project:" not in first_cursor
+        and "task_" not in first_cursor
+        and "project:missing" not in serialized_pages
+        and "project:old-a" not in serialized_pages
+        and "project:old-b" not in serialized_pages
+        and "project:newer" not in serialized_pages
+        and "GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001" in docs_text
+        and "GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001" in product_text
+        and "GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001/stable_cursor_pages",
+        suite="GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001",
+        passed=passed,
+        summary="Limited review queues expose a stable non-provenance cursor for the next ordered page.",
+        metrics={
+            "first_returned_count": first_page.get("returned_count", -1),
+            "second_returned_count": second_page.get("returned_count", -1),
+            "first_has_more": int(first_page.get("has_more") is True),
+            "second_has_more": int(second_page.get("has_more") is True),
+        },
+        evidence={
+            "ordering": first_page.get("ordering"),
+            "first_page_ids": first_page.get("lesson_ids", []),
+            "second_page_ids": second_page.get("lesson_ids", []),
+            "cursor_contains_provenance": "project:" in first_cursor
+            or "task_" in first_cursor,
         },
     )
 

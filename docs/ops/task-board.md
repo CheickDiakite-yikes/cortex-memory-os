@@ -6,7 +6,7 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001 | Add stable review queue paging cursor | Codex | Contract, tests, benchmark case | Limited review queues need a next-page cursor tied to deterministic ordering. |
+| GATEWAY-REVIEW-QUEUE-INVALID-CURSOR-001 | Add redacted invalid cursor handling | Codex | Contract, tests, benchmark case | Malformed review queue cursors should fail with a fixed non-leaky error. |
 
 ## Next
 
@@ -107,6 +107,7 @@ Last updated: 2026-04-29
 | GATEWAY-REVIEW-QUEUE-EMPTY-SAFETY-001 | Add empty review queue safety summary | Codex | `uv run pytest` -> 166 passed, `uv run cortex-bench` -> 78/78 passed, `uv run cortex-mcp --smoke` | Empty review queues still return a zeroed, redacted safety summary for safe UI rendering. |
 | GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001 | Add review queue limit safety summary | Codex | `uv run pytest` -> 167 passed, `uv run cortex-bench` -> 79/79 passed, `uv run cortex-mcp --smoke` | Review queue safety summaries make the applied limit, returned count, total review-required count, and truncation state explicit. |
 | GATEWAY-REVIEW-QUEUE-ORDERING-001 | Add deterministic review queue ordering | Codex | `uv run pytest` -> 168 passed, `uv run cortex-bench` -> 80/80 passed, `uv run cortex-mcp --smoke` | Review queues sort stale scoped lessons deterministically before applying limits. |
+| GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001 | Add stable review queue paging cursor | Codex | `uv run pytest` -> 169 passed, `uv run cortex-bench` -> 81/81 passed, `uv run cortex-mcp --smoke` | Limited review queues expose a non-provenance cursor tied to deterministic ordering. |
 
 ## Dropped
 

@@ -530,3 +530,14 @@ pagination:
 - the queue and `safety_summary` both expose the ordering contract without
   exposing lesson content, learned-from refs, rollback text, or scoped
   provenance.
+
+`GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001` must pass before a multi-page review
+queue is shown:
+
+- limited queues return `has_more`, `next_cursor`, `page_start`, and `page_end`
+  fields tied to the deterministic ordering contract;
+- the cursor contains only cursor version, ordering contract, and numeric
+  offset, never lesson IDs, content, learned-from refs, rollback text, or
+  scoped provenance;
+- following `next_cursor` returns the next ordered page without repeating the
+  previous page.

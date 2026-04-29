@@ -96,6 +96,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Empty review queue safety summary | `uv run cortex-bench` | 78/78 passed | `benchmarks/runs/bench_20260429T015802Z.json` | Next benchmark: review queue limit safety. |
 | 2026-04-29 | Review queue limit safety | `uv run cortex-bench` | 79/79 passed | `benchmarks/runs/bench_20260429T020001Z.json` | Next benchmark: review queue ordering. |
 | 2026-04-29 | Review queue deterministic ordering | `uv run cortex-bench` | 80/80 passed | `benchmarks/runs/bench_20260429T020437Z.json` | Next benchmark: review queue paging cursor. |
+| 2026-04-29 | Review queue paging cursor | `uv run cortex-bench` | 81/81 passed | `benchmarks/runs/bench_20260429T020720Z.json` | Next benchmark: invalid cursor handling. |
 
 ## First Runnable Harness Requirements
 

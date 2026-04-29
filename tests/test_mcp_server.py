@@ -1668,6 +1668,63 @@ def test_self_lesson_review_queue_orders_before_limit(tmp_path):
     assert queue["truncated"] is True
 
 
+def test_self_lesson_review_queue_pages_with_stable_cursor(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+
+    def stale_lesson(
+        lesson_id: str,
+        ref: str,
+        last_validated: date | None,
+    ) -> SelfLesson:
+        return active.model_copy(
+            update={
+                "lesson_id": lesson_id,
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": [ref, f"task_{lesson_id}"],
+                "last_validated": last_validated,
+            }
+        )
+
+    for lesson in (
+        stale_lesson("lesson_project_stale_newer", "project:newer", date(2025, 3, 1)),
+        stale_lesson("lesson_project_stale_old_b", "project:old-b", date(2024, 1, 1)),
+        stale_lesson("lesson_project_missing_validation", "project:missing", None),
+        stale_lesson("lesson_project_stale_old_a", "project:old-a", date(2024, 1, 1)),
+    ):
+        store.add_self_lesson(lesson)
+    server = CortexMCPServer(store=store)
+
+    first_page = server.call_tool("self_lesson.review_queue", {"limit": 2})
+    second_page = server.call_tool(
+        "self_lesson.review_queue",
+        {"limit": 2, "cursor": first_page["next_cursor"]},
+    )
+
+    assert first_page["lesson_ids"] == [
+        "lesson_project_missing_validation",
+        "lesson_project_stale_old_a",
+    ]
+    assert first_page["cursor"] is None
+    assert first_page["has_more"] is True
+    assert first_page["next_cursor"]
+    assert first_page["page_start"] == 0
+    assert first_page["page_end"] == 2
+    assert first_page["safety_summary"]["next_cursor_present"] is True
+    assert second_page["lesson_ids"] == [
+        "lesson_project_stale_old_b",
+        "lesson_project_stale_newer",
+    ]
+    assert second_page["cursor"] == first_page["next_cursor"]
+    assert second_page["has_more"] is False
+    assert second_page["next_cursor"] is None
+    assert second_page["page_start"] == 2
+    assert second_page["page_end"] == 4
+    assert second_page["safety_summary"]["next_cursor_present"] is False
+    assert "project:" not in first_page["next_cursor"]
+    assert "task_" not in first_page["next_cursor"]
+
+
 def test_self_lesson_review_flow_returns_exact_redacted_action_routes(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))

@@ -350,3 +350,11 @@ one project, agent, or session from silently shaping another.
 - ordering is applied before the queue limit trims returned lessons;
 - queue and safety-summary ordering metadata does not expose lesson content or
   scoped provenance.
+
+`GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001` verifies:
+
+- limited review queues expose `has_more`, `next_cursor`, `page_start`, and
+  `page_end` metadata;
+- cursors encode only cursor version, ordering contract, and numeric offset;
+- following a cursor returns the next ordered page without repeating lessons or
+  exposing content/provenance.

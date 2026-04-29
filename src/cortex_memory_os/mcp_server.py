@@ -77,6 +77,7 @@ SELF_LESSON_REVIEW_AFTER_DAYS = 90
 SELF_LESSON_REVIEW_QUEUE_ORDERING = (
     "last_validated_missing_first_oldest_first_lesson_id_asc"
 )
+SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX = "self_lesson_review_queue_v1"
 
 
 class JsonRpcError(ValueError):
@@ -216,6 +217,7 @@ class CortexMCPServer:
                     "type": "object",
                     "properties": {
                         "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+                        "cursor": {"type": "string"},
                     },
                     "additionalProperties": False,
                 },
@@ -519,6 +521,11 @@ class CortexMCPServer:
             }
         if name == "self_lesson.review_queue":
             limit = _optional_int_range(arguments, "limit", default=50, minimum=1, maximum=100)
+            cursor = _require_string(arguments, "cursor") if "cursor" in arguments else None
+            try:
+                page_start = decode_self_lesson_review_queue_cursor(cursor)
+            except ValueError as error:
+                raise JsonRpcError(-32602, str(error)) from error
             all_review_lessons = order_self_lesson_review_queue(
                 [
                     lesson
@@ -526,7 +533,15 @@ class CortexMCPServer:
                     if self_lesson_review_state(lesson)["review_required"]
                 ]
             )
-            review_lessons = all_review_lessons[:limit]
+            page_end = page_start + limit
+            review_lessons = all_review_lessons[page_start:page_end]
+            returned_end = page_start + len(review_lessons)
+            has_more = returned_end < len(all_review_lessons)
+            next_cursor = (
+                encode_self_lesson_review_queue_cursor(returned_end)
+                if has_more
+                else None
+            )
             lesson_items = [
                 serialize_self_lesson_list_item(
                     lesson,
@@ -543,12 +558,20 @@ class CortexMCPServer:
                     lesson_items,
                     applied_limit=limit,
                     total_review_required_count=len(all_review_lessons),
+                    page_start=page_start,
+                    page_end=returned_end,
+                    has_more=has_more,
                 ),
                 "applied_limit": limit,
                 "returned_count": len(review_lessons),
                 "total_review_required_count": len(all_review_lessons),
                 "truncated": len(review_lessons) < len(all_review_lessons),
                 "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
+                "cursor": cursor,
+                "next_cursor": next_cursor,
+                "has_more": has_more,
+                "page_start": page_start,
+                "page_end": returned_end,
                 "content_redacted": True,
                 "policy_refs": [SELF_LESSON_REVIEW_QUEUE_POLICY_REF],
             }
@@ -1269,6 +1292,9 @@ def summarize_self_lesson_review_queue_safety(
     *,
     applied_limit: int,
     total_review_required_count: int,
+    page_start: int,
+    page_end: int,
+    has_more: bool,
 ) -> dict[str, Any]:
     action_plans = [
         item.get("review_action_plan", [])
@@ -1284,6 +1310,11 @@ def summarize_self_lesson_review_queue_safety(
         "total_review_required_count": total_review_required_count,
         "truncated": len(lesson_items) < total_review_required_count,
         "ordering": SELF_LESSON_REVIEW_QUEUE_ORDERING,
+        "cursor_version": SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
+        "page_start": page_start,
+        "page_end": page_end,
+        "has_more": has_more,
+        "next_cursor_present": has_more,
         "content_redacted": True,
         "learned_from_redacted": True,
         "rollback_if_redacted": True,
@@ -1324,6 +1355,31 @@ def order_self_lesson_review_queue(lessons: list[SelfLesson]) -> list[SelfLesson
             lesson.lesson_id,
         ),
     )
+
+
+def encode_self_lesson_review_queue_cursor(offset: int) -> str:
+    if offset < 0:
+        raise ValueError("invalid review queue cursor")
+    return (
+        f"{SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX}:"
+        f"{SELF_LESSON_REVIEW_QUEUE_ORDERING}:{offset}"
+    )
+
+
+def decode_self_lesson_review_queue_cursor(cursor: str | None) -> int:
+    if cursor is None:
+        return 0
+    parts = cursor.split(":")
+    if len(parts) != 3:
+        raise ValueError("invalid review queue cursor")
+    prefix, ordering, offset_text = parts
+    if (
+        prefix != SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX
+        or ordering != SELF_LESSON_REVIEW_QUEUE_ORDERING
+        or not offset_text.isdigit()
+    ):
+        raise ValueError("invalid review queue cursor")
+    return int(offset_text)
 
 
 def serialize_self_lesson_review_flow_audit_preview_hint(
