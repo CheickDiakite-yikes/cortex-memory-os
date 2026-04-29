@@ -294,3 +294,12 @@ one project, agent, or session from silently shaping another.
   their preview entries;
 - real audit responses remain redacted and do not copy lesson content or scoped
   provenance.
+
+`CONTEXT-PACK-REVIEW-FLOW-AUDIT-HINT-001` verifies:
+
+- context-pack review summaries tell agents that exact review flows include an
+  audit preview;
+- the hint points to the preview's audit shape ID without copying the preview
+  or any lesson content;
+- the hint keeps the exact-lesson-ID requirement visible before audit preview
+  retrieval.

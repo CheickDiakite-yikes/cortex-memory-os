@@ -467,3 +467,11 @@ can be treated as reliable action receipts:
   their preview entries;
 - actual audit responses stay redacted and do not copy lesson content or scoped
   provenance.
+
+`CONTEXT-PACK-REVIEW-FLOW-AUDIT-HINT-001` must pass before agents can route from
+aggregate context-pack review warnings to audit-backed review cards:
+
+- context packs announce that exact review flows include audit previews;
+- the summary includes the audit shape ID and exact-lesson-ID requirement;
+- the summary does not embed preview content, lesson content, learned-from refs,
+  rollback text, or scoped provenance.

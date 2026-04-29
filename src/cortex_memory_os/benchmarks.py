@@ -192,6 +192,7 @@ def run_all() -> BenchmarkRunResult:
         case_self_lesson_review_flow_audit_consistency,
         case_context_pack_self_lesson_review_summary,
         case_context_pack_self_lesson_review_flow_hint,
+        case_context_pack_review_flow_audit_hint,
         case_gateway_memory_palace_tools,
         case_gateway_memory_export_tool,
         case_shadow_pointer_state_contract,
@@ -2581,6 +2582,68 @@ def case_context_pack_self_lesson_review_flow_hint() -> BenchmarkCaseResult:
         evidence={
             "review_queue_tool": summary.get("review_queue_tool"),
             "review_flow_tool": summary.get("review_flow_tool"),
+        },
+    )
+
+
+def case_context_pack_review_flow_audit_hint() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+        stale = base.model_copy(
+            update={
+                "lesson_id": "lesson_project_stale_audit_hint",
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": ["project:alpha", "task_project_stale_audit_hint"],
+                "last_validated": date(2025, 1, 1),
+            }
+        )
+        store.add_self_lesson(stale)
+        server = CortexMCPServer(store=store)
+        context_pack = server.call_tool(
+            "memory.get_context_pack",
+            {"goal": "continue fixing onboarding auth bug", "active_project": "alpha"},
+        )
+
+    summary = context_pack.get("self_lesson_review_summary", {})
+    serialized_summary = json.dumps(summary, sort_keys=True)
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        summary.get("review_required_count") == 1
+        and summary.get("review_flow_tool") == "self_lesson.review_flow"
+        and summary.get("review_flow_requires_lesson_id") is True
+        and summary.get("review_flow_audit_preview_available") is True
+        and summary.get("review_flow_audit_preview_requires_lesson_id") is True
+        and summary.get("review_flow_audit_shape_id")
+        == "self_lesson_decision_audit_v1"
+        and summary.get("content_redacted") is True
+        and "Before editing auth" not in serialized_summary
+        and "project:alpha" not in serialized_summary
+        and "task_project_stale_audit_hint" not in serialized_summary
+        and "CONTEXT-PACK-REVIEW-FLOW-AUDIT-HINT-001" in docs_text
+        and "CONTEXT-PACK-REVIEW-FLOW-AUDIT-HINT-001" in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id="CONTEXT-PACK-REVIEW-FLOW-AUDIT-HINT-001/audit_preview_hint",
+        suite="CONTEXT-PACK-REVIEW-FLOW-AUDIT-HINT-001",
+        passed=passed,
+        summary="Context-pack review summaries point agents to exact-ID review-flow audit previews without lesson content.",
+        metrics={
+            "review_required_count": summary.get("review_required_count", 0),
+            "audit_preview_available": int(
+                bool(summary.get("review_flow_audit_preview_available"))
+            ),
+        },
+        evidence={
+            "review_flow_tool": summary.get("review_flow_tool"),
+            "review_flow_audit_shape_id": summary.get("review_flow_audit_shape_id"),
         },
     )
 

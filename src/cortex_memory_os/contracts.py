@@ -364,6 +364,9 @@ class SelfLessonReviewSummary(StrictModel):
     review_queue_tool: str = "self_lesson.review_queue"
     review_flow_tool: str = "self_lesson.review_flow"
     review_flow_requires_lesson_id: bool = True
+    review_flow_audit_preview_available: bool = True
+    review_flow_audit_preview_requires_lesson_id: bool = True
+    review_flow_audit_shape_id: str = "self_lesson_decision_audit_v1"
     content_redacted: bool = True
 
 
