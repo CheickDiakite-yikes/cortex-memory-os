@@ -17,6 +17,7 @@ The project is intentionally starting with an engineering control plane before i
 - [Benchmark plan](docs/ops/benchmark-plan.md)
 - [Debug journal](docs/ops/debug-journal.md)
 - [Architecture decisions](docs/adr/)
+- [Repo-local Codex plugin](plugins/cortex-memory-os/README.md)
 
 Core design work should keep memory provenance, user consent, deletion, auditability, privacy, prompt-injection resistance, and embodied safety in view from the first prototype.
 

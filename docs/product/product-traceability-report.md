@@ -12,6 +12,7 @@ Source documents:
 - `docs/product/original-goal-coverage.md`
 - `docs/product/memory-palace-dashboard.md`
 - `docs/product/skill-forge-candidate-list.md`
+- `docs/research/frontier-agent-plugin-lessons-2026-04-29.md`
 - `docs/architecture/context-pack-templates.md`
 - `docs/architecture/document-to-skill-derivation.md`
 - `docs/architecture/swarm-governance.md`
@@ -35,7 +36,7 @@ Source documents:
 | Retrieval and context packs | Validated budgeted skeleton | `RETRIEVAL-SCORE-001`, `CONTEXT-PACK-001`, `CONTEXT-BUDGET-001`, scoped self-lesson suites | Add vector/sparse/graph fusion behind stable interfaces. |
 | Memory Palace | Validated dashboard contract | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, `MEMORY-PALACE-DASHBOARD-001`, self-lesson review flows | Build real dashboard UI shell over the safe view model. |
 | Skill Forge | Validated skeleton plus candidate list | `SKILL-FORGE-002`, `SKILL-DOC-DERIVATION-001`, `SKILL-FORGE-LIST-001`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Build real candidate UI shell, workflow clustering, and skill success metrics. |
-| Agent Gateway | Validated skeleton | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools | Package Codex plugin and bridge additional clients. |
+| Agent Gateway | Validated skeleton plus Codex plugin package | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools, `CODEX-PLUGIN-001`, `plugins/cortex-memory-os` | Validate plugin discovery in an installed Codex plugin path and bridge additional clients. |
 | Agent Runtime Trace | Validated contract | `RUNTIME-TRACE-001`, `docs/architecture/agent-runtime-trace.md`, runtime trace fixture | Persist real agent traces through the gateway and outcome engine. |
 | Swarm Governance | Validated contract | `SWARM-GOVERNANCE-001`, `docs/adr/0005-swarm-governance-boundary.md` | Wire future parallel agents through governed gateway execution instead of direct delegation. |
 | Shadow Pointer | Partial with controls and pointing contract | `SHADOW-POINTER-001`, `SHADOW-POINTER-CONTROLS-001`, `POINTER-PROPOSAL-001`, static UI prototype | Build native overlay with live permissions and wire controls/proposals to real capture adapters. |
@@ -64,7 +65,8 @@ User-facing pillars:
   derivation, candidate-list cards, maturity gates, rollback, audits, and
   draft-only execution.
 - Agent Gateway: validated budgeted context packs, scoped actions, audit
-  receipts, review queues, and draft skill execution.
+  receipts, review queues, draft skill execution, and repo-local Codex plugin
+  packaging.
 - Agent Runtime Trace: validated tool calls, shell actions, browser actions,
   artifacts, approvals, retries, blocked hostile content, and outcome checks.
 - Swarm Governance: validated source isolation, disjoint write scopes, budget
@@ -79,8 +81,8 @@ The next useful slices should move from contract depth into product surface and
 capture realism:
 
 1. Skill Forge candidate list UI shell using the safe candidate-card view model.
-2. Codex plugin packaging for the MCP gateway and core skills.
-3. Browser/terminal adapters with source-trust and redaction checks.
+2. Browser/terminal adapters with source-trust and redaction checks.
+3. Real Codex plugin install/discovery smoke from the repo-local skeleton.
 4. Shadow Pointer native overlay proof wired to live pause/delete/app-ignore
    commands and display-only pointing proposals.
 5. Persist real agent runtime traces through the gateway and outcome engine.

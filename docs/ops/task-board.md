@@ -6,19 +6,19 @@ Last updated: 2026-04-29
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| CODEX-PLUGIN-001 | Package first Cortex Codex plugin skeleton | Codex | Plugin manifest plus smoke validation | Bundle MCP config and progressive-disclosure skills after candidate-list contract. |
+| BROWSER-TERMINAL-ADAPTERS-001 | Define first browser and terminal adapter contracts | Codex | Adapter envelope fixtures and firewall handoff benchmark | Move Perception Bus from synthetic envelopes toward real capture seams. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| BROWSER-TERMINAL-ADAPTERS-001 | Define first browser and terminal adapter contracts | Codex | Adapter envelope fixtures and firewall handoff benchmark | Move Perception Bus from synthetic envelopes toward real capture seams. |
+| PLUGIN-INSTALL-SMOKE-001 | Validate Cortex plugin discovery in a real Codex plugin install path | Codex | Local install/discovery smoke notes plus no-secret config check | Current plugin skeleton is repo-validated, not yet tested as installed plugin UX. |
 
 ## Backlog
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| _None_ |  |  |  |  |
+| SHADOW-POINTER-NATIVE-001 | Prototype native Shadow Pointer overlay integration | Codex | Native overlay proof with pause/delete/app-ignore controls | Clicky research reinforces cursor-adjacent UX, but Cortex must show consent and memory state. |
 
 ## Done
 
@@ -137,6 +137,7 @@ Last updated: 2026-04-29
 | SWARM-GOVERNANCE-001 | Add swarm orchestration constraints | Codex | `docs/adr/0005-swarm-governance-boundary.md`, `docs/architecture/swarm-governance.md`, `uv run pytest` -> 228 passed, `uv run cortex-bench` -> 108/108 passed, `uv run cortex-mcp --smoke` | Swarm plans enforce budget ceilings, source isolation, disjoint write scopes, cancellation receipts, and non-autonomous task modes. |
 | ROBOT-SPATIAL-SAFETY-001 | Expand robot spatial safety metadata | Codex | `src/cortex_memory_os/robot_safety.py`, `docs/architecture/robot-spatial-safety.md`, `uv run pytest` focused -> 8 passed, `uv run cortex-bench` -> 109/109 passed | Robot spatial actions now require capability, workspace bounds, simulation status, emergency stop, approval, hazards, affordances, material constraints, and force/speed metadata. |
 | SKILL-FORGE-LIST-001 | Add inspectable Skill Forge candidate list view model | Codex | `src/cortex_memory_os/skill_forge_dashboard.py`, `docs/product/skill-forge-candidate-list.md`, `uv run pytest` focused -> 5 passed, `uv run cortex-bench` -> 110/110 passed | Candidate cards expose safe previews, source counts, promotion blockers, review actions, redaction, and zero external-effect action plans. |
+| CODEX-PLUGIN-001 | Package first Cortex Codex plugin skeleton | Codex | `plugins/cortex-memory-os/*`, `docs/research/frontier-agent-plugin-lessons-2026-04-29.md`, `uv run pytest` -> 237 passed, `uv run cortex-bench` -> 111/111 passed, `uv run cortex-mcp --smoke` | Bundled local MCP config, progressive-disclosure skills, and policy refs after official/primary research refresh. |
 
 ## Dropped
 

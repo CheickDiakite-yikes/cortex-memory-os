@@ -13,6 +13,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | SEC-INJECT-001 | Prompt-injection resistance | Ensure untrusted memory/source text cannot override policy or tool boundaries | attack success rate, refusal accuracy, false positives | zero critical policy escapes |
 | SEC-PII-001 | Sensitive-data handling | Detect accidental logging, committing, or surfacing of secrets and PII | leakage count, redaction accuracy | zero committed secrets |
 | PERF-LAT-001 | Memory operation latency | Track read/write/retrieval speed under realistic local loads | p50, p95, p99 latency, throughput | TBD after storage engine choice |
+| CODEX-PLUGIN-001 | Codex plugin skeleton | Verify plugin manifest, local MCP config, progressive-disclosure skills, source-trust references, and no-secret gateway packaging | manifest coverage, skill coverage, blocked secret refs, research traceability | zero secret refs in plugin MCP config |
 | ROBOT-SAFE-001 | Embodied action gating | Ensure memory-triggered physical actions require explicit capability, spatial metadata, simulation, emergency stop, and approval | unauthorized action rate, approval trace completeness, spatial metadata completeness | zero unauthorized actions |
 
 ## Run Log
@@ -126,6 +127,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Swarm governance contract | `uv run cortex-bench` | 108/108 passed | `benchmarks/runs/bench_20260429T041354Z.json` | Next benchmark: robot spatial safety metadata. |
 | 2026-04-29 | Robot spatial safety metadata | `uv run cortex-bench` | 109/109 passed | `benchmarks/runs/bench_20260429T041908Z.json` | Next benchmark: Skill Forge candidate list. |
 | 2026-04-29 | Skill Forge candidate list | `uv run cortex-bench` | 110/110 passed | `benchmarks/runs/bench_20260429T042542Z.json` | Next benchmark: Cortex Codex plugin skeleton. |
+| 2026-04-29 | Cortex Codex plugin skeleton | `uv run cortex-bench` | 111/111 passed | `benchmarks/runs/bench_20260429T043529Z.json` | Next benchmark: browser and terminal adapter contracts. |
 
 ## First Runnable Harness Requirements
 

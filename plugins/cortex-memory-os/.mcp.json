@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "cortex-memory-os": {
+      "command": "uv",
+      "args": [
+        "--project",
+        "../..",
+        "run",
+        "cortex-mcp"
+      ],
+      "env": {
+        "CORTEX_MCP_MODE": "local"
+      }
+    }
+  }
+}

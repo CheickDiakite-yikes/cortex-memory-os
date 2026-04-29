@@ -1,0 +1,43 @@
+{
+  "name": "cortex-memory-os",
+  "version": "0.1.0",
+  "description": "Governed memory, skill, and self-lesson context for local AI agents.",
+  "author": {
+    "name": "Cortex Memory OS Team",
+    "email": "security@example.invalid",
+    "url": "https://github.com/CheickDiakite-yikes/cortex-memory-os"
+  },
+  "homepage": "https://github.com/CheickDiakite-yikes/cortex-memory-os",
+  "repository": "https://github.com/CheickDiakite-yikes/cortex-memory-os",
+  "license": "UNLICENSED",
+  "keywords": [
+    "agent-memory",
+    "mcp",
+    "context-packs",
+    "skill-forge",
+    "privacy"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Cortex Memory OS",
+    "shortDescription": "Governed memory and skill context for Codex.",
+    "longDescription": "Connects Codex to Cortex Memory OS context packs, draft-only skills, memory review flows, and self-lesson postmortems with explicit safety and audit boundaries.",
+    "developerName": "Cortex Memory OS Team",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/CheickDiakite-yikes/cortex-memory-os",
+    "privacyPolicyURL": "https://github.com/CheickDiakite-yikes/cortex-memory-os/blob/main/docs/security/secret-pii-local-data-policy.md",
+    "termsOfServiceURL": "https://github.com/CheickDiakite-yikes/cortex-memory-os/blob/main/AGENTS.md",
+    "defaultPrompt": [
+      "Get Cortex context before coding.",
+      "Review Cortex memory candidates.",
+      "Draft a skill from this workflow."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

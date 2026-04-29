@@ -323,6 +323,7 @@ def run_all() -> BenchmarkRunResult:
         case_product_goal_coverage_contract,
         case_product_traceability_report_contract,
         case_frontier_agent_research_synthesis,
+        case_codex_plugin_skeleton_contract,
         case_swarm_governance_contract,
         case_agent_runtime_trace_contract,
         case_perception_event_envelope_contract,
@@ -575,6 +576,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "docs/product/original-goal-coverage.md",
         "docs/product/memory-palace-dashboard.md",
         "docs/product/skill-forge-candidate-list.md",
+        "docs/research/frontier-agent-plugin-lessons-2026-04-29.md",
         "docs/architecture/context-pack-templates.md",
         "docs/architecture/document-to-skill-derivation.md",
         "docs/architecture/swarm-governance.md",
@@ -607,15 +609,15 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "SKILL-DOC-DERIVATION-001",
         "SKILL-FORGE-LIST-001",
         "GATEWAY-CTX-001",
+        "CODEX-PLUGIN-001",
         "SWARM-GOVERNANCE-001",
         "SHADOW-POINTER-001",
         "POINTER-PROPOSAL-001",
         "ROBOT-SAFE-001",
     ]
     next_gap_terms = [
-        "Skill Forge candidate list",
-        "Codex plugin packaging",
         "Browser/terminal adapters",
+        "plugin install/discovery smoke",
         "Shadow Pointer native overlay",
         "Persist real agent runtime traces",
     ]
@@ -766,6 +768,159 @@ def case_frontier_agent_research_synthesis() -> BenchmarkCaseResult:
             "missing_followups": missing_followups,
             "missing_source_urls": missing_source_urls,
             "missing_ledger_sources": missing_ledger_sources,
+        },
+    )
+
+
+def case_codex_plugin_skeleton_contract() -> BenchmarkCaseResult:
+    plugin_root = REPO_ROOT / "plugins" / "cortex-memory-os"
+    manifest_path = plugin_root / ".codex-plugin" / "plugin.json"
+    mcp_path = plugin_root / ".mcp.json"
+    research_path = (
+        REPO_ROOT
+        / "docs"
+        / "research"
+        / "frontier-agent-plugin-lessons-2026-04-29.md"
+    )
+    plan_path = REPO_ROOT / "docs" / "ops" / "benchmark-plan.md"
+    registry_path = REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    task_board_path = REPO_ROOT / "docs" / "ops" / "task-board.md"
+
+    skill_paths = [
+        plugin_root / "skills" / "use-cortex-memory" / "SKILL.md",
+        plugin_root / "skills" / "create-cortex-skill" / "SKILL.md",
+        plugin_root / "skills" / "postmortem-agent-task" / "SKILL.md",
+    ]
+    reference_paths = [
+        plugin_root / "references" / "memory_policy.md",
+        plugin_root / "references" / "safe_execution.md",
+    ]
+    existing_paths = [
+        manifest_path,
+        mcp_path,
+        plugin_root / "README.md",
+        research_path,
+        *skill_paths,
+        *reference_paths,
+    ]
+    missing_paths = [
+        str(path.relative_to(REPO_ROOT)) for path in existing_paths if not path.exists()
+    ]
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if not missing_paths else {}
+    mcp_text = mcp_path.read_text(encoding="utf-8") if mcp_path.exists() else ""
+    mcp_config = json.loads(mcp_text) if mcp_text else {}
+    skill_text = "\n".join(
+        path.read_text(encoding="utf-8") for path in skill_paths if path.exists()
+    )
+    reference_text = "\n".join(
+        path.read_text(encoding="utf-8") for path in reference_paths if path.exists()
+    )
+    research_text = research_path.read_text(encoding="utf-8") if research_path.exists() else ""
+    plan_text = plan_path.read_text(encoding="utf-8")
+    registry_text = registry_path.read_text(encoding="utf-8")
+    task_text = task_board_path.read_text(encoding="utf-8")
+
+    default_prompts = manifest.get("interface", {}).get("defaultPrompt", [])
+    mcp_server = mcp_config.get("mcpServers", {}).get("cortex-memory-os", {})
+    mcp_args = mcp_server.get("args", [])
+    blocked_mcp_terms = [
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "ASSEMBLYAI_API_KEY",
+        "ELEVENLABS_API_KEY",
+        "sk-",
+        ".env.local",
+    ]
+    required_skill_terms = [
+        "memory.get_context_pack",
+        "memory.search",
+        "memory.explain",
+        "memory.correct",
+        "memory.forget",
+        "skill.execute_draft",
+        "self_lesson.propose",
+        "self_lesson.review_queue",
+        "untrusted",
+        "prompt injection",
+        "source refs",
+        "draft-only",
+        "no external effects",
+        "approval",
+    ]
+    required_reference_terms = [
+        "Class A",
+        "Class B",
+        "Class C",
+        "Class D",
+        "Class E",
+        "deleted",
+        "audit receipts",
+        "API call -> local script -> deterministic GUI replay",
+        "Point tags",
+        "request signing",
+        "emergency stop",
+    ]
+    required_research_terms = [
+        "OpenAI",
+        "Google Gemini",
+        "Anthropic Claude",
+        "DeepSeek",
+        "Kimi / Moonshot",
+        "Clicky",
+        "No external repository code or setup instructions were executed",
+        "plugins/cortex-memory-os",
+        "PLUGIN-INSTALL-SMOKE-001",
+    ]
+    missing_skill_terms = _missing_terms(skill_text, required_skill_terms)
+    missing_reference_terms = _missing_terms(reference_text, required_reference_terms)
+    missing_research_terms = _missing_terms(research_text, required_research_terms)
+    lower_mcp_text = mcp_text.lower()
+    mcp_secret_hits = [
+        term for term in blocked_mcp_terms if term.lower() in lower_mcp_text
+    ]
+
+    passed = (
+        not missing_paths
+        and manifest.get("name") == "cortex-memory-os"
+        and manifest.get("skills") == "./skills/"
+        and manifest.get("mcpServers") == "./.mcp.json"
+        and len(default_prompts) == 3
+        and all(len(prompt) <= 128 for prompt in default_prompts)
+        and mcp_server.get("command") == "uv"
+        and mcp_args == ["--project", "../..", "run", "cortex-mcp"]
+        and not mcp_secret_hits
+        and not missing_skill_terms
+        and not missing_reference_terms
+        and not missing_research_terms
+        and "CODEX-PLUGIN-001" in plan_text
+        and "CODEX-PLUGIN-001" in registry_text
+        and "CODEX-PLUGIN-001" in task_text
+    )
+    return BenchmarkCaseResult(
+        case_id="CODEX-PLUGIN-001/plugin_skeleton_contract",
+        suite="CODEX-PLUGIN-001",
+        passed=passed,
+        summary=(
+            "Codex plugin skeleton packages local MCP config and progressive-disclosure "
+            "skills without secrets, autonomy jumps, or hostile-source trust."
+        ),
+        metrics={
+            "skill_count": len(skill_paths),
+            "default_prompt_count": len(default_prompts),
+            "missing_paths": len(missing_paths),
+            "mcp_secret_hits": len(mcp_secret_hits),
+            "missing_skill_terms": len(missing_skill_terms),
+        },
+        evidence={
+            "manifest_path": str(manifest_path.relative_to(REPO_ROOT)),
+            "mcp_path": str(mcp_path.relative_to(REPO_ROOT)),
+            "research_path": str(research_path.relative_to(REPO_ROOT)),
+            "missing_paths": missing_paths,
+            "mcp_secret_hits": mcp_secret_hits,
+            "missing_skill_terms": missing_skill_terms,
+            "missing_reference_terms": missing_reference_terms,
+            "missing_research_terms": missing_research_terms,
         },
     )
 
