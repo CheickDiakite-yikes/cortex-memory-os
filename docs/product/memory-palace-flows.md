@@ -561,6 +561,14 @@ before a UI uses signatures as review-queue drift signals:
   review;
 - ignored lessons must not leak through signature metadata.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-MEMBERSHIP-SENSITIVE-001` must pass
+before a UI assumes a cursor still points into the same review set:
+
+- refreshing a stale scoped lesson out of review-required status changes
+  `cursor_metadata.queue_signature`;
+- the queue count and visible review cards shrink with the membership change;
+- the removed lesson is not exposed through signature metadata.
+
 `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` must pass before a paged or limited
 queue is shown:
 

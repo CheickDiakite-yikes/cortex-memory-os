@@ -92,6 +92,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-LIMIT-INDEPENDENT-001` | Review queue signatures stay stable when only page size changes. | Page-size changes create false drift signals, signatures depend on visible slice size, or limit hints desync. |
 | `GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-ORDER-SENSITIVE-001` | Review queue signatures change when ordering-relevant lesson metadata changes. | Reordered review-required queues keep the old signature, hide drift when counts stay the same, or leak signature inputs. |
 | `GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-NONREVIEW-STABILITY-001` | Review queue signatures ignore self-lessons that are not review-required. | Current, global, candidate, or revoked lessons change review-queue signatures or leak through signature metadata. |
+| `GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-MEMBERSHIP-SENSITIVE-001` | Review queue signatures change when review-required membership changes. | Lessons enter or exit the review-required set without signature drift, or removed lesson metadata leaks through signatures. |
 | `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` | Review queue safety summaries expose applied limit, returned count, total review-required count, and truncation state. | Limited queues hide truncation state, count omitted actions, or leak omitted lesson provenance. |
 | `GATEWAY-REVIEW-QUEUE-ORDERING-001` | Review queues sort missing validation dates first, then oldest validation date, then lesson ID before limits. | Queue ordering depends on insertion order, hidden store order, or leaks provenance while exposing order metadata. |
 | `GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001` | Limited review queues expose stable cursors tied to deterministic ordering. | Cursors leak lesson IDs/provenance, repeat cards, or drift from the advertised ordering contract. |
@@ -148,8 +149,9 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- `GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-MEMBERSHIP-SENSITIVE-001`: Queue
-  signatures should change when review-required membership changes.
+- `GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-CONTENT-INDEPENDENT-001`: Queue
+  signatures should ignore lesson content/provenance when membership and
+  ordering stay unchanged.
 
 Longer-term suites:
 

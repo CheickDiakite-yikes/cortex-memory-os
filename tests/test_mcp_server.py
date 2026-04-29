@@ -1947,6 +1947,72 @@ def test_self_lesson_review_queue_signature_ignores_non_review_lessons(tmp_path)
     assert "task_" not in rendered_metadata
 
 
+def test_self_lesson_review_queue_signature_changes_when_membership_changes(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))
+
+    def scoped_lesson(
+        lesson_id: str,
+        ref: str,
+        last_validated: date | None,
+    ) -> SelfLesson:
+        return active.model_copy(
+            update={
+                "lesson_id": lesson_id,
+                "scope": ScopeLevel.PROJECT_SPECIFIC,
+                "learned_from": [ref, f"task_{lesson_id}"],
+                "last_validated": last_validated,
+            }
+        )
+
+    exit_lesson = scoped_lesson(
+        "lesson_project_stale_membership_exit",
+        "project:membership-exit",
+        date(2024, 1, 1),
+    )
+    anchor_lesson = scoped_lesson(
+        "lesson_project_missing_membership_anchor",
+        "project:membership-anchor",
+        None,
+    )
+    store.add_self_lesson(exit_lesson)
+    store.add_self_lesson(anchor_lesson)
+    server = CortexMCPServer(store=store)
+
+    initial_queue = server.call_tool("self_lesson.review_queue", {"limit": 10})
+    store.add_self_lesson(
+        scoped_lesson(
+            "lesson_project_stale_membership_exit",
+            "project:membership-exit",
+            date.today(),
+        )
+    )
+    changed_queue = server.call_tool("self_lesson.review_queue", {"limit": 10})
+
+    initial_metadata = initial_queue["cursor_metadata"]
+    changed_metadata = changed_queue["cursor_metadata"]
+    assert initial_metadata["queue_signature"] != changed_metadata["queue_signature"]
+    assert changed_metadata["queue_signature"].startswith("sha256:")
+    assert initial_queue["total_review_required_count"] == 2
+    assert changed_queue["total_review_required_count"] == 1
+    assert initial_queue["lesson_ids"] == [
+        "lesson_project_missing_membership_anchor",
+        "lesson_project_stale_membership_exit",
+    ]
+    assert changed_queue["lesson_ids"] == [
+        "lesson_project_missing_membership_anchor",
+    ]
+    assert changed_metadata["signature_subject"] == (
+        "ordered_review_required_self_lessons"
+    )
+    assert changed_metadata["empty_queue_signature"] is False
+    assert changed_metadata["signature_inputs_redacted"] is True
+    rendered_metadata = json.dumps([initial_metadata, changed_metadata])
+    assert "lesson_project_stale_membership_exit" not in rendered_metadata
+    assert "project:" not in rendered_metadata
+    assert "task_" not in rendered_metadata
+
+
 def test_self_lesson_review_queue_limit_safety_summary_counts_returned_slice(tmp_path):
     store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
     active = SelfLesson.model_validate(load_json("tests/fixtures/self_lesson_auth.json"))

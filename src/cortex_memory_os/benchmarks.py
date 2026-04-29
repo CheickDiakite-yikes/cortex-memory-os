@@ -203,6 +203,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_review_queue_signature_limit_independent,
         case_gateway_review_queue_signature_order_sensitive,
         case_gateway_review_queue_signature_nonreview_stability,
+        case_gateway_review_queue_signature_membership_sensitive,
         case_gateway_review_queue_limit_safety_summary,
         case_gateway_review_queue_ordering,
         case_gateway_review_queue_paging_cursor,
@@ -3043,6 +3044,128 @@ def case_gateway_review_queue_signature_nonreview_stability() -> BenchmarkCaseRe
             "signature_subject": expanded_metadata.get("signature_subject"),
             "lesson_ids_stable": expanded_queue.get("lesson_ids")
             == initial_queue.get("lesson_ids"),
+        },
+    )
+
+
+def case_gateway_review_queue_signature_membership_sensitive() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        base = SelfLesson.model_validate(load_json(TEST_FIXTURES / "self_lesson_auth.json"))
+
+        def scoped_lesson(
+            lesson_id: str,
+            ref: str,
+            last_validated: date | None,
+        ) -> SelfLesson:
+            return base.model_copy(
+                update={
+                    "lesson_id": lesson_id,
+                    "scope": ScopeLevel.PROJECT_SPECIFIC,
+                    "learned_from": [ref, f"task_{lesson_id}"],
+                    "last_validated": last_validated,
+                }
+            )
+
+        exit_lesson = scoped_lesson(
+            "lesson_project_stale_membership_exit",
+            "project:membership-exit",
+            date(2024, 1, 1),
+        )
+        anchor_lesson = scoped_lesson(
+            "lesson_project_missing_membership_anchor",
+            "project:membership-anchor",
+            None,
+        )
+        store.add_self_lesson(exit_lesson)
+        store.add_self_lesson(anchor_lesson)
+        server = CortexMCPServer(store=store)
+
+        initial_queue = server.call_tool("self_lesson.review_queue", {"limit": 10})
+        store.add_self_lesson(
+            scoped_lesson(
+                "lesson_project_stale_membership_exit",
+                "project:membership-exit",
+                datetime.now(UTC).date(),
+            )
+        )
+        changed_queue = server.call_tool("self_lesson.review_queue", {"limit": 10})
+
+    initial_metadata = initial_queue.get("cursor_metadata", {})
+    changed_metadata = changed_queue.get("cursor_metadata", {})
+    serialized_metadata = json.dumps(
+        [initial_metadata, changed_metadata],
+        sort_keys=True,
+    )
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md"
+    ).read_text(encoding="utf-8")
+    product_text = (
+        REPO_ROOT / "docs" / "product" / "memory-palace-flows.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    passed = (
+        initial_metadata.get("queue_signature")
+        != changed_metadata.get("queue_signature")
+        and isinstance(changed_metadata.get("queue_signature"), str)
+        and changed_metadata.get("queue_signature", "").startswith("sha256:")
+        and initial_queue.get("total_review_required_count") == 2
+        and changed_queue.get("total_review_required_count") == 1
+        and initial_queue.get("lesson_ids")
+        == [
+            "lesson_project_missing_membership_anchor",
+            "lesson_project_stale_membership_exit",
+        ]
+        and changed_queue.get("lesson_ids")
+        == [
+            "lesson_project_missing_membership_anchor",
+        ]
+        and changed_metadata.get("signature_subject")
+        == "ordered_review_required_self_lessons"
+        and changed_metadata.get("empty_queue_signature") is False
+        and changed_metadata.get("signature_inputs_redacted") is True
+        and "lesson_project_stale_membership_exit" not in serialized_metadata
+        and "project:" not in serialized_metadata
+        and "task_" not in serialized_metadata
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-MEMBERSHIP-SENSITIVE-001"
+        in docs_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-MEMBERSHIP-SENSITIVE-001"
+        in product_text
+        and "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-MEMBERSHIP-SENSITIVE-001"
+        in plan_text
+    )
+    return BenchmarkCaseResult(
+        case_id=(
+            "GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-MEMBERSHIP-SENSITIVE-001/"
+            "membership_exit"
+        ),
+        suite="GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-MEMBERSHIP-SENSITIVE-001",
+        passed=passed,
+        summary=(
+            "Review queue signatures change when a lesson exits the "
+            "review-required set."
+        ),
+        metrics={
+            "signature_changed": int(
+                initial_metadata.get("queue_signature")
+                != changed_metadata.get("queue_signature")
+            ),
+            "initial_review_required_count": initial_queue.get(
+                "total_review_required_count",
+                -1,
+            ),
+            "changed_review_required_count": changed_queue.get(
+                "total_review_required_count",
+                -1,
+            ),
+        },
+        evidence={
+            "signature_subject": changed_metadata.get("signature_subject"),
+            "changed_lesson_ids": changed_queue.get("lesson_ids", []),
         },
     )
 

@@ -376,6 +376,14 @@ one project, agent, or session from silently shaping another.
 - signature metadata stays redacted even when ignored lessons carry scoped
   provenance.
 
+`GATEWAY-REVIEW-QUEUE-CURSOR-SIGNATURE-MEMBERSHIP-SENSITIVE-001` verifies:
+
+- `queue_signature` changes when a lesson exits the review-required set;
+- total review-required counts and visible queue IDs reflect the membership
+  change;
+- signature metadata stays opaque and does not expose the removed lesson ID,
+  content, learned-from refs, or scoped provenance.
+
 `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` verifies:
 
 - review queues expose the applied limit, returned count, total review-required
