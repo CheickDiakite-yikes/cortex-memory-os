@@ -6,13 +6,14 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| OPS-QUALITY-SURFACE-001 | Add concise ops quality summary for latest verification | Codex | Local command or report test over sanitized benchmark/run state | Must not include private run payloads or raw benchmark artifacts. |
+| CONTEXT-FUSION-STRESS-001 | Stress hybrid fusion diagnostics under large hostile/safe candidate mixes | Codex | Focused stress test plus benchmark case | Must stay deterministic and metadata-only. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| _None_ |  |  |  |  |
+| GATEWAY-POSTMORTEM-STRESS-001 | Stress gateway outcome postmortem exact-ID and redaction boundaries | Codex | Focused gateway stress test plus benchmark case | Must reject mismatches and never return runtime event summaries. |
+| RETRIEVAL-SCOPE-STRESS-001 | Stress retrieval scope boundaries across many projects, agents, sessions, and statuses | Codex | Focused scope stress test plus benchmark case | Must block cross-scope and deleted/quarantined memory leakage. |
 
 ## Backlog
 
@@ -24,6 +25,7 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
+| OPS-QUALITY-SURFACE-001 | Add concise ops quality summary for latest verification | Codex | `uv run pytest` -> 314 passed, `uv run cortex-bench` -> 134/134 passed, `uv run cortex-ops-quality --format markdown` -> latest run summary only | Aggregate-only ops receipt exposes counts and safe IDs without benchmark summaries, metrics payloads, evidence payloads, raw refs, hostile text, secrets, or absolute private paths. |
 | GATEWAY-OUTCOME-POSTMORTEM-001 | Expose outcome postmortem compilation through the local gateway | Codex | `outcome.postmortem`, `uv run pytest` -> 310 passed, `uv run cortex-bench` -> 133/133 passed | Gateway compiles metadata-only postmortems from exact persisted trace/outcome IDs without event summaries, self-lesson promotion, or skill maturity changes. |
 | HYBRID-FUSION-CONTEXT-PACK-INTEGRATION-001 | Feed local fusion adapters into context-pack diagnostics | Codex | `src/cortex_memory_os/context_fusion.py`, `uv run pytest` -> 308 passed, `uv run cortex-bench` -> 132/132 passed | Context packs now carry score-only local fusion diagnostics without content, source refs, hostile text, raw refs, or scope changes. |
 | RETRIEVAL-RECEIPTS-DASHBOARD-SURFACE-001 | Surface retrieval explanation receipts in dashboard context/debug panels | Codex | `src/cortex_memory_os/retrieval_receipts_dashboard.py`, browser snapshot, `uv run pytest` -> 306 passed, `uv run cortex-bench` -> 131/131 passed | Receipt rail shows included/evidence-only decisions without memory content, source refs, hostile text, or raw refs. |

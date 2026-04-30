@@ -37,6 +37,7 @@ Source documents:
 - `docs/architecture/robot-spatial-safety.md`
 - `docs/architecture/agent-runtime-trace.md`
 - `docs/architecture/outcome-postmortem-trace-handoff.md`
+- `docs/architecture/ops-quality-surface.md`
 - `docs/architecture/shadow-pointer-pointing.md`
 - `docs/architecture/system-blueprint.md`
 - `docs/ops/task-board.md`
@@ -48,6 +49,7 @@ Source documents:
 | Area | Status | Evidence | Gap |
 | --- | --- | --- | --- |
 | Engineering control plane | Validated | Task board, benchmark registry, research safety ledger, ADRs | Keep reports current after each slice. |
+| Ops Quality Surface | Validated aggregate status receipt | `OPS-QUALITY-SURFACE-001`, `uv run cortex-ops-quality`, `docs/architecture/ops-quality-surface.md` | Feed the sanitized receipt into future local dashboard ops panels without raw benchmark artifacts. |
 | Contract layer | Validated | Typed contracts, fixtures, `tests/test_contracts.py` | Add migration/versioning policy as schemas evolve. |
 | Privacy + Safety Firewall | Validated | `SEC-INJECT-001`, `SEC-PII-001`, `CTX-HOSTILE-001` | Expand from synthetic text to app/browser/source classifiers. |
 | Evidence Vault | Validated skeleton | `VAULT-RETENTION-001`, `VAULT-ENCRYPT-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001` | Replace dev cipher with production key management before real private data. |

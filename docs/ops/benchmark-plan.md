@@ -34,6 +34,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `PERF-LAT-001` | Synthetic local memory writes and searches report p50/p95 latency. | Local p95 latency crosses the initial synthetic gate. |
 | `PERF-HISTORY-001` | Benchmark latency artifacts can be compared across runs. | Large p95 regression is not flagged. |
 | `GATEWAY-HISTORY-001` | Local ops command renders sanitized latency-history reports. | History command leaks non-latency payloads or lacks regression failure mode. |
+| `OPS-QUALITY-SURFACE-001` | Local ops command renders an aggregate-only latest verification summary. | Ops quality output leaks benchmark summaries, metrics, evidence payloads, raw refs, hostile text, secrets, or absolute private paths. |
 | `MEM-LIFECYCLE-001` | Activation, deletion, revocation, quarantine, and supersession obey lifecycle policy. | Secret, external, or low-confidence memory becomes active. |
 | `MEM-FORGET-001` | Deleted memories are omitted from recall. | Deleted memory appears in search or a context pack. |
 | `SEC-INJECT-001` | External prompt injection is quarantined. | Hostile text becomes memory, skill, or agent instruction. |
@@ -186,6 +187,8 @@ The following failures block merge, release, or wider use:
   docs outside explicitly synthetic source fixtures.
 - Any Evidence Vault write plan that allows raw blobs for secret, third-party,
   quarantined, discarded, or non-memory-eligible observations.
+- Any ops quality surface that leaks benchmark case payloads, raw refs, hostile
+  text, or secret-like text.
 - Any high-risk or critical action allowed without the required review gate.
 
 ## Expansion Roadmap
