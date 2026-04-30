@@ -16,6 +16,8 @@ from cortex_memory_os.runtime_trace import (
 
 OUTCOME_POSTMORTEM_TRACE_ID = "OUTCOME-POSTMORTEM-TRACE-001"
 OUTCOME_POSTMORTEM_TRACE_POLICY_REF = "policy_outcome_postmortem_trace_v1"
+GATEWAY_OUTCOME_POSTMORTEM_ID = "GATEWAY-OUTCOME-POSTMORTEM-001"
+GATEWAY_OUTCOME_POSTMORTEM_POLICY_REF = "policy_gateway_outcome_postmortem_v1"
 
 
 class OutcomePostmortem(StrictModel):

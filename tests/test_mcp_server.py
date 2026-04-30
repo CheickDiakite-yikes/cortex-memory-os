@@ -34,6 +34,7 @@ def test_lists_memory_tools():
         "runtime_trace.record",
         "runtime_trace.get",
         "runtime_trace.list",
+        "outcome.postmortem",
         "skill.execute_draft",
         "self_lesson.propose",
         "self_lesson.list",
@@ -185,6 +186,97 @@ def test_runtime_trace_gateway_records_and_returns_safe_metadata(tmp_path):
     )
     assert list_response["result"]["count"] == 1
     assert list_response["result"]["traces"][0]["trace_id"] == "trace_cortex_debug_001"
+
+
+def test_outcome_postmortem_gateway_compiles_from_persisted_trace(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    server = CortexMCPServer(store=store)
+    trace_payload = load_json("tests/fixtures/agent_runtime_trace.json")
+    server.call_tool("runtime_trace.record", {"trace": trace_payload})
+    outcome = {
+        "outcome_id": "outcome_onboarding_debug_001",
+        "task_id": trace_payload["task_id"],
+        "agent_id": trace_payload["agent_id"],
+        "status": "success",
+        "evidence_refs": ["outcome:onboarding-debug-local-tests"],
+        "created_at": "2026-04-30T06:34:00Z",
+    }
+
+    result = server.call_tool(
+        "outcome.postmortem",
+        {
+            "trace_id": trace_payload["trace_id"],
+            "outcome_id": outcome["outcome_id"],
+            "outcome": outcome,
+        },
+    )
+    postmortem = result["postmortem"]
+    payload = json.dumps(result, sort_keys=True)
+
+    assert postmortem["trace_id"] == trace_payload["trace_id"]
+    assert postmortem["outcome_id"] == outcome["outcome_id"]
+    assert postmortem["event_count"] == 11
+    assert postmortem["summary_text_redacted"] is True
+    assert postmortem["event_summaries_included"] is False
+    assert postmortem["content_redacted"] is True
+    assert result["content_redacted"] is True
+    assert "policy_gateway_outcome_postmortem_v1" in result["policy_refs"]
+    assert "GATEWAY-OUTCOME-POSTMORTEM-001" in result["policy_refs"]
+    assert "copy_runtime_event_summary_text" in result["blocked_effects"]
+    assert "Agent started scoped debugging task" not in payload
+    assert "Blocked untrusted external browser content" not in payload
+    assert "ignore previous" not in payload.lower()
+
+
+def test_outcome_postmortem_gateway_requires_exact_ids(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    server = CortexMCPServer(store=store)
+    trace_payload = load_json("tests/fixtures/agent_runtime_trace.json")
+    server.call_tool("runtime_trace.record", {"trace": trace_payload})
+    outcome = {
+        "outcome_id": "outcome_onboarding_debug_001",
+        "task_id": trace_payload["task_id"],
+        "agent_id": trace_payload["agent_id"],
+        "status": "success",
+        "evidence_refs": ["outcome:onboarding-debug-local-tests"],
+        "created_at": "2026-04-30T06:34:00Z",
+    }
+
+    mismatch = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 202,
+            "method": "tools/call",
+            "params": {
+                "name": "outcome.postmortem",
+                "arguments": {
+                    "trace_id": trace_payload["trace_id"],
+                    "outcome_id": "outcome_other",
+                    "outcome": outcome,
+                },
+            },
+        }
+    )
+    unknown = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 203,
+            "method": "tools/call",
+            "params": {
+                "name": "outcome.postmortem",
+                "arguments": {
+                    "trace_id": "trace_missing",
+                    "outcome_id": outcome["outcome_id"],
+                    "outcome": outcome,
+                },
+            },
+        }
+    )
+
+    assert mismatch["error"]["code"] == -32602
+    assert "outcome_id must match" in mismatch["error"]["message"]
+    assert unknown["error"]["code"] == -32602
+    assert "unknown trace_id" in unknown["error"]["message"]
 
 
 def test_context_pack_template_changes_debugging_next_steps():

@@ -22,6 +22,7 @@ from cortex_memory_os.contracts import (
     HYBRID_FUSION_CONTEXT_DIAGNOSTIC_POLICY_REF,
     MemoryRecord,
     MemoryStatus,
+    OutcomeRecord,
     RelevantMemory,
     RelevantSelfLesson,
     RETRIEVAL_EXPLANATION_POLICY_REF,
@@ -61,6 +62,12 @@ from cortex_memory_os.runtime_trace import (
     runtime_trace_metadata,
     runtime_trace_persistence_receipt,
     trace_evidence_refs,
+)
+from cortex_memory_os.outcome_postmortem import (
+    GATEWAY_OUTCOME_POSTMORTEM_ID,
+    GATEWAY_OUTCOME_POSTMORTEM_POLICY_REF,
+    OUTCOME_POSTMORTEM_TRACE_POLICY_REF,
+    compile_outcome_postmortem_from_trace,
 )
 from cortex_memory_os.self_lesson_audit import (
     SELF_LESSON_AUDIT_POLICY_REF,
@@ -205,6 +212,20 @@ class CortexMCPServer:
                         "task_id": {"type": "string"},
                         "limit": {"type": "integer", "minimum": 1, "maximum": 100},
                     },
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "outcome.postmortem",
+                "description": "Compile a redacted outcome postmortem from an exact stored runtime trace and outcome payload.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "trace_id": {"type": "string"},
+                        "outcome_id": {"type": "string"},
+                        "outcome": {"type": "object"},
+                    },
+                    "required": ["trace_id", "outcome_id", "outcome"],
                     "additionalProperties": False,
                 },
             },
@@ -585,6 +606,38 @@ class CortexMCPServer:
                 "count": len(traces),
                 "content_redacted": True,
                 "policy_refs": [GATEWAY_RUNTIME_TRACE_PERSISTENCE_POLICY_REF],
+            }
+        if name == "outcome.postmortem":
+            store = self._require_runtime_trace_store()
+            trace_id = _require_string(arguments, "trace_id")
+            outcome_id = _require_string(arguments, "outcome_id")
+            trace = store.get_runtime_trace(trace_id)
+            if trace is None:
+                raise JsonRpcError(-32602, f"unknown trace_id: {trace_id}")
+            try:
+                outcome = OutcomeRecord.model_validate(
+                    _require_object(arguments, "outcome")
+                )
+                if outcome.outcome_id != outcome_id:
+                    raise ValueError("outcome_id must match outcome payload")
+                postmortem = compile_outcome_postmortem_from_trace(trace, outcome)
+            except ValueError as error:
+                raise JsonRpcError(-32602, str(error)) from error
+            return {
+                "postmortem": postmortem.model_dump(mode="json"),
+                "content_redacted": True,
+                "allowed_effects": ["compile_redacted_outcome_postmortem"],
+                "blocked_effects": [
+                    "copy_runtime_event_summary_text",
+                    "promote_trace_text_to_instruction",
+                    "change_skill_maturity",
+                    "create_active_self_lesson",
+                ],
+                "policy_refs": [
+                    GATEWAY_OUTCOME_POSTMORTEM_POLICY_REF,
+                    OUTCOME_POSTMORTEM_TRACE_POLICY_REF,
+                    GATEWAY_OUTCOME_POSTMORTEM_ID,
+                ],
             }
         if name == "skill.execute_draft":
             skill_id = _require_string(arguments, "skill_id")

@@ -6,13 +6,13 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-OUTCOME-POSTMORTEM-001 | Expose outcome postmortem compilation through the local gateway | Codex | Gateway tool test using persisted runtime trace | Tool must return metadata-only postmortems and require exact trace/outcome IDs. |
+| OPS-QUALITY-SURFACE-001 | Add concise ops quality summary for latest verification | Codex | Local command or report test over sanitized benchmark/run state | Must not include private run payloads or raw benchmark artifacts. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| OPS-QUALITY-SURFACE-001 | Add concise ops quality summary for latest verification | Codex | Local command or report test over sanitized benchmark/run state | Must not include private run payloads or raw benchmark artifacts. |
+| _None_ |  |  |  |  |
 
 ## Backlog
 
@@ -24,6 +24,7 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
+| GATEWAY-OUTCOME-POSTMORTEM-001 | Expose outcome postmortem compilation through the local gateway | Codex | `outcome.postmortem`, `uv run pytest` -> 310 passed, `uv run cortex-bench` -> 133/133 passed | Gateway compiles metadata-only postmortems from exact persisted trace/outcome IDs without event summaries, self-lesson promotion, or skill maturity changes. |
 | HYBRID-FUSION-CONTEXT-PACK-INTEGRATION-001 | Feed local fusion adapters into context-pack diagnostics | Codex | `src/cortex_memory_os/context_fusion.py`, `uv run pytest` -> 308 passed, `uv run cortex-bench` -> 132/132 passed | Context packs now carry score-only local fusion diagnostics without content, source refs, hostile text, raw refs, or scope changes. |
 | RETRIEVAL-RECEIPTS-DASHBOARD-SURFACE-001 | Surface retrieval explanation receipts in dashboard context/debug panels | Codex | `src/cortex_memory_os/retrieval_receipts_dashboard.py`, browser snapshot, `uv run pytest` -> 306 passed, `uv run cortex-bench` -> 131/131 passed | Receipt rail shows included/evidence-only decisions without memory content, source refs, hostile text, or raw refs. |
 | SKILL-METRICS-DASHBOARD-SURFACE-001 | Surface Skill Forge metrics in dashboard view models | Codex | `src/cortex_memory_os/skill_metrics_dashboard.py`, browser snapshot, `uv run pytest` -> 304 passed, `uv run cortex-bench` -> 130/130 passed | Metric strips show outcome counts and review recommendations without procedure text, task content, raw refs, or autonomy changes. |

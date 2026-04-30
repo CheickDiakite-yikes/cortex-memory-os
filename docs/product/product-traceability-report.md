@@ -56,7 +56,7 @@ Source documents:
 | Memory Palace | Validated dashboard contract, static UI shell, and read-only gateway action receipts | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, `MEMORY-PALACE-DASHBOARD-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, `DASHBOARD-GATEWAY-ACTIONS-001`, self-lesson review flows | Wire safe read-only calls to the local gateway runtime; keep correction/delete/export confirmation-gated. |
 | Skill Forge | Validated skeleton plus candidate list, success metrics, dashboard metrics surface, static UI shell, and read-only review receipts | `SKILL-FORGE-002`, `SKILL-DOC-DERIVATION-001`, `SKILL-FORGE-LIST-001`, `SKILL-SUCCESS-METRICS-001`, `SKILL-METRICS-DASHBOARD-SURFACE-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, `DASHBOARD-GATEWAY-ACTIONS-001`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add workflow clustering and live draft-only execution previews behind receipts. |
 | Agent Gateway | Validated skeleton plus install-smoked and approval-gated Codex plugin package | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools, `CODEX-PLUGIN-001`, `PLUGIN-INSTALL-SMOKE-001`, `CODEX-PLUGIN-REAL-ENABLE-001`, `plugins/cortex-memory-os` | Bridge additional clients and keep real user config changes explicit. |
-| Agent Runtime Trace | Validated contract, gateway persistence receipts, and safe postmortem handoff | `RUNTIME-TRACE-001`, `GATEWAY-TRACE-PERSISTENCE-001`, `OUTCOME-POSTMORTEM-TRACE-001`, `docs/architecture/agent-runtime-trace.md`, `docs/architecture/outcome-postmortem-trace-handoff.md`, runtime trace fixture, SQLite persistence, `runtime_trace.record`, `runtime_trace.get`, `runtime_trace.list` | Expose postmortem compilation through the gateway and connect it to self-improvement scoring. |
+| Agent Runtime Trace | Validated contract, gateway persistence receipts, safe postmortem handoff, and gateway postmortem compilation | `RUNTIME-TRACE-001`, `GATEWAY-TRACE-PERSISTENCE-001`, `OUTCOME-POSTMORTEM-TRACE-001`, `GATEWAY-OUTCOME-POSTMORTEM-001`, `docs/architecture/agent-runtime-trace.md`, `docs/architecture/outcome-postmortem-trace-handoff.md`, `docs/architecture/gateway-outcome-postmortem.md`, runtime trace fixture, SQLite persistence, `runtime_trace.record`, `runtime_trace.get`, `runtime_trace.list`, `outcome.postmortem` | Connect postmortem receipts to self-improvement scoring without automatic promotion. |
 | Swarm Governance | Validated contract | `SWARM-GOVERNANCE-001`, `docs/adr/0005-swarm-governance-boundary.md` | Wire future parallel agents through governed gateway execution instead of direct delegation. |
 | Shadow Pointer | Validated native proof, static prototype, capture receipt wiring, and read-only permission status smoke | `SHADOW-POINTER-001`, `SHADOW-POINTER-CONTROLS-001`, `POINTER-PROPOSAL-001`, `SHADOW-POINTER-NATIVE-001`, `NATIVE-CAPTURE-PERMISSION-SMOKE-001`, `SHADOW-POINTER-CAPTURE-WIRING-001`, static UI prototype, `native/macos-shadow-pointer` | Feed live local endpoint and permission-status receipts into the native overlay panel. |
 | Native Perception Bus | Envelope, firewall handoff, evidence eligibility, browser/terminal contracts, macOS app/window and Accessibility contracts, live adapter smoke artifacts, local adapter endpoint, manual browser/terminal proof, Shadow Pointer capture receipt wiring, and native permission-status smoke validated | `PERCEPTION-EVENT-ENVELOPE-001`, `PERCEPTION-FIREWALL-HANDOFF-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001`, `NATIVE-CAPTURE-PERMISSION-SMOKE-001`, `SHADOW-POINTER-CAPTURE-WIRING-001`, `MACOS-PERCEPTION-ADAPTERS-001`, `BROWSER-TERMINAL-ADAPTERS-001`, `LIVE-BROWSER-TERMINAL-ADAPTERS-001`, `LOCAL-ADAPTER-ENDPOINT-001`, `MANUAL-ADAPTER-PROOF-001`, roadmap, and ADR | Wire the status receipt to onboarding and the Shadow Pointer without enabling real capture. |
@@ -106,8 +106,8 @@ User-facing pillars:
   artifacts, approvals, retries, blocked hostile content, outcome checks, and
   gateway persistence receipts that return metadata without event summary text,
   plus `OUTCOME-POSTMORTEM-TRACE-001` postmortems that preserve safe trace
-  metadata while keeping event summaries out of self-improvement instruction
-  lanes.
+  metadata and `GATEWAY-OUTCOME-POSTMORTEM-001` gateway compilation that keeps
+  event summaries out of self-improvement instruction lanes.
 - Swarm Governance: validated source isolation, disjoint write scopes, budget
   enforcement, cancellation receipts, and non-autonomous task ceilings.
 - Robot readiness: validated capability refs, workspace bounds, affordances,
@@ -134,8 +134,8 @@ capture realism:
    local endpoint receipt streams.
 3. Execute the read-only dashboard gateway receipts against the local gateway
    runtime, with browser proof and no mutation paths enabled.
-4. Persist real agent runtime traces into outcome postmortems through the
-   gateway and feed them into self-improvement scoring.
+4. Connect gateway postmortem receipts to self-improvement scoring without
+   automatic lesson or skill promotion.
 5. Feed metadata-only hybrid fusion diagnostics into live dashboard context/debug
    panels without adding content or source refs.
 6. Extend `RETRIEVAL-RECEIPTS-DASHBOARD-SURFACE-001` from static synthetic data

@@ -36,6 +36,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | RUNTIME-TRACE-001 | Agent runtime trace contract | Verify agent tool, shell, browser, artifact, approval, retry, blocked-hostile, and outcome events are ordered and redacted | event count, approval refs, retry refs, evidence refs, outcome check | successful traces require outcome checks and hostile content stays redacted |
 | GATEWAY-TRACE-PERSISTENCE-001 | Gateway runtime trace persistence | Verify gateway record/get/list tools persist traces and return safe metadata receipts | persisted trace count, summary redaction, evidence refs, policy refs | zero event summary text returned by default, persistence policy ref present |
 | OUTCOME-POSTMORTEM-TRACE-001 | Outcome postmortem trace handoff | Verify outcome postmortems use safe trace metadata without event summary text or automatic self-improvement | event count, follow-up count, summary leak count, policy refs | zero event summary leakage, review-only follow-ups, `policy_outcome_postmortem_trace_v1` present |
+| GATEWAY-OUTCOME-POSTMORTEM-001 | Gateway outcome postmortem bridge | Verify gateway postmortems compile only from exact persisted trace and outcome IDs | event count, mismatch rejection, summary leak count, policy refs | exact ID match required, zero event summary leakage, no self-improvement promotion |
 | ROBOT-SAFE-001 | Embodied action gating | Ensure memory-triggered physical actions require explicit capability, spatial metadata, simulation, emergency stop, and approval | unauthorized action rate, approval trace completeness, spatial metadata completeness | zero unauthorized actions |
 
 ## Run Log
@@ -171,6 +172,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-30 | Skill Metrics dashboard surface | `uv run cortex-bench` plus focused dashboard metrics tests | 130/130 passed; focused tests passed with 11 tests; full suite passed with 304 tests | `benchmarks/runs/bench_20260430T061713Z.json` | Next benchmark: retrieval receipts dashboard surface. |
 | 2026-04-30 | Retrieval receipts dashboard surface | `uv run cortex-bench` plus focused retrieval receipt dashboard tests | 131/131 passed; focused tests passed with 11 tests; full suite passed with 306 tests | `benchmarks/runs/bench_20260430T062252Z.json` | Next benchmark: hybrid fusion context-pack integration. |
 | 2026-04-30 | Hybrid fusion context-pack diagnostics | `uv run cortex-bench` plus focused context fusion/gateway tests | 132/132 passed; focused tests passed; full suite passed with 308 tests | `benchmarks/runs/bench_20260430T063041Z.json` | Next benchmark: gateway outcome postmortem compilation. |
+| 2026-04-30 | Gateway outcome postmortem bridge | `uv run cortex-bench` plus focused gateway postmortem tests | 133/133 passed; focused tests passed; full suite passed with 310 tests | `benchmarks/runs/bench_20260430T063629Z.json` | Next benchmark: ops quality summary surface. |
 
 ## First Runnable Harness Requirements
 

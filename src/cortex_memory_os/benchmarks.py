@@ -211,6 +211,8 @@ from cortex_memory_os.runtime_trace import (
     trace_evidence_refs,
 )
 from cortex_memory_os.outcome_postmortem import (
+    GATEWAY_OUTCOME_POSTMORTEM_ID,
+    GATEWAY_OUTCOME_POSTMORTEM_POLICY_REF,
     OUTCOME_POSTMORTEM_TRACE_ID,
     OUTCOME_POSTMORTEM_TRACE_POLICY_REF,
     compile_outcome_postmortem_from_trace,
@@ -448,6 +450,7 @@ def run_all() -> BenchmarkRunResult:
         case_agent_runtime_trace_contract,
         case_gateway_runtime_trace_persistence_contract,
         case_outcome_postmortem_trace_handoff_contract,
+        case_gateway_outcome_postmortem_contract,
         case_perception_event_envelope_contract,
         case_perception_firewall_handoff_contract,
         case_evidence_eligibility_handoff_contract,
@@ -1147,6 +1150,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         SKILL_SUCCESS_METRICS_ID,
         DASHBOARD_SHELL_ID,
         "GATEWAY-CTX-001",
+        GATEWAY_OUTCOME_POSTMORTEM_ID,
         "CODEX-PLUGIN-001",
         "BROWSER-TERMINAL-ADAPTERS-001",
         "LIVE-BROWSER-TERMINAL-ADAPTERS-001",
@@ -1165,7 +1169,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "Real Memory Palace and Skill Forge UI shell",
         "plugin install/discovery smoke",
         "Shadow Pointer native overlay",
-        "Persist real agent runtime traces",
+        "Connect gateway postmortem receipts",
     ]
 
     missing_sections = _missing_terms(report_text, required_sections)
@@ -2159,6 +2163,125 @@ def case_outcome_postmortem_trace_handoff_contract() -> BenchmarkCaseResult:
             "policy_ref": OUTCOME_POSTMORTEM_TRACE_POLICY_REF,
             "trace_id": postmortem.trace_id,
             "safe_findings": postmortem.safe_findings,
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_gateway_outcome_postmortem_contract() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    trace = AgentRuntimeTrace.model_validate(
+        load_json("tests/fixtures/agent_runtime_trace.json")
+    )
+    outcome = OutcomeRecord(
+        outcome_id="outcome_onboarding_debug_001",
+        task_id=trace.task_id,
+        agent_id=trace.agent_id,
+        status=OutcomeStatus.SUCCESS,
+        evidence_refs=["outcome:onboarding-debug-local-tests"],
+        created_at=datetime(2026, 4, 30, 6, 34, tzinfo=UTC),
+    )
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        server = CortexMCPServer(store=store)
+        server.call_tool(
+            "runtime_trace.record",
+            {"trace": trace.model_dump(mode="json")},
+        )
+        result = server.call_tool(
+            "outcome.postmortem",
+            {
+                "trace_id": trace.trace_id,
+                "outcome_id": outcome.outcome_id,
+                "outcome": outcome.model_dump(mode="json"),
+            },
+        )
+        mismatch = server.handle_jsonrpc(
+            {
+                "jsonrpc": "2.0",
+                "id": 204,
+                "method": "tools/call",
+                "params": {
+                    "name": "outcome.postmortem",
+                    "arguments": {
+                        "trace_id": trace.trace_id,
+                        "outcome_id": "outcome_other",
+                        "outcome": outcome.model_dump(mode="json"),
+                    },
+                },
+            }
+        )
+    postmortem = result["postmortem"]
+    safe_payload = json.dumps(result, sort_keys=True)
+    event_summary_leaks = [
+        event.summary for event in trace.events if event.summary in safe_payload
+    ]
+
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "gateway-outcome-postmortem.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (
+        REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    ).read_text(encoding="utf-8")
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    report_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        GATEWAY_OUTCOME_POSTMORTEM_ID,
+        GATEWAY_OUTCOME_POSTMORTEM_POLICY_REF,
+        "outcome.postmortem",
+        "trace_id",
+        "outcome_id",
+        "metadata-only",
+        "copy_runtime_event_summary_text",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        postmortem["trace_id"] == trace.trace_id
+        and postmortem["outcome_id"] == outcome.outcome_id
+        and postmortem["event_count"] == 11
+        and postmortem["summary_text_redacted"] is True
+        and postmortem["event_summaries_included"] is False
+        and postmortem["content_redacted"] is True
+        and result["content_redacted"] is True
+        and GATEWAY_OUTCOME_POSTMORTEM_POLICY_REF in result["policy_refs"]
+        and OUTCOME_POSTMORTEM_TRACE_POLICY_REF in result["policy_refs"]
+        and "copy_runtime_event_summary_text" in result["blocked_effects"]
+        and mismatch.get("error", {}).get("code") == -32602
+        and "outcome_id must match" in mismatch.get("error", {}).get("message", "")
+        and not event_summary_leaks
+        and not missing_doc_terms
+        and GATEWAY_OUTCOME_POSTMORTEM_ID in plan_text
+        and GATEWAY_OUTCOME_POSTMORTEM_ID in registry_text
+        and GATEWAY_OUTCOME_POSTMORTEM_ID in task_text
+        and GATEWAY_OUTCOME_POSTMORTEM_ID in report_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-OUTCOME-POSTMORTEM-001/gateway_trace_outcome_bridge",
+        suite=GATEWAY_OUTCOME_POSTMORTEM_ID,
+        passed=passed,
+        summary=(
+            "Gateway compiles exact-ID outcome postmortems from persisted "
+            "runtime traces without returning event summary text or promoting "
+            "self-improvement."
+        ),
+        metrics={
+            "event_count": postmortem.get("event_count", 0),
+            "event_summary_leak_count": len(event_summary_leaks),
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": GATEWAY_OUTCOME_POSTMORTEM_POLICY_REF,
+            "trace_id": postmortem.get("trace_id"),
+            "outcome_id": postmortem.get("outcome_id"),
+            "mismatch_error_code": mismatch.get("error", {}).get("code"),
             "missing_doc_terms": missing_doc_terms,
         },
     )
