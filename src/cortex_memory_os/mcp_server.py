@@ -133,6 +133,10 @@ class CortexMCPServer:
                     "properties": {
                         "query": {"type": "string"},
                         "limit": {"type": "integer", "minimum": 1, "maximum": 20},
+                        "active_project": {"type": "string"},
+                        "agent_id": {"type": "string"},
+                        "session_id": {"type": "string"},
+                        "include_global": {"type": "boolean"},
                     },
                     "required": ["query"],
                     "additionalProperties": False,
@@ -148,6 +152,7 @@ class CortexMCPServer:
                         "active_project": {"type": "string"},
                         "agent_id": {"type": "string"},
                         "session_id": {"type": "string"},
+                        "include_global": {"type": "boolean"},
                         "limit": {"type": "integer", "minimum": 1, "maximum": 20},
                         "max_prompt_tokens": {
                             "type": "integer",
@@ -1137,20 +1142,26 @@ class CortexMCPServer:
 
     def memory_search(self, arguments: dict[str, Any]) -> list[MemoryRecord]:
         query = _require_string(arguments, "query")
-        limit = int(arguments.get("limit", 5))
-        return _search_store(self.store, query, limit=limit)
+        limit = _optional_int_range(arguments, "limit", default=5, minimum=1, maximum=20)
+        return _search_store(
+            self.store,
+            query,
+            limit=limit,
+            scope=_retrieval_scope_from_arguments(arguments),
+        )
 
     def get_context_pack(self, arguments: dict[str, Any]) -> ContextPack:
         goal = _require_string(arguments, "goal")
-        active_project = arguments.get("active_project")
-        agent_id = arguments.get("agent_id")
-        session_id = arguments.get("session_id")
+        active_project = _optional_string(arguments, "active_project")
+        agent_id = _optional_string(arguments, "agent_id")
+        session_id = _optional_string(arguments, "session_id")
         template = select_context_pack_template(goal)
         limit = effective_context_limit(template, int(arguments.get("limit", template.max_memories)))
         retrieval_scope = RetrievalScope(
             active_project=active_project,
             agent_id=agent_id,
             session_id=session_id,
+            include_global=_optional_bool(arguments, "include_global", default=True),
         )
         ranked_memories = _rank_store(self.store, goal, limit=limit, scope=retrieval_scope)
         available_self_lessons = _available_self_lessons(self.store, self.self_lessons)
@@ -1885,6 +1896,15 @@ def _search_store(
     raise TypeError("store does not support memory search")
 
 
+def _retrieval_scope_from_arguments(arguments: dict[str, Any]) -> RetrievalScope:
+    return RetrievalScope(
+        active_project=_optional_string(arguments, "active_project"),
+        agent_id=_optional_string(arguments, "agent_id"),
+        session_id=_optional_string(arguments, "session_id"),
+        include_global=_optional_bool(arguments, "include_global", default=True),
+    )
+
+
 def _rank_store(
     store: Any,
     query: str,
@@ -2342,6 +2362,12 @@ def _optional_dict(payload: dict[str, Any], key: str) -> dict[str, Any]:
     return value
 
 
+def _optional_string(payload: dict[str, Any], key: str) -> str | None:
+    if key not in payload:
+        return None
+    return _require_string(payload, key)
+
+
 def _require_object(payload: dict[str, Any], key: str) -> dict[str, Any]:
     value = payload.get(key)
     if not isinstance(value, dict) or not value:
@@ -2377,6 +2403,12 @@ def _require_bool(payload: dict[str, Any], key: str) -> bool:
     if not isinstance(value, bool):
         raise JsonRpcError(-32602, f"missing required boolean parameter: {key}")
     return value
+
+
+def _optional_bool(payload: dict[str, Any], key: str, *, default: bool) -> bool:
+    if key not in payload:
+        return default
+    return _require_bool(payload, key)
 
 
 def _require_number(payload: dict[str, Any], key: str) -> float:

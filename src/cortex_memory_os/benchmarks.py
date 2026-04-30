@@ -193,7 +193,12 @@ from cortex_memory_os.memory_palace_flows import (
 )
 from cortex_memory_os.memory_store import InMemoryMemoryStore
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
-from cortex_memory_os.retrieval import RetrievalScope, rank_memories, score_memory
+from cortex_memory_os.retrieval import (
+    RETRIEVAL_SCOPE_STRESS_ID,
+    RetrievalScope,
+    rank_memories,
+    score_memory,
+)
 from cortex_memory_os.retrieval_explanations import (
     RETRIEVAL_EXPLANATION_RECEIPTS_ID,
     build_context_retrieval_receipts,
@@ -350,6 +355,7 @@ def run_all() -> BenchmarkRunResult:
         case_benign_recall,
         case_retrieval_scoring,
         case_scope_aware_retrieval_policy,
+        case_retrieval_scope_stress_contract,
         case_context_fusion_index_stub_contract,
         case_local_fusion_adapters_contract,
         case_hybrid_fusion_context_pack_integration_contract,
@@ -3652,6 +3658,203 @@ def case_scope_aware_retrieval_policy() -> BenchmarkCaseResult:
             "eligible_memory_ids": [item.memory.memory_id for item in ranked],
             "blocked_project_reasons": list(beta_score.reasons),
             "blocked_agent_reasons": list(wrong_agent_score.reasons),
+        },
+    )
+
+
+def case_retrieval_scope_stress_contract() -> BenchmarkCaseResult:
+    now = datetime(2026, 4, 30, 14, 0, tzinfo=UTC)
+    query = "onboarding auth redirect scope stress"
+
+    def memory(
+        memory_id: str,
+        scope_level: ScopeLevel,
+        source_refs: list[str],
+        *,
+        status: MemoryStatus = MemoryStatus.ACTIVE,
+        influence_level: InfluenceLevel = InfluenceLevel.DIRECT_QUERY,
+        sensitivity: Sensitivity = Sensitivity.LOW,
+    ) -> MemoryRecord:
+        return MemoryRecord(
+            memory_id=memory_id,
+            type=MemoryType.PROJECT,
+            content=f"Onboarding auth redirect scope stress memory for {memory_id}.",
+            source_refs=[*source_refs, f"scene:{memory_id}"],
+            evidence_type=EvidenceType.OBSERVED_AND_INFERRED,
+            confidence=0.88,
+            status=status,
+            created_at=now,
+            valid_from=date(2026, 4, 30),
+            sensitivity=sensitivity,
+            scope=scope_level,
+            influence_level=influence_level,
+            allowed_influence=["context_retrieval"],
+        )
+
+    memories = [
+        memory("mem_scope_project_alpha", ScopeLevel.PROJECT_SPECIFIC, ["project:alpha"]),
+        memory("mem_scope_agent_codex", ScopeLevel.AGENT_SPECIFIC, ["agent:codex"]),
+        memory("mem_scope_session_debug", ScopeLevel.SESSION_ONLY, ["session:debug"]),
+        memory("mem_scope_global", ScopeLevel.WORK_GLOBAL, ["work:cortex"]),
+        memory("mem_scope_project_beta", ScopeLevel.PROJECT_SPECIFIC, ["project:beta"]),
+        memory("mem_scope_agent_claude", ScopeLevel.AGENT_SPECIFIC, ["agent:claude"]),
+        memory("mem_scope_session_other", ScopeLevel.SESSION_ONLY, ["session:other"]),
+        memory(
+            "mem_scope_deleted",
+            ScopeLevel.PROJECT_SPECIFIC,
+            ["project:alpha"],
+            status=MemoryStatus.DELETED,
+            influence_level=InfluenceLevel.STORED_ONLY,
+        ),
+        memory(
+            "mem_scope_revoked",
+            ScopeLevel.PROJECT_SPECIFIC,
+            ["project:alpha"],
+            status=MemoryStatus.REVOKED,
+            influence_level=InfluenceLevel.STORED_ONLY,
+        ),
+        memory(
+            "mem_scope_superseded",
+            ScopeLevel.PROJECT_SPECIFIC,
+            ["project:alpha"],
+            status=MemoryStatus.SUPERSEDED,
+        ),
+        memory(
+            "mem_scope_quarantined",
+            ScopeLevel.PROJECT_SPECIFIC,
+            ["project:alpha"],
+            status=MemoryStatus.QUARANTINED,
+        ),
+        memory(
+            "mem_scope_stored_only",
+            ScopeLevel.PROJECT_SPECIFIC,
+            ["project:alpha"],
+            influence_level=InfluenceLevel.STORED_ONLY,
+        ),
+        memory(
+            "mem_scope_secret",
+            ScopeLevel.PROJECT_SPECIFIC,
+            ["project:alpha"],
+            sensitivity=Sensitivity.SECRET,
+        ),
+        memory("mem_scope_never_store", ScopeLevel.NEVER_STORE, ["project:alpha"]),
+    ]
+    scope = RetrievalScope(
+        active_project="alpha",
+        agent_id="codex",
+        session_id="debug",
+    )
+    strict_scope = RetrievalScope(
+        active_project="alpha",
+        agent_id="codex",
+        session_id="debug",
+        include_global=False,
+    )
+    ranked = rank_memories(memories, query, scope=scope, now=now, limit=20)
+    strict_ranked = rank_memories(memories, query, scope=strict_scope, now=now, limit=20)
+    reason_map = {
+        memory_record.memory_id: score_memory(memory_record, query, scope=scope, now=now).reasons
+        for memory_record in memories
+    }
+    global_excluded_reasons = score_memory(
+        next(memory for memory in memories if memory.memory_id == "mem_scope_global"),
+        query,
+        scope=strict_scope,
+        now=now,
+    ).reasons
+
+    server = CortexMCPServer(store=InMemoryMemoryStore(memories))
+    gateway_search = server.call_tool(
+        "memory.search",
+        {
+            "query": query,
+            "active_project": "alpha",
+            "agent_id": "codex",
+            "session_id": "debug",
+            "include_global": False,
+            "limit": 20,
+        },
+    )
+    gateway_pack = server.call_tool(
+        "memory.get_context_pack",
+        {
+            "goal": query,
+            "active_project": "alpha",
+            "agent_id": "codex",
+            "session_id": "debug",
+            "include_global": False,
+            "limit": 20,
+        },
+    )
+    ranked_ids = {item.memory.memory_id for item in ranked}
+    strict_ranked_ids = {item.memory.memory_id for item in strict_ranked}
+    gateway_search_ids = {
+        memory_payload["memory_id"] for memory_payload in gateway_search["memories"]
+    }
+    gateway_pack_ids = {
+        memory_payload["memory_id"] for memory_payload in gateway_pack["relevant_memories"]
+    }
+
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "retrieval-scope-stress.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (
+        REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    ).read_text(encoding="utf-8")
+    expected_with_global = {
+        "mem_scope_agent_codex",
+        "mem_scope_global",
+        "mem_scope_project_alpha",
+        "mem_scope_session_debug",
+    }
+    expected_without_global = {
+        "mem_scope_agent_codex",
+        "mem_scope_project_alpha",
+        "mem_scope_session_debug",
+    }
+    passed = (
+        ranked_ids == expected_with_global
+        and strict_ranked_ids == expected_without_global
+        and gateway_search_ids == expected_without_global
+        and gateway_pack_ids == expected_without_global
+        and "project_scope_mismatch" in reason_map["mem_scope_project_beta"]
+        and "agent_scope_mismatch" in reason_map["mem_scope_agent_claude"]
+        and "session_scope_mismatch" in reason_map["mem_scope_session_other"]
+        and "status_deleted" in reason_map["mem_scope_deleted"]
+        and "status_revoked" in reason_map["mem_scope_revoked"]
+        and "status_superseded" in reason_map["mem_scope_superseded"]
+        and "status_quarantined" in reason_map["mem_scope_quarantined"]
+        and "stored_only" in reason_map["mem_scope_stored_only"]
+        and "secret_sensitivity" in reason_map["mem_scope_secret"]
+        and "scope_never_store" in reason_map["mem_scope_never_store"]
+        and "global_scope_excluded" in global_excluded_reasons
+        and RETRIEVAL_SCOPE_STRESS_ID in docs_text
+        and RETRIEVAL_SCOPE_STRESS_ID in plan_text
+        and RETRIEVAL_SCOPE_STRESS_ID in registry_text
+    )
+    return BenchmarkCaseResult(
+        case_id="RETRIEVAL-SCOPE-STRESS-001/gateway_scope_boundary_stress",
+        suite=RETRIEVAL_SCOPE_STRESS_ID,
+        passed=passed,
+        summary=(
+            "Retrieval scope stress blocks cross-project, cross-agent, "
+            "cross-session, non-retrievable status, secret, never-store, and "
+            "global-excluded memory leakage through rank, search, and context packs."
+        ),
+        metrics={
+            "candidate_count": len(memories),
+            "ranked_with_global_count": len(ranked_ids),
+            "ranked_without_global_count": len(strict_ranked_ids),
+            "gateway_search_count": len(gateway_search_ids),
+            "gateway_pack_count": len(gateway_pack_ids),
+        },
+        evidence={
+            "eligible_with_global": sorted(ranked_ids),
+            "eligible_without_global": sorted(strict_ranked_ids),
+            "global_excluded_reasons": list(global_excluded_reasons),
         },
     )
 

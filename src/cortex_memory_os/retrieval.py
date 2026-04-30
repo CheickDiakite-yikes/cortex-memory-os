@@ -23,6 +23,7 @@ NON_RETRIEVABLE_STATUSES = {
     MemoryStatus.SUPERSEDED,
     MemoryStatus.QUARANTINED,
 }
+RETRIEVAL_SCOPE_STRESS_ID = "RETRIEVAL-SCOPE-STRESS-001"
 
 
 @dataclass(frozen=True)
