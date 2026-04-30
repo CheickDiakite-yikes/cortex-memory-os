@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum, IntEnum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -443,6 +443,38 @@ class RetrievalScoreSummary(StrictModel):
     reason_tags: list[str] = Field(default_factory=list)
 
 
+RETRIEVAL_EXPLANATION_POLICY_REF = "policy_retrieval_explanation_receipts_v1"
+
+
+class RetrievalExplanationReceipt(StrictModel):
+    memory_id: str = Field(min_length=1)
+    decision: Literal["included", "evidence_only", "excluded"]
+    rank: int | None = Field(default=None, ge=1)
+    score: float = Field(ge=0.0, le=1.0)
+    reason_tags: list[str] = Field(min_length=1)
+    source_ref_count: int = Field(ge=0)
+    source_refs_redacted: bool = True
+    content_redacted: bool = True
+    content_included: bool = False
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [RETRIEVAL_EXPLANATION_POLICY_REF]
+    )
+
+    @model_validator(mode="after")
+    def keep_receipt_non_leaky(self) -> RetrievalExplanationReceipt:
+        if not self.source_refs_redacted:
+            raise ValueError("retrieval explanation receipts must redact source refs")
+        if not self.content_redacted or self.content_included:
+            raise ValueError("retrieval explanation receipts cannot include content")
+        if RETRIEVAL_EXPLANATION_POLICY_REF not in self.policy_refs:
+            raise ValueError("retrieval explanation receipts require policy ref")
+        if self.decision == "included" and self.rank is None:
+            raise ValueError("included retrieval receipts require a rank")
+        if self.decision != "included" and self.rank is not None:
+            raise ValueError("non-included retrieval receipts cannot carry rank")
+        return self
+
+
 CONTEXT_BUDGET_POLICY_REF = "policy_context_pack_budget_v1"
 
 
@@ -497,6 +529,9 @@ class ContextPack(StrictModel):
         default_factory=SelfLessonReviewSummary
     )
     retrieval_scores: list[RetrievalScoreSummary] = Field(default_factory=list)
+    retrieval_explanation_receipts: list[RetrievalExplanationReceipt] = Field(
+        default_factory=list
+    )
     audit_metadata: list[AuditMetadata] = Field(default_factory=list)
     blocked_memory_ids: list[str] = Field(default_factory=list)
     untrusted_evidence_refs: list[str] = Field(default_factory=list)

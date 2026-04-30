@@ -44,6 +44,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `VAULT-ENCRYPT-001` | Production vault mode rejects no-op ciphers. | Raw evidence can be stored in production with `noop-dev`. |
 | `GATEWAY-CTX-001` | Gateway returns task-scoped context packs with warnings. | Context pack lacks scope warnings or source refs. |
 | `CONTEXT-PACK-001` | Context packs include retrieval score summaries. | Scores do not align with returned memories. |
+| `RETRIEVAL-EXPLANATION-RECEIPTS-001` | Context packs expose redacted receipts for included, evidence-only, and excluded retrieval decisions. | Explanations leak memory content, source refs, hostile text, or omit decision reason tags. |
 | `CONTEXT-BUDGET-001` | Context packs expose token, time, tool, artifact, memory, self-lesson, risk, and autonomy budgets. | Requested budgets expand beyond template ceilings, high-risk/autonomous budgets appear, or estimated tokens exceed budget. |
 | `CTX-HOSTILE-001` | External evidence is cited separately from trusted memory. | Hostile external text becomes memory, guidance, or instructions. |
 | `CONTEXT-TEMPLATE-001` | Context pack templates select compact task lanes without widening scope. | Template ignores scope, requests secrets, or expands memory budget. |

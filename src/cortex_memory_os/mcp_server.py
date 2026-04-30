@@ -23,6 +23,7 @@ from cortex_memory_os.contracts import (
     MemoryStatus,
     RelevantMemory,
     RelevantSelfLesson,
+    RETRIEVAL_EXPLANATION_POLICY_REF,
     RetrievalScoreSummary,
     ScopeLevel,
     SelfLesson,
@@ -47,6 +48,7 @@ from cortex_memory_os.memory_palace_flows import (
     self_lesson_review_action_plan,
 )
 from cortex_memory_os.retrieval import RankedMemory, RetrievalScope, self_lesson_scope_allowed
+from cortex_memory_os.retrieval_explanations import build_context_retrieval_receipts
 from cortex_memory_os.runtime_trace import (
     AgentRuntimeTrace,
     GATEWAY_RUNTIME_TRACE_PERSISTENCE_POLICY_REF,
@@ -1111,6 +1113,7 @@ class CortexMCPServer:
             scope=retrieval_scope,
         )
         trusted_ranked: list[RankedMemory] = []
+        blocked_ranked: list[tuple[RankedMemory, str, tuple[str, ...]]] = []
         blocked_memory_ids: list[str] = []
         untrusted_evidence_refs: list[str] = []
         for ranked in ranked_memories:
@@ -1119,6 +1122,15 @@ class CortexMCPServer:
                 trusted_ranked.append(ranked)
                 continue
             blocked_memory_ids.append(ranked.memory.memory_id)
+            blocked_ranked.append(
+                (
+                    ranked,
+                    "evidence_only"
+                    if decision.cite_as_untrusted_evidence
+                    else "excluded",
+                    decision.reason_tags,
+                )
+            )
             if decision.cite_as_untrusted_evidence:
                 untrusted_evidence_refs.extend(ranked.memory.source_refs)
         memories = [ranked.memory for ranked in trusted_ranked]
@@ -1157,6 +1169,10 @@ class CortexMCPServer:
             )
             for ranked in trusted_ranked
         ]
+        retrieval_explanation_receipts = build_context_retrieval_receipts(
+            trusted_ranked,
+            blocked_ranked,
+        )
         audit_metadata = _audit_metadata_for_self_lessons(self.store, self_lessons)
         evidence_refs = [
             *[ref for memory in memories for ref in memory.source_refs],
@@ -1189,12 +1205,14 @@ class CortexMCPServer:
                 self_lesson_exclusions
             ),
             retrieval_scores=retrieval_scores,
+            retrieval_explanation_receipts=retrieval_explanation_receipts,
             audit_metadata=audit_metadata,
             blocked_memory_ids=blocked_memory_ids,
             untrusted_evidence_refs=untrusted_evidence_refs,
             context_policy_refs=[
                 CONTEXT_PACK_POLICY_REF,
                 CONTEXT_TEMPLATE_POLICY_REF,
+                RETRIEVAL_EXPLANATION_POLICY_REF,
                 template.template_id,
             ],
             relevant_skills=list(template.suggested_skills),

@@ -98,6 +98,12 @@ def test_context_pack_is_task_scoped_and_warned():
     assert pack["relevant_memories"][0]["memory_id"] == "mem_001"
     assert pack["retrieval_scores"][0]["memory_id"] == "mem_001"
     assert pack["retrieval_scores"][0]["score"] > 0
+    assert pack["retrieval_explanation_receipts"][0]["memory_id"] == "mem_001"
+    assert pack["retrieval_explanation_receipts"][0]["decision"] == "included"
+    assert pack["retrieval_explanation_receipts"][0]["content_redacted"] is True
+    assert pack["retrieval_explanation_receipts"][0]["source_refs_redacted"] is True
+    assert "content" not in pack["retrieval_explanation_receipts"][0]
+    assert "source_refs" not in pack["retrieval_explanation_receipts"][0]
     assert "Use Cortex memory only within the current task scope." in pack["warnings"]
     assert "policy_context_template_compact_scope_v1" in pack["context_policy_refs"]
     assert "policy_context_pack_budget_v1" in pack["budget"]["policy_refs"]
@@ -317,6 +323,10 @@ def test_context_pack_routes_external_evidence_without_instruction_content():
     pack = response["result"]
     assert pack["relevant_memories"] == []
     assert pack["retrieval_scores"] == []
+    assert pack["retrieval_explanation_receipts"][0]["memory_id"] == "mem_external_attack"
+    assert pack["retrieval_explanation_receipts"][0]["decision"] == "evidence_only"
+    assert "external_evidence_only" in pack["retrieval_explanation_receipts"][0]["reason_tags"]
+    assert pack["retrieval_explanation_receipts"][0]["content_redacted"] is True
     assert pack["blocked_memory_ids"] == ["mem_external_attack"]
     assert "ev_external_attack" in pack["untrusted_evidence_refs"]
     assert "policy_context_pack_hostile_source_v1" in pack["context_policy_refs"]
