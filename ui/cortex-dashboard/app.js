@@ -26,6 +26,7 @@ let skillFilter = "all";
 const gatewayReceiptByAction = new Map(
   (data.gateway_action_receipts || []).map((receipt) => [receipt.action_key, receipt]),
 );
+const skillMetricById = new Map((data.skill_metrics?.cards || []).map((card) => [card.skill_id, card]));
 
 function svgIcon(name) {
   return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${icons[name] || icons.file}</svg>`;
@@ -234,7 +235,9 @@ function renderSkillCards() {
   }
   list.innerHTML = cards
     .map(
-      (card) => `
+      (card) => {
+        const metric = skillMetricById.get(card.skill_id);
+        return `
         <section class="skill-card" data-risk="${escapeHtml(card.risk_level)}" data-skill-id="${escapeHtml(card.skill_id)}">
           <div class="card-top">
             <div>
@@ -248,6 +251,7 @@ function renderSkillCards() {
             <div><span class="meta-label">Risk</span><strong class="meta-value ${riskClass(card.risk_level)}">${formatToken(card.risk_level)}</strong></div>
             <div><span class="meta-label">Maturity</span><strong class="meta-value">Level ${card.maturity_level}</strong></div>
           </div>
+          ${metric ? renderSkillMetric(metric) : ""}
           <ul class="blocker-list">
             ${card.promotion_blockers.map((blocker) => `<li>${svgIcon("shield")} ${formatToken(blocker)}</li>`).join("")}
           </ul>
@@ -255,10 +259,23 @@ function renderSkillCards() {
             ${skillCommandButtons(card)}
           </div>
         </section>
-      `,
+      `;
+      },
     )
     .join("");
   list.querySelectorAll("[data-action-tool]").forEach(bindActionButton);
+}
+
+function renderSkillMetric(metric) {
+  const totalRuns = Object.values(metric.outcome_counts || {}).reduce((total, count) => total + Number(count || 0), 0);
+  return `
+    <div class="metric-strip" aria-label="Skill Metrics">
+      <div><span class="meta-label">Runs</span><strong>${totalRuns}</strong></div>
+      <div><span class="meta-label">Success</span><strong>${Math.round(Number(metric.success_rate || 0) * 100)}%</strong></div>
+      <div><span class="meta-label">Corrections</span><strong>${Number(metric.correction_rate || 0).toFixed(2)}</strong></div>
+      <div><span class="meta-label">Review</span><strong>${formatToken(metric.review_recommendation)}</strong></div>
+    </div>
+  `;
 }
 
 function skillCommandButtons(card) {

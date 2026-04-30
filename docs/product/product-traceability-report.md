@@ -13,6 +13,7 @@ Source documents:
 - `docs/product/memory-palace-dashboard.md`
 - `docs/product/skill-forge-candidate-list.md`
 - `docs/product/skill-success-metrics.md`
+- `docs/product/skill-metrics-dashboard-surface.md`
 - `docs/product/cortex-dashboard-shell.md`
 - `docs/product/dashboard-gateway-actions.md`
 - `docs/research/frontier-agent-plugin-lessons-2026-04-29.md`
@@ -52,7 +53,7 @@ Source documents:
 | Scene, memory, and graph pipeline | Validated skeleton | `SCENE-SEGMENT-001`, `MEM-COMPILE-001`, `GRAPH-EDGE-001` | Add richer multimodal segmentation and contradiction handling. |
 | Retrieval and context packs | Validated budgeted skeleton plus hybrid fusion interface, local fusion adapters, and redacted explanation receipts | `RETRIEVAL-SCORE-001`, `CONTEXT-FUSION-INDEX-STUB-001`, `REAL-VECTOR-INDEX-ADAPTER-001`, `RETRIEVAL-EXPLANATION-RECEIPTS-001`, `CONTEXT-PACK-001`, `CONTEXT-BUDGET-001`, scoped self-lesson suites | Wire local fusion adapter diagnostics into context packs and show receipts in the dashboard. |
 | Memory Palace | Validated dashboard contract, static UI shell, and read-only gateway action receipts | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, `MEMORY-PALACE-DASHBOARD-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, `DASHBOARD-GATEWAY-ACTIONS-001`, self-lesson review flows | Wire safe read-only calls to the local gateway runtime; keep correction/delete/export confirmation-gated. |
-| Skill Forge | Validated skeleton plus candidate list, success metrics, static UI shell, and read-only review receipts | `SKILL-FORGE-002`, `SKILL-DOC-DERIVATION-001`, `SKILL-FORGE-LIST-001`, `SKILL-SUCCESS-METRICS-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, `DASHBOARD-GATEWAY-ACTIONS-001`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add workflow clustering and live draft-only execution previews behind receipts. |
+| Skill Forge | Validated skeleton plus candidate list, success metrics, dashboard metrics surface, static UI shell, and read-only review receipts | `SKILL-FORGE-002`, `SKILL-DOC-DERIVATION-001`, `SKILL-FORGE-LIST-001`, `SKILL-SUCCESS-METRICS-001`, `SKILL-METRICS-DASHBOARD-SURFACE-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, `DASHBOARD-GATEWAY-ACTIONS-001`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add workflow clustering and live draft-only execution previews behind receipts. |
 | Agent Gateway | Validated skeleton plus install-smoked and approval-gated Codex plugin package | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools, `CODEX-PLUGIN-001`, `PLUGIN-INSTALL-SMOKE-001`, `CODEX-PLUGIN-REAL-ENABLE-001`, `plugins/cortex-memory-os` | Bridge additional clients and keep real user config changes explicit. |
 | Agent Runtime Trace | Validated contract, gateway persistence receipts, and safe postmortem handoff | `RUNTIME-TRACE-001`, `GATEWAY-TRACE-PERSISTENCE-001`, `OUTCOME-POSTMORTEM-TRACE-001`, `docs/architecture/agent-runtime-trace.md`, `docs/architecture/outcome-postmortem-trace-handoff.md`, runtime trace fixture, SQLite persistence, `runtime_trace.record`, `runtime_trace.get`, `runtime_trace.list` | Expose postmortem compilation through the gateway and connect it to self-improvement scoring. |
 | Swarm Governance | Validated contract | `SWARM-GOVERNANCE-001`, `docs/adr/0005-swarm-governance-boundary.md` | Wire future parallel agents through governed gateway execution instead of direct delegation. |
@@ -85,7 +86,8 @@ User-facing pillars:
   models, plus read-only dashboard gateway receipts.
 - Skill Forge: validated repeated-workflow detector, document-to-skill candidate
   derivation, candidate-list cards, success/failure metrics, maturity gates,
-  rollback, audits, and draft-only execution, plus the shared dashboard shell.
+  dashboard metric cards, rollback, audits, and draft-only execution, plus the
+  shared dashboard shell.
 - Agent Gateway: validated budgeted context packs, scoped actions, audit
   receipts, retrieval explanation receipts, review queues, draft skill
   execution, and repo-local Codex plugin packaging plus temporary cache-shaped
@@ -131,8 +133,8 @@ capture realism:
    without changing the redacted result contract.
 6. Surface `RETRIEVAL-EXPLANATION-RECEIPTS-001` in the dashboard context/debug
    panels without adding memory content or source refs.
-7. Surface `SKILL-SUCCESS-METRICS-001` in Skill Forge dashboard cards and
-   promotion-review flows without changing autonomy.
+7. Extend `SKILL-METRICS-DASHBOARD-SURFACE-001` from static synthetic data to
+   live gateway-backed Skill Forge metrics without changing autonomy.
 8. Additional client bridges after the Codex plugin path is user-approved in a
    real environment.
 

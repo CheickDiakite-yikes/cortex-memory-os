@@ -33,6 +33,7 @@ safe view models:
 
 - `MemoryPalaceDashboard`
 - `SkillForgeCandidateList`
+- `SkillMetricsDashboard`
 
 The generated `ui/cortex-dashboard/dashboard-data.js` contains synthetic,
 redacted, deterministic view-model data. It must contain no raw private memory,
@@ -48,6 +49,8 @@ The static app in `ui/cortex-dashboard/` must render:
   state, and exact gateway action plans;
 - Skill Forge candidate cards with observed refs, risk, maturity, promotion
   blockers, and draft-only actions;
+- Skill Metrics strips with run count, success rate, correction rate, and
+  review recommendation;
 - local filter controls for both lists;
 - icon-first action controls that update local UI state;
 - Recent Safe Receipts with redacted targets.
@@ -67,6 +70,8 @@ execute skills, export data, or perform external effects.
 - action plans are visible but inert;
 - `DASHBOARD-GATEWAY-ACTIONS-001` receipts are present for exact gateway tools;
 - generated fixture data has no secret markers or raw refs;
+- generated Skill Metrics data has no procedure text, task content, or
+  autonomy-changing controls;
 - dashboard docs, task board, benchmark plan, and benchmark registry name the
   slice;
 - local browser proof confirms the first viewport renders without overlapping

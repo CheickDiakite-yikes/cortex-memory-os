@@ -10,6 +10,7 @@ from cortex_memory_os.dashboard_shell import (
 from cortex_memory_os.dashboard_gateway_actions import DASHBOARD_GATEWAY_ACTIONS_POLICY_REF
 from cortex_memory_os.memory_palace_dashboard import MEMORY_PALACE_DASHBOARD_POLICY_REF
 from cortex_memory_os.skill_forge_dashboard import SKILL_FORGE_CANDIDATE_LIST_POLICY_REF
+from cortex_memory_os.skill_metrics_dashboard import SKILL_METRICS_DASHBOARD_POLICY_REF
 
 
 def test_dashboard_shell_composes_safe_view_models():
@@ -21,9 +22,14 @@ def test_dashboard_shell_composes_safe_view_models():
     assert DASHBOARD_GATEWAY_ACTIONS_POLICY_REF in shell.policy_refs
     assert MEMORY_PALACE_DASHBOARD_POLICY_REF in shell.policy_refs
     assert SKILL_FORGE_CANDIDATE_LIST_POLICY_REF in shell.policy_refs
+    assert SKILL_METRICS_DASHBOARD_POLICY_REF in shell.policy_refs
     assert len(shell.status_strip) == 4
     assert len(shell.memory_palace.cards) >= 4
     assert len(shell.skill_forge.cards) >= 3
+    assert len(shell.skill_metrics.cards) >= 3
+    assert shell.skill_metrics.total_run_count >= 5
+    assert not shell.skill_metrics.procedure_text_included
+    assert not shell.skill_metrics.autonomy_change_allowed
     assert shell.safe_receipts
     assert shell.gateway_action_receipts
     assert any(receipt.allowed_gateway_call for receipt in shell.gateway_action_receipts)
@@ -33,6 +39,9 @@ def test_dashboard_shell_composes_safe_view_models():
     assert "CORTEX_FAKE_TOKEN" not in serialized
     assert "raw://" not in serialized
     assert "encrypted_blob://" not in serialized
+    assert "Search primary sources" not in serialized
+    assert "Gather approved metrics" not in serialized
+    assert "Reproduce the local login flow" not in serialized
 
 
 def test_dashboard_data_js_is_redacted_and_static_app_ready():
@@ -45,6 +54,8 @@ def test_dashboard_data_js_is_redacted_and_static_app_ready():
     assert "CORTEX_FAKE_TOKEN" not in data_js
     assert "OPENAI_API_KEY=" not in data_js
     assert "raw://" not in data_js
+    assert "Skill Metrics" in data_js
+    assert "Search primary sources" not in data_js
 
 
 def test_dashboard_shell_smoke_contract_passes():
@@ -55,9 +66,13 @@ def test_dashboard_shell_smoke_contract_passes():
     assert result.ui_files_present is True
     assert result.memory_card_count >= 4
     assert result.skill_card_count >= 3
+    assert result.skill_metric_card_count >= 3
+    assert result.skill_metric_run_count >= 5
     assert result.safe_receipt_count >= 4
     assert result.gateway_action_receipt_count > 0
     assert result.gateway_actions_present is True
+    assert result.skill_metrics_present is True
+    assert result.procedure_text_retained is False
     assert result.secret_retained is False
     assert result.raw_private_data_retained is False
     assert result.action_plans_present is True

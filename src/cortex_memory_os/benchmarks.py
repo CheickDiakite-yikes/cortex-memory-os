@@ -284,6 +284,10 @@ from cortex_memory_os.skill_metrics import (
     build_skill_metric_card,
     summarize_skill_outcomes,
 )
+from cortex_memory_os.skill_metrics_dashboard import (
+    SKILL_METRICS_DASHBOARD_POLICY_REF,
+    SKILL_METRICS_DASHBOARD_SURFACE_ID,
+)
 from cortex_memory_os.skill_policy import (
     evaluate_skill_promotion,
     evaluate_skill_rollback,
@@ -408,6 +412,7 @@ def run_all() -> BenchmarkRunResult:
         case_document_to_skill_derivation_contract,
         case_skill_forge_candidate_list_contract,
         case_skill_success_metrics_contract,
+        case_skill_metrics_dashboard_surface_contract,
         case_dashboard_shell_contract,
         case_dashboard_gateway_actions_contract,
         case_skill_promotion_gate,
@@ -9447,6 +9452,90 @@ def case_skill_success_metrics_contract() -> BenchmarkCaseResult:
     )
 
 
+def case_skill_metrics_dashboard_surface_contract() -> BenchmarkCaseResult:
+    shell = build_dashboard_shell(now=datetime(2026, 4, 30, 11, 0, tzinfo=UTC))
+    dashboard = shell.skill_metrics
+    dashboard_payload = json.dumps(dashboard.model_dump(mode="json"), sort_keys=True)
+
+    docs_text = (
+        REPO_ROOT / "docs" / "product" / "skill-metrics-dashboard-surface.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (
+        REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    ).read_text(encoding="utf-8")
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    report_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    ui_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "ui" / "cortex-dashboard" / "index.html",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "styles.css",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "app.js",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "dashboard-data.js",
+        ]
+        if path.exists()
+    )
+    required_doc_terms = [
+        SKILL_METRICS_DASHBOARD_SURFACE_ID,
+        SKILL_METRICS_DASHBOARD_POLICY_REF,
+        "Skill Metrics",
+        "procedure_text_included: false",
+        "task_content_included: false",
+        "autonomy_change_allowed: false",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        dashboard.dashboard_id == SKILL_METRICS_DASHBOARD_SURFACE_ID
+        and dashboard.skill_count >= 3
+        and dashboard.total_run_count >= 5
+        and not dashboard.procedure_text_included
+        and not dashboard.task_content_included
+        and not dashboard.autonomy_change_allowed
+        and all(card.procedure_redacted for card in dashboard.cards)
+        and all(card.content_redacted for card in dashboard.cards)
+        and SKILL_METRICS_DASHBOARD_POLICY_REF in dashboard.policy_refs
+        and SKILL_SUCCESS_METRICS_POLICY_REF in dashboard.policy_refs
+        and "Search primary sources" not in dashboard_payload
+        and "Gather approved metrics" not in dashboard_payload
+        and "Reproduce the local login flow" not in dashboard_payload
+        and "Skill Metrics" in ui_text
+        and "metric-strip" in ui_text
+        and "Gather approved metrics" not in ui_text
+        and not missing_doc_terms
+        and SKILL_METRICS_DASHBOARD_SURFACE_ID in plan_text
+        and SKILL_METRICS_DASHBOARD_SURFACE_ID in registry_text
+        and SKILL_METRICS_DASHBOARD_SURFACE_ID in task_text
+        and SKILL_METRICS_DASHBOARD_SURFACE_ID in report_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SKILL-METRICS-DASHBOARD-SURFACE-001/dashboard_metric_cards",
+        suite=SKILL_METRICS_DASHBOARD_SURFACE_ID,
+        passed=passed,
+        summary=(
+            "Skill Forge metrics appear in dashboard-safe cards without "
+            "procedure text, task content, or autonomy-changing controls."
+        ),
+        metrics={
+            "skill_metric_card_count": len(dashboard.cards),
+            "total_run_count": dashboard.total_run_count,
+            "review_required_count": dashboard.review_required_count,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": SKILL_METRICS_DASHBOARD_POLICY_REF,
+            "metrics_policy_ref": SKILL_SUCCESS_METRICS_POLICY_REF,
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
 def case_dashboard_shell_contract() -> BenchmarkCaseResult:
     smoke = run_dashboard_shell_smoke()
     plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
@@ -9482,6 +9571,8 @@ def case_dashboard_shell_contract() -> BenchmarkCaseResult:
         and smoke.policy_ref == DASHBOARD_SHELL_POLICY_REF
         and smoke.memory_card_count >= 4
         and smoke.skill_card_count >= 3
+        and smoke.skill_metric_card_count >= 3
+        and smoke.skill_metrics_present
         and smoke.safe_receipt_count >= 4
         and smoke.action_plans_present
         and not smoke.secret_retained
@@ -9504,6 +9595,7 @@ def case_dashboard_shell_contract() -> BenchmarkCaseResult:
         metrics={
             "memory_card_count": smoke.memory_card_count,
             "skill_card_count": smoke.skill_card_count,
+            "skill_metric_card_count": smoke.skill_metric_card_count,
             "safe_receipt_count": smoke.safe_receipt_count,
             "missing_ui_terms": len(missing_ui_terms),
         },

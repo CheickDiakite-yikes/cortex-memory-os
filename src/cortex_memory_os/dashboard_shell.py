@@ -18,6 +18,7 @@ from cortex_memory_os.contracts import (
     MemoryRecord,
     MemoryStatus,
     MemoryType,
+    OutcomeStatus,
     ScopeLevel,
     Sensitivity,
     SkillRecord,
@@ -43,6 +44,12 @@ from cortex_memory_os.skill_forge_dashboard import (
     SKILL_FORGE_CANDIDATE_LIST_POLICY_REF,
     SkillForgeCandidateList,
     build_skill_forge_candidate_list,
+)
+from cortex_memory_os.skill_metrics import SkillOutcomeEvent
+from cortex_memory_os.skill_metrics_dashboard import (
+    SKILL_METRICS_DASHBOARD_POLICY_REF,
+    SkillMetricsDashboard,
+    build_skill_metrics_dashboard,
 )
 
 DASHBOARD_SHELL_ID = "MEMORY-PALACE-SKILL-FORGE-UI-001"
@@ -89,6 +96,7 @@ class CortexDashboardShell(StrictModel):
     nav_items: list[DashboardNavItem] = Field(default_factory=list)
     memory_palace: MemoryPalaceDashboard
     skill_forge: SkillForgeCandidateList
+    skill_metrics: SkillMetricsDashboard
     safe_receipts: list[DashboardSafeReceipt] = Field(default_factory=list)
     gateway_action_receipts: list[DashboardGatewayActionReceipt] = Field(default_factory=list)
     policy_refs: list[str] = Field(default_factory=list)
@@ -103,6 +111,8 @@ class DashboardShellSmokeResult(StrictModel):
     ui_files_present: bool
     memory_card_count: int = Field(ge=0)
     skill_card_count: int = Field(ge=0)
+    skill_metric_card_count: int = Field(ge=0)
+    skill_metric_run_count: int = Field(ge=0)
     safe_receipt_count: int = Field(ge=0)
     gateway_action_receipt_count: int = Field(ge=0)
     read_only_gateway_action_count: int = Field(ge=0)
@@ -111,6 +121,8 @@ class DashboardShellSmokeResult(StrictModel):
     raw_private_data_retained: bool
     action_plans_present: bool
     gateway_actions_present: bool
+    skill_metrics_present: bool
+    procedure_text_retained: bool
     missing_ui_terms: list[str] = Field(default_factory=list)
     missing_doc_terms: list[str] = Field(default_factory=list)
 
@@ -129,7 +141,15 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
         scope=RetrievalScope(active_project="cortex-memory-os"),
         now=timestamp,
     )
-    skill_list = build_skill_forge_candidate_list(_sample_skills(), now=timestamp)
+    skills = _sample_skills()
+    skill_list = _redact_dashboard_skill_procedures(
+        build_skill_forge_candidate_list(skills, now=timestamp)
+    )
+    skill_metrics = build_skill_metrics_dashboard(
+        skills,
+        _sample_skill_outcome_events(skills, timestamp),
+        now=timestamp,
+    )
 
     return CortexDashboardShell(
         generated_at=timestamp,
@@ -185,6 +205,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
         ],
         memory_palace=memory_dashboard,
         skill_forge=skill_list,
+        skill_metrics=skill_metrics,
         safe_receipts=_sample_safe_receipts(timestamp),
         gateway_action_receipts=build_dashboard_gateway_action_receipts(
             memory_dashboard,
@@ -195,10 +216,12 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             DASHBOARD_SHELL_POLICY_REF,
             MEMORY_PALACE_DASHBOARD_POLICY_REF,
             SKILL_FORGE_CANDIDATE_LIST_POLICY_REF,
+            SKILL_METRICS_DASHBOARD_POLICY_REF,
             DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
         ],
         design_notes=[
             "Two primary work areas: Memory Palace review queue and Skill Forge candidates.",
+            "Skill Metrics are shown as outcome summaries, not procedure previews.",
             "Status strip exposes observation, project, consent, and firewall state.",
             "Action controls are declarative UI plans; this shell does not execute mutations.",
         ],
@@ -206,6 +229,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Static fixture contains synthetic view-model data only.",
             "No raw private memory, screenshots, databases, logs, or API responses are embedded.",
             "Action buttons resolve to gateway receipts before any tool call is allowed.",
+            "Skill metric cards do not include procedure text, task content, or autonomy-changing controls.",
         ],
     )
 
@@ -249,6 +273,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "Safety Firewall",
         "Recent Safe Receipts",
         "Gateway Action Receipts",
+        "Skill Metrics",
         "window.CORTEX_DASHBOARD_DATA",
     ]
     missing_ui_terms = _missing_terms(ui_text + "\n" + data_js, required_ui_terms)
@@ -279,15 +304,32 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         for marker in ["CORTEX_FAKE_TOKEN", "OPENAI_API_KEY=", "sk-"]
     )
     raw_private_data_retained = "raw://" in serialized or "encrypted_blob://" in serialized
+    procedure_text_retained = any(
+        text in serialized + data_js
+        for text in [
+            "Search primary sources",
+            "Gather approved metrics",
+            "Reproduce the local login flow",
+            "Inspect route, console, and terminal errors",
+        ]
+    )
+    skill_metrics_present = (
+        bool(shell.skill_metrics.cards)
+        and shell.skill_metrics.total_run_count > 0
+        and not shell.skill_metrics.procedure_text_included
+        and not shell.skill_metrics.autonomy_change_allowed
+    )
 
     passed = (
         ui_files_present
         and shell.memory_palace.cards
         and shell.skill_forge.cards
+        and skill_metrics_present
         and shell.safe_receipts
         and gateway_actions_present
         and not secret_retained
         and not raw_private_data_retained
+        and not procedure_text_retained
         and action_plans_present
         and not missing_ui_terms
         and not missing_doc_terms
@@ -297,6 +339,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         ui_files_present=ui_files_present,
         memory_card_count=len(shell.memory_palace.cards),
         skill_card_count=len(shell.skill_forge.cards),
+        skill_metric_card_count=len(shell.skill_metrics.cards),
+        skill_metric_run_count=shell.skill_metrics.total_run_count,
         safe_receipt_count=len(shell.safe_receipts),
         gateway_action_receipt_count=len(shell.gateway_action_receipts),
         read_only_gateway_action_count=sum(
@@ -309,6 +353,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         raw_private_data_retained=raw_private_data_retained,
         action_plans_present=action_plans_present,
         gateway_actions_present=gateway_actions_present,
+        skill_metrics_present=skill_metrics_present,
+        procedure_text_retained=procedure_text_retained,
         missing_ui_terms=missing_ui_terms,
         missing_doc_terms=missing_doc_terms,
     )
@@ -450,6 +496,16 @@ def _sample_skills() -> list[SkillRecord]:
     return [auth, monthly, research]
 
 
+def _redact_dashboard_skill_procedures(
+    skill_list: SkillForgeCandidateList,
+) -> SkillForgeCandidateList:
+    redacted_cards = [
+        card.model_copy(update={"procedure_preview": [], "content_redacted": True})
+        for card in skill_list.cards
+    ]
+    return skill_list.model_copy(update={"cards": redacted_cards})
+
+
 def _sample_audit_events(now: datetime) -> list[AuditEvent]:
     return [
         AuditEvent(
@@ -475,6 +531,84 @@ def _sample_audit_events(now: datetime) -> list[AuditEvent]:
             redacted_summary="Skill candidate created from synthetic dashboard fixture.",
         ),
     ]
+
+
+def _sample_skill_outcome_events(
+    skills: list[SkillRecord],
+    now: datetime,
+) -> list[SkillOutcomeEvent]:
+    by_id = {skill.skill_id: skill for skill in skills}
+    return [
+        _skill_outcome_event(
+            by_id["skill_frontend_auth_debugging_flow_v1"],
+            "evt_auth_success_001",
+            "task_auth_debug_001",
+            OutcomeStatus.SUCCESS,
+            now,
+            correction_count=0,
+            verification_refs=["test://auth-flow/focused"],
+        ),
+        _skill_outcome_event(
+            by_id["skill_frontend_auth_debugging_flow_v1"],
+            "evt_auth_partial_001",
+            "task_auth_debug_002",
+            OutcomeStatus.PARTIAL,
+            now,
+            correction_count=1,
+            verification_refs=["test://auth-flow/regression"],
+        ),
+        _skill_outcome_event(
+            by_id["skill_research_synthesis_blueprint_v1"],
+            "evt_research_success_001",
+            "task_research_001",
+            OutcomeStatus.SUCCESS,
+            now,
+            correction_count=0,
+            verification_refs=["doc://research-synthesis/review"],
+        ),
+        _skill_outcome_event(
+            by_id["skill_research_synthesis_blueprint_v1"],
+            "evt_research_success_002",
+            "task_research_002",
+            OutcomeStatus.SUCCESS,
+            now,
+            correction_count=1,
+            verification_refs=["doc://architecture-implications/review"],
+        ),
+        _skill_outcome_event(
+            by_id["skill_doc_doc_monthly_update_workflow_candidate_v1"],
+            "evt_monthly_blocked_001",
+            "task_monthly_update_001",
+            OutcomeStatus.UNSAFE_BLOCKED,
+            now,
+            correction_count=0,
+            verification_refs=["audit://blocked-send-review"],
+        ),
+    ]
+
+
+def _skill_outcome_event(
+    skill: SkillRecord,
+    event_id: str,
+    task_id: str,
+    outcome: OutcomeStatus,
+    observed_at: datetime,
+    *,
+    correction_count: int,
+    verification_refs: list[str],
+) -> SkillOutcomeEvent:
+    return SkillOutcomeEvent(
+        event_id=event_id,
+        skill_id=skill.skill_id,
+        task_id=task_id,
+        outcome=outcome,
+        observed_at=observed_at,
+        maturity_level=skill.maturity_level,
+        execution_mode=skill.execution_mode,
+        risk_level=skill.risk_level,
+        user_correction_count=correction_count,
+        verification_refs=verification_refs,
+    )
 
 
 def _sample_safe_receipts(now: datetime) -> list[DashboardSafeReceipt]:
