@@ -579,7 +579,7 @@ class CortexMCPServer:
             trace_id = _require_string(arguments, "trace_id")
             trace = store.get_runtime_trace(trace_id)
             if trace is None:
-                raise JsonRpcError(-32602, f"unknown trace_id: {trace_id}")
+                raise JsonRpcError(-32602, "unknown trace_id")
             return {
                 "trace": serialize_runtime_trace_metadata(trace),
                 "content_redacted": True,
@@ -613,7 +613,7 @@ class CortexMCPServer:
             outcome_id = _require_string(arguments, "outcome_id")
             trace = store.get_runtime_trace(trace_id)
             if trace is None:
-                raise JsonRpcError(-32602, f"unknown trace_id: {trace_id}")
+                raise JsonRpcError(-32602, "unknown trace_id")
             try:
                 outcome = OutcomeRecord.model_validate(
                     _require_object(arguments, "outcome")

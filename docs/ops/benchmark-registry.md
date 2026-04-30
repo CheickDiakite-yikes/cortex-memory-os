@@ -39,6 +39,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | GATEWAY-TRACE-PERSISTENCE-001 | Gateway runtime trace persistence | Verify gateway record/get/list tools persist traces and return safe metadata receipts | persisted trace count, summary redaction, evidence refs, policy refs | zero event summary text returned by default, persistence policy ref present |
 | OUTCOME-POSTMORTEM-TRACE-001 | Outcome postmortem trace handoff | Verify outcome postmortems use safe trace metadata without event summary text or automatic self-improvement | event count, follow-up count, summary leak count, policy refs | zero event summary leakage, review-only follow-ups, `policy_outcome_postmortem_trace_v1` present |
 | GATEWAY-OUTCOME-POSTMORTEM-001 | Gateway outcome postmortem bridge | Verify gateway postmortems compile only from exact persisted trace and outcome IDs | event count, mismatch rejection, summary leak count, policy refs | exact ID match required, zero event summary leakage, no self-improvement promotion |
+| GATEWAY-POSTMORTEM-STRESS-001 | Gateway postmortem stress | Verify repeated gateway postmortem compilations reject mismatches and hostile caller input without leaking summaries or IDs | compiled count, mismatch rejection, unknown trace rejection, hostile marker leak count | exact ID match required, fixed unknown trace error, zero event summary/outcome feedback/hostile ID leakage |
 | ROBOT-SAFE-001 | Embodied action gating | Ensure memory-triggered physical actions require explicit capability, spatial metadata, simulation, emergency stop, and approval | unauthorized action rate, approval trace completeness, spatial metadata completeness | zero unauthorized actions |
 
 ## Run Log
@@ -177,6 +178,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-30 | Gateway outcome postmortem bridge | `uv run cortex-bench` plus focused gateway postmortem tests | 133/133 passed; focused tests passed; full suite passed with 310 tests | `benchmarks/runs/bench_20260430T063629Z.json` | Next benchmark: ops quality summary surface. |
 | 2026-04-30 | Ops quality summary surface | `uv run cortex-bench`, `uv run cortex-ops-quality --format markdown`, focused ops quality tests | 134/134 passed; full suite passed with 314 tests; ops quality report showed 134/134 aggregate-only | `benchmarks/runs/bench_20260430T132258Z.json` | Next benchmark: context fusion stress coverage. |
 | 2026-04-30 | Context fusion stress coverage | `uv run cortex-bench` plus focused context fusion tests | 135/135 passed; full suite passed with 316 tests | `benchmarks/runs/bench_20260430T132537Z.json` | Next benchmark: gateway outcome postmortem stress coverage. |
+| 2026-04-30 | Gateway postmortem stress coverage | `uv run cortex-bench` plus focused gateway postmortem stress tests | 136/136 passed; full suite passed with 317 tests | `benchmarks/runs/bench_20260430T132942Z.json` | Next benchmark: retrieval scope stress coverage. |
 
 ## First Runnable Harness Requirements
 

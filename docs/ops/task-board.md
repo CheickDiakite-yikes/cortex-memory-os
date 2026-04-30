@@ -6,13 +6,13 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-POSTMORTEM-STRESS-001 | Stress gateway outcome postmortem exact-ID and redaction boundaries | Codex | Focused gateway stress test plus benchmark case | Must reject mismatches and never return runtime event summaries. |
+| RETRIEVAL-SCOPE-STRESS-001 | Stress retrieval scope boundaries across many projects, agents, sessions, and statuses | Codex | Focused scope stress test plus benchmark case | Must block cross-scope and deleted/quarantined memory leakage. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| RETRIEVAL-SCOPE-STRESS-001 | Stress retrieval scope boundaries across many projects, agents, sessions, and statuses | Codex | Focused scope stress test plus benchmark case | Must block cross-scope and deleted/quarantined memory leakage. |
+| _None_ |  |  |  |  |
 
 ## Backlog
 
@@ -24,6 +24,7 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
+| GATEWAY-POSTMORTEM-STRESS-001 | Stress gateway outcome postmortem exact-ID and redaction boundaries | Codex | `uv run pytest` -> 317 passed, `uv run cortex-bench` -> 136/136 passed | Repeated gateway postmortems reject mismatches, fixed unknown trace errors no longer echo caller IDs, and event summaries/outcome feedback stay redacted. |
 | CONTEXT-FUSION-STRESS-001 | Stress hybrid fusion diagnostics under large hostile/safe candidate mixes | Codex | `uv run pytest` -> 316 passed, `uv run cortex-bench` -> 135/135 passed | Deterministic mixed-candidate stress keeps diagnostics metadata-only, excludes hostile and secret candidates, and rejects raw refs. |
 | OPS-QUALITY-SURFACE-001 | Add concise ops quality summary for latest verification | Codex | `uv run pytest` -> 314 passed, `uv run cortex-bench` -> 134/134 passed, `uv run cortex-ops-quality --format markdown` -> latest run summary only | Aggregate-only ops receipt exposes counts and safe IDs without benchmark summaries, metrics payloads, evidence payloads, raw refs, hostile text, secrets, or absolute private paths. |
 | GATEWAY-OUTCOME-POSTMORTEM-001 | Expose outcome postmortem compilation through the local gateway | Codex | `outcome.postmortem`, `uv run pytest` -> 310 passed, `uv run cortex-bench` -> 133/133 passed | Gateway compiles metadata-only postmortems from exact persisted trace/outcome IDs without event summaries, self-lesson promotion, or skill maturity changes. |
