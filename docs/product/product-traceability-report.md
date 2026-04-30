@@ -17,6 +17,7 @@ Source documents:
 - `docs/ops/plugin-install-smoke.md`
 - `docs/ops/codex-plugin-real-enable.md`
 - `docs/architecture/native-shadow-pointer-overlay.md`
+- `docs/architecture/shadow-pointer-capture-wiring.md`
 - `docs/architecture/live-browser-terminal-adapters.md`
 - `docs/architecture/local-adapter-endpoint.md`
 - `docs/architecture/manual-adapter-proof.md`
@@ -48,8 +49,8 @@ Source documents:
 | Agent Gateway | Validated skeleton plus install-smoked and approval-gated Codex plugin package | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools, `CODEX-PLUGIN-001`, `PLUGIN-INSTALL-SMOKE-001`, `CODEX-PLUGIN-REAL-ENABLE-001`, `plugins/cortex-memory-os` | Bridge additional clients and keep real user config changes explicit. |
 | Agent Runtime Trace | Validated contract | `RUNTIME-TRACE-001`, `docs/architecture/agent-runtime-trace.md`, runtime trace fixture | Persist real agent traces through the gateway and outcome engine. |
 | Swarm Governance | Validated contract | `SWARM-GOVERNANCE-001`, `docs/adr/0005-swarm-governance-boundary.md` | Wire future parallel agents through governed gateway execution instead of direct delegation. |
-| Shadow Pointer | Validated native proof plus static prototype | `SHADOW-POINTER-001`, `SHADOW-POINTER-CONTROLS-001`, `POINTER-PROPOSAL-001`, `SHADOW-POINTER-NATIVE-001`, static UI prototype, `native/macos-shadow-pointer` | Wire native overlay to live permissions and real capture adapters. |
-| Native Perception Bus | Envelope, firewall handoff, evidence eligibility, browser/terminal contracts, macOS app/window and Accessibility contracts, live adapter smoke artifacts, local adapter endpoint, and manual browser/terminal proof validated | `PERCEPTION-EVENT-ENVELOPE-001`, `PERCEPTION-FIREWALL-HANDOFF-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001`, `MACOS-PERCEPTION-ADAPTERS-001`, `BROWSER-TERMINAL-ADAPTERS-001`, `LIVE-BROWSER-TERMINAL-ADAPTERS-001`, `LOCAL-ADAPTER-ENDPOINT-001`, `MANUAL-ADAPTER-PROOF-001`, roadmap, and ADR | Wire macOS receipts into Shadow Pointer status before enabling real capture. |
+| Shadow Pointer | Validated native proof, static prototype, and capture receipt wiring | `SHADOW-POINTER-001`, `SHADOW-POINTER-CONTROLS-001`, `POINTER-PROPOSAL-001`, `SHADOW-POINTER-NATIVE-001`, `SHADOW-POINTER-CAPTURE-WIRING-001`, static UI prototype, `native/macos-shadow-pointer` | Feed live local endpoint and macOS permission status into the native overlay panel. |
+| Native Perception Bus | Envelope, firewall handoff, evidence eligibility, browser/terminal contracts, macOS app/window and Accessibility contracts, live adapter smoke artifacts, local adapter endpoint, manual browser/terminal proof, and Shadow Pointer capture receipt wiring validated | `PERCEPTION-EVENT-ENVELOPE-001`, `PERCEPTION-FIREWALL-HANDOFF-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001`, `SHADOW-POINTER-CAPTURE-WIRING-001`, `MACOS-PERCEPTION-ADAPTERS-001`, `BROWSER-TERMINAL-ADAPTERS-001`, `LIVE-BROWSER-TERMINAL-ADAPTERS-001`, `LOCAL-ADAPTER-ENDPOINT-001`, `MANUAL-ADAPTER-PROOF-001`, roadmap, and ADR | Add a read-only native permission-status smoke before enabling real capture. |
 | Robot readiness | Spatial safety contract validated | `ROBOT-SAFE-001`, `docs/architecture/robot-spatial-safety.md`, initial threat model | Keep physical integrations blocked until real simulation, capability, emergency-stop, and audit adapters exist. |
 | Production autonomy and real capture | Not started | No production capture daemon, no autonomous skill runner, and no robot executor are enabled | Keep disabled until consent UI, local endpoint, audit, rollback, and emergency-stop boundaries exist. |
 
@@ -69,7 +70,7 @@ User-facing pillars:
 
 - Shadow Pointer: static prototype, state contract, native-ready control
   receipts, display-only model pointing proposals, and SwiftPM native overlay
-  proof.
+  proof, plus adapter-to-overlay capture receipts.
 - Memory Palace: validated inspect, explain, correct, delete, export,
   dashboard cards, export previews, action plans, self-lesson review flows, and
   the Real Memory Palace and Skill Forge UI shell using the safe dashboard view
@@ -91,8 +92,9 @@ User-facing pillars:
 - Native Perception Bus: validated terminal/browser and macOS app/window plus
   Accessibility adapter contracts that preserve consent, source trust,
   prompt-injection flags, redaction, firewall handoff, Evidence Vault
-  eligibility, live smoke artifacts, local adapter endpoint, and manual
-  browser/terminal proof before real capture exists.
+  eligibility, live smoke artifacts, local adapter endpoint, manual
+  browser/terminal proof, and Shadow Pointer capture receipt wiring before real
+  capture exists.
 
 ## Next Product Gaps
 
@@ -102,9 +104,10 @@ capture realism:
 1. Real browser/terminal adapters now have validated local endpoint support and
    manual browser/terminal proof. Live browser/terminal adapter smoke artifacts
    and consented macOS app/window plus Accessibility contracts are also in
-   place; next is wiring visible capture receipts.
-2. Wire the Shadow Pointer native overlay proof to live permissions and capture
-   adapter receipts.
+   place; capture receipts are now wired. Next is native permission-status
+   smoke without starting capture.
+2. Wire the Shadow Pointer native overlay proof to live permission-status and
+   local endpoint receipt streams.
 3. Live gateway-backed dashboard interactions for the static Memory Palace and
    Skill Forge UI shell.
 4. Persist real agent runtime traces through the gateway and outcome engine.

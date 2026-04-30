@@ -6,19 +6,19 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| SHADOW-POINTER-CAPTURE-WIRING-001 | Wire native Shadow Pointer overlay to live permission and adapter receipts | Codex | Native receipt contract plus local adapter status proof | Keep capture disabled unless explicit consent and source scope are visible. |
+| DASHBOARD-GATEWAY-ACTIONS-001 | Connect dashboard action previews to local gateway read-only flows | Codex | Browser proof plus gateway receipts for explain/review actions | Keep mutation/export actions confirmation-gated and inert until explicit approval. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| DASHBOARD-GATEWAY-ACTIONS-001 | Connect dashboard action previews to local gateway read-only flows | Codex | Browser proof plus gateway receipts for explain/review actions | Keep mutation/export actions confirmation-gated and inert until explicit approval. |
+| NATIVE-CAPTURE-PERMISSION-SMOKE-001 | Add a local macOS permission-status smoke command | Codex | Read-only permission status JSON and benchmark hook | Must not start capture or request permissions automatically. |
 
 ## Backlog
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| NATIVE-CAPTURE-PERMISSION-SMOKE-001 | Add a local macOS permission-status smoke command | Codex | Read-only permission status JSON and benchmark hook | Must not start capture or request permissions automatically. |
+| GATEWAY-TRACE-PERSISTENCE-001 | Persist real agent runtime traces through the gateway | Codex | Runtime trace write/read smoke plus audit-safe fixture | Keep hostile/browser text in evidence lanes, not trusted instructions. |
 
 ## Done
 
@@ -147,6 +147,7 @@ Last updated: 2026-04-30
 | MEMORY-PALACE-SKILL-FORGE-UI-001 | Build real dashboard shell for Memory Palace and Skill Forge view models | Codex | `src/cortex_memory_os/dashboard_shell.py`, `ui/cortex-dashboard`, `uv run cortex-dashboard-shell --smoke --json`, local browser proof, `uv run pytest`, `uv run cortex-bench` | Static shell uses synthetic safe view-model data; action controls update local receipts only. |
 | MACOS-PERCEPTION-ADAPTERS-001 | Specify consented macOS app/window and Accessibility adapter contracts | Codex | `src/cortex_memory_os/perception_adapters.py`, `docs/architecture/macos-perception-adapter-contracts.md`, `uv run pytest tests/test_macos_perception_adapters.py tests/test_perception_adapters.py tests/test_benchmarks.py` -> 13 passed, `uv run cortex-bench` -> 119/119 passed | Derived-only macOS app/window and Accessibility envelopes discard denied permissions, blocked apps, sensitive apps, and private fields before memory eligibility. |
 | CODEX-PLUGIN-REAL-ENABLE-001 | Validate a user-approved real Codex plugin enable path | Codex | `docs/ops/codex-plugin-real-enable.md`, `uv run pytest tests/test_plugin_enable_plan.py tests/test_plugin_install_smoke.py tests/test_benchmarks.py` -> 8 passed, `uv run cortex-plugin-enable-plan --json`, `uv run cortex-bench` -> 120/120 passed | Dry-run default does not write to real Codex home; apply requires exact approval phrase, temp-home discovery, and rollback. |
+| SHADOW-POINTER-CAPTURE-WIRING-001 | Wire native Shadow Pointer overlay to live permission and adapter receipts | Codex | `src/cortex_memory_os/shadow_pointer_capture.py`, `docs/architecture/shadow-pointer-capture-wiring.md`, `uv run pytest tests/test_shadow_pointer_capture.py tests/test_shadow_pointer.py tests/test_perception_adapters.py tests/test_macos_perception_adapters.py tests/test_benchmarks.py` -> 32 passed, `uv run cortex-bench` -> 121/121 passed | Adapter outcomes now compile into truthful observing, private-masking, needs-approval, paused, and off overlay receipts without exposing raw refs. |
 
 ## Dropped
 
