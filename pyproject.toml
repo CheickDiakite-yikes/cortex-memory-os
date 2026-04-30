@@ -16,6 +16,7 @@ cortex-openai-smoke = "cortex_memory_os.live_openai_smoke:main"
 cortex-plugin-install-smoke = "cortex_memory_os.plugin_install_smoke:main"
 cortex-live-adapter-smoke = "cortex_memory_os.live_adapters:main"
 cortex-adapter-endpoint = "cortex_memory_os.adapter_endpoint:main"
+cortex-manual-adapter-proof = "cortex_memory_os.manual_adapter_proof:main"
 
 [build-system]
 requires = ["setuptools>=69"]

@@ -116,6 +116,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `BROWSER-TERMINAL-ADAPTERS-001` | Browser and terminal adapter events compile into governed perception envelopes, firewall decisions, and evidence plans. | Webpage content becomes trusted memory, terminal secrets keep raw refs, paused consent keeps refs, or adapters bypass firewall/evidence planning. |
 | `LIVE-BROWSER-TERMINAL-ADAPTERS-001` | Dormant browser-extension and zsh-hook artifacts smoke-test against the adapter handoff chain. | Extension host permissions are broad, browser content becomes memory eligible, terminal secrets are retained, or hooks run without explicit opt-in. |
 | `LOCAL-ADAPTER-ENDPOINT-001` | Local adapter endpoint accepts browser/terminal smoke events on localhost only. | Remote clients are accepted, trust escalation is allowed, raw browser or terminal refs are retained, terminal secrets leak, or oversized payloads are accepted. |
+| `MANUAL-ADAPTER-PROOF-001` | Manual proof invokes the terminal hook and browser payloads against the local endpoint using synthetic data. | Hook cannot reach the endpoint, browser payload becomes memory eligible, terminal secret markers leak, raw refs are retained, or proof output exposes synthetic secrets. |
 | `GATEWAY-REVIEW-QUEUE-LIMIT-SAFETY-001` | Review queue safety summaries expose applied limit, returned count, total review-required count, and truncation state. | Limited queues hide truncation state, count omitted actions, or leak omitted lesson provenance. |
 | `GATEWAY-REVIEW-QUEUE-ORDERING-001` | Review queues sort missing validation dates first, then oldest validation date, then lesson ID before limits. | Queue ordering depends on insertion order, hidden store order, or leaks provenance while exposing order metadata. |
 | `GATEWAY-REVIEW-QUEUE-PAGING-CURSOR-001` | Limited review queues expose stable cursors tied to deterministic ordering. | Cursors leak lesson IDs/provenance, repeat cards, or drift from the advertised ordering contract. |
@@ -174,9 +175,9 @@ The following failures block merge, release, or wider use:
 
 Near-term suites:
 
-- Manual browser/terminal proof against the local adapter endpoint.
 - User-approved real Codex plugin enable/rollback path beyond temporary smoke.
 - Real dashboard shell for Memory Palace and Skill Forge view models.
+- Real Memory Palace and Skill Forge UI shell using the safe dashboard view models.
 
 Longer-term suites:
 

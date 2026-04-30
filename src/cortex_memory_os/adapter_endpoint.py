@@ -266,13 +266,14 @@ class LocalAdapterEndpointHandler(BaseHTTPRequestHandler):
             self._write_json(_reject(400, "invalid_json_object", "adapter payload must be an object"))
             return
 
-        self._write_json(
-            ingest_adapter_payload(
-                path=self.path,
-                payload=payload,
-                client_host=client_host,
-            )
+        result = ingest_adapter_payload(
+            path=self.path,
+            payload=payload,
+            client_host=client_host,
         )
+        if isinstance(self.server, LocalAdapterEndpointServer):
+            self.server.record_ingest(result)
+        self._write_json(result)
 
     def do_GET(self) -> None:  # noqa: N802
         if self.path == "/healthz":
@@ -312,9 +313,26 @@ class LocalAdapterEndpointHandler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
 
+class LocalAdapterEndpointServer(ThreadingHTTPServer):
+    """Threading HTTP server with redacted ingest-result recording for proof runs."""
+
+    def __init__(self, server_address: tuple[str, int]) -> None:
+        super().__init__(server_address, LocalAdapterEndpointHandler)
+        self._ingest_results: list[AdapterEndpointIngestResult] = []
+        self._ingest_lock = threading.Lock()
+
+    def record_ingest(self, result: AdapterEndpointIngestResult) -> None:
+        with self._ingest_lock:
+            self._ingest_results.append(result)
+
+    def ingest_results(self) -> list[AdapterEndpointIngestResult]:
+        with self._ingest_lock:
+            return list(self._ingest_results)
+
+
 @dataclass
 class RunningAdapterEndpoint:
-    server: ThreadingHTTPServer
+    server: LocalAdapterEndpointServer
     thread: threading.Thread
 
     @property
@@ -327,6 +345,9 @@ class RunningAdapterEndpoint:
         self.server.server_close()
         self.thread.join(timeout=2)
 
+    def ingest_results(self) -> list[AdapterEndpointIngestResult]:
+        return self.server.ingest_results()
+
 
 def start_local_adapter_endpoint(
     *,
@@ -335,7 +356,7 @@ def start_local_adapter_endpoint(
 ) -> RunningAdapterEndpoint:
     if not client_host_allowed(host):
         raise ValueError("adapter endpoint host must be localhost")
-    server = ThreadingHTTPServer((host, port), LocalAdapterEndpointHandler)
+    server = LocalAdapterEndpointServer((host, port))
     thread = threading.Thread(target=server.serve_forever, name="cortex-adapter-endpoint")
     thread.daemon = True
     thread.start()

@@ -6,13 +6,13 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| MANUAL-ADAPTER-PROOF-001 | Prove browser and terminal adapter artifacts against the local endpoint manually | Codex | Local endpoint run plus manual terminal-hook/browser-extension payload proof with no raw web refs or terminal secret retention | Use synthetic content only; do not install into a daily browser profile without explicit approval. |
+| MEMORY-PALACE-SKILL-FORGE-UI-001 | Build real dashboard shell for Memory Palace and Skill Forge view models | Codex | Local UI proof over existing safe view models | Keep UI inspectable and action-plan driven; no raw private memories in fixtures. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| MEMORY-PALACE-SKILL-FORGE-UI-001 | Build real dashboard shell for Memory Palace and Skill Forge view models | Codex | Local UI proof over existing safe view models | Keep UI inspectable and action-plan driven; no raw private memories in fixtures. |
+| MACOS-PERCEPTION-ADAPTERS-001 | Specify consented macOS app/window and accessibility adapter contracts | Codex | Synthetic adapter contracts prove consent, source trust, and no raw private capture before endpoint handoff | Follows local browser/terminal proof; keep macOS permissions explicit and non-capturing by default. |
 
 ## Backlog
 
@@ -143,6 +143,7 @@ Last updated: 2026-04-30
 | SHADOW-POINTER-NATIVE-001 | Prototype native Shadow Pointer overlay integration | Codex | `native/macos-shadow-pointer`, `docs/architecture/native-shadow-pointer-overlay.md`, `swift build --package-path native/macos-shadow-pointer`, `swift test --package-path native/macos-shadow-pointer` -> 5 passed, `swift run --package-path native/macos-shadow-pointer cortex-shadow-pointer-smoke` -> `passed: true`, `uv run pytest` -> 246 passed, `uv run cortex-bench` -> 114/114 passed | SwiftPM proof uses a transparent non-activating `NSPanel`, display-only pointer boundary, and pause/delete/app-ignore receipts without starting capture. |
 | LIVE-BROWSER-TERMINAL-ADAPTERS-001 | Implement live browser extension and terminal shell-hook adapters | Codex | `adapters/browser-extension`, `adapters/terminal-shell`, `uv run cortex-live-adapter-smoke --json` -> passed, `uv run pytest` -> 250 passed, `uv run cortex-bench` -> 115/115 passed | Dormant artifacts are click/opt-in gated, localhost-scoped, raw-web-ref-free, and terminal-secret redacted before endpoint work. |
 | LOCAL-ADAPTER-ENDPOINT-001 | Implement local ingest endpoint for live browser and terminal adapter artifacts | Codex | `src/cortex_memory_os/adapter_endpoint.py`, `docs/architecture/local-adapter-endpoint.md`, `uv run cortex-adapter-endpoint --smoke --json` -> passed, `uv run pytest` -> 256 passed, `uv run cortex-bench` -> 116/116 passed | Endpoint binds localhost by default, rejects remote clients/trust escalation/oversized payloads/raw refs, and never returns raw payload text. |
+| MANUAL-ADAPTER-PROOF-001 | Prove browser and terminal adapter artifacts against the local endpoint manually | Codex | `src/cortex_memory_os/manual_adapter_proof.py`, `docs/architecture/manual-adapter-proof.md`, `uv run cortex-manual-adapter-proof --json` -> passed, `uv run pytest` -> 258 passed, `uv run cortex-bench` -> 117/117 passed | Proof sources the real zsh hook in a subprocess and posts browser-extension-shaped synthetic payloads; no daily browser profile install. |
 
 ## Dropped
 

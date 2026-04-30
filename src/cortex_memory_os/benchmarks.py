@@ -73,6 +73,10 @@ from cortex_memory_os.adapter_endpoint import (
     LOCAL_ADAPTER_ENDPOINT_POLICY_REF,
     run_local_adapter_endpoint_smoke,
 )
+from cortex_memory_os.manual_adapter_proof import (
+    MANUAL_ADAPTER_PROOF_POLICY_REF,
+    run_manual_adapter_proof,
+)
 from cortex_memory_os.evidence_vault import (
     EVIDENCE_VAULT_ENCRYPTION_POLICY_REF,
     EvidenceVault,
@@ -353,6 +357,7 @@ def run_all() -> BenchmarkRunResult:
         case_browser_terminal_adapter_contract,
         case_live_browser_terminal_adapter_smoke,
         case_local_adapter_endpoint_contract,
+        case_manual_adapter_proof_contract,
         case_live_openai_smoke_contract,
         case_gateway_self_lesson_proposal_tool,
         case_self_lesson_sqlite_persistence,
@@ -638,6 +643,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "BROWSER-TERMINAL-ADAPTERS-001",
         "LIVE-BROWSER-TERMINAL-ADAPTERS-001",
         "LOCAL-ADAPTER-ENDPOINT-001",
+        "MANUAL-ADAPTER-PROOF-001",
         "SWARM-GOVERNANCE-001",
         "SHADOW-POINTER-001",
         "POINTER-PROPOSAL-001",
@@ -647,6 +653,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "Real browser/terminal adapters",
         "Live browser/terminal adapter smoke artifacts",
         "local adapter endpoint",
+        "manual browser/terminal proof",
         "plugin install/discovery smoke",
         "Shadow Pointer native overlay",
         "Persist real agent runtime traces",
@@ -1961,6 +1968,82 @@ def case_local_adapter_endpoint_contract() -> BenchmarkCaseResult:
             "terminal_raw_ref_retained": smoke.terminal_raw_ref_retained,
             "trust_escalation_rejected_status_code": smoke.trust_escalation_rejected_status_code,
             "oversized_payload_status_code": smoke.oversized_payload_status_code,
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_manual_adapter_proof_contract() -> BenchmarkCaseResult:
+    proof = run_manual_adapter_proof()
+    benchmark_id = "MANUAL-ADAPTER-PROOF-001"
+    docs_path = REPO_ROOT / "docs" / "architecture" / "manual-adapter-proof.md"
+    plan_path = REPO_ROOT / "docs" / "ops" / "benchmark-plan.md"
+    registry_path = REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    task_board_path = REPO_ROOT / "docs" / "ops" / "task-board.md"
+    traceability_path = REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    pyproject_path = REPO_ROOT / "pyproject.toml"
+
+    docs_text = docs_path.read_text(encoding="utf-8")
+    plan_text = plan_path.read_text(encoding="utf-8")
+    registry_text = registry_path.read_text(encoding="utf-8")
+    task_text = task_board_path.read_text(encoding="utf-8")
+    traceability_text = traceability_path.read_text(encoding="utf-8")
+    pyproject_text = pyproject_path.read_text(encoding="utf-8")
+
+    required_doc_terms = [
+        benchmark_id,
+        MANUAL_ADAPTER_PROOF_POLICY_REF,
+        "adapters/terminal-shell/cortex-terminal-hook.zsh",
+        "cortex_terminal_emit_event",
+        "POST /adapter/browser",
+        "terminal secret marker is not retained",
+        "browser prompt-injection payload is discarded",
+        "uv run cortex-manual-adapter-proof --json",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        proof.passed
+        and proof.terminal_event_observed
+        and proof.terminal_hook_return_code == 0
+        and proof.terminal_secret_retained is False
+        and proof.terminal_raw_ref_retained is False
+        and proof.browser_memory_eligible is False
+        and proof.browser_raw_ref_retained is False
+        and proof.browser_attack_discarded
+        and proof.service_worker_localhost_only
+        and proof.content_script_redaction_present
+        and proof.stdout_redacted
+        and proof.stderr_redacted
+        and not missing_doc_terms
+        and benchmark_id in plan_text
+        and benchmark_id in registry_text
+        and benchmark_id in task_text
+        and benchmark_id in traceability_text
+        and "cortex-manual-adapter-proof" in pyproject_text
+    )
+    return BenchmarkCaseResult(
+        case_id="MANUAL-ADAPTER-PROOF-001/artifact_against_endpoint",
+        suite="MANUAL-ADAPTER-PROOF-001",
+        passed=passed,
+        summary=(
+            "Manual adapter proof invokes the real terminal hook and posts "
+            "browser-extension-shaped payloads against the local endpoint using "
+            "synthetic data only."
+        ),
+        metrics={
+            "terminal_event_observed": int(proof.terminal_event_observed),
+            "terminal_secret_retained": int(proof.terminal_secret_retained),
+            "browser_memory_eligible": int(proof.browser_memory_eligible),
+            "browser_attack_discarded": int(proof.browser_attack_discarded),
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": MANUAL_ADAPTER_PROOF_POLICY_REF,
+            "terminal_hook_path": proof.terminal_hook_path,
+            "browser_payload_status_code": proof.browser_payload_status_code,
+            "browser_attack_status_code": proof.browser_attack_status_code,
+            "stdout_redacted": proof.stdout_redacted,
+            "stderr_redacted": proof.stderr_redacted,
             "missing_doc_terms": missing_doc_terms,
         },
     )
