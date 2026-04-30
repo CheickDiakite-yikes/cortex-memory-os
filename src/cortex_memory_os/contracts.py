@@ -475,6 +475,56 @@ class RetrievalExplanationReceipt(StrictModel):
         return self
 
 
+HYBRID_FUSION_CONTEXT_DIAGNOSTIC_POLICY_REF = (
+    "policy_hybrid_fusion_context_pack_diagnostics_v1"
+)
+
+
+class HybridFusionContextDiagnostic(StrictModel):
+    memory_id: str = Field(min_length=1)
+    score: float = Field(ge=0.0, le=1.0)
+    included: bool
+    excluded_reason_tags: list[str] = Field(default_factory=list)
+    component_scores: dict[str, float] = Field(default_factory=dict)
+    source_ref_count: int = Field(ge=0)
+    content_redacted: bool = True
+    source_refs_redacted: bool = True
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [HYBRID_FUSION_CONTEXT_DIAGNOSTIC_POLICY_REF]
+    )
+
+    @model_validator(mode="after")
+    def keep_diagnostic_metadata_only(self) -> HybridFusionContextDiagnostic:
+        allowed_components = {
+            "semantic",
+            "sparse",
+            "graph",
+            "recency",
+            "trust",
+            "privacy_risk",
+            "prompt_injection_risk",
+            "staleness_penalty",
+            "contradiction_penalty",
+        }
+        if not self.content_redacted:
+            raise ValueError("hybrid fusion diagnostics must redact content")
+        if not self.source_refs_redacted:
+            raise ValueError("hybrid fusion diagnostics must redact source refs")
+        if HYBRID_FUSION_CONTEXT_DIAGNOSTIC_POLICY_REF not in self.policy_refs:
+            raise ValueError("hybrid fusion diagnostics require policy refs")
+        unknown_components = set(self.component_scores).difference(allowed_components)
+        if unknown_components:
+            raise ValueError("hybrid fusion diagnostics contain unknown components")
+        for component, score in self.component_scores.items():
+            if score < 0.0 or score > 1.0:
+                raise ValueError(f"hybrid fusion component out of range: {component}")
+        if self.included and self.excluded_reason_tags:
+            raise ValueError("included fusion diagnostics cannot carry exclusion reasons")
+        if not self.included and not self.excluded_reason_tags:
+            raise ValueError("excluded fusion diagnostics require reason tags")
+        return self
+
+
 CONTEXT_BUDGET_POLICY_REF = "policy_context_pack_budget_v1"
 
 
@@ -530,6 +580,9 @@ class ContextPack(StrictModel):
     )
     retrieval_scores: list[RetrievalScoreSummary] = Field(default_factory=list)
     retrieval_explanation_receipts: list[RetrievalExplanationReceipt] = Field(
+        default_factory=list
+    )
+    hybrid_fusion_diagnostics: list[HybridFusionContextDiagnostic] = Field(
         default_factory=list
     )
     audit_metadata: list[AuditMetadata] = Field(default_factory=list)

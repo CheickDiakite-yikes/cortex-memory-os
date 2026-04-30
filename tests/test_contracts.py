@@ -12,6 +12,7 @@ from cortex_memory_os.contracts import (
     EvidenceType,
     ExecutionMode,
     FirewallDecisionRecord,
+    HybridFusionContextDiagnostic,
     InfluenceLevel,
     MemoryRecord,
     MemoryStatus,
@@ -202,6 +203,28 @@ def test_context_pack_budget_stays_inside_safe_bounds():
     payload["budget"]["memory_budget"] = 0
     with pytest.raises(ValidationError, match="exceeds memory budget"):
         ContextPack.model_validate(payload)
+
+
+def test_hybrid_fusion_context_diagnostic_rejects_leaky_shapes():
+    with pytest.raises(ValidationError, match="redact source refs"):
+        HybridFusionContextDiagnostic(
+            memory_id="mem_bad_source_ref_shape",
+            score=0.2,
+            included=True,
+            component_scores={"semantic": 0.2},
+            source_ref_count=1,
+            source_refs_redacted=False,
+        )
+
+    with pytest.raises(ValidationError, match="unknown components"):
+        HybridFusionContextDiagnostic(
+            memory_id="mem_bad_component_shape",
+            score=0.2,
+            included=False,
+            excluded_reason_tags=["score_below_threshold"],
+            component_scores={"content": 0.2},
+            source_ref_count=1,
+        )
 
 
 def test_context_budget_rejects_overflow_high_risk_and_autonomy():

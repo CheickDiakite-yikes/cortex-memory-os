@@ -19,6 +19,7 @@ from cortex_memory_os.contracts import (
     ContextBudget,
     ContextPack,
     ExecutionMode,
+    HYBRID_FUSION_CONTEXT_DIAGNOSTIC_POLICY_REF,
     MemoryRecord,
     MemoryStatus,
     RelevantMemory,
@@ -30,6 +31,11 @@ from cortex_memory_os.contracts import (
     SelfLessonExclusion,
     SelfLessonReviewSummary,
     SkillRecord,
+    TemporalEdge,
+)
+from cortex_memory_os.context_fusion import (
+    HYBRID_FUSION_CONTEXT_PACK_INTEGRATION_ID,
+    build_context_fusion_diagnostics,
 )
 from cortex_memory_os.context_policy import CONTEXT_PACK_POLICY_REF, evaluate_context_memory
 from cortex_memory_os.context_templates import (
@@ -1173,6 +1179,12 @@ class CortexMCPServer:
             trusted_ranked,
             blocked_ranked,
         )
+        hybrid_fusion_diagnostics = build_context_fusion_diagnostics(
+            [ranked.memory for ranked in ranked_memories],
+            goal,
+            temporal_edges=_context_pack_temporal_edges(self.store),
+            limit=limit,
+        )
         audit_metadata = _audit_metadata_for_self_lessons(self.store, self_lessons)
         evidence_refs = [
             *[ref for memory in memories for ref in memory.source_refs],
@@ -1206,6 +1218,7 @@ class CortexMCPServer:
             ),
             retrieval_scores=retrieval_scores,
             retrieval_explanation_receipts=retrieval_explanation_receipts,
+            hybrid_fusion_diagnostics=hybrid_fusion_diagnostics,
             audit_metadata=audit_metadata,
             blocked_memory_ids=blocked_memory_ids,
             untrusted_evidence_refs=untrusted_evidence_refs,
@@ -1213,6 +1226,8 @@ class CortexMCPServer:
                 CONTEXT_PACK_POLICY_REF,
                 CONTEXT_TEMPLATE_POLICY_REF,
                 RETRIEVAL_EXPLANATION_POLICY_REF,
+                HYBRID_FUSION_CONTEXT_DIAGNOSTIC_POLICY_REF,
+                HYBRID_FUSION_CONTEXT_PACK_INTEGRATION_ID,
                 template.template_id,
             ],
             relevant_skills=list(template.suggested_skills),
@@ -1830,6 +1845,12 @@ def _rank_store(
     from cortex_memory_os.retrieval import rank_memories
 
     return rank_memories(memories, query, limit=limit, scope=scope)
+
+
+def _context_pack_temporal_edges(store: Any) -> tuple[TemporalEdge, ...]:
+    if hasattr(store, "edges_for_subject"):
+        return tuple(store.edges_for_subject("user"))
+    return ()
 
 
 def _audit_metadata_for_self_lessons(
