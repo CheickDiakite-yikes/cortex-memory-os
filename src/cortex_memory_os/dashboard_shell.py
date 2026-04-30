@@ -29,6 +29,11 @@ from cortex_memory_os.memory_palace_dashboard import (
     MemoryPalaceDashboard,
     build_memory_palace_dashboard,
 )
+from cortex_memory_os.dashboard_gateway_actions import (
+    DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
+    DashboardGatewayActionReceipt,
+    build_dashboard_gateway_action_receipts,
+)
 from cortex_memory_os.retrieval import RetrievalScope
 from cortex_memory_os.skill_forge import (
     DocumentSkillDerivationRequest,
@@ -85,6 +90,7 @@ class CortexDashboardShell(StrictModel):
     memory_palace: MemoryPalaceDashboard
     skill_forge: SkillForgeCandidateList
     safe_receipts: list[DashboardSafeReceipt] = Field(default_factory=list)
+    gateway_action_receipts: list[DashboardGatewayActionReceipt] = Field(default_factory=list)
     policy_refs: list[str] = Field(default_factory=list)
     design_notes: list[str] = Field(default_factory=list)
     safety_notes: list[str] = Field(default_factory=list)
@@ -98,9 +104,13 @@ class DashboardShellSmokeResult(StrictModel):
     memory_card_count: int = Field(ge=0)
     skill_card_count: int = Field(ge=0)
     safe_receipt_count: int = Field(ge=0)
+    gateway_action_receipt_count: int = Field(ge=0)
+    read_only_gateway_action_count: int = Field(ge=0)
+    blocked_gateway_action_count: int = Field(ge=0)
     secret_retained: bool
     raw_private_data_retained: bool
     action_plans_present: bool
+    gateway_actions_present: bool
     missing_ui_terms: list[str] = Field(default_factory=list)
     missing_doc_terms: list[str] = Field(default_factory=list)
 
@@ -176,10 +186,16 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
         memory_palace=memory_dashboard,
         skill_forge=skill_list,
         safe_receipts=_sample_safe_receipts(timestamp),
+        gateway_action_receipts=build_dashboard_gateway_action_receipts(
+            memory_dashboard,
+            skill_list,
+            now=timestamp,
+        ),
         policy_refs=[
             DASHBOARD_SHELL_POLICY_REF,
             MEMORY_PALACE_DASHBOARD_POLICY_REF,
             SKILL_FORGE_CANDIDATE_LIST_POLICY_REF,
+            DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
         ],
         design_notes=[
             "Two primary work areas: Memory Palace review queue and Skill Forge candidates.",
@@ -189,7 +205,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
         safety_notes=[
             "Static fixture contains synthetic view-model data only.",
             "No raw private memory, screenshots, databases, logs, or API responses are embedded.",
-            "All action buttons update local UI receipts instead of calling gateway tools.",
+            "Action buttons resolve to gateway receipts before any tool call is allowed.",
         ],
     )
 
@@ -232,6 +248,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "Shadow Pointer",
         "Safety Firewall",
         "Recent Safe Receipts",
+        "Gateway Action Receipts",
         "window.CORTEX_DASHBOARD_DATA",
     ]
     missing_ui_terms = _missing_terms(ui_text + "\n" + data_js, required_ui_terms)
@@ -252,6 +269,11 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
     action_plans_present = any(
         card.action_plans for card in shell.memory_palace.cards
     ) and any(card.action_plans for card in shell.skill_forge.cards)
+    gateway_actions_present = (
+        bool(shell.gateway_action_receipts)
+        and any(receipt.allowed_gateway_call for receipt in shell.gateway_action_receipts)
+        and any(not receipt.allowed_gateway_call for receipt in shell.gateway_action_receipts)
+    )
     secret_retained = any(
         marker in serialized + data_js
         for marker in ["CORTEX_FAKE_TOKEN", "OPENAI_API_KEY=", "sk-"]
@@ -263,6 +285,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and shell.memory_palace.cards
         and shell.skill_forge.cards
         and shell.safe_receipts
+        and gateway_actions_present
         and not secret_retained
         and not raw_private_data_retained
         and action_plans_present
@@ -275,9 +298,17 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         memory_card_count=len(shell.memory_palace.cards),
         skill_card_count=len(shell.skill_forge.cards),
         safe_receipt_count=len(shell.safe_receipts),
+        gateway_action_receipt_count=len(shell.gateway_action_receipts),
+        read_only_gateway_action_count=sum(
+            int(receipt.allowed_gateway_call) for receipt in shell.gateway_action_receipts
+        ),
+        blocked_gateway_action_count=sum(
+            int(not receipt.allowed_gateway_call) for receipt in shell.gateway_action_receipts
+        ),
         secret_retained=secret_retained,
         raw_private_data_retained=raw_private_data_retained,
         action_plans_present=action_plans_present,
+        gateway_actions_present=gateway_actions_present,
         missing_ui_terms=missing_ui_terms,
         missing_doc_terms=missing_doc_terms,
     )

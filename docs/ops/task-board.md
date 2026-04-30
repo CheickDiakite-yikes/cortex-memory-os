@@ -6,19 +6,19 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| DASHBOARD-GATEWAY-ACTIONS-001 | Connect dashboard action previews to local gateway read-only flows | Codex | Browser proof plus gateway receipts for explain/review actions | Keep mutation/export actions confirmation-gated and inert until explicit approval. |
+| NATIVE-CAPTURE-PERMISSION-SMOKE-001 | Add a local macOS permission-status smoke command | Codex | Read-only permission status JSON and benchmark hook | Must not start capture or request permissions automatically. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| NATIVE-CAPTURE-PERMISSION-SMOKE-001 | Add a local macOS permission-status smoke command | Codex | Read-only permission status JSON and benchmark hook | Must not start capture or request permissions automatically. |
+| GATEWAY-TRACE-PERSISTENCE-001 | Persist real agent runtime traces through the gateway | Codex | Runtime trace write/read smoke plus audit-safe fixture | Keep hostile/browser text in evidence lanes, not trusted instructions. |
 
 ## Backlog
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| GATEWAY-TRACE-PERSISTENCE-001 | Persist real agent runtime traces through the gateway | Codex | Runtime trace write/read smoke plus audit-safe fixture | Keep hostile/browser text in evidence lanes, not trusted instructions. |
+| CONTEXT-FUSION-INDEX-STUB-001 | Add a stubbed hybrid retrieval index interface | Codex | Interface tests plus no-network local fixture | Keep graph/vector/sparse fusion behind stable contracts before adding dependencies. |
 
 ## Done
 
@@ -148,6 +148,7 @@ Last updated: 2026-04-30
 | MACOS-PERCEPTION-ADAPTERS-001 | Specify consented macOS app/window and Accessibility adapter contracts | Codex | `src/cortex_memory_os/perception_adapters.py`, `docs/architecture/macos-perception-adapter-contracts.md`, `uv run pytest tests/test_macos_perception_adapters.py tests/test_perception_adapters.py tests/test_benchmarks.py` -> 13 passed, `uv run cortex-bench` -> 119/119 passed | Derived-only macOS app/window and Accessibility envelopes discard denied permissions, blocked apps, sensitive apps, and private fields before memory eligibility. |
 | CODEX-PLUGIN-REAL-ENABLE-001 | Validate a user-approved real Codex plugin enable path | Codex | `docs/ops/codex-plugin-real-enable.md`, `uv run pytest tests/test_plugin_enable_plan.py tests/test_plugin_install_smoke.py tests/test_benchmarks.py` -> 8 passed, `uv run cortex-plugin-enable-plan --json`, `uv run cortex-bench` -> 120/120 passed | Dry-run default does not write to real Codex home; apply requires exact approval phrase, temp-home discovery, and rollback. |
 | SHADOW-POINTER-CAPTURE-WIRING-001 | Wire native Shadow Pointer overlay to live permission and adapter receipts | Codex | `src/cortex_memory_os/shadow_pointer_capture.py`, `docs/architecture/shadow-pointer-capture-wiring.md`, `uv run pytest tests/test_shadow_pointer_capture.py tests/test_shadow_pointer.py tests/test_perception_adapters.py tests/test_macos_perception_adapters.py tests/test_benchmarks.py` -> 32 passed, `uv run cortex-bench` -> 121/121 passed | Adapter outcomes now compile into truthful observing, private-masking, needs-approval, paused, and off overlay receipts without exposing raw refs. |
+| DASHBOARD-GATEWAY-ACTIONS-001 | Connect dashboard action previews to local gateway read-only flows | Codex | `src/cortex_memory_os/dashboard_gateway_actions.py`, `docs/product/dashboard-gateway-actions.md`, `uv run pytest tests/test_dashboard_gateway_actions.py tests/test_dashboard_shell.py tests/test_benchmarks.py` -> 9 passed, browser proof, `uv run cortex-bench` -> 122/122 passed | Dashboard buttons now resolve to gateway receipts; only `memory.explain` and `skill.review_candidate` are allowed, while mutation/export/draft actions stay blocked. |
 
 ## Dropped
 

@@ -23,6 +23,9 @@ const icons = {
 
 let memoryFilter = "all";
 let skillFilter = "all";
+const gatewayReceiptByAction = new Map(
+  (data.gateway_action_receipts || []).map((receipt) => [receipt.action_key, receipt]),
+);
 
 function svgIcon(name) {
   return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${icons[name] || icons.file}</svg>`;
@@ -285,15 +288,30 @@ function skillCommandButtons(card) {
 
 function bindActionButton(button) {
   button.addEventListener("click", () => {
-    const confirmation = button.dataset.confirmation === "required" ? " Confirmation required." : "";
-    writeReceipt(`${button.dataset.actionTool} prepared for ${button.dataset.targetRef}.${confirmation} No external effect executed.`);
+    const actionKey = `${button.dataset.actionTool}:${button.dataset.targetRef}`;
+    const receipt = gatewayReceiptByAction.get(actionKey);
+    if (!receipt) {
+      writeReceipt(`${button.dataset.actionTool} has no gateway receipt. No mutation executed.`);
+      return;
+    }
+    if (receipt.allowed_gateway_call) {
+      writeReceipt(
+        `Gateway receipt allows ${receipt.gateway_tool} read-only for ${receipt.target_ref}. No mutation executed.`,
+      );
+      return;
+    }
+    writeReceipt(
+      `Gateway receipt blocks ${receipt.gateway_tool} for ${receipt.target_ref}: ${receipt.blocked_reasons.join(", ")}. No mutation executed.`,
+    );
   });
 }
 
 function renderReceipts() {
   const list = document.querySelector("#receipt-list");
-  list.innerHTML = data.safe_receipts
-    .map(
+  const gatewayReceipts = data.gateway_action_receipts || [];
+  list.innerHTML = [
+    '<div class="receipt-section-label">Safe Receipts</div>',
+    ...data.safe_receipts.map(
       (receipt) => `
         <div class="receipt-item" data-state="${escapeHtml(receipt.state)}">
           <span class="receipt-dot">${svgIcon(receipt.state === "warning" ? "pause" : "check")}</span>
@@ -303,8 +321,20 @@ function renderReceipts() {
           </span>
         </div>
       `,
-    )
-    .join("");
+    ),
+    '<div class="receipt-section-label">Gateway Action Receipts</div>',
+    ...gatewayReceipts.slice(0, 6).map(
+      (receipt) => `
+        <div class="receipt-item" data-state="${receipt.allowed_gateway_call ? "healthy" : "warning"}">
+          <span class="receipt-dot">${svgIcon(receipt.allowed_gateway_call ? "check" : "pause")}</span>
+          <span>
+            <strong>${escapeHtml(receipt.gateway_tool)}</strong>
+            <span>${escapeHtml(receipt.target_ref)} · ${receipt.allowed_gateway_call ? "read-only ready" : "preview blocked"}</span>
+          </span>
+        </div>
+      `,
+    ),
+  ].join("");
 
   document.querySelector("#receipt-filter").addEventListener("click", () => {
     writeReceipt("Audit log preview selected. Receipt content remains redacted.");

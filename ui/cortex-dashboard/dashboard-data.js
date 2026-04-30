@@ -8,7 +8,1279 @@ window.CORTEX_DASHBOARD_DATA = {
     "Action controls are declarative UI plans; this shell does not execute mutations."
   ],
   "encrypted_at_rest": true,
-  "generated_at": "2026-04-30T04:01:17.784922Z",
+  "gateway_action_receipts": [
+    {
+      "action_key": "memory.explain:mem_auth_redirect_root_cause",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": true,
+      "audit_action": null,
+      "audit_required": false,
+      "blocked_reasons": [],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "memory.explain",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": false,
+      "payload_preview": {
+        "memory_id_or_visible_card_anchor": "mem_auth_redirect_root_cause"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": true,
+      "receipt_id": "dash_gateway_memory_palace_explain_memory_mem_auth_redirect_root_cause",
+      "required_inputs": [
+        "memory_id_or_visible_card_anchor"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_auth_redirect_root_cause"
+    },
+    {
+      "action_key": "memory.correct:mem_auth_redirect_root_cause",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": false,
+      "audit_action": "correct_memory",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "memory.correct",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "corrected_content": "<redacted_user_supplied_value>",
+        "memory_id_or_visible_card_anchor": "mem_auth_redirect_root_cause"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_memory_palace_correct_memory_mem_auth_redirect_root_cause",
+      "required_inputs": [
+        "memory_id_or_visible_card_anchor",
+        "corrected_content"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_auth_redirect_root_cause"
+    },
+    {
+      "action_key": "memory.forget:mem_auth_redirect_root_cause",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": false,
+      "audit_action": "delete_memory",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "memory.forget",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "explicit_delete_confirmation": "<required_at_confirmation>",
+        "memory_id_or_visible_card_anchor": "mem_auth_redirect_root_cause"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_memory_palace_delete_memory_mem_auth_redirect_root_cause",
+      "required_inputs": [
+        "memory_id_or_visible_card_anchor",
+        "explicit_delete_confirmation"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_auth_redirect_root_cause"
+    },
+    {
+      "action_key": "memory.export:mem_auth_redirect_root_cause",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": false,
+      "audit_action": "export_memories",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "data_egress_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": true,
+      "external_effect": false,
+      "gateway_tool": "memory.export",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": false,
+      "payload_preview": {
+        "explicit_export_confirmation": "<required_at_confirmation>",
+        "selected_memory_ids_or_scope": "mem_auth_redirect_root_cause"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_memory_palace_export_memories_mem_auth_redirect_root_cause",
+      "required_inputs": [
+        "selected_memory_ids_or_scope",
+        "explicit_export_confirmation"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_auth_redirect_root_cause"
+    },
+    {
+      "action_key": "memory.explain:mem_smallest_safe_change",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": true,
+      "audit_action": null,
+      "audit_required": false,
+      "blocked_reasons": [],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "memory.explain",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": false,
+      "payload_preview": {
+        "memory_id_or_visible_card_anchor": "mem_smallest_safe_change"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": true,
+      "receipt_id": "dash_gateway_memory_palace_explain_memory_mem_smallest_safe_change",
+      "required_inputs": [
+        "memory_id_or_visible_card_anchor"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_smallest_safe_change"
+    },
+    {
+      "action_key": "memory.correct:mem_smallest_safe_change",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": false,
+      "audit_action": "correct_memory",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "memory.correct",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "corrected_content": "<redacted_user_supplied_value>",
+        "memory_id_or_visible_card_anchor": "mem_smallest_safe_change"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_memory_palace_correct_memory_mem_smallest_safe_change",
+      "required_inputs": [
+        "memory_id_or_visible_card_anchor",
+        "corrected_content"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_smallest_safe_change"
+    },
+    {
+      "action_key": "memory.forget:mem_smallest_safe_change",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": false,
+      "audit_action": "delete_memory",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "memory.forget",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "explicit_delete_confirmation": "<required_at_confirmation>",
+        "memory_id_or_visible_card_anchor": "mem_smallest_safe_change"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_memory_palace_delete_memory_mem_smallest_safe_change",
+      "required_inputs": [
+        "memory_id_or_visible_card_anchor",
+        "explicit_delete_confirmation"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_smallest_safe_change"
+    },
+    {
+      "action_key": "memory.export:mem_smallest_safe_change",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": false,
+      "audit_action": "export_memories",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "data_egress_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": true,
+      "external_effect": false,
+      "gateway_tool": "memory.export",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": false,
+      "payload_preview": {
+        "explicit_export_confirmation": "<required_at_confirmation>",
+        "selected_memory_ids_or_scope": "mem_smallest_safe_change"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_memory_palace_export_memories_mem_smallest_safe_change",
+      "required_inputs": [
+        "selected_memory_ids_or_scope",
+        "explicit_export_confirmation"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_smallest_safe_change"
+    },
+    {
+      "action_key": "memory.explain:mem_linear_label_tracking",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": true,
+      "audit_action": null,
+      "audit_required": false,
+      "blocked_reasons": [],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "memory.explain",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": false,
+      "payload_preview": {
+        "memory_id_or_visible_card_anchor": "mem_linear_label_tracking"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": true,
+      "receipt_id": "dash_gateway_memory_palace_explain_memory_mem_linear_label_tracking",
+      "required_inputs": [
+        "memory_id_or_visible_card_anchor"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_linear_label_tracking"
+    },
+    {
+      "action_key": "memory.correct:mem_linear_label_tracking",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": false,
+      "audit_action": "correct_memory",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "memory.correct",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "corrected_content": "<redacted_user_supplied_value>",
+        "memory_id_or_visible_card_anchor": "mem_linear_label_tracking"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_memory_palace_correct_memory_mem_linear_label_tracking",
+      "required_inputs": [
+        "memory_id_or_visible_card_anchor",
+        "corrected_content"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_linear_label_tracking"
+    },
+    {
+      "action_key": "memory.forget:mem_linear_label_tracking",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": false,
+      "audit_action": "delete_memory",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "memory.forget",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "explicit_delete_confirmation": "<required_at_confirmation>",
+        "memory_id_or_visible_card_anchor": "mem_linear_label_tracking"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_memory_palace_delete_memory_mem_linear_label_tracking",
+      "required_inputs": [
+        "memory_id_or_visible_card_anchor",
+        "explicit_delete_confirmation"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_linear_label_tracking"
+    },
+    {
+      "action_key": "memory.export:mem_linear_label_tracking",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": false,
+      "audit_action": "export_memories",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "data_egress_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": true,
+      "external_effect": false,
+      "gateway_tool": "memory.export",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": false,
+      "payload_preview": {
+        "explicit_export_confirmation": "<required_at_confirmation>",
+        "selected_memory_ids_or_scope": "mem_linear_label_tracking"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_memory_palace_export_memories_mem_linear_label_tracking",
+      "required_inputs": [
+        "selected_memory_ids_or_scope",
+        "explicit_export_confirmation"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_linear_label_tracking"
+    },
+    {
+      "action_key": "memory.explain:mem_research_depth_candidate",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": true,
+      "audit_action": null,
+      "audit_required": false,
+      "blocked_reasons": [],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "memory.explain",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": false,
+      "payload_preview": {
+        "memory_id_or_visible_card_anchor": "mem_research_depth_candidate"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": true,
+      "receipt_id": "dash_gateway_memory_palace_explain_memory_mem_research_depth_candidate",
+      "required_inputs": [
+        "memory_id_or_visible_card_anchor"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_research_depth_candidate"
+    },
+    {
+      "action_key": "memory.correct:mem_research_depth_candidate",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": false,
+      "audit_action": "correct_memory",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "memory.correct",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "corrected_content": "<redacted_user_supplied_value>",
+        "memory_id_or_visible_card_anchor": "mem_research_depth_candidate"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_memory_palace_correct_memory_mem_research_depth_candidate",
+      "required_inputs": [
+        "memory_id_or_visible_card_anchor",
+        "corrected_content"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_research_depth_candidate"
+    },
+    {
+      "action_key": "memory.forget:mem_research_depth_candidate",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": false,
+      "audit_action": "delete_memory",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "memory.forget",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "explicit_delete_confirmation": "<required_at_confirmation>",
+        "memory_id_or_visible_card_anchor": "mem_research_depth_candidate"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_memory_palace_delete_memory_mem_research_depth_candidate",
+      "required_inputs": [
+        "memory_id_or_visible_card_anchor",
+        "explicit_delete_confirmation"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_research_depth_candidate"
+    },
+    {
+      "action_key": "memory.export:mem_research_depth_candidate",
+      "action_source": "memory_palace",
+      "allowed_gateway_call": false,
+      "audit_action": "export_memories",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "data_egress_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": true,
+      "external_effect": false,
+      "gateway_tool": "memory.export",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": false,
+      "payload_preview": {
+        "explicit_export_confirmation": "<required_at_confirmation>",
+        "selected_memory_ids_or_scope": "mem_research_depth_candidate"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_memory_palace_export_memories_mem_research_depth_candidate",
+      "required_inputs": [
+        "selected_memory_ids_or_scope",
+        "explicit_export_confirmation"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "mem_research_depth_candidate"
+    },
+    {
+      "action_key": "skill.review_candidate:skill_doc_doc_monthly_update_workflow_candidate_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": true,
+      "audit_action": null,
+      "audit_required": false,
+      "blocked_reasons": [],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.review_candidate",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": false,
+      "payload_preview": {
+        "skill_id": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": true,
+      "receipt_id": "dash_gateway_skill_forge_review_candidate_skill_doc_doc_monthly_update_workflow_candidate_v1",
+      "required_inputs": [
+        "skill_id"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+    },
+    {
+      "action_key": "skill.execute_draft:skill_doc_doc_monthly_update_workflow_candidate_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": false,
+      "audit_action": null,
+      "audit_required": false,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.execute_draft",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": false,
+      "payload_preview": {
+        "input_summary": "<redacted_user_supplied_value>",
+        "skill_id": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_skill_forge_execute_draft_skill_doc_doc_monthly_update_workflow_candidate_v1",
+      "required_inputs": [
+        "skill_id",
+        "input_summary"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+    },
+    {
+      "action_key": "skill.approve_draft_only:skill_doc_doc_monthly_update_workflow_candidate_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": false,
+      "audit_action": "approve_skill_candidate",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.approve_draft_only",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "approval_ref": "<required_at_confirmation>",
+        "skill_id": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_skill_forge_approve_draft_only_skill_doc_doc_monthly_update_workflow_candidate_v1",
+      "required_inputs": [
+        "skill_id",
+        "approval_ref"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+    },
+    {
+      "action_key": "skill.edit_candidate:skill_doc_doc_monthly_update_workflow_candidate_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": false,
+      "audit_action": "edit_skill_candidate",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.edit_candidate",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "approval_ref": "<required_at_confirmation>",
+        "corrected_steps": "<redacted_user_supplied_value>",
+        "skill_id": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_skill_forge_edit_steps_skill_doc_doc_monthly_update_workflow_candidate_v1",
+      "required_inputs": [
+        "skill_id",
+        "corrected_steps",
+        "approval_ref"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+    },
+    {
+      "action_key": "skill.need_more_data:skill_doc_doc_monthly_update_workflow_candidate_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": false,
+      "audit_action": "defer_skill_candidate",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.need_more_data",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "reason": "<redacted_user_supplied_value>",
+        "skill_id": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_skill_forge_need_more_data_skill_doc_doc_monthly_update_workflow_candidate_v1",
+      "required_inputs": [
+        "skill_id",
+        "reason"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+    },
+    {
+      "action_key": "skill.reject_candidate:skill_doc_doc_monthly_update_workflow_candidate_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": false,
+      "audit_action": "reject_skill_candidate",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.reject_candidate",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "approval_ref": "<required_at_confirmation>",
+        "skill_id": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_skill_forge_reject_candidate_skill_doc_doc_monthly_update_workflow_candidate_v1",
+      "required_inputs": [
+        "skill_id",
+        "approval_ref"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+    },
+    {
+      "action_key": "skill.review_candidate:skill_frontend_auth_debugging_flow_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": true,
+      "audit_action": null,
+      "audit_required": false,
+      "blocked_reasons": [],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.review_candidate",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": false,
+      "payload_preview": {
+        "skill_id": "skill_frontend_auth_debugging_flow_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": true,
+      "receipt_id": "dash_gateway_skill_forge_review_candidate_skill_frontend_auth_debugging_flow_v1",
+      "required_inputs": [
+        "skill_id"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_frontend_auth_debugging_flow_v1"
+    },
+    {
+      "action_key": "skill.execute_draft:skill_frontend_auth_debugging_flow_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": false,
+      "audit_action": null,
+      "audit_required": false,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.execute_draft",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": false,
+      "payload_preview": {
+        "input_summary": "<redacted_user_supplied_value>",
+        "skill_id": "skill_frontend_auth_debugging_flow_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_skill_forge_execute_draft_skill_frontend_auth_debugging_flow_v1",
+      "required_inputs": [
+        "skill_id",
+        "input_summary"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_frontend_auth_debugging_flow_v1"
+    },
+    {
+      "action_key": "skill.approve_draft_only:skill_frontend_auth_debugging_flow_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": false,
+      "audit_action": "approve_skill_candidate",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.approve_draft_only",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "approval_ref": "<required_at_confirmation>",
+        "skill_id": "skill_frontend_auth_debugging_flow_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_skill_forge_approve_draft_only_skill_frontend_auth_debugging_flow_v1",
+      "required_inputs": [
+        "skill_id",
+        "approval_ref"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_frontend_auth_debugging_flow_v1"
+    },
+    {
+      "action_key": "skill.edit_candidate:skill_frontend_auth_debugging_flow_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": false,
+      "audit_action": "edit_skill_candidate",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.edit_candidate",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "approval_ref": "<required_at_confirmation>",
+        "corrected_steps": "<redacted_user_supplied_value>",
+        "skill_id": "skill_frontend_auth_debugging_flow_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_skill_forge_edit_steps_skill_frontend_auth_debugging_flow_v1",
+      "required_inputs": [
+        "skill_id",
+        "corrected_steps",
+        "approval_ref"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_frontend_auth_debugging_flow_v1"
+    },
+    {
+      "action_key": "skill.need_more_data:skill_frontend_auth_debugging_flow_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": false,
+      "audit_action": "defer_skill_candidate",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.need_more_data",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "reason": "<redacted_user_supplied_value>",
+        "skill_id": "skill_frontend_auth_debugging_flow_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_skill_forge_need_more_data_skill_frontend_auth_debugging_flow_v1",
+      "required_inputs": [
+        "skill_id",
+        "reason"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_frontend_auth_debugging_flow_v1"
+    },
+    {
+      "action_key": "skill.reject_candidate:skill_frontend_auth_debugging_flow_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": false,
+      "audit_action": "reject_skill_candidate",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.reject_candidate",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "approval_ref": "<required_at_confirmation>",
+        "skill_id": "skill_frontend_auth_debugging_flow_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_skill_forge_reject_candidate_skill_frontend_auth_debugging_flow_v1",
+      "required_inputs": [
+        "skill_id",
+        "approval_ref"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_frontend_auth_debugging_flow_v1"
+    },
+    {
+      "action_key": "skill.review_candidate:skill_research_synthesis_blueprint_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": true,
+      "audit_action": null,
+      "audit_required": false,
+      "blocked_reasons": [],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.review_candidate",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": false,
+      "payload_preview": {
+        "skill_id": "skill_research_synthesis_blueprint_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": true,
+      "receipt_id": "dash_gateway_skill_forge_review_candidate_skill_research_synthesis_blueprint_v1",
+      "required_inputs": [
+        "skill_id"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_research_synthesis_blueprint_v1"
+    },
+    {
+      "action_key": "skill.execute_draft:skill_research_synthesis_blueprint_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": false,
+      "audit_action": null,
+      "audit_required": false,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.execute_draft",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": false,
+      "payload_preview": {
+        "input_summary": "<redacted_user_supplied_value>",
+        "skill_id": "skill_research_synthesis_blueprint_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_skill_forge_execute_draft_skill_research_synthesis_blueprint_v1",
+      "required_inputs": [
+        "skill_id",
+        "input_summary"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_research_synthesis_blueprint_v1"
+    },
+    {
+      "action_key": "skill.approve_draft_only:skill_research_synthesis_blueprint_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": false,
+      "audit_action": "approve_skill_candidate",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.approve_draft_only",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "approval_ref": "<required_at_confirmation>",
+        "skill_id": "skill_research_synthesis_blueprint_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_skill_forge_approve_draft_only_skill_research_synthesis_blueprint_v1",
+      "required_inputs": [
+        "skill_id",
+        "approval_ref"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_research_synthesis_blueprint_v1"
+    },
+    {
+      "action_key": "skill.edit_candidate:skill_research_synthesis_blueprint_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": false,
+      "audit_action": "edit_skill_candidate",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.edit_candidate",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "approval_ref": "<required_at_confirmation>",
+        "corrected_steps": "<redacted_user_supplied_value>",
+        "skill_id": "skill_research_synthesis_blueprint_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_skill_forge_edit_steps_skill_research_synthesis_blueprint_v1",
+      "required_inputs": [
+        "skill_id",
+        "corrected_steps",
+        "approval_ref"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_research_synthesis_blueprint_v1"
+    },
+    {
+      "action_key": "skill.need_more_data:skill_research_synthesis_blueprint_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": false,
+      "audit_action": "defer_skill_candidate",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.need_more_data",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "reason": "<redacted_user_supplied_value>",
+        "skill_id": "skill_research_synthesis_blueprint_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_skill_forge_need_more_data_skill_research_synthesis_blueprint_v1",
+      "required_inputs": [
+        "skill_id",
+        "reason"
+      ],
+      "requires_confirmation": false,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_research_synthesis_blueprint_v1"
+    },
+    {
+      "action_key": "skill.reject_candidate:skill_research_synthesis_blueprint_v1",
+      "action_source": "skill_forge",
+      "allowed_gateway_call": false,
+      "audit_action": "reject_skill_candidate",
+      "audit_required": true,
+      "blocked_reasons": [
+        "tool_not_enabled_for_read_only_dashboard_slice",
+        "not_read_only",
+        "mutation_blocked",
+        "confirmation_required"
+      ],
+      "content_redacted": true,
+      "data_egress": false,
+      "external_effect": false,
+      "gateway_tool": "skill.reject_candidate",
+      "generated_at": "2026-04-30T04:30:49.245844Z",
+      "mutation": true,
+      "payload_preview": {
+        "approval_ref": "<required_at_confirmation>",
+        "skill_id": "skill_research_synthesis_blueprint_v1"
+      },
+      "policy_refs": [
+        "policy_dashboard_gateway_actions_v1"
+      ],
+      "read_only": false,
+      "receipt_id": "dash_gateway_skill_forge_reject_candidate_skill_research_synthesis_blueprint_v1",
+      "required_inputs": [
+        "skill_id",
+        "approval_ref"
+      ],
+      "requires_confirmation": true,
+      "safety_notes": [
+        "dashboard actions are receipt previews before gateway execution",
+        "only read-only explain and review tools are callable in this slice",
+        "mutation, export, draft execution, and external-effect tools remain blocked"
+      ],
+      "target_ref": "skill_research_synthesis_blueprint_v1"
+    }
+  ],
+  "generated_at": "2026-04-30T04:30:49.245844Z",
   "local_mode": true,
   "memory_palace": {
     "audit_summary": {
@@ -319,7 +1591,7 @@ window.CORTEX_DASHBOARD_DATA = {
       }
     ],
     "confirmation_required_count": 8,
-    "dashboard_id": "memory_palace_dashboard_20260430T040117Z",
+    "dashboard_id": "memory_palace_dashboard_20260430T043049Z",
     "export_preview": {
       "data_egress": true,
       "exportable_count": 3,
@@ -341,7 +1613,7 @@ window.CORTEX_DASHBOARD_DATA = {
       ],
       "selection_mode": "explicit_ids"
     },
-    "generated_at": "2026-04-30T04:01:17.784922Z",
+    "generated_at": "2026-04-30T04:30:49.245844Z",
     "policy_refs": [
       "policy_memory_palace_dashboard_v1",
       "policy_memory_export_deletion_aware_v1",
@@ -400,7 +1672,8 @@ window.CORTEX_DASHBOARD_DATA = {
   "policy_refs": [
     "policy_cortex_dashboard_shell_v1",
     "policy_memory_palace_dashboard_v1",
-    "policy_skill_forge_candidate_list_v1"
+    "policy_skill_forge_candidate_list_v1",
+    "policy_dashboard_gateway_actions_v1"
   ],
   "safe_receipts": [
     {
@@ -410,7 +1683,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_memory_created",
       "state": "healthy",
       "target_ref": "mem_smallest_safe_change",
-      "timestamp": "2026-04-30T04:01:17.784922Z"
+      "timestamp": "2026-04-30T04:30:49.245844Z"
     },
     {
       "actor": "system",
@@ -419,7 +1692,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_memory_export_preview",
       "state": "neutral",
       "target_ref": "export_preview_project_scope",
-      "timestamp": "2026-04-30T04:01:17.784922Z"
+      "timestamp": "2026-04-30T04:30:49.245844Z"
     },
     {
       "actor": "system",
@@ -428,7 +1701,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_skill_candidate_created",
       "state": "healthy",
       "target_ref": "skill_frontend_auth_debugging_flow_v1",
-      "timestamp": "2026-04-30T04:01:17.784922Z"
+      "timestamp": "2026-04-30T04:30:49.245844Z"
     },
     {
       "actor": "user",
@@ -437,13 +1710,13 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_observation_paused",
       "state": "warning",
       "target_ref": "session_20260430",
-      "timestamp": "2026-04-30T04:01:17.784922Z"
+      "timestamp": "2026-04-30T04:30:49.245844Z"
     }
   ],
   "safety_notes": [
     "Static fixture contains synthetic view-model data only.",
     "No raw private memory, screenshots, databases, logs, or API responses are embedded.",
-    "All action buttons update local UI receipts instead of calling gateway tools."
+    "Action buttons resolve to gateway receipts before any tool call is allowed."
   ],
   "shell_id": "MEMORY-PALACE-SKILL-FORGE-UI-001",
   "skill_forge": {
@@ -794,8 +2067,8 @@ window.CORTEX_DASHBOARD_DATA = {
       }
     ],
     "external_effect_action_count": 0,
-    "generated_at": "2026-04-30T04:01:17.784922Z",
-    "list_id": "skill_forge_candidate_list_20260430T040117Z",
+    "generated_at": "2026-04-30T04:30:49.245844Z",
+    "list_id": "skill_forge_candidate_list_20260430T043049Z",
     "policy_refs": [
       "policy_skill_forge_candidate_list_v1"
     ],

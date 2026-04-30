@@ -80,7 +80,12 @@ from cortex_memory_os.manual_adapter_proof import (
 from cortex_memory_os.dashboard_shell import (
     DASHBOARD_SHELL_ID,
     DASHBOARD_SHELL_POLICY_REF,
+    build_dashboard_shell,
     run_dashboard_shell_smoke,
+)
+from cortex_memory_os.dashboard_gateway_actions import (
+    DASHBOARD_GATEWAY_ACTIONS_ID,
+    DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
 )
 from cortex_memory_os.evidence_vault import (
     EVIDENCE_VAULT_ENCRYPTION_POLICY_REF,
@@ -360,6 +365,7 @@ def run_all() -> BenchmarkRunResult:
         case_document_to_skill_derivation_contract,
         case_skill_forge_candidate_list_contract,
         case_dashboard_shell_contract,
+        case_dashboard_gateway_actions_contract,
         case_skill_promotion_gate,
         case_skill_rollback_gate,
         case_skill_maturity_audit_events,
@@ -8667,6 +8673,95 @@ def case_dashboard_shell_contract() -> BenchmarkCaseResult:
             "ui_root": "ui/cortex-dashboard",
             "missing_ui_terms": missing_ui_terms,
             "missing_doc_terms": smoke.missing_doc_terms,
+        },
+    )
+
+
+def case_dashboard_gateway_actions_contract() -> BenchmarkCaseResult:
+    shell = build_dashboard_shell(now=datetime(2026, 4, 30, 11, 0, tzinfo=UTC))
+    receipts = shell.gateway_action_receipts
+    allowed = [receipt for receipt in receipts if receipt.allowed_gateway_call]
+    blocked = [receipt for receipt in receipts if not receipt.allowed_gateway_call]
+
+    docs_path = REPO_ROOT / "docs" / "product" / "dashboard-gateway-actions.md"
+    shell_docs_path = REPO_ROOT / "docs" / "product" / "cortex-dashboard-shell.md"
+    plan_path = REPO_ROOT / "docs" / "ops" / "benchmark-plan.md"
+    registry_path = REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    task_board_path = REPO_ROOT / "docs" / "ops" / "task-board.md"
+    traceability_path = REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ui_paths = [
+        REPO_ROOT / "ui" / "cortex-dashboard" / "index.html",
+        REPO_ROOT / "ui" / "cortex-dashboard" / "styles.css",
+        REPO_ROOT / "ui" / "cortex-dashboard" / "app.js",
+        REPO_ROOT / "ui" / "cortex-dashboard" / "dashboard-data.js",
+    ]
+    docs_text = docs_path.read_text(encoding="utf-8") + "\n" + shell_docs_path.read_text(
+        encoding="utf-8"
+    )
+    plan_text = plan_path.read_text(encoding="utf-8")
+    registry_text = registry_path.read_text(encoding="utf-8")
+    task_text = task_board_path.read_text(encoding="utf-8")
+    traceability_text = traceability_path.read_text(encoding="utf-8")
+    ui_text = "\n".join(path.read_text(encoding="utf-8") for path in ui_paths if path.exists())
+    required_doc_terms = [
+        DASHBOARD_GATEWAY_ACTIONS_ID,
+        DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
+        "DashboardGatewayActionReceipt",
+        "memory.explain",
+        "skill.review_candidate",
+        "allowed_gateway_call",
+        "No mutation executed",
+    ]
+    missing_doc_terms = _missing_terms(docs_text + "\n" + ui_text, required_doc_terms)
+    serialized = "\n".join(receipt.model_dump_json() for receipt in receipts)
+    raw_or_secret_retained = any(
+        marker in serialized + ui_text
+        for marker in ["CORTEX_FAKE_TOKEN", "OPENAI_API_KEY=", "raw://", "encrypted_blob://"]
+    )
+    passed = (
+        receipts
+        and allowed
+        and blocked
+        and {receipt.gateway_tool for receipt in allowed}
+        == {"memory.explain", "skill.review_candidate"}
+        and all(receipt.read_only for receipt in allowed)
+        and all(not receipt.mutation for receipt in allowed)
+        and all(not receipt.data_egress for receipt in allowed)
+        and any("mutation_blocked" in receipt.blocked_reasons for receipt in blocked)
+        and any("data_egress_blocked" in receipt.blocked_reasons for receipt in blocked)
+        and any(
+            "tool_not_enabled_for_read_only_dashboard_slice" in receipt.blocked_reasons
+            for receipt in blocked
+        )
+        and not raw_or_secret_retained
+        and not missing_doc_terms
+        and DASHBOARD_GATEWAY_ACTIONS_ID in plan_text
+        and DASHBOARD_GATEWAY_ACTIONS_ID in registry_text
+        and DASHBOARD_GATEWAY_ACTIONS_ID in task_text
+        and DASHBOARD_GATEWAY_ACTIONS_ID in traceability_text
+        and DASHBOARD_GATEWAY_ACTIONS_POLICY_REF in shell.policy_refs
+    )
+    return BenchmarkCaseResult(
+        case_id="DASHBOARD-GATEWAY-ACTIONS-001/read_only_receipts",
+        suite=DASHBOARD_GATEWAY_ACTIONS_ID,
+        passed=passed,
+        summary=(
+            "Dashboard action controls resolve to local gateway receipts that allow "
+            "only read-only explain/review calls and block mutation, export, draft "
+            "execution, and external-effect previews."
+        ),
+        metrics={
+            "receipt_count": len(receipts),
+            "allowed_read_only_count": len(allowed),
+            "blocked_count": len(blocked),
+            "missing_doc_terms": len(missing_doc_terms),
+            "raw_or_secret_retained": int(raw_or_secret_retained),
+        },
+        evidence={
+            "policy_ref": DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
+            "allowed_tools": sorted({receipt.gateway_tool for receipt in allowed}),
+            "blocked_tools": sorted({receipt.gateway_tool for receipt in blocked}),
+            "missing_doc_terms": missing_doc_terms,
         },
     )
 

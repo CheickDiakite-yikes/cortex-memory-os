@@ -62,6 +62,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `PALACE-EXPORT-UI-001` | Memory Palace export flow is explicit, scoped, confirmation-gated, and audit-backed. | Export can run without visible scope, confirmation, redaction, or audit receipt. |
 | `MEMORY-PALACE-DASHBOARD-001` | Memory Palace dashboard cards expose safe previews, action plans, export previews, and audit counts. | Dashboard resurrects deleted content, leaks secrets, omits confirmation markers, or hides export omissions. |
 | `MEMORY-PALACE-SKILL-FORGE-UI-001` | Static dashboard shell renders Memory Palace and Skill Forge safe view models with local-only action previews. | UI embeds raw private data, action controls execute mutations, generated data leaks secrets/raw refs, or primary panels fail to render. |
+| `DASHBOARD-GATEWAY-ACTIONS-001` | Dashboard action controls resolve to local gateway receipts that allow only read-only explain/review calls. | Dashboard buttons mutate memory, export data, execute draft skills, skip receipt checks, or hide blocked reasons. |
 | `AUDIT-001` | Memory mutations persist human-visible audits. | Mutation lacks a redacted audit event. |
 | `EXPORT-001` | User memory export is scoped, redacted, and deletion-aware. | Deleted/revoked content appears in export output. |
 | `EXPORT-AUDIT-001` | Memory exports persist redacted audit receipts. | Export audit copies memory content or secret-like text. |

@@ -51,10 +51,12 @@ The static app in `ui/cortex-dashboard/` must render:
 - local filter controls for both lists;
 - icon-first action controls that update local UI state;
 - Recent Safe Receipts with redacted targets.
+- Gateway Action Receipts that distinguish read-only prepared calls from
+  blocked mutation, export, and draft-execution previews.
 
-All actions are declarative previews. They update local UI state and receipts
-only. They do not call MCP, mutate memory, execute skills, export data, or
-perform external effects.
+All actions are receipt-gated previews. Only read-only explain/review actions
+may become prepared gateway calls in this slice. They do not mutate memory,
+execute skills, export data, or perform external effects.
 
 ## Safety Gates
 
@@ -63,6 +65,7 @@ perform external effects.
 - UI files are present and reference `window.CORTEX_DASHBOARD_DATA`;
 - Memory Palace and Skill Forge cards render from safe view models;
 - action plans are visible but inert;
+- `DASHBOARD-GATEWAY-ACTIONS-001` receipts are present for exact gateway tools;
 - generated fixture data has no secret markers or raw refs;
 - dashboard docs, task board, benchmark plan, and benchmark registry name the
   slice;
