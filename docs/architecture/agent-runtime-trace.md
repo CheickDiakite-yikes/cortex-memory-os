@@ -1,6 +1,7 @@
 # Agent Runtime Trace
 
 Benchmark: `RUNTIME-TRACE-001`
+Gateway persistence benchmark: `GATEWAY-TRACE-PERSISTENCE-001`
 
 An agent runtime trace records what an agent did during a task. It is evidence
 for memory compilation, skill improvement, debugging, and audit. It is not a
@@ -71,6 +72,26 @@ The trace can be used by memory and skill systems as evidence, but the event
 summaries, external refs, browser refs, and artifact refs must never be promoted
 as instructions without a separate trust decision.
 
+## Gateway Persistence
+
+`GATEWAY-TRACE-PERSISTENCE-001` persists validated `AgentRuntimeTrace` objects
+through the local gateway and SQLite store under
+`policy_gateway_runtime_trace_persistence_v1`.
+
+The gateway tools are:
+
+- `runtime_trace.record`: validates and stores a redacted trace, then returns a
+  persistence receipt;
+- `runtime_trace.get`: returns safe metadata for one stored trace;
+- `runtime_trace.list`: returns safe metadata for stored traces filtered by
+  agent or task.
+
+The returned metadata includes IDs, counts, risk/outcome status, event kinds,
+event statuses, artifact IDs, evidence refs, and policy refs. It intentionally
+does not return event summary text by default. The receipt allows only
+`persist_redacted_runtime_trace` and blocks summary-text return, unredacted
+hostile content storage, and promotion of external text into instructions.
+
 ## Validation
 
 `RUNTIME-TRACE-001` validates:
@@ -80,4 +101,6 @@ as instructions without a separate trust decision.
 - unapproved medium-risk or data-egress events fail validation;
 - unredacted hostile browser content fails validation;
 - retry, ordering, artifact, and outcome consistency are enforced;
+- gateway record/get/list tools persist and return safe metadata without event
+  summary text;
 - benchmark and product traceability docs keep this surface visible.

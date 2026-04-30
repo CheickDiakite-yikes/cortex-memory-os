@@ -17,6 +17,10 @@ from cortex_memory_os.contracts import (
 )
 
 RUNTIME_TRACE_POLICY_REF = "policy_agent_runtime_trace_v1"
+GATEWAY_RUNTIME_TRACE_PERSISTENCE_ID = "GATEWAY-TRACE-PERSISTENCE-001"
+GATEWAY_RUNTIME_TRACE_PERSISTENCE_POLICY_REF = (
+    "policy_gateway_runtime_trace_persistence_v1"
+)
 
 
 class RuntimeEventKind(str, Enum):
@@ -262,6 +266,64 @@ def summarize_runtime_trace(trace: AgentRuntimeTrace) -> RuntimeTraceSummary:
         outcome_status=trace.outcome_status,
         content_redacted=all(event.content_redacted for event in trace.events),
     )
+
+
+def runtime_trace_persistence_receipt(
+    trace: AgentRuntimeTrace,
+    *,
+    stored_at: datetime,
+) -> dict[str, object]:
+    summary = summarize_runtime_trace(trace)
+    return {
+        "receipt_id": f"runtime_trace_persisted_{trace.trace_id}",
+        "trace_id": trace.trace_id,
+        "task_id": trace.task_id,
+        "agent_id": trace.agent_id,
+        "outcome_status": trace.outcome_status.value,
+        "stored_at": stored_at.isoformat(),
+        "content_redacted": summary.content_redacted,
+        "event_count": summary.event_count,
+        "tool_call_count": summary.tool_call_count,
+        "shell_action_count": summary.shell_action_count,
+        "browser_action_count": summary.browser_action_count,
+        "artifact_count": summary.artifact_count,
+        "approval_count": summary.approval_count,
+        "retry_count": summary.retry_count,
+        "external_effect_count": summary.external_effect_count,
+        "highest_risk": summary.highest_risk.value,
+        "evidence_refs": trace_evidence_refs(trace),
+        "allowed_effects": ["persist_redacted_runtime_trace"],
+        "blocked_effects": [
+            "promote_external_text_to_instruction",
+            "return_event_summary_text_by_default",
+            "store_unredacted_hostile_content",
+        ],
+        "policy_refs": [
+            RUNTIME_TRACE_POLICY_REF,
+            GATEWAY_RUNTIME_TRACE_PERSISTENCE_POLICY_REF,
+        ],
+    }
+
+
+def runtime_trace_metadata(trace: AgentRuntimeTrace) -> dict[str, object]:
+    summary = summarize_runtime_trace(trace)
+    return {
+        "trace_id": trace.trace_id,
+        "task_id": trace.task_id,
+        "agent_id": trace.agent_id,
+        "started_at": trace.started_at.isoformat(),
+        "ended_at": trace.ended_at.isoformat() if trace.ended_at else None,
+        "outcome_status": trace.outcome_status.value,
+        "outcome_ref": trace.outcome_ref,
+        "content_redacted": summary.content_redacted,
+        "event_count": summary.event_count,
+        "artifact_count": summary.artifact_count,
+        "highest_risk": summary.highest_risk.value,
+        "policy_refs": [
+            RUNTIME_TRACE_POLICY_REF,
+            GATEWAY_RUNTIME_TRACE_PERSISTENCE_POLICY_REF,
+        ],
+    }
 
 
 def trace_evidence_refs(trace: AgentRuntimeTrace) -> list[str]:

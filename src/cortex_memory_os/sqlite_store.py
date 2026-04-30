@@ -22,6 +22,10 @@ from cortex_memory_os.retrieval import (
     rank_memories as rank_memory_records,
     tokenize,
 )
+from cortex_memory_os.runtime_trace import (
+    AgentRuntimeTrace,
+    summarize_runtime_trace,
+)
 
 
 class SQLiteMemoryGraphStore:
@@ -320,6 +324,80 @@ class SQLiteMemoryGraphStore:
             ).fetchall()
         return [AuditEvent.model_validate_json(row["payload_json"]) for row in rows]
 
+    def add_runtime_trace(self, trace: AgentRuntimeTrace) -> None:
+        summary = summarize_runtime_trace(trace)
+        now = datetime.now(UTC).isoformat()
+        with self._connect() as con:
+            con.execute(
+                """
+                INSERT INTO runtime_traces (
+                    trace_id, task_id, agent_id, outcome_status, highest_risk,
+                    event_count, content_redacted, payload_json, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(trace_id) DO UPDATE SET
+                    task_id = excluded.task_id,
+                    agent_id = excluded.agent_id,
+                    outcome_status = excluded.outcome_status,
+                    highest_risk = excluded.highest_risk,
+                    event_count = excluded.event_count,
+                    content_redacted = excluded.content_redacted,
+                    payload_json = excluded.payload_json,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    trace.trace_id,
+                    trace.task_id,
+                    trace.agent_id,
+                    trace.outcome_status.value,
+                    summary.highest_risk.value,
+                    summary.event_count,
+                    int(summary.content_redacted),
+                    trace.model_dump_json(),
+                    now,
+                ),
+            )
+
+    def get_runtime_trace(self, trace_id: str) -> AgentRuntimeTrace | None:
+        with self._connect() as con:
+            row = con.execute(
+                "SELECT payload_json FROM runtime_traces WHERE trace_id = ?",
+                (trace_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return AgentRuntimeTrace.model_validate_json(row["payload_json"])
+
+    def list_runtime_traces(
+        self,
+        *,
+        agent_id: str | None = None,
+        task_id: str | None = None,
+        limit: int = 50,
+    ) -> list[AgentRuntimeTrace]:
+        clauses: list[str] = []
+        params: list[str | int] = []
+        if agent_id is not None:
+            clauses.append("agent_id = ?")
+            params.append(agent_id)
+        if task_id is not None:
+            clauses.append("task_id = ?")
+            params.append(task_id)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        params.append(limit)
+        with self._connect() as con:
+            rows = con.execute(
+                f"""
+                SELECT payload_json
+                FROM runtime_traces
+                {where}
+                ORDER BY updated_at DESC, trace_id ASC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+        return [AgentRuntimeTrace.model_validate_json(row["payload_json"]) for row in rows]
+
     def _init_db(self) -> None:
         with self._connect() as con:
             con.execute(
@@ -401,6 +479,27 @@ class SQLiteMemoryGraphStore:
                 """
                 CREATE INDEX IF NOT EXISTS idx_audit_events_target
                 ON audit_events(target_ref, timestamp)
+                """
+            )
+            con.execute(
+                """
+                CREATE TABLE IF NOT EXISTS runtime_traces (
+                    trace_id TEXT PRIMARY KEY,
+                    task_id TEXT NOT NULL,
+                    agent_id TEXT NOT NULL,
+                    outcome_status TEXT NOT NULL,
+                    highest_risk TEXT NOT NULL,
+                    event_count INTEGER NOT NULL,
+                    content_redacted INTEGER NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
+            con.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_runtime_traces_agent_task
+                ON runtime_traces(agent_id, task_id, updated_at)
                 """
             )
 

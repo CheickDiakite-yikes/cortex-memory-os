@@ -31,6 +31,9 @@ def test_lists_memory_tools():
     assert {tool["name"] for tool in tools} == {
         "memory.search",
         "memory.get_context_pack",
+        "runtime_trace.record",
+        "runtime_trace.get",
+        "runtime_trace.list",
         "skill.execute_draft",
         "self_lesson.propose",
         "self_lesson.list",
@@ -105,6 +108,67 @@ def test_context_pack_is_task_scoped_and_warned():
     assert "template_research_synthesis_v1" in pack["context_policy_refs"]
     assert "skill_research_synthesis_v1" in pack["relevant_skills"]
     assert pack["evidence_refs"]
+
+
+def test_runtime_trace_gateway_records_and_returns_safe_metadata(tmp_path):
+    store = SQLiteMemoryGraphStore(tmp_path / "cortex.sqlite3")
+    server = CortexMCPServer(store=store)
+    trace_payload = load_json("tests/fixtures/agent_runtime_trace.json")
+
+    record_response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 200,
+            "method": "tools/call",
+            "params": {
+                "name": "runtime_trace.record",
+                "arguments": {"trace": trace_payload},
+            },
+        }
+    )
+
+    receipt = record_response["result"]["receipt"]
+    assert receipt["trace_id"] == "trace_cortex_debug_001"
+    assert receipt["event_count"] == 11
+    assert receipt["content_redacted"] is True
+    assert receipt["allowed_effects"] == ["persist_redacted_runtime_trace"]
+    assert "return_event_summary_text_by_default" in receipt["blocked_effects"]
+    assert "policy_gateway_runtime_trace_persistence_v1" in receipt["policy_refs"]
+    assert store.get_runtime_trace("trace_cortex_debug_001") is not None
+
+    get_response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 201,
+            "method": "tools/call",
+            "params": {
+                "name": "runtime_trace.get",
+                "arguments": {"trace_id": "trace_cortex_debug_001"},
+            },
+        }
+    )
+    returned = get_response["result"]["trace"]
+    serialized = json.dumps(returned)
+    assert returned["trace_id"] == "trace_cortex_debug_001"
+    assert returned["summary_text_redacted"] is True
+    assert returned["event_count"] == 11
+    assert "evt_external_blocked" in returned["event_ids"]
+    assert "Blocked untrusted external browser content" not in serialized
+    assert "Agent started scoped debugging task" not in serialized
+
+    list_response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 202,
+            "method": "tools/call",
+            "params": {
+                "name": "runtime_trace.list",
+                "arguments": {"agent_id": "codex", "limit": 5},
+            },
+        }
+    )
+    assert list_response["result"]["count"] == 1
+    assert list_response["result"]["traces"][0]["trace_id"] == "trace_cortex_debug_001"
 
 
 def test_context_pack_template_changes_debugging_next_steps():

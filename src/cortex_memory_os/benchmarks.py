@@ -166,12 +166,16 @@ from cortex_memory_os.memory_store import InMemoryMemoryStore
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
 from cortex_memory_os.retrieval import RetrievalScope, rank_memories, score_memory
 from cortex_memory_os.runtime_trace import (
+    GATEWAY_RUNTIME_TRACE_PERSISTENCE_ID,
+    GATEWAY_RUNTIME_TRACE_PERSISTENCE_POLICY_REF,
     RUNTIME_TRACE_POLICY_REF,
     AgentRuntimeEvent,
     AgentRuntimeTrace,
     RuntimeEffect,
     RuntimeEventKind,
     RuntimeEventStatus,
+    runtime_trace_metadata,
+    runtime_trace_persistence_receipt,
     summarize_runtime_trace,
     trace_evidence_refs,
 )
@@ -388,6 +392,7 @@ def run_all() -> BenchmarkRunResult:
         case_codex_plugin_real_enable_contract,
         case_swarm_governance_contract,
         case_agent_runtime_trace_contract,
+        case_gateway_runtime_trace_persistence_contract,
         case_perception_event_envelope_contract,
         case_perception_firewall_handoff_contract,
         case_evidence_eligibility_handoff_contract,
@@ -1496,6 +1501,112 @@ def case_agent_runtime_trace_contract() -> BenchmarkCaseResult:
             "policy_ref": RUNTIME_TRACE_POLICY_REF,
             "highest_risk": summary.highest_risk.value,
             "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_gateway_runtime_trace_persistence_contract() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    trace = AgentRuntimeTrace.model_validate(
+        load_json(TEST_FIXTURES / "agent_runtime_trace.json")
+    )
+    stored_at = datetime(2026, 4, 30, 13, 0, tzinfo=UTC)
+    with TemporaryDirectory() as temp_dir:
+        store = SQLiteMemoryGraphStore(Path(temp_dir) / "cortex.sqlite3")
+        server = CortexMCPServer(store=store)
+        record_result = server.call_tool(
+            "runtime_trace.record",
+            {"trace": trace.model_dump(mode="json")},
+        )
+        get_result = server.call_tool(
+            "runtime_trace.get",
+            {"trace_id": trace.trace_id},
+        )
+        list_result = server.call_tool(
+            "runtime_trace.list",
+            {"agent_id": trace.agent_id, "limit": 5},
+        )
+        persisted = store.get_runtime_trace(trace.trace_id)
+
+    receipt = runtime_trace_persistence_receipt(trace, stored_at=stored_at)
+    metadata = runtime_trace_metadata(trace)
+    safe_payload = json.dumps(
+        {
+            "record": record_result,
+            "get": get_result,
+            "list": list_result,
+            "metadata": metadata,
+        },
+        sort_keys=True,
+    )
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "agent-runtime-trace.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (
+        REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    ).read_text(encoding="utf-8")
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    report_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        GATEWAY_RUNTIME_TRACE_PERSISTENCE_ID,
+        GATEWAY_RUNTIME_TRACE_PERSISTENCE_POLICY_REF,
+        "runtime_trace.record",
+        "runtime_trace.get",
+        "runtime_trace.list",
+        "persist_redacted_runtime_trace",
+        "does not return event summary text by default",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        persisted == trace
+        and record_result["receipt"]["trace_id"] == trace.trace_id
+        and record_result["receipt"]["content_redacted"] is True
+        and record_result["receipt"]["allowed_effects"] == ["persist_redacted_runtime_trace"]
+        and "return_event_summary_text_by_default"
+        in record_result["receipt"]["blocked_effects"]
+        and get_result["trace"]["summary_text_redacted"] is True
+        and list_result["count"] == 1
+        and list_result["traces"][0]["trace_id"] == trace.trace_id
+        and "Blocked untrusted external browser content" not in safe_payload
+        and "Agent started scoped debugging task" not in safe_payload
+        and receipt["policy_refs"]
+        == [RUNTIME_TRACE_POLICY_REF, GATEWAY_RUNTIME_TRACE_PERSISTENCE_POLICY_REF]
+        and metadata["event_count"] == 11
+        and not missing_doc_terms
+        and GATEWAY_RUNTIME_TRACE_PERSISTENCE_ID in plan_text
+        and GATEWAY_RUNTIME_TRACE_PERSISTENCE_ID in registry_text
+        and GATEWAY_RUNTIME_TRACE_PERSISTENCE_ID in task_text
+        and GATEWAY_RUNTIME_TRACE_PERSISTENCE_ID in report_text
+    )
+    return BenchmarkCaseResult(
+        case_id="GATEWAY-TRACE-PERSISTENCE-001/gateway_record_get_list",
+        suite=GATEWAY_RUNTIME_TRACE_PERSISTENCE_ID,
+        passed=passed,
+        summary=(
+            "Gateway runtime trace tools persist validated traces and return "
+            "safe metadata receipts without event summary text."
+        ),
+        metrics={
+            "event_count": metadata["event_count"],
+            "returned_trace_count": list_result["count"],
+            "evidence_ref_count": len(get_result["trace"]["evidence_refs"]),
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "trace_id": trace.trace_id,
+            "policy_ref": GATEWAY_RUNTIME_TRACE_PERSISTENCE_POLICY_REF,
+            "missing_doc_terms": missing_doc_terms,
+            "summary_text_returned": int(
+                "Blocked untrusted external browser content" in safe_payload
+            ),
         },
     )
 

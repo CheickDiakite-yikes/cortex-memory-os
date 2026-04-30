@@ -9,6 +9,7 @@ from cortex_memory_os.contracts import (
 )
 from cortex_memory_os.fixtures import load_json
 from cortex_memory_os.memory_compiler import compile_scene_memory
+from cortex_memory_os.runtime_trace import AgentRuntimeTrace
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
 from cortex_memory_os.temporal_graph import compile_temporal_edge
 
@@ -124,3 +125,23 @@ def test_sqlite_self_lessons_round_trip_and_filter_active(tmp_path):
         candidate.lesson_id,
         revoked.lesson_id,
     }
+
+
+def test_sqlite_runtime_traces_round_trip_and_filter_by_agent_task(tmp_path):
+    db_path = tmp_path / "cortex.sqlite3"
+    store = SQLiteMemoryGraphStore(db_path)
+    trace = AgentRuntimeTrace.model_validate(
+        load_json("tests/fixtures/agent_runtime_trace.json")
+    )
+
+    store.add_runtime_trace(trace)
+    reopened = SQLiteMemoryGraphStore(db_path)
+
+    assert reopened.get_runtime_trace(trace.trace_id) == trace
+    assert [item.trace_id for item in reopened.list_runtime_traces(agent_id="codex")] == [
+        trace.trace_id
+    ]
+    assert [item.trace_id for item in reopened.list_runtime_traces(task_id=trace.task_id)] == [
+        trace.trace_id
+    ]
+    assert reopened.list_runtime_traces(agent_id="claude") == []

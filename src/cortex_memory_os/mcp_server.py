@@ -47,6 +47,13 @@ from cortex_memory_os.memory_palace_flows import (
     self_lesson_review_action_plan,
 )
 from cortex_memory_os.retrieval import RankedMemory, RetrievalScope, self_lesson_scope_allowed
+from cortex_memory_os.runtime_trace import (
+    AgentRuntimeTrace,
+    GATEWAY_RUNTIME_TRACE_PERSISTENCE_POLICY_REF,
+    runtime_trace_metadata,
+    runtime_trace_persistence_receipt,
+    trace_evidence_refs,
+)
 from cortex_memory_os.self_lesson_audit import (
     SELF_LESSON_AUDIT_POLICY_REF,
     record_self_lesson_decision_audit,
@@ -157,6 +164,39 @@ class CortexMCPServer:
                         },
                     },
                     "required": ["goal"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "runtime_trace.record",
+                "description": "Persist a validated, redacted agent runtime trace and return a safe receipt.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {"trace": {"type": "object"}},
+                    "required": ["trace"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "runtime_trace.get",
+                "description": "Return safe metadata for one stored agent runtime trace.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {"trace_id": {"type": "string"}},
+                    "required": ["trace_id"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "runtime_trace.list",
+                "description": "List safe metadata for stored agent runtime traces.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "agent_id": {"type": "string"},
+                        "task_id": {"type": "string"},
+                        "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+                    },
                     "additionalProperties": False,
                 },
             },
@@ -492,6 +532,52 @@ class CortexMCPServer:
             return {"memories": [serialize_memory(memory) for memory in self.memory_search(arguments)]}
         if name == "memory.get_context_pack":
             return self.get_context_pack(arguments).model_dump(mode="json")
+        if name == "runtime_trace.record":
+            store = self._require_runtime_trace_store()
+            try:
+                trace = AgentRuntimeTrace.model_validate(_require_object(arguments, "trace"))
+            except ValueError as error:
+                raise JsonRpcError(-32602, str(error)) from error
+            store.add_runtime_trace(trace)
+            return {
+                "receipt": runtime_trace_persistence_receipt(
+                    trace,
+                    stored_at=datetime.now(UTC),
+                )
+            }
+        if name == "runtime_trace.get":
+            store = self._require_runtime_trace_store()
+            trace_id = _require_string(arguments, "trace_id")
+            trace = store.get_runtime_trace(trace_id)
+            if trace is None:
+                raise JsonRpcError(-32602, f"unknown trace_id: {trace_id}")
+            return {
+                "trace": serialize_runtime_trace_metadata(trace),
+                "content_redacted": True,
+            }
+        if name == "runtime_trace.list":
+            store = self._require_runtime_trace_store()
+            traces = store.list_runtime_traces(
+                agent_id=_require_string(arguments, "agent_id")
+                if "agent_id" in arguments
+                else None,
+                task_id=_require_string(arguments, "task_id")
+                if "task_id" in arguments
+                else None,
+                limit=_optional_int_range(
+                    arguments,
+                    "limit",
+                    default=50,
+                    minimum=1,
+                    maximum=100,
+                ),
+            )
+            return {
+                "traces": [serialize_runtime_trace_metadata(trace) for trace in traces],
+                "count": len(traces),
+                "content_redacted": True,
+                "policy_refs": [GATEWAY_RUNTIME_TRACE_PERSISTENCE_POLICY_REF],
+            }
         if name == "skill.execute_draft":
             skill_id = _require_string(arguments, "skill_id")
             skill = self.skills.get(skill_id)
@@ -1162,6 +1248,12 @@ class CortexMCPServer:
             raise JsonRpcError(-32601, "self-lesson persistence tools are not configured")
         return self.store
 
+    def _require_runtime_trace_store(self) -> Any:
+        required = ("add_runtime_trace", "get_runtime_trace", "list_runtime_traces")
+        if not all(hasattr(self.store, name) for name in required):
+            raise JsonRpcError(-32601, "runtime trace persistence tools are not configured")
+        return self.store
+
 
 def default_server() -> CortexMCPServer:
     fixture_path = "tests/fixtures/memory_preference.json"
@@ -1191,6 +1283,17 @@ def serialize_memory(memory: MemoryRecord) -> dict[str, Any]:
         "sensitivity": memory.sensitivity.value,
         "scope": memory.scope.value,
     }
+
+
+def serialize_runtime_trace_metadata(trace: AgentRuntimeTrace) -> dict[str, Any]:
+    metadata = runtime_trace_metadata(trace)
+    metadata["event_kinds"] = [event.kind.value for event in trace.events]
+    metadata["event_statuses"] = [event.status.value for event in trace.events]
+    metadata["event_ids"] = [event.event_id for event in trace.events]
+    metadata["artifact_ids"] = [artifact.artifact_id for artifact in trace.artifacts]
+    metadata["evidence_refs"] = trace_evidence_refs(trace)
+    metadata["summary_text_redacted"] = True
+    return metadata
 
 
 def serialize_explanation(explanation: MemoryExplanation) -> dict[str, Any]:
@@ -2144,6 +2247,13 @@ def _optional_dict(payload: dict[str, Any], key: str) -> dict[str, Any]:
     value = payload.get(key)
     if not isinstance(value, dict):
         raise JsonRpcError(-32602, f"invalid object parameter: {key}")
+    return value
+
+
+def _require_object(payload: dict[str, Any], key: str) -> dict[str, Any]:
+    value = payload.get(key)
+    if not isinstance(value, dict) or not value:
+        raise JsonRpcError(-32602, f"missing required object parameter: {key}")
     return value
 
 
