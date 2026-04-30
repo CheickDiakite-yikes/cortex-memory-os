@@ -19,6 +19,7 @@ cortex-adapter-endpoint = "cortex_memory_os.adapter_endpoint:main"
 cortex-manual-adapter-proof = "cortex_memory_os.manual_adapter_proof:main"
 cortex-dashboard-shell = "cortex_memory_os.dashboard_shell:main"
 cortex-plugin-enable-plan = "cortex_memory_os.plugin_enable_plan:main"
+cortex-native-permission-smoke = "cortex_memory_os.native_permission_smoke:main"
 
 [build-system]
 requires = ["setuptools>=69"]

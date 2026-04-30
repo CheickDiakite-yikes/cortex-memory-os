@@ -77,6 +77,11 @@ from cortex_memory_os.manual_adapter_proof import (
     MANUAL_ADAPTER_PROOF_POLICY_REF,
     run_manual_adapter_proof,
 )
+from cortex_memory_os.native_permission_smoke import (
+    NATIVE_CAPTURE_PERMISSION_SMOKE_ID,
+    NATIVE_CAPTURE_PERMISSION_SMOKE_POLICY_REF,
+    build_fixture_permission_smoke_result,
+)
 from cortex_memory_os.dashboard_shell import (
     DASHBOARD_SHELL_ID,
     DASHBOARD_SHELL_POLICY_REF,
@@ -347,6 +352,7 @@ def run_all() -> BenchmarkRunResult:
         case_shadow_pointer_controls_contract,
         case_shadow_pointer_pointing_proposal_contract,
         case_shadow_pointer_native_overlay_contract,
+        case_native_capture_permission_smoke_contract,
         case_shadow_pointer_capture_wiring_contract,
         case_scene_segmentation,
         case_memory_compiler_candidate,
@@ -7404,6 +7410,117 @@ def case_shadow_pointer_native_overlay_contract() -> BenchmarkCaseResult:
             "docs_path": str(docs_path.relative_to(REPO_ROOT)),
             "missing_paths": missing_paths,
             "missing_terms": missing_terms,
+        },
+    )
+
+
+def case_native_capture_permission_smoke_contract() -> BenchmarkCaseResult:
+    package_root = REPO_ROOT / "native" / "macos-shadow-pointer"
+    package_path = package_root / "Package.swift"
+    source_path = (
+        package_root
+        / "Sources"
+        / "CortexShadowPointerNative"
+        / "ShadowPointerNative.swift"
+    )
+    smoke_path = (
+        package_root
+        / "Sources"
+        / "CortexPermissionSmoke"
+        / "main.swift"
+    )
+    test_path = (
+        package_root
+        / "Tests"
+        / "CortexShadowPointerNativeTests"
+        / "ShadowPointerNativeTests.swift"
+    )
+    readme_path = package_root / "README.md"
+    docs_path = REPO_ROOT / "docs" / "architecture" / "native-capture-permission-smoke.md"
+    plan_path = REPO_ROOT / "docs" / "ops" / "benchmark-plan.md"
+    registry_path = REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    task_board_path = REPO_ROOT / "docs" / "ops" / "task-board.md"
+    traceability_path = REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+
+    required_paths = [
+        package_path,
+        source_path,
+        smoke_path,
+        test_path,
+        readme_path,
+        docs_path,
+    ]
+    missing_paths = [
+        str(path.relative_to(REPO_ROOT)) for path in required_paths if not path.exists()
+    ]
+    combined_text = "\n".join(
+        path.read_text(encoding="utf-8") for path in required_paths if path.exists()
+    )
+    plan_text = plan_path.read_text(encoding="utf-8")
+    registry_text = registry_path.read_text(encoding="utf-8")
+    task_text = task_board_path.read_text(encoding="utf-8")
+    traceability_text = traceability_path.read_text(encoding="utf-8")
+    fixture = build_fixture_permission_smoke_result()
+    required_terms = [
+        NATIVE_CAPTURE_PERMISSION_SMOKE_ID,
+        NATIVE_CAPTURE_PERMISSION_SMOKE_POLICY_REF,
+        "cortex-permission-smoke",
+        "CGPreflightScreenCaptureAccess",
+        "AXIsProcessTrustedWithOptions",
+        "kAXTrustedCheckOptionPrompt",
+        "promptRequested",
+        "captureStarted",
+        "accessibilityObserverStarted",
+        "memoryWriteAllowed",
+        "read_permission_status",
+        "request_screen_recording_permission",
+        "request_accessibility_permission",
+        "start_screen_capture",
+        "start_accessibility_observer",
+        "swift run --package-path native/macos-shadow-pointer cortex-permission-smoke",
+        "uv run cortex-native-permission-smoke --json",
+    ]
+    missing_terms = _missing_terms(combined_text, required_terms)
+    passed = (
+        not missing_paths
+        and not missing_terms
+        and fixture.passed
+        and not fixture.prompt_requested
+        and not fixture.capture_started
+        and not fixture.accessibility_observer_started
+        and not fixture.memory_write_allowed
+        and fixture.evidence_refs == []
+        and fixture.allowed_effects == ["read_permission_status"]
+        and NATIVE_CAPTURE_PERMISSION_SMOKE_ID in plan_text
+        and NATIVE_CAPTURE_PERMISSION_SMOKE_ID in registry_text
+        and NATIVE_CAPTURE_PERMISSION_SMOKE_ID in task_text
+        and NATIVE_CAPTURE_PERMISSION_SMOKE_ID in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="NATIVE-CAPTURE-PERMISSION-SMOKE-001/read_only_permission_status",
+        suite=NATIVE_CAPTURE_PERMISSION_SMOKE_ID,
+        passed=passed,
+        summary=(
+            "Native macOS permission smoke reads Screen Recording and Accessibility "
+            "status without prompting, starting capture, starting observers, "
+            "writing memory, or emitting evidence refs."
+        ),
+        metrics={
+            "missing_paths": len(missing_paths),
+            "missing_terms": len(missing_terms),
+            "allowed_effect_count": len(fixture.allowed_effects),
+            "blocked_effect_count": len(fixture.blocked_effects),
+            "evidence_ref_count": len(fixture.evidence_refs),
+        },
+        evidence={
+            "policy_ref": NATIVE_CAPTURE_PERMISSION_SMOKE_POLICY_REF,
+            "package_path": str(package_path.relative_to(REPO_ROOT)),
+            "source_path": str(source_path.relative_to(REPO_ROOT)),
+            "docs_path": str(docs_path.relative_to(REPO_ROOT)),
+            "missing_paths": missing_paths,
+            "missing_terms": missing_terms,
+            "allowed_effects": fixture.allowed_effects,
+            "blocked_effects": fixture.blocked_effects,
         },
     )
 

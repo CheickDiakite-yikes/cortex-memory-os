@@ -54,3 +54,16 @@ swift run --package-path native/macos-shadow-pointer cortex-shadow-pointer-smoke
 
 `SHADOW-POINTER-NATIVE-001` benchmarks the package source and docs, while the
 Swift tests exercise the native control bridge and overlay window specification.
+
+`NATIVE-CAPTURE-PERMISSION-SMOKE-001` reuses the same SwiftPM package for a
+separate read-only permission-status executable:
+
+```bash
+swift run --package-path native/macos-shadow-pointer cortex-permission-smoke
+uv run cortex-native-permission-smoke --json
+```
+
+That smoke checks `CGPreflightScreenCaptureAccess` and
+`AXIsProcessTrustedWithOptions` with `kAXTrustedCheckOptionPrompt` set to false.
+It reports permission status without prompting, starting capture, starting
+Accessibility observers, writing memory, or emitting evidence refs.

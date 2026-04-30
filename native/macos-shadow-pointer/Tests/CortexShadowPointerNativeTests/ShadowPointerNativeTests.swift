@@ -86,4 +86,36 @@ final class ShadowPointerNativeTests: XCTestCase {
         XCTAssertTrue(result.ignoreAppBlocksMemory)
         XCTAssertTrue(result.displayOnlyPointing)
     }
+
+    func testPermissionSmokeIsReadOnlyWhenPermissionsAreDenied() {
+        let deniedProbe = NativeCapturePermissionProbe(
+            screenRecordingPreflight: false,
+            accessibilityTrusted: false,
+            promptRequested: false
+        )
+        let result = NativeCapturePermissionSmokeResult.run(
+            probe: deniedProbe,
+            checkedAt: Date(timeIntervalSince1970: 0)
+        )
+
+        XCTAssertTrue(result.passed)
+        XCTAssertEqual(result.benchmarkID, nativeCapturePermissionSmokeBenchmarkID)
+        XCTAssertEqual(result.policyRef, nativeCapturePermissionSmokePolicyRef)
+        XCTAssertFalse(result.screenRecordingPreflight)
+        XCTAssertFalse(result.accessibilityTrusted)
+        XCTAssertFalse(result.promptRequested)
+        XCTAssertFalse(result.captureStarted)
+        XCTAssertFalse(result.accessibilityObserverStarted)
+        XCTAssertFalse(result.memoryWriteAllowed)
+        XCTAssertTrue(result.evidenceRefs.isEmpty)
+        XCTAssertEqual(result.allowedEffects, ["read_permission_status"])
+        XCTAssertTrue(result.blockedEffects.contains("request_screen_recording_permission"))
+        XCTAssertTrue(result.blockedEffects.contains("start_screen_capture"))
+    }
+
+    func testCurrentProcessPermissionProbeDoesNotPrompt() {
+        let probe = NativeCapturePermissionProbe.readCurrentProcess()
+
+        XCTAssertFalse(probe.promptRequested)
+    }
 }

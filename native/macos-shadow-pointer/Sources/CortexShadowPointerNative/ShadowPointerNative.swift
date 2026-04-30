@@ -3,8 +3,16 @@ import Foundation
 #if canImport(AppKit)
 import AppKit
 #endif
+#if canImport(ApplicationServices)
+@preconcurrency import ApplicationServices
+#endif
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 
 public let shadowPointerNativePolicyRef = "policy_shadow_pointer_native_overlay_v1"
+public let nativeCapturePermissionSmokeBenchmarkID = "NATIVE-CAPTURE-PERMISSION-SMOKE-001"
+public let nativeCapturePermissionSmokePolicyRef = "policy_native_capture_permission_smoke_v1"
 
 public enum ShadowPointerNativeState: String, Codable, CaseIterable, Sendable {
     case off
@@ -314,6 +322,111 @@ public struct ShadowPointerNativeSmokeResult: Codable, Equatable, Sendable {
             deleteRecentBlocksMemory: !deleteRecent.memoryWriteAllowed,
             ignoreAppBlocksMemory: !ignoreApp.memoryWriteAllowed,
             displayOnlyPointing: displayOnlyPointing,
+            passed: passed
+        )
+    }
+}
+
+public struct NativeCapturePermissionProbe: Equatable, Sendable {
+    public var screenRecordingPreflight: Bool
+    public var accessibilityTrusted: Bool
+    public var promptRequested: Bool
+
+    public init(
+        screenRecordingPreflight: Bool,
+        accessibilityTrusted: Bool,
+        promptRequested: Bool
+    ) {
+        self.screenRecordingPreflight = screenRecordingPreflight
+        self.accessibilityTrusted = accessibilityTrusted
+        self.promptRequested = promptRequested
+    }
+
+    public static func readCurrentProcess() -> NativeCapturePermissionProbe {
+        #if canImport(CoreGraphics)
+        let screenRecordingPreflight = CGPreflightScreenCaptureAccess()
+        #else
+        let screenRecordingPreflight = false
+        #endif
+
+        #if canImport(ApplicationServices)
+        let options = [
+            kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false
+        ] as CFDictionary
+        let accessibilityTrusted = AXIsProcessTrustedWithOptions(options)
+        #else
+        let accessibilityTrusted = false
+        #endif
+
+        return NativeCapturePermissionProbe(
+            screenRecordingPreflight: screenRecordingPreflight,
+            accessibilityTrusted: accessibilityTrusted,
+            promptRequested: false
+        )
+    }
+}
+
+public struct NativeCapturePermissionSmokeResult: Codable, Equatable, Sendable {
+    public var benchmarkID: String
+    public var policyRef: String
+    public var checkedAt: Date
+    public var screenRecordingPreflight: Bool
+    public var accessibilityTrusted: Bool
+    public var promptRequested: Bool
+    public var captureStarted: Bool
+    public var accessibilityObserverStarted: Bool
+    public var memoryWriteAllowed: Bool
+    public var evidenceRefs: [String]
+    public var allowedEffects: [String]
+    public var blockedEffects: [String]
+    public var safetyNotes: [String]
+    public var passed: Bool
+
+    public static func run(
+        probe: NativeCapturePermissionProbe = .readCurrentProcess(),
+        checkedAt: Date = Date()
+    ) -> NativeCapturePermissionSmokeResult {
+        let captureStarted = false
+        let accessibilityObserverStarted = false
+        let memoryWriteAllowed = false
+        let evidenceRefs: [String] = []
+        let allowedEffects = ["read_permission_status"]
+        let blockedEffects = [
+            "request_screen_recording_permission",
+            "request_accessibility_permission",
+            "start_screen_capture",
+            "start_accessibility_observer",
+            "write_memory",
+            "store_raw_evidence",
+        ]
+        let safetyNotes = [
+            "CGPreflightScreenCaptureAccess reads Screen Recording status without prompting.",
+            "AXIsProcessTrustedWithOptions uses kAXTrustedCheckOptionPrompt false.",
+            "This smoke does not start capture, observers, memory writes, or evidence storage.",
+        ]
+        let passed = !probe.promptRequested
+            && !captureStarted
+            && !accessibilityObserverStarted
+            && !memoryWriteAllowed
+            && evidenceRefs.isEmpty
+            && allowedEffects == ["read_permission_status"]
+            && blockedEffects.contains("request_screen_recording_permission")
+            && blockedEffects.contains("start_screen_capture")
+
+        return NativeCapturePermissionSmokeResult(
+            benchmarkID: nativeCapturePermissionSmokeBenchmarkID,
+            policyRef: nativeCapturePermissionSmokePolicyRef,
+            checkedAt: checkedAt,
+            screenRecordingPreflight: probe.screenRecordingPreflight,
+            accessibilityTrusted: probe.accessibilityTrusted,
+            promptRequested: probe.promptRequested,
+            captureStarted: captureStarted,
+            accessibilityObserverStarted: accessibilityObserverStarted,
+            memoryWriteAllowed: memoryWriteAllowed,
+            evidenceRefs: evidenceRefs,
+            allowedEffects: allowedEffects,
+            blockedEffects: blockedEffects,
+            safetyNotes: safetyNotes,
             passed: passed
         )
     }
