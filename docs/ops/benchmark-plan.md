@@ -61,6 +61,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `PALACE-SELF-LESSON-FLOWS-001` | Self-lesson review phrases map to safe inspect, correct, promote, rollback, and delete flows. | Review or correction silently activates candidate guidance. |
 | `PALACE-EXPORT-UI-001` | Memory Palace export flow is explicit, scoped, confirmation-gated, and audit-backed. | Export can run without visible scope, confirmation, redaction, or audit receipt. |
 | `MEMORY-PALACE-DASHBOARD-001` | Memory Palace dashboard cards expose safe previews, action plans, export previews, and audit counts. | Dashboard resurrects deleted content, leaks secrets, omits confirmation markers, or hides export omissions. |
+| `MEMORY-PALACE-SKILL-FORGE-UI-001` | Static dashboard shell renders Memory Palace and Skill Forge safe view models with local-only action previews. | UI embeds raw private data, action controls execute mutations, generated data leaks secrets/raw refs, or primary panels fail to render. |
 | `AUDIT-001` | Memory mutations persist human-visible audits. | Mutation lacks a redacted audit event. |
 | `EXPORT-001` | User memory export is scoped, redacted, and deletion-aware. | Deleted/revoked content appears in export output. |
 | `EXPORT-AUDIT-001` | Memory exports persist redacted audit receipts. | Export audit copies memory content or secret-like text. |
@@ -176,8 +177,7 @@ The following failures block merge, release, or wider use:
 Near-term suites:
 
 - User-approved real Codex plugin enable/rollback path beyond temporary smoke.
-- Real dashboard shell for Memory Palace and Skill Forge view models.
-- Real Memory Palace and Skill Forge UI shell using the safe dashboard view models.
+- Live gateway-backed dashboard interactions after the static shell.
 
 Longer-term suites:
 

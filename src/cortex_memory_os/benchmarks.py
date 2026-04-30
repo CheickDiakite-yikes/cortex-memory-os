@@ -77,6 +77,11 @@ from cortex_memory_os.manual_adapter_proof import (
     MANUAL_ADAPTER_PROOF_POLICY_REF,
     run_manual_adapter_proof,
 )
+from cortex_memory_os.dashboard_shell import (
+    DASHBOARD_SHELL_ID,
+    DASHBOARD_SHELL_POLICY_REF,
+    run_dashboard_shell_smoke,
+)
 from cortex_memory_os.evidence_vault import (
     EVIDENCE_VAULT_ENCRYPTION_POLICY_REF,
     EvidenceVault,
@@ -336,6 +341,7 @@ def run_all() -> BenchmarkRunResult:
         case_skill_forge_detector,
         case_document_to_skill_derivation_contract,
         case_skill_forge_candidate_list_contract,
+        case_dashboard_shell_contract,
         case_skill_promotion_gate,
         case_skill_rollback_gate,
         case_skill_maturity_audit_events,
@@ -605,6 +611,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "docs/product/original-goal-coverage.md",
         "docs/product/memory-palace-dashboard.md",
         "docs/product/skill-forge-candidate-list.md",
+        "docs/product/cortex-dashboard-shell.md",
         "docs/research/frontier-agent-plugin-lessons-2026-04-29.md",
         "docs/architecture/browser-terminal-adapter-contracts.md",
         "docs/architecture/context-pack-templates.md",
@@ -638,6 +645,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "SKILL-FORGE-002",
         "SKILL-DOC-DERIVATION-001",
         "SKILL-FORGE-LIST-001",
+        DASHBOARD_SHELL_ID,
         "GATEWAY-CTX-001",
         "CODEX-PLUGIN-001",
         "BROWSER-TERMINAL-ADAPTERS-001",
@@ -654,6 +662,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "Live browser/terminal adapter smoke artifacts",
         "local adapter endpoint",
         "manual browser/terminal proof",
+        "Real Memory Palace and Skill Forge UI shell",
         "plugin install/discovery smoke",
         "Shadow Pointer native overlay",
         "Persist real agent runtime traces",
@@ -8164,6 +8173,75 @@ def case_skill_forge_candidate_list_contract() -> BenchmarkCaseResult:
             "missing_doc_terms": missing_doc_terms,
             "action_tool_count": len(action_tools),
             "status_counts": candidate_list.status_counts,
+        },
+    )
+
+
+def case_dashboard_shell_contract() -> BenchmarkCaseResult:
+    smoke = run_dashboard_shell_smoke()
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    ui_paths = [
+        REPO_ROOT / "ui" / "cortex-dashboard" / "index.html",
+        REPO_ROOT / "ui" / "cortex-dashboard" / "styles.css",
+        REPO_ROOT / "ui" / "cortex-dashboard" / "app.js",
+        REPO_ROOT / "ui" / "cortex-dashboard" / "dashboard-data.js",
+    ]
+    ui_text = "\n".join(path.read_text(encoding="utf-8") for path in ui_paths if path.exists())
+    required_ui_terms = [
+        "Memory Palace Review Queue",
+        "Skill Forge Candidate Workflows",
+        "Recent Safe Receipts",
+        "Pause Observation",
+        "data-action-tool",
+        "window.CORTEX_DASHBOARD_DATA",
+    ]
+    missing_ui_terms = _missing_terms(ui_text, required_ui_terms)
+    passed = (
+        smoke.passed
+        and smoke.policy_ref == DASHBOARD_SHELL_POLICY_REF
+        and smoke.memory_card_count >= 4
+        and smoke.skill_card_count >= 3
+        and smoke.safe_receipt_count >= 4
+        and smoke.action_plans_present
+        and not smoke.secret_retained
+        and not smoke.raw_private_data_retained
+        and not missing_ui_terms
+        and DASHBOARD_SHELL_ID in plan_text
+        and DASHBOARD_SHELL_ID in registry_text
+        and DASHBOARD_SHELL_ID in task_text
+        and DASHBOARD_SHELL_ID in traceability_text
+        and "docs/product/cortex-dashboard-shell.md" in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="MEMORY-PALACE-SKILL-FORGE-UI-001/static_dashboard_shell",
+        suite=DASHBOARD_SHELL_ID,
+        passed=passed,
+        summary=(
+            "Static Cortex dashboard shell renders Memory Palace and Skill Forge "
+            "safe view models with local-only action previews."
+        ),
+        metrics={
+            "memory_card_count": smoke.memory_card_count,
+            "skill_card_count": smoke.skill_card_count,
+            "safe_receipt_count": smoke.safe_receipt_count,
+            "missing_ui_terms": len(missing_ui_terms),
+        },
+        evidence={
+            "policy_ref": DASHBOARD_SHELL_POLICY_REF,
+            "ui_root": "ui/cortex-dashboard",
+            "missing_ui_terms": missing_ui_terms,
+            "missing_doc_terms": smoke.missing_doc_terms,
         },
     )
 

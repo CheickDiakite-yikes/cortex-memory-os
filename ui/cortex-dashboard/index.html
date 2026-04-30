@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cortex Memory OS Dashboard</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="dashboard-shell" data-benchmark-id="MEMORY-PALACE-SKILL-FORGE-UI-001">
+      <aside class="sidebar" aria-label="Cortex navigation">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">CM</div>
+          <div>
+            <strong>Cortex Memory OS</strong>
+            <span>Local-first AI memory</span>
+          </div>
+        </div>
+
+        <nav id="nav-list" class="nav-list" aria-label="Primary"></nav>
+
+        <section class="health-panel" aria-label="Local system health">
+          <h2>Memory Store</h2>
+          <dl>
+            <div><dt>Graph</dt><dd>Healthy</dd></div>
+            <div><dt>Vector Index</dt><dd>Healthy</dd></div>
+            <div><dt>Evidence Vault</dt><dd>Healthy</dd></div>
+          </dl>
+        </section>
+      </aside>
+
+      <main class="main-area">
+        <header class="status-strip" id="status-strip" aria-label="Current Cortex status"></header>
+
+        <section class="workspace-grid" aria-label="Dashboard work queues">
+          <article class="work-panel memory-panel" aria-labelledby="memory-heading">
+            <div class="panel-heading">
+              <div>
+                <p class="section-label">Memory Palace</p>
+                <h1 id="memory-heading">Memory Palace Review Queue</h1>
+              </div>
+              <span class="count-pill" id="memory-count">0</span>
+            </div>
+            <div id="memory-tabs" class="tab-row" aria-label="Memory filters"></div>
+            <div id="memory-list" class="card-list" aria-live="polite"></div>
+          </article>
+
+          <article class="work-panel skill-panel" aria-labelledby="skill-heading">
+            <div class="panel-heading">
+              <div>
+                <p class="section-label">Skill Forge</p>
+                <h1 id="skill-heading">Skill Forge Candidate Workflows</h1>
+              </div>
+              <span class="count-pill" id="skill-count">0</span>
+            </div>
+            <div id="skill-tabs" class="tab-row" aria-label="Skill filters"></div>
+            <div id="skill-list" class="card-list" aria-live="polite"></div>
+          </article>
+        </section>
+
+        <section class="audit-rail" aria-label="Recent Safe Receipts">
+          <div class="rail-heading">
+            <h2>Recent Safe Receipts</h2>
+            <button class="text-command" type="button" id="receipt-filter">All Receipts</button>
+          </div>
+          <div id="receipt-list" class="receipt-list"></div>
+          <p id="interaction-receipt" class="interaction-receipt" aria-live="polite">
+            Dashboard ready. Actions are local previews only.
+          </p>
+        </section>
+      </main>
+    </div>
+
+    <script src="./dashboard-data.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

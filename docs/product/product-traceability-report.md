@@ -12,6 +12,7 @@ Source documents:
 - `docs/product/original-goal-coverage.md`
 - `docs/product/memory-palace-dashboard.md`
 - `docs/product/skill-forge-candidate-list.md`
+- `docs/product/cortex-dashboard-shell.md`
 - `docs/research/frontier-agent-plugin-lessons-2026-04-29.md`
 - `docs/ops/plugin-install-smoke.md`
 - `docs/architecture/native-shadow-pointer-overlay.md`
@@ -40,8 +41,8 @@ Source documents:
 | Evidence Vault | Validated skeleton | `VAULT-RETENTION-001`, `VAULT-ENCRYPT-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001` | Replace dev cipher with production key management before real private data. |
 | Scene, memory, and graph pipeline | Validated skeleton | `SCENE-SEGMENT-001`, `MEM-COMPILE-001`, `GRAPH-EDGE-001` | Add richer multimodal segmentation and contradiction handling. |
 | Retrieval and context packs | Validated budgeted skeleton | `RETRIEVAL-SCORE-001`, `CONTEXT-PACK-001`, `CONTEXT-BUDGET-001`, scoped self-lesson suites | Add vector/sparse/graph fusion behind stable interfaces. |
-| Memory Palace | Validated dashboard contract | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, `MEMORY-PALACE-DASHBOARD-001`, self-lesson review flows | Build real dashboard UI shell over the safe view model. |
-| Skill Forge | Validated skeleton plus candidate list | `SKILL-FORGE-002`, `SKILL-DOC-DERIVATION-001`, `SKILL-FORGE-LIST-001`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Build real candidate UI shell, workflow clustering, and skill success metrics. |
+| Memory Palace | Validated dashboard contract plus static UI shell | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, `MEMORY-PALACE-DASHBOARD-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, self-lesson review flows | Wire cards to live gateway-backed review actions after consent and audit paths are visible. |
+| Skill Forge | Validated skeleton plus candidate list and static UI shell | `SKILL-FORGE-002`, `SKILL-DOC-DERIVATION-001`, `SKILL-FORGE-LIST-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add workflow clustering, skill success metrics, and live draft-only execution previews. |
 | Agent Gateway | Validated skeleton plus install-smoked Codex plugin package | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools, `CODEX-PLUGIN-001`, `PLUGIN-INSTALL-SMOKE-001`, `plugins/cortex-memory-os` | Bridge additional clients and validate real user-approved plugin enable flows. |
 | Agent Runtime Trace | Validated contract | `RUNTIME-TRACE-001`, `docs/architecture/agent-runtime-trace.md`, runtime trace fixture | Persist real agent traces through the gateway and outcome engine. |
 | Swarm Governance | Validated contract | `SWARM-GOVERNANCE-001`, `docs/adr/0005-swarm-governance-boundary.md` | Wire future parallel agents through governed gateway execution instead of direct delegation. |
@@ -68,10 +69,12 @@ User-facing pillars:
   receipts, display-only model pointing proposals, and SwiftPM native overlay
   proof.
 - Memory Palace: validated inspect, explain, correct, delete, export,
-  dashboard cards, export previews, action plans, and self-lesson review flows.
+  dashboard cards, export previews, action plans, self-lesson review flows, and
+  the Real Memory Palace and Skill Forge UI shell using the safe dashboard view
+  models.
 - Skill Forge: validated repeated-workflow detector, document-to-skill candidate
   derivation, candidate-list cards, maturity gates, rollback, audits, and
-  draft-only execution.
+  draft-only execution, plus the shared dashboard shell.
 - Agent Gateway: validated budgeted context packs, scoped actions, audit
   receipts, review queues, draft skill execution, and repo-local Codex plugin
   packaging plus temporary cache-shaped plugin install/discovery smoke.
@@ -98,7 +101,8 @@ capture realism:
    adapter work.
 2. Wire the Shadow Pointer native overlay proof to live permissions and capture
    adapter receipts.
-3. Skill Forge candidate list UI shell using the safe candidate-card view model.
+3. Live gateway-backed dashboard interactions for the static Memory Palace and
+   Skill Forge UI shell.
 4. User-approved real Codex plugin enable/rollback path beyond temp smoke.
 5. Persist real agent runtime traces through the gateway and outcome engine.
 

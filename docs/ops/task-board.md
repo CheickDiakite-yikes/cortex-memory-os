@@ -6,19 +6,19 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| MEMORY-PALACE-SKILL-FORGE-UI-001 | Build real dashboard shell for Memory Palace and Skill Forge view models | Codex | Local UI proof over existing safe view models | Keep UI inspectable and action-plan driven; no raw private memories in fixtures. |
+| MACOS-PERCEPTION-ADAPTERS-001 | Specify consented macOS app/window and accessibility adapter contracts | Codex | Synthetic adapter contracts prove consent, source trust, and no raw private capture before endpoint handoff | Follows local browser/terminal proof; keep macOS permissions explicit and non-capturing by default. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| MACOS-PERCEPTION-ADAPTERS-001 | Specify consented macOS app/window and accessibility adapter contracts | Codex | Synthetic adapter contracts prove consent, source trust, and no raw private capture before endpoint handoff | Follows local browser/terminal proof; keep macOS permissions explicit and non-capturing by default. |
+| CODEX-PLUGIN-REAL-ENABLE-001 | Validate a user-approved real Codex plugin enable path | Codex | Explicit user-approved install/enable notes and rollback path | `PLUGIN-INSTALL-SMOKE-001` validates cache-shaped install in temp by default; real user config changes should remain deliberate. |
 
 ## Backlog
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| CODEX-PLUGIN-REAL-ENABLE-001 | Validate a user-approved real Codex plugin enable path | Codex | Explicit user-approved install/enable notes and rollback path | `PLUGIN-INSTALL-SMOKE-001` validates cache-shaped install in temp by default; real user config changes should remain deliberate. |
+| SHADOW-POINTER-CAPTURE-WIRING-001 | Wire native Shadow Pointer overlay to live permission and adapter receipts | Codex | Native receipt contract plus local adapter status proof | Keep capture disabled unless explicit consent and source scope are visible. |
 
 ## Done
 
@@ -144,6 +144,7 @@ Last updated: 2026-04-30
 | LIVE-BROWSER-TERMINAL-ADAPTERS-001 | Implement live browser extension and terminal shell-hook adapters | Codex | `adapters/browser-extension`, `adapters/terminal-shell`, `uv run cortex-live-adapter-smoke --json` -> passed, `uv run pytest` -> 250 passed, `uv run cortex-bench` -> 115/115 passed | Dormant artifacts are click/opt-in gated, localhost-scoped, raw-web-ref-free, and terminal-secret redacted before endpoint work. |
 | LOCAL-ADAPTER-ENDPOINT-001 | Implement local ingest endpoint for live browser and terminal adapter artifacts | Codex | `src/cortex_memory_os/adapter_endpoint.py`, `docs/architecture/local-adapter-endpoint.md`, `uv run cortex-adapter-endpoint --smoke --json` -> passed, `uv run pytest` -> 256 passed, `uv run cortex-bench` -> 116/116 passed | Endpoint binds localhost by default, rejects remote clients/trust escalation/oversized payloads/raw refs, and never returns raw payload text. |
 | MANUAL-ADAPTER-PROOF-001 | Prove browser and terminal adapter artifacts against the local endpoint manually | Codex | `src/cortex_memory_os/manual_adapter_proof.py`, `docs/architecture/manual-adapter-proof.md`, `uv run cortex-manual-adapter-proof --json` -> passed, `uv run pytest` -> 258 passed, `uv run cortex-bench` -> 117/117 passed | Proof sources the real zsh hook in a subprocess and posts browser-extension-shaped synthetic payloads; no daily browser profile install. |
+| MEMORY-PALACE-SKILL-FORGE-UI-001 | Build real dashboard shell for Memory Palace and Skill Forge view models | Codex | `src/cortex_memory_os/dashboard_shell.py`, `ui/cortex-dashboard`, `uv run cortex-dashboard-shell --smoke --json`, local browser proof, `uv run pytest`, `uv run cortex-bench` | Static shell uses synthetic safe view-model data; action controls update local receipts only. |
 
 ## Dropped
 
