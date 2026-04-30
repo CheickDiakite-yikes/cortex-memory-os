@@ -95,10 +95,16 @@ from cortex_memory_os.evidence_eligibility import (
     build_evidence_eligibility_plan,
 )
 from cortex_memory_os.perception_adapters import (
+    MACOS_PERCEPTION_ADAPTER_POLICY_REF,
     PERCEPTION_ADAPTER_POLICY_REF,
     BrowserAdapterEvent,
+    MacOSAccessibilityAdapterEvent,
+    MacOSAppWindowAdapterEvent,
+    MacOSPermissionState,
     TerminalAdapterEvent,
     handoff_browser_event,
+    handoff_macos_accessibility_event,
+    handoff_macos_app_window_event,
     handoff_terminal_event,
 )
 from cortex_memory_os.plugin_install_smoke import (
@@ -360,6 +366,7 @@ def run_all() -> BenchmarkRunResult:
         case_perception_event_envelope_contract,
         case_perception_firewall_handoff_contract,
         case_evidence_eligibility_handoff_contract,
+        case_macos_perception_adapter_contract,
         case_browser_terminal_adapter_contract,
         case_live_browser_terminal_adapter_smoke,
         case_local_adapter_endpoint_contract,
@@ -1832,6 +1839,158 @@ def case_browser_terminal_adapter_contract() -> BenchmarkCaseResult:
             "browser_decision": browser_result.firewall.decision.value,
             "attack_decision": attack_result.firewall.decision.value,
             "paused_route": paused_result.envelope.route.value,
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_macos_perception_adapter_contract() -> BenchmarkCaseResult:
+    doc_path = REPO_ROOT / "docs" / "architecture" / "macos-perception-adapter-contracts.md"
+    plan_path = REPO_ROOT / "docs" / "ops" / "benchmark-plan.md"
+    task_board_path = REPO_ROOT / "docs" / "ops" / "task-board.md"
+    registry_path = REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+
+    doc_text = doc_path.read_text(encoding="utf-8")
+    plan_text = plan_path.read_text(encoding="utf-8")
+    task_text = task_board_path.read_text(encoding="utf-8")
+    registry_text = registry_path.read_text(encoding="utf-8")
+
+    window_result = handoff_macos_app_window_event(
+        MacOSAppWindowAdapterEvent(
+            event_id="bench_macos_window",
+            observed_at=datetime(2026, 4, 30, 9, 0, tzinfo=UTC),
+            device="macbook",
+            app="Xcode",
+            bundle_id="com.apple.dt.Xcode",
+            window_title="Cortex Memory OS",
+            project_id="cortex-memory-os",
+            capture_scope=ScopeLevel.APP_SPECIFIC,
+            consent_state=ConsentState.ACTIVE,
+            screen_recording_permission=MacOSPermissionState.GRANTED,
+            accessibility_permission=MacOSPermissionState.GRANTED,
+            app_allowed=True,
+            derived_text_ref="derived://macos/app-window/bench_macos_window",
+            sequence=1,
+        )
+    )
+    accessibility_result = handoff_macos_accessibility_event(
+        MacOSAccessibilityAdapterEvent(
+            event_id="bench_macos_ax",
+            observed_at=datetime(2026, 4, 30, 9, 1, tzinfo=UTC),
+            device="macbook",
+            app="VS Code",
+            bundle_id="com.microsoft.VSCode",
+            window_title="perception_adapters.py",
+            focused_role="AXTextArea",
+            focused_label="Editor",
+            value_preview="handoff_macos_app_window_event",
+            project_id="cortex-memory-os",
+            capture_scope=ScopeLevel.APP_SPECIFIC,
+            consent_state=ConsentState.ACTIVE,
+            accessibility_permission=MacOSPermissionState.GRANTED,
+            app_allowed=True,
+            derived_text_ref="derived://macos/accessibility/bench_macos_ax",
+            sequence=2,
+        )
+    )
+    private_result = handoff_macos_accessibility_event(
+        MacOSAccessibilityAdapterEvent(
+            event_id="bench_macos_private_ax",
+            observed_at=datetime(2026, 4, 30, 9, 2, tzinfo=UTC),
+            device="macbook",
+            app="Safari",
+            bundle_id="com.apple.Safari",
+            focused_role="AXSecureTextField",
+            focused_label="Password",
+            project_id="cortex-memory-os",
+            capture_scope=ScopeLevel.APP_SPECIFIC,
+            consent_state=ConsentState.ACTIVE,
+            accessibility_permission=MacOSPermissionState.GRANTED,
+            app_allowed=True,
+            private_field_detected=True,
+            derived_text_ref="derived://macos/accessibility/bench_macos_private_ax",
+            sequence=3,
+        )
+    )
+    denied_result = handoff_macos_app_window_event(
+        MacOSAppWindowAdapterEvent(
+            event_id="bench_macos_window_denied",
+            observed_at=datetime(2026, 4, 30, 9, 3, tzinfo=UTC),
+            device="macbook",
+            app="Xcode",
+            bundle_id="com.apple.dt.Xcode",
+            project_id="cortex-memory-os",
+            capture_scope=ScopeLevel.APP_SPECIFIC,
+            consent_state=ConsentState.ACTIVE,
+            screen_recording_permission=MacOSPermissionState.DENIED,
+            app_allowed=True,
+            derived_text_ref="derived://macos/app-window/bench_macos_window_denied",
+            sequence=4,
+        )
+    )
+
+    benchmark_id = "MACOS-PERCEPTION-ADAPTERS-001"
+    required_doc_terms = [
+        benchmark_id,
+        "MacOSAppWindowAdapterEvent",
+        "MacOSAccessibilityAdapterEvent",
+        "Screen Recording permission",
+        "Accessibility permission",
+        "derived-only evidence",
+        "private Accessibility fields",
+        "raw screen frames",
+        MACOS_PERCEPTION_ADAPTER_POLICY_REF,
+    ]
+    missing_doc_terms = _missing_terms(doc_text, required_doc_terms)
+    passed = (
+        window_result.envelope.source_kind == PerceptionSourceKind.APP_WINDOW
+        and window_result.envelope.raw_ref is None
+        and window_result.firewall.decision == FirewallDecision.MEMORY_ELIGIBLE
+        and window_result.evidence_plan.write_mode == EvidenceWriteMode.DERIVED_ONLY
+        and window_result.evidence_plan.raw_blob_write_allowed is False
+        and accessibility_result.envelope.source_kind == PerceptionSourceKind.ACCESSIBILITY
+        and accessibility_result.envelope.raw_ref is None
+        and accessibility_result.firewall.decision == FirewallDecision.MEMORY_ELIGIBLE
+        and accessibility_result.evidence_plan.write_mode == EvidenceWriteMode.DERIVED_ONLY
+        and private_result.envelope.route == PerceptionRoute.DISCARD
+        and private_result.evidence_plan.write_mode == EvidenceWriteMode.DISCARD
+        and denied_result.envelope.route == PerceptionRoute.DISCARD
+        and denied_result.evidence_plan.write_mode == EvidenceWriteMode.DISCARD
+        and MACOS_PERCEPTION_ADAPTER_POLICY_REF
+        in window_result.envelope.required_policy_refs
+        and not missing_doc_terms
+        and benchmark_id in plan_text
+        and benchmark_id in task_text
+        and benchmark_id in registry_text
+    )
+    return BenchmarkCaseResult(
+        case_id="MACOS-PERCEPTION-ADAPTERS-001/macos_app_window_accessibility",
+        suite="MACOS-PERCEPTION-ADAPTERS-001",
+        passed=passed,
+        summary=(
+            "Consented macOS app/window and Accessibility adapter events produce "
+            "derived-only governed evidence while denied permissions and private "
+            "fields discard before memory eligibility."
+        ),
+        metrics={
+            "window_memory_eligible": int(window_result.evidence_plan.eligible_for_memory),
+            "accessibility_memory_eligible": int(
+                accessibility_result.evidence_plan.eligible_for_memory
+            ),
+            "private_field_discarded": int(
+                private_result.evidence_plan.write_mode == EvidenceWriteMode.DISCARD
+            ),
+            "denied_permission_discarded": int(
+                denied_result.evidence_plan.write_mode == EvidenceWriteMode.DISCARD
+            ),
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": MACOS_PERCEPTION_ADAPTER_POLICY_REF,
+            "window_write_mode": window_result.evidence_plan.write_mode.value,
+            "accessibility_write_mode": accessibility_result.evidence_plan.write_mode.value,
+            "private_route": private_result.envelope.route.value,
+            "denied_route": denied_result.envelope.route.value,
             "missing_doc_terms": missing_doc_terms,
         },
     )

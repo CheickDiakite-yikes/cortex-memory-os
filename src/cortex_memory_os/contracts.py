@@ -20,6 +20,7 @@ class StrictModel(BaseModel):
 
 
 class ObservationEventType(str, Enum):
+    APP_WINDOW = "app_window"
     SCREEN_FRAME = "screen_frame"
     OCR_TEXT = "ocr_text"
     ACCESSIBILITY_TREE = "accessibility_tree"
