@@ -6,19 +6,19 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| CODEX-PLUGIN-REAL-ENABLE-001 | Validate a user-approved real Codex plugin enable path | Codex | Explicit user-approved install/enable notes and rollback path | `PLUGIN-INSTALL-SMOKE-001` validates cache-shaped install in temp by default; real user config changes should remain deliberate. |
+| SHADOW-POINTER-CAPTURE-WIRING-001 | Wire native Shadow Pointer overlay to live permission and adapter receipts | Codex | Native receipt contract plus local adapter status proof | Keep capture disabled unless explicit consent and source scope are visible. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| SHADOW-POINTER-CAPTURE-WIRING-001 | Wire native Shadow Pointer overlay to live permission and adapter receipts | Codex | Native receipt contract plus local adapter status proof | Keep capture disabled unless explicit consent and source scope are visible. |
+| DASHBOARD-GATEWAY-ACTIONS-001 | Connect dashboard action previews to local gateway read-only flows | Codex | Browser proof plus gateway receipts for explain/review actions | Keep mutation/export actions confirmation-gated and inert until explicit approval. |
 
 ## Backlog
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| DASHBOARD-GATEWAY-ACTIONS-001 | Connect dashboard action previews to local gateway read-only flows | Codex | Browser proof plus gateway receipts for explain/review actions | Keep mutation/export actions confirmation-gated and inert until explicit approval. |
+| NATIVE-CAPTURE-PERMISSION-SMOKE-001 | Add a local macOS permission-status smoke command | Codex | Read-only permission status JSON and benchmark hook | Must not start capture or request permissions automatically. |
 
 ## Done
 
@@ -146,6 +146,7 @@ Last updated: 2026-04-30
 | MANUAL-ADAPTER-PROOF-001 | Prove browser and terminal adapter artifacts against the local endpoint manually | Codex | `src/cortex_memory_os/manual_adapter_proof.py`, `docs/architecture/manual-adapter-proof.md`, `uv run cortex-manual-adapter-proof --json` -> passed, `uv run pytest` -> 258 passed, `uv run cortex-bench` -> 117/117 passed | Proof sources the real zsh hook in a subprocess and posts browser-extension-shaped synthetic payloads; no daily browser profile install. |
 | MEMORY-PALACE-SKILL-FORGE-UI-001 | Build real dashboard shell for Memory Palace and Skill Forge view models | Codex | `src/cortex_memory_os/dashboard_shell.py`, `ui/cortex-dashboard`, `uv run cortex-dashboard-shell --smoke --json`, local browser proof, `uv run pytest`, `uv run cortex-bench` | Static shell uses synthetic safe view-model data; action controls update local receipts only. |
 | MACOS-PERCEPTION-ADAPTERS-001 | Specify consented macOS app/window and Accessibility adapter contracts | Codex | `src/cortex_memory_os/perception_adapters.py`, `docs/architecture/macos-perception-adapter-contracts.md`, `uv run pytest tests/test_macos_perception_adapters.py tests/test_perception_adapters.py tests/test_benchmarks.py` -> 13 passed, `uv run cortex-bench` -> 119/119 passed | Derived-only macOS app/window and Accessibility envelopes discard denied permissions, blocked apps, sensitive apps, and private fields before memory eligibility. |
+| CODEX-PLUGIN-REAL-ENABLE-001 | Validate a user-approved real Codex plugin enable path | Codex | `docs/ops/codex-plugin-real-enable.md`, `uv run pytest tests/test_plugin_enable_plan.py tests/test_plugin_install_smoke.py tests/test_benchmarks.py` -> 8 passed, `uv run cortex-plugin-enable-plan --json`, `uv run cortex-bench` -> 120/120 passed | Dry-run default does not write to real Codex home; apply requires exact approval phrase, temp-home discovery, and rollback. |
 
 ## Dropped
 

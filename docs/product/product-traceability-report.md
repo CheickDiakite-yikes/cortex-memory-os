@@ -15,6 +15,7 @@ Source documents:
 - `docs/product/cortex-dashboard-shell.md`
 - `docs/research/frontier-agent-plugin-lessons-2026-04-29.md`
 - `docs/ops/plugin-install-smoke.md`
+- `docs/ops/codex-plugin-real-enable.md`
 - `docs/architecture/native-shadow-pointer-overlay.md`
 - `docs/architecture/live-browser-terminal-adapters.md`
 - `docs/architecture/local-adapter-endpoint.md`
@@ -44,7 +45,7 @@ Source documents:
 | Retrieval and context packs | Validated budgeted skeleton | `RETRIEVAL-SCORE-001`, `CONTEXT-PACK-001`, `CONTEXT-BUDGET-001`, scoped self-lesson suites | Add vector/sparse/graph fusion behind stable interfaces. |
 | Memory Palace | Validated dashboard contract plus static UI shell | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, `MEMORY-PALACE-DASHBOARD-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, self-lesson review flows | Wire cards to live gateway-backed review actions after consent and audit paths are visible. |
 | Skill Forge | Validated skeleton plus candidate list and static UI shell | `SKILL-FORGE-002`, `SKILL-DOC-DERIVATION-001`, `SKILL-FORGE-LIST-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add workflow clustering, skill success metrics, and live draft-only execution previews. |
-| Agent Gateway | Validated skeleton plus install-smoked Codex plugin package | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools, `CODEX-PLUGIN-001`, `PLUGIN-INSTALL-SMOKE-001`, `plugins/cortex-memory-os` | Bridge additional clients and validate real user-approved plugin enable flows. |
+| Agent Gateway | Validated skeleton plus install-smoked and approval-gated Codex plugin package | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools, `CODEX-PLUGIN-001`, `PLUGIN-INSTALL-SMOKE-001`, `CODEX-PLUGIN-REAL-ENABLE-001`, `plugins/cortex-memory-os` | Bridge additional clients and keep real user config changes explicit. |
 | Agent Runtime Trace | Validated contract | `RUNTIME-TRACE-001`, `docs/architecture/agent-runtime-trace.md`, runtime trace fixture | Persist real agent traces through the gateway and outcome engine. |
 | Swarm Governance | Validated contract | `SWARM-GOVERNANCE-001`, `docs/adr/0005-swarm-governance-boundary.md` | Wire future parallel agents through governed gateway execution instead of direct delegation. |
 | Shadow Pointer | Validated native proof plus static prototype | `SHADOW-POINTER-001`, `SHADOW-POINTER-CONTROLS-001`, `POINTER-PROPOSAL-001`, `SHADOW-POINTER-NATIVE-001`, static UI prototype, `native/macos-shadow-pointer` | Wire native overlay to live permissions and real capture adapters. |
@@ -78,7 +79,8 @@ User-facing pillars:
   draft-only execution, plus the shared dashboard shell.
 - Agent Gateway: validated budgeted context packs, scoped actions, audit
   receipts, review queues, draft skill execution, and repo-local Codex plugin
-  packaging plus temporary cache-shaped plugin install/discovery smoke.
+  packaging plus temporary cache-shaped plugin install/discovery smoke and
+  approval-gated real enable/rollback plan.
 - Agent Runtime Trace: validated tool calls, shell actions, browser actions,
   artifacts, approvals, retries, blocked hostile content, and outcome checks.
 - Swarm Governance: validated source isolation, disjoint write scopes, budget
@@ -105,8 +107,9 @@ capture realism:
    adapter receipts.
 3. Live gateway-backed dashboard interactions for the static Memory Palace and
    Skill Forge UI shell.
-4. User-approved real Codex plugin enable/rollback path beyond temp smoke.
-5. Persist real agent runtime traces through the gateway and outcome engine.
+4. Persist real agent runtime traces through the gateway and outcome engine.
+5. Additional client bridges after the Codex plugin path is user-approved in a
+   real environment.
 
 ## Update Rule
 

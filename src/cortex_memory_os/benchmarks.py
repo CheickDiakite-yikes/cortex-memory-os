@@ -111,6 +111,13 @@ from cortex_memory_os.plugin_install_smoke import (
     PLUGIN_INSTALL_POLICY_REF,
     run_plugin_install_smoke,
 )
+from cortex_memory_os.plugin_enable_plan import (
+    CODEX_PLUGIN_ENABLE_APPROVAL_PHRASE,
+    CODEX_PLUGIN_REAL_ENABLE_POLICY_REF,
+    PluginEnableMode,
+    build_plugin_enable_plan,
+    remove_enabled_plugin,
+)
 from cortex_memory_os.debug_trace import DebugTraceStatus, make_debug_trace
 from cortex_memory_os.mcp_server import (
     SELF_LESSON_REVIEW_QUEUE_CURSOR_PREFIX,
@@ -361,6 +368,7 @@ def run_all() -> BenchmarkRunResult:
         case_frontier_agent_research_synthesis,
         case_codex_plugin_skeleton_contract,
         case_plugin_install_smoke_contract,
+        case_codex_plugin_real_enable_contract,
         case_swarm_governance_contract,
         case_agent_runtime_trace_contract,
         case_perception_event_envelope_contract,
@@ -1050,6 +1058,97 @@ def case_plugin_install_smoke_contract() -> BenchmarkCaseResult:
             "reference_files": result.reference_files,
             "blocked_config_hits": result.blocked_config_hits,
             "missing_paths": result.missing_paths,
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_codex_plugin_real_enable_contract() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    docs_path = REPO_ROOT / "docs" / "ops" / "codex-plugin-real-enable.md"
+    plan_path = REPO_ROOT / "docs" / "ops" / "benchmark-plan.md"
+    registry_path = REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    task_board_path = REPO_ROOT / "docs" / "ops" / "task-board.md"
+    traceability_path = REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+
+    with TemporaryDirectory(prefix="cortex-codex-home-enable-") as temp_dir:
+        codex_home = Path(temp_dir)
+        dry_run = build_plugin_enable_plan(codex_home=codex_home)
+        blocked_apply = build_plugin_enable_plan(
+            codex_home=codex_home,
+            mode=PluginEnableMode.APPLY,
+            user_confirmation="yes",
+        )
+        approved_apply = build_plugin_enable_plan(
+            codex_home=codex_home,
+            mode=PluginEnableMode.APPLY,
+            user_confirmation=CODEX_PLUGIN_ENABLE_APPROVAL_PHRASE,
+        )
+        removed_path = remove_enabled_plugin(codex_home=codex_home)
+        rollback_removed = not removed_path.exists()
+
+    docs_text = docs_path.read_text(encoding="utf-8")
+    plan_text = plan_path.read_text(encoding="utf-8")
+    registry_text = registry_path.read_text(encoding="utf-8")
+    task_text = task_board_path.read_text(encoding="utf-8")
+    traceability_text = traceability_path.read_text(encoding="utf-8")
+    benchmark_id = "CODEX-PLUGIN-REAL-ENABLE-001"
+    required_doc_terms = [
+        benchmark_id,
+        CODEX_PLUGIN_REAL_ENABLE_POLICY_REF,
+        CODEX_PLUGIN_ENABLE_APPROVAL_PHRASE,
+        "plugins/cache/local/cortex-memory-os/0.1.0",
+        "Rollback",
+        "dry run",
+        "Real user config changes must remain deliberate",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        dry_run.passed
+        and not dry_run.applied
+        and not Path(dry_run.target_install_root).exists()
+        and blocked_apply.passed is False
+        and "user_confirmation_required" in blocked_apply.blocked_reasons
+        and not Path(blocked_apply.target_install_root).exists()
+        and approved_apply.passed
+        and approved_apply.applied
+        and approved_apply.discovery is not None
+        and approved_apply.discovery.passed
+        and approved_apply.discovery.mcp_project_path_exists
+        and rollback_removed
+        and not approved_apply.blocked_config_hits
+        and not missing_doc_terms
+        and benchmark_id in plan_text
+        and benchmark_id in registry_text
+        and benchmark_id in task_text
+        and benchmark_id in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="CODEX-PLUGIN-REAL-ENABLE-001/approval_gated_enable",
+        suite="CODEX-PLUGIN-REAL-ENABLE-001",
+        passed=passed,
+        summary=(
+            "Codex plugin real enable path is approval-gated, dry-run by default, "
+            "temp-home applied/discovered, and rollback-tested without touching "
+            "the user's real Codex home."
+        ),
+        metrics={
+            "dry_run_applied": int(dry_run.applied),
+            "blocked_apply_reason_count": len(blocked_apply.blocked_reasons),
+            "approved_apply_discovered": int(
+                approved_apply.discovery is not None and approved_apply.discovery.passed
+            ),
+            "rollback_removed": int(rollback_removed),
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": CODEX_PLUGIN_REAL_ENABLE_POLICY_REF,
+            "install_policy_ref": PLUGIN_INSTALL_POLICY_REF,
+            "approval_phrase_required": dry_run.required_approval_phrase,
+            "blocked_reasons": blocked_apply.blocked_reasons,
+            "target_shape": "/plugins/cache/local/cortex-memory-os/0.1.0",
+            "rollback_removed": rollback_removed,
             "missing_doc_terms": missing_doc_terms,
         },
     )
