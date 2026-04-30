@@ -6,19 +6,18 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| REAL-VECTOR-INDEX-ADAPTER-001 | Wire local vector, sparse, and graph adapters behind fusion interface | Codex | Adapter tests using local sanitized fixtures | Preserve redacted fusion result contract before external vector DB dependencies. |
+| SKILL-METRICS-DASHBOARD-SURFACE-001 | Surface Skill Forge metrics in dashboard view models | Codex | Dashboard-safe card tests and browser proof | Must not expose procedure text, task content, raw refs, or autonomy-changing controls. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| SKILL-METRICS-DASHBOARD-SURFACE-001 | Surface Skill Forge metrics in dashboard view models | Codex | Dashboard-safe card tests and browser proof | Must not expose procedure text, task content, raw refs, or autonomy-changing controls. |
+| RETRIEVAL-RECEIPTS-DASHBOARD-SURFACE-001 | Surface retrieval explanation receipts in dashboard context/debug panels | Codex | Dashboard-safe receipt tests and browser proof | Must not expose memory content, source refs, or hostile text. |
 
 ## Backlog
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| RETRIEVAL-RECEIPTS-DASHBOARD-SURFACE-001 | Surface retrieval explanation receipts in dashboard context/debug panels | Codex | Dashboard-safe receipt tests and browser proof | Must not expose memory content, source refs, or hostile text. |
 | HYBRID-FUSION-CONTEXT-PACK-INTEGRATION-001 | Feed local fusion adapters into context-pack diagnostics | Codex | Context-pack fusion tests with redacted result summaries | Keep retrieval scope and prompt-risk exclusions unchanged. |
 | GATEWAY-OUTCOME-POSTMORTEM-001 | Expose outcome postmortem compilation through the local gateway | Codex | Gateway tool test using persisted runtime trace | Tool must return metadata-only postmortems and require exact trace/outcome IDs. |
 
@@ -26,6 +25,7 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
+| REAL-VECTOR-INDEX-ADAPTER-001 | Wire local vector, sparse, and graph adapters behind fusion interface | Codex | `src/cortex_memory_os/fusion_adapters.py`, `uv run pytest` -> 302 passed, `uv run cortex-bench` -> 129/129 passed | Local dependency-free adapters feed redacted hybrid fusion candidates and preserve prompt-risk exclusions. |
 | OUTCOME-POSTMORTEM-TRACE-001 | Feed runtime traces into outcome postmortems | Codex | `src/cortex_memory_os/outcome_postmortem.py`, `uv run pytest` -> 299 passed, `uv run cortex-bench` -> 128/128 passed | Postmortems return counts, fixed findings, and review follow-ups without event summaries. |
 | SKILL-SUCCESS-METRICS-001 | Add Skill Forge success/failure metrics | Codex | `src/cortex_memory_os/skill_metrics.py`, dashboard-safe cards, `uv run cortex-bench` -> 127/127 passed | Tracks maturity evidence without promoting skills or raising autonomy. |
 | RETRIEVAL-EXPLANATION-RECEIPTS-001 | Add context retrieval explanation receipts | Codex | `src/cortex_memory_os/retrieval_explanations.py`, context-pack receipts, `uv run cortex-bench` -> 126/126 passed | Explains included/evidence-only/excluded memory decisions without exposing content or source refs. |
