@@ -1,12 +1,12 @@
 # Cortex Memory OS Task Board
 
-Last updated: 2026-04-29
+Last updated: 2026-04-30
 
 ## Active
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| LOCAL-ADAPTER-ENDPOINT-001 | Implement local ingest endpoint for live browser and terminal adapter artifacts | Codex | Local endpoint smoke accepts synthetic adapter events, rejects non-local/external trust escalation, and preserves no raw web refs or terminal secrets | Follows `LIVE-BROWSER-TERMINAL-ADAPTERS-001`; keep endpoint localhost-only and consent-gated. |
+| MANUAL-ADAPTER-PROOF-001 | Prove browser and terminal adapter artifacts against the local endpoint manually | Codex | Local endpoint run plus manual terminal-hook/browser-extension payload proof with no raw web refs or terminal secret retention | Use synthetic content only; do not install into a daily browser profile without explicit approval. |
 
 ## Next
 
@@ -142,6 +142,7 @@ Last updated: 2026-04-29
 | PLUGIN-INSTALL-SMOKE-001 | Validate Cortex plugin discovery in a real Codex plugin install path shape | Codex | `src/cortex_memory_os/plugin_install_smoke.py`, `docs/ops/plugin-install-smoke.md`, `uv run cortex-plugin-install-smoke`, `uv run pytest` -> 246 passed, `uv run cortex-bench` -> 113/113 passed, `uvx ruff check` | Installs into a temporary `plugins/cache/local/cortex-memory-os/0.1.0` shape by default; installed config must stay secret-free. |
 | SHADOW-POINTER-NATIVE-001 | Prototype native Shadow Pointer overlay integration | Codex | `native/macos-shadow-pointer`, `docs/architecture/native-shadow-pointer-overlay.md`, `swift build --package-path native/macos-shadow-pointer`, `swift test --package-path native/macos-shadow-pointer` -> 5 passed, `swift run --package-path native/macos-shadow-pointer cortex-shadow-pointer-smoke` -> `passed: true`, `uv run pytest` -> 246 passed, `uv run cortex-bench` -> 114/114 passed | SwiftPM proof uses a transparent non-activating `NSPanel`, display-only pointer boundary, and pause/delete/app-ignore receipts without starting capture. |
 | LIVE-BROWSER-TERMINAL-ADAPTERS-001 | Implement live browser extension and terminal shell-hook adapters | Codex | `adapters/browser-extension`, `adapters/terminal-shell`, `uv run cortex-live-adapter-smoke --json` -> passed, `uv run pytest` -> 250 passed, `uv run cortex-bench` -> 115/115 passed | Dormant artifacts are click/opt-in gated, localhost-scoped, raw-web-ref-free, and terminal-secret redacted before endpoint work. |
+| LOCAL-ADAPTER-ENDPOINT-001 | Implement local ingest endpoint for live browser and terminal adapter artifacts | Codex | `src/cortex_memory_os/adapter_endpoint.py`, `docs/architecture/local-adapter-endpoint.md`, `uv run cortex-adapter-endpoint --smoke --json` -> passed, `uv run pytest` -> 256 passed, `uv run cortex-bench` -> 116/116 passed | Endpoint binds localhost by default, rejects remote clients/trust escalation/oversized payloads/raw refs, and never returns raw payload text. |
 
 ## Dropped
 

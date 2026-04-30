@@ -1,6 +1,6 @@
 # Benchmark Registry
 
-Last updated: 2026-04-29
+Last updated: 2026-04-30
 
 Benchmarks should become runnable as soon as implementation begins. Until then, this registry defines what must be measurable.
 
@@ -18,6 +18,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | SHADOW-POINTER-NATIVE-001 | Native Shadow Pointer overlay proof | Verify SwiftPM native macOS overlay boundary, display-only pointer behavior, and pause/delete/app-ignore receipt semantics | Swift build/test pass, overlay safety terms, control receipt coverage | non-activating overlay, no default mouse events, zero memory writes from blocked controls |
 | BROWSER-TERMINAL-ADAPTERS-001 | Browser and terminal adapter contracts | Verify first capture adapters preserve consent, source trust, prompt-risk, redaction, and evidence eligibility rules | adapter pass rate, raw-ref drop count, memory eligibility by source trust | zero web memory eligibility and zero raw secret retention |
 | LIVE-BROWSER-TERMINAL-ADAPTERS-001 | Live adapter artifact smoke | Verify dormant browser-extension and terminal-hook artifacts stay opt-in, localhost-scoped, raw-web-memory-free, and secret-redacted | artifact pass rate, host permission violations, memory eligibility by source, secret retention | zero broad host permissions, zero raw web refs, zero terminal secret retention |
+| LOCAL-ADAPTER-ENDPOINT-001 | Local adapter endpoint smoke | Verify localhost-only browser/terminal ingest rejects remote clients, trust escalation, raw refs, oversized payloads, and secret retention | HTTP smoke pass rate, rejection status codes, raw-ref retention, memory eligibility | localhost-only, no raw refs, no terminal secret retention, rejected trust escalation |
 | ROBOT-SAFE-001 | Embodied action gating | Ensure memory-triggered physical actions require explicit capability, spatial metadata, simulation, emergency stop, and approval | unauthorized action rate, approval trace completeness, spatial metadata completeness | zero unauthorized actions |
 
 ## Run Log
@@ -136,6 +137,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-29 | Cortex plugin install/discovery smoke | `uv run cortex-bench` plus `uv run cortex-plugin-install-smoke` | 113/113 passed; install smoke passed | `benchmarks/runs/bench_20260429T044921Z.json` | Next benchmark: native Shadow Pointer overlay proof. |
 | 2026-04-29 | Native Shadow Pointer overlay proof | `uv run cortex-bench` plus SwiftPM build/test/smoke | 114/114 passed; SwiftPM build passed; SwiftPM tests passed with 5 tests; smoke returned `passed: true` | `benchmarks/runs/bench_20260429T045856Z.json` | Next benchmark: live browser and terminal adapters. |
 | 2026-04-29 | Live browser and terminal adapter artifact smoke | `uv run cortex-bench` plus `uv run cortex-live-adapter-smoke --json` | 115/115 passed; live adapter smoke passed; `uv run pytest` -> 250 passed | `benchmarks/runs/bench_20260429T050513Z.json` | Next benchmark: local adapter ingest endpoint. |
+| 2026-04-30 | Local adapter ingest endpoint | `uv run cortex-bench` plus `uv run cortex-adapter-endpoint --smoke --json` | 116/116 passed; endpoint smoke passed; `uv run pytest` -> 256 passed | `benchmarks/runs/bench_20260430T025058Z.json` | Next benchmark: manual browser/terminal proof against local endpoint. |
 
 ## First Runnable Harness Requirements
 

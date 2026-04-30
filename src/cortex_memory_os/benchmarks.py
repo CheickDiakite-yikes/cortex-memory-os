@@ -69,6 +69,10 @@ from cortex_memory_os.live_adapters import (
     LIVE_ADAPTER_POLICY_REF,
     run_live_adapter_smoke,
 )
+from cortex_memory_os.adapter_endpoint import (
+    LOCAL_ADAPTER_ENDPOINT_POLICY_REF,
+    run_local_adapter_endpoint_smoke,
+)
 from cortex_memory_os.evidence_vault import (
     EVIDENCE_VAULT_ENCRYPTION_POLICY_REF,
     EvidenceVault,
@@ -348,6 +352,7 @@ def run_all() -> BenchmarkRunResult:
         case_evidence_eligibility_handoff_contract,
         case_browser_terminal_adapter_contract,
         case_live_browser_terminal_adapter_smoke,
+        case_local_adapter_endpoint_contract,
         case_live_openai_smoke_contract,
         case_gateway_self_lesson_proposal_tool,
         case_self_lesson_sqlite_persistence,
@@ -632,6 +637,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "CODEX-PLUGIN-001",
         "BROWSER-TERMINAL-ADAPTERS-001",
         "LIVE-BROWSER-TERMINAL-ADAPTERS-001",
+        "LOCAL-ADAPTER-ENDPOINT-001",
         "SWARM-GOVERNANCE-001",
         "SHADOW-POINTER-001",
         "POINTER-PROPOSAL-001",
@@ -640,6 +646,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
     next_gap_terms = [
         "Real browser/terminal adapters",
         "Live browser/terminal adapter smoke artifacts",
+        "local adapter endpoint",
         "plugin install/discovery smoke",
         "Shadow Pointer native overlay",
         "Persist real agent runtime traces",
@@ -1880,6 +1887,81 @@ def case_live_browser_terminal_adapter_smoke() -> BenchmarkCaseResult:
             "missing_paths": smoke.missing_paths,
             "missing_terms": smoke.missing_terms + missing_doc_terms,
             "blocked_host_permissions": smoke.blocked_host_permissions,
+        },
+    )
+
+
+def case_local_adapter_endpoint_contract() -> BenchmarkCaseResult:
+    smoke = run_local_adapter_endpoint_smoke()
+    benchmark_id = "LOCAL-ADAPTER-ENDPOINT-001"
+    docs_path = REPO_ROOT / "docs" / "architecture" / "local-adapter-endpoint.md"
+    plan_path = REPO_ROOT / "docs" / "ops" / "benchmark-plan.md"
+    registry_path = REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    task_board_path = REPO_ROOT / "docs" / "ops" / "task-board.md"
+    traceability_path = REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    pyproject_path = REPO_ROOT / "pyproject.toml"
+
+    docs_text = docs_path.read_text(encoding="utf-8")
+    plan_text = plan_path.read_text(encoding="utf-8")
+    registry_text = registry_path.read_text(encoding="utf-8")
+    task_text = task_board_path.read_text(encoding="utf-8")
+    traceability_text = traceability_path.read_text(encoding="utf-8")
+    pyproject_text = pyproject_path.read_text(encoding="utf-8")
+
+    required_doc_terms = [
+        benchmark_id,
+        LOCAL_ADAPTER_ENDPOINT_POLICY_REF,
+        "127.0.0.1",
+        "client_host_not_allowed",
+        "POST /adapter/browser",
+        "POST /adapter/terminal",
+        "MAX_ADAPTER_PAYLOAD_BYTES",
+        "browser trust escalation is rejected",
+        "terminal secrets are not retained",
+        "uv run cortex-adapter-endpoint --smoke --json",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        smoke.passed
+        and smoke.browser_memory_eligible is False
+        and smoke.browser_raw_ref_retained is False
+        and smoke.browser_attack_discarded
+        and smoke.terminal_secret_retained is False
+        and smoke.terminal_raw_ref_retained is False
+        and smoke.remote_rejected_status_code == 403
+        and smoke.trust_escalation_rejected_status_code == 422
+        and smoke.oversized_payload_status_code == 413
+        and not missing_doc_terms
+        and benchmark_id in plan_text
+        and benchmark_id in registry_text
+        and benchmark_id in task_text
+        and benchmark_id in traceability_text
+        and "cortex-adapter-endpoint" in pyproject_text
+    )
+    return BenchmarkCaseResult(
+        case_id="LOCAL-ADAPTER-ENDPOINT-001/local_ingest_endpoint",
+        suite="LOCAL-ADAPTER-ENDPOINT-001",
+        passed=passed,
+        summary=(
+            "Local adapter endpoint accepts synthetic browser/terminal events on "
+            "localhost only while rejecting trust escalation, raw refs, oversized "
+            "payloads, and terminal secret retention."
+        ),
+        metrics={
+            "browser_memory_eligible": int(smoke.browser_memory_eligible),
+            "browser_raw_ref_retained": int(smoke.browser_raw_ref_retained),
+            "terminal_secret_retained": int(smoke.terminal_secret_retained),
+            "remote_rejected_status_code": smoke.remote_rejected_status_code,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": LOCAL_ADAPTER_ENDPOINT_POLICY_REF,
+            "bind_host": smoke.bind_host,
+            "browser_attack_discarded": smoke.browser_attack_discarded,
+            "terminal_raw_ref_retained": smoke.terminal_raw_ref_retained,
+            "trust_escalation_rejected_status_code": smoke.trust_escalation_rejected_status_code,
+            "oversized_payload_status_code": smoke.oversized_payload_status_code,
+            "missing_doc_terms": missing_doc_terms,
         },
     )
 

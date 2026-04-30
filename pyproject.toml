@@ -15,6 +15,7 @@ cortex-mcp = "cortex_memory_os.mcp_server:main"
 cortex-openai-smoke = "cortex_memory_os.live_openai_smoke:main"
 cortex-plugin-install-smoke = "cortex_memory_os.plugin_install_smoke:main"
 cortex-live-adapter-smoke = "cortex_memory_os.live_adapters:main"
+cortex-adapter-endpoint = "cortex_memory_os.adapter_endpoint:main"
 
 [build-system]
 requires = ["setuptools>=69"]
