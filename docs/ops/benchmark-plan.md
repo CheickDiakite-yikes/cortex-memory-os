@@ -45,6 +45,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-CTX-001` | Gateway returns task-scoped context packs with warnings. | Context pack lacks scope warnings or source refs. |
 | `CONTEXT-PACK-001` | Context packs include retrieval score summaries. | Scores do not align with returned memories. |
 | `RETRIEVAL-EXPLANATION-RECEIPTS-001` | Context packs expose redacted receipts for included, evidence-only, and excluded retrieval decisions. | Explanations leak memory content, source refs, hostile text, or omit decision reason tags. |
+| `RETRIEVAL-RECEIPTS-DASHBOARD-SURFACE-001` | Dashboard renders redacted retrieval receipt cards for context/debug review. | Dashboard receipts expose memory content, source refs, hostile text, raw refs, or change retrieval scope. |
 | `REAL-VECTOR-INDEX-ADAPTER-001` | Local semantic, sparse, and graph adapters feed the hybrid fusion interface without dependencies. | Adapters leak content, accept raw refs, miss prompt-risk exclusions, or require network/model dependencies in the default runner. |
 | `CONTEXT-BUDGET-001` | Context packs expose token, time, tool, artifact, memory, self-lesson, risk, and autonomy budgets. | Requested budgets expand beyond template ceilings, high-risk/autonomous budgets appear, or estimated tokens exceed budget. |
 | `CTX-HOSTILE-001` | External evidence is cited separately from trusted memory. | Hostile external text becomes memory, guidance, or instructions. |

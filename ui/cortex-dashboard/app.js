@@ -326,6 +326,7 @@ function bindActionButton(button) {
 function renderReceipts() {
   const list = document.querySelector("#receipt-list");
   const gatewayReceipts = data.gateway_action_receipts || [];
+  const retrievalReceipts = data.retrieval_debug?.cards || [];
   list.innerHTML = [
     '<div class="receipt-section-label">Safe Receipts</div>',
     ...data.safe_receipts.map(
@@ -347,6 +348,18 @@ function renderReceipts() {
           <span>
             <strong>${escapeHtml(receipt.gateway_tool)}</strong>
             <span>${escapeHtml(receipt.target_ref)} · ${receipt.allowed_gateway_call ? "read-only ready" : "preview blocked"}</span>
+          </span>
+        </div>
+      `,
+    ),
+    '<div class="receipt-section-label">Retrieval Receipts</div>',
+    ...retrievalReceipts.slice(0, 4).map(
+      (receipt) => `
+        <div class="receipt-item retrieval-receipt" data-state="${receipt.decision === "included" ? "healthy" : "warning"}">
+          <span class="receipt-dot">${svgIcon(receipt.decision === "included" ? "check" : "pause")}</span>
+          <span>
+            <strong>${escapeHtml(formatToken(receipt.decision))}</strong>
+            <span>${escapeHtml(receipt.memory_id)} · score ${Number(receipt.score || 0).toFixed(2)} · refs ${receipt.source_ref_count}</span>
           </span>
         </div>
       `,
