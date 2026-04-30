@@ -26,6 +26,7 @@ Source documents:
 - `docs/architecture/macos-perception-adapter-contracts.md`
 - `docs/architecture/browser-terminal-adapter-contracts.md`
 - `docs/architecture/context-pack-templates.md`
+- `docs/architecture/hybrid-context-fusion-index.md`
 - `docs/architecture/document-to-skill-derivation.md`
 - `docs/architecture/swarm-governance.md`
 - `docs/architecture/robot-spatial-safety.md`
@@ -45,7 +46,7 @@ Source documents:
 | Privacy + Safety Firewall | Validated | `SEC-INJECT-001`, `SEC-PII-001`, `CTX-HOSTILE-001` | Expand from synthetic text to app/browser/source classifiers. |
 | Evidence Vault | Validated skeleton | `VAULT-RETENTION-001`, `VAULT-ENCRYPT-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001` | Replace dev cipher with production key management before real private data. |
 | Scene, memory, and graph pipeline | Validated skeleton | `SCENE-SEGMENT-001`, `MEM-COMPILE-001`, `GRAPH-EDGE-001` | Add richer multimodal segmentation and contradiction handling. |
-| Retrieval and context packs | Validated budgeted skeleton | `RETRIEVAL-SCORE-001`, `CONTEXT-PACK-001`, `CONTEXT-BUDGET-001`, scoped self-lesson suites | Add vector/sparse/graph fusion behind stable interfaces. |
+| Retrieval and context packs | Validated budgeted skeleton plus hybrid fusion interface | `RETRIEVAL-SCORE-001`, `CONTEXT-FUSION-INDEX-STUB-001`, `CONTEXT-PACK-001`, `CONTEXT-BUDGET-001`, scoped self-lesson suites | Wire real vector/sparse/graph adapters behind the stable fusion interface. |
 | Memory Palace | Validated dashboard contract, static UI shell, and read-only gateway action receipts | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, `MEMORY-PALACE-DASHBOARD-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, `DASHBOARD-GATEWAY-ACTIONS-001`, self-lesson review flows | Wire safe read-only calls to the local gateway runtime; keep correction/delete/export confirmation-gated. |
 | Skill Forge | Validated skeleton plus candidate list, static UI shell, and read-only review receipts | `SKILL-FORGE-002`, `SKILL-DOC-DERIVATION-001`, `SKILL-FORGE-LIST-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, `DASHBOARD-GATEWAY-ACTIONS-001`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add workflow clustering, skill success metrics, and live draft-only execution previews behind receipts. |
 | Agent Gateway | Validated skeleton plus install-smoked and approval-gated Codex plugin package | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools, `CODEX-PLUGIN-001`, `PLUGIN-INSTALL-SMOKE-001`, `CODEX-PLUGIN-REAL-ENABLE-001`, `plugins/cortex-memory-os` | Bridge additional clients and keep real user config changes explicit. |
@@ -116,7 +117,10 @@ capture realism:
    runtime, with browser proof and no mutation paths enabled.
 4. Persist real agent runtime traces into outcome postmortems and
    self-improvement scoring.
-5. Additional client bridges after the Codex plugin path is user-approved in a
+5. Wire real vector, sparse, and graph adapters behind
+   `CONTEXT-FUSION-INDEX-STUB-001` without changing the redacted result
+   contract.
+6. Additional client bridges after the Codex plugin path is user-approved in a
    real environment.
 
 ## Update Rule

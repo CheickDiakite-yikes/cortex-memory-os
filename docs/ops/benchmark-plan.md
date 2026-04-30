@@ -30,6 +30,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `MEM-RECALL-001` | Benign memory recall returns the intended memory with provenance. | Relevant user-approved memory cannot be recalled. |
 | `RETRIEVAL-SCORE-001` | Ranking favors trusted, recent, task-relevant memories. | Deleted or untrusted memory outranks safe active memory. |
 | `SCOPE-POLICY-001` | Project, agent, and session boundaries filter retrieval. | Memory crosses a mismatched project, agent, or session scope. |
+| `CONTEXT-FUSION-INDEX-STUB-001` | Hybrid context fusion combines semantic, sparse, graph, recency, and trust signals with prompt-risk exclusions. | Risky or raw-ref candidates enter context, or fusion results expose content instead of redacted diagnostics. |
 | `PERF-LAT-001` | Synthetic local memory writes and searches report p50/p95 latency. | Local p95 latency crosses the initial synthetic gate. |
 | `PERF-HISTORY-001` | Benchmark latency artifacts can be compared across runs. | Large p95 regression is not flagged. |
 | `GATEWAY-HISTORY-001` | Local ops command renders sanitized latency-history reports. | History command leaks non-latency payloads or lacks regression failure mode. |

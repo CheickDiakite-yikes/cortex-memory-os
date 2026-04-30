@@ -6,25 +6,26 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| CONTEXT-FUSION-INDEX-STUB-001 | Add a stubbed hybrid retrieval index interface | Codex | Interface tests plus no-network local fixture | Keep graph/vector/sparse fusion behind stable contracts before adding dependencies. |
+| RETRIEVAL-EXPLANATION-RECEIPTS-001 | Add context retrieval explanation receipts | Codex | Safe inclusion/exclusion receipt tests plus benchmark hook | Explain why memory was selected without exposing hidden content. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| RETRIEVAL-EXPLANATION-RECEIPTS-001 | Add context retrieval explanation receipts | Codex | Safe inclusion/exclusion receipt tests plus benchmark hook | Explain why memory was selected without exposing hidden content. |
+| SKILL-SUCCESS-METRICS-001 | Add Skill Forge success/failure metrics | Codex | Synthetic skill outcome counters and dashboard-safe summaries | Track maturity evidence without raising autonomy. |
 
 ## Backlog
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| SKILL-SUCCESS-METRICS-001 | Add Skill Forge success/failure metrics | Codex | Synthetic skill outcome counters and dashboard-safe summaries | Track maturity evidence without raising autonomy. |
 | OUTCOME-POSTMORTEM-TRACE-001 | Feed runtime traces into outcome postmortems | Codex | Postmortem fixture with safe trace metadata only | Do not turn event summaries into instructions. |
+| REAL-VECTOR-INDEX-ADAPTER-001 | Wire real vector, sparse, and graph adapters behind fusion interface | Codex | Adapter tests using local sanitized fixtures | Must preserve `CONTEXT-FUSION-INDEX-STUB-001` result redaction and risk exclusions. |
 
 ## Done
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
+| CONTEXT-FUSION-INDEX-STUB-001 | Add a stubbed hybrid retrieval index interface | Codex | `src/cortex_memory_os/hybrid_index.py`, focused tests, `uv run cortex-bench` -> 125/125 passed | Keeps graph/vector/sparse fusion behind stable redacted contracts before adding dependencies. |
 | GATEWAY-TRACE-PERSISTENCE-001 | Persist real agent runtime traces through the gateway | Codex | `runtime_trace.record/get/list`, SQLite round-trip, `uv run cortex-bench --no-write` -> 124/124 passed | Gateway returns metadata receipts without event summary text by default. |
 | NATIVE-CAPTURE-PERMISSION-SMOKE-001 | Add a local macOS permission-status smoke command | Codex | `src/cortex_memory_os/native_permission_smoke.py`, `swift run --package-path native/macos-shadow-pointer cortex-permission-smoke`, `uv run cortex-bench --no-write` -> 123/123 passed | Reads permission status only; no prompts, capture, observers, memory writes, or evidence refs. |
 | OPS-001 | Install project engineering control plane | Codex | `AGENTS.md`, `docs/ops/*`, `docs/adr/0001-engineering-control-plane.md`, `.gitignore` | Created before product implementation. |

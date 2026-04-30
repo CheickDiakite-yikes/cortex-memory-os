@@ -59,6 +59,12 @@ from cortex_memory_os.firewall import (
 )
 from cortex_memory_os.fixtures import load_json
 from cortex_memory_os.governance import gate_action
+from cortex_memory_os.hybrid_index import (
+    CONTEXT_FUSION_INDEX_STUB_ID,
+    HYBRID_CONTEXT_FUSION_POLICY_REF,
+    build_memory_fusion_candidate,
+    fuse_hybrid_candidates,
+)
 from cortex_memory_os.live_openai_smoke import (
     DEFAULT_OPENAI_MODEL,
     build_responses_payload,
@@ -293,6 +299,7 @@ def run_all() -> BenchmarkRunResult:
         case_benign_recall,
         case_retrieval_scoring,
         case_scope_aware_retrieval_policy,
+        case_context_fusion_index_stub_contract,
         case_local_memory_latency,
         case_latency_history_report,
         case_gateway_latency_history_command,
@@ -516,6 +523,115 @@ def case_retrieval_scoring() -> BenchmarkCaseResult:
     )
 
 
+def case_context_fusion_index_stub_contract() -> BenchmarkCaseResult:
+    memory = MemoryRecord.model_validate(load_json(TEST_FIXTURES / "memory_preference.json"))
+    now = datetime(2026, 4, 30, 13, 0, tzinfo=UTC)
+    trusted = build_memory_fusion_candidate(
+        memory.model_copy(
+            update={
+                "memory_id": "mem_hybrid_trusted",
+                "evidence_type": EvidenceType.USER_CONFIRMED,
+                "created_at": now - timedelta(days=1),
+                "sensitivity": Sensitivity.PUBLIC,
+                "source_refs": ["scene:research_sprint", "project:cortex"],
+            }
+        ),
+        semantic_score=0.72,
+        sparse_score=0.54,
+        graph_score=0.94,
+        now=now,
+    )
+    risky = build_memory_fusion_candidate(
+        memory.model_copy(
+            update={
+                "memory_id": "mem_hybrid_external_risky",
+                "evidence_type": EvidenceType.EXTERNAL_EVIDENCE,
+                "created_at": now - timedelta(days=430),
+                "sensitivity": Sensitivity.REGULATED,
+                "source_refs": ["external:webpage", "project:cortex"],
+            }
+        ),
+        semantic_score=0.98,
+        sparse_score=0.90,
+        graph_score=0.18,
+        now=now,
+        prompt_injection_risk=0.80,
+    )
+    results = fuse_hybrid_candidates([risky, trusted], limit=1)
+    result_payload = json.dumps(
+        [result.model_dump(mode="json") for result in results],
+        sort_keys=True,
+    )
+
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "hybrid-context-fusion-index.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (
+        REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    ).read_text(encoding="utf-8")
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    report_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        CONTEXT_FUSION_INDEX_STUB_ID,
+        HYBRID_CONTEXT_FUSION_POLICY_REF,
+        "dependency-free",
+        "semantic",
+        "sparse",
+        "graph",
+        "prompt_injection_risk",
+        "content redacted",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        [result.memory_id for result in results]
+        == ["mem_hybrid_trusted", "mem_hybrid_external_risky"]
+        and results[0].included
+        and not results[1].included
+        and "prompt_injection_risk" in results[1].excluded_reason_tags
+        and results[0].content_redacted
+        and results[1].content_redacted
+        and "content_preview" not in result_payload
+        and "raw://" not in result_payload
+        and HYBRID_CONTEXT_FUSION_POLICY_REF in results[0].policy_refs
+        and not missing_doc_terms
+        and CONTEXT_FUSION_INDEX_STUB_ID in plan_text
+        and CONTEXT_FUSION_INDEX_STUB_ID in registry_text
+        and CONTEXT_FUSION_INDEX_STUB_ID in task_text
+        and CONTEXT_FUSION_INDEX_STUB_ID in report_text
+    )
+    return BenchmarkCaseResult(
+        case_id="CONTEXT-FUSION-INDEX-STUB-001/hybrid_signal_fusion",
+        suite=CONTEXT_FUSION_INDEX_STUB_ID,
+        passed=passed,
+        summary=(
+            "Hybrid context fusion combines semantic, sparse, graph, recency, "
+            "and trust signals while excluding prompt-risk candidates and "
+            "returning content-redacted diagnostics."
+        ),
+        metrics={
+            "result_count": len(results),
+            "included_count": sum(int(result.included) for result in results),
+            "top_score": results[0].score if results else 0,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": HYBRID_CONTEXT_FUSION_POLICY_REF,
+            "ranked_memory_ids": [result.memory_id for result in results],
+            "excluded_reason_tags": {
+                result.memory_id: result.excluded_reason_tags for result in results
+            },
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
 def _missing_terms(text: str, terms: list[str]) -> list[str]:
     lower_text = text.lower()
     return [term for term in terms if term.lower() not in lower_text]
@@ -652,6 +768,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "docs/research/frontier-agent-plugin-lessons-2026-04-29.md",
         "docs/architecture/browser-terminal-adapter-contracts.md",
         "docs/architecture/context-pack-templates.md",
+        "docs/architecture/hybrid-context-fusion-index.md",
         "docs/architecture/document-to-skill-derivation.md",
         "docs/architecture/swarm-governance.md",
         "docs/architecture/robot-spatial-safety.md",
@@ -674,6 +791,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "PRODUCT-GOAL-COVERAGE-001",
         "PRODUCT-TRACEABILITY-REPORT-001",
         "CONTEXT-BUDGET-001",
+        CONTEXT_FUSION_INDEX_STUB_ID,
         "RUNTIME-TRACE-001",
         "SEC-INJECT-001",
         "VAULT-RETENTION-001",
