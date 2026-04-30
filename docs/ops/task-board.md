@@ -6,24 +6,25 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| SKILL-SUCCESS-METRICS-001 | Add Skill Forge success/failure metrics | Codex | Synthetic skill outcome counters and dashboard-safe summaries | Track maturity evidence without raising autonomy. |
+| OUTCOME-POSTMORTEM-TRACE-001 | Feed runtime traces into outcome postmortems | Codex | Postmortem fixture with safe trace metadata only | Do not turn event summaries into instructions. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| OUTCOME-POSTMORTEM-TRACE-001 | Feed runtime traces into outcome postmortems | Codex | Postmortem fixture with safe trace metadata only | Do not turn event summaries into instructions. |
+| REAL-VECTOR-INDEX-ADAPTER-001 | Wire real vector, sparse, and graph adapters behind fusion interface | Codex | Adapter tests using local sanitized fixtures | Must preserve `CONTEXT-FUSION-INDEX-STUB-001` result redaction and risk exclusions. |
 
 ## Backlog
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| REAL-VECTOR-INDEX-ADAPTER-001 | Wire real vector, sparse, and graph adapters behind fusion interface | Codex | Adapter tests using local sanitized fixtures | Must preserve `CONTEXT-FUSION-INDEX-STUB-001` result redaction and risk exclusions. |
+| SKILL-METRICS-DASHBOARD-SURFACE-001 | Surface Skill Forge metrics in dashboard view models | Codex | Dashboard-safe card tests and browser proof | Must not expose procedure text, task content, raw refs, or autonomy-changing controls. |
 
 ## Done
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
+| SKILL-SUCCESS-METRICS-001 | Add Skill Forge success/failure metrics | Codex | `src/cortex_memory_os/skill_metrics.py`, dashboard-safe cards, `uv run cortex-bench` -> 127/127 passed | Tracks maturity evidence without promoting skills or raising autonomy. |
 | RETRIEVAL-EXPLANATION-RECEIPTS-001 | Add context retrieval explanation receipts | Codex | `src/cortex_memory_os/retrieval_explanations.py`, context-pack receipts, `uv run cortex-bench` -> 126/126 passed | Explains included/evidence-only/excluded memory decisions without exposing content or source refs. |
 | CONTEXT-FUSION-INDEX-STUB-001 | Add a stubbed hybrid retrieval index interface | Codex | `src/cortex_memory_os/hybrid_index.py`, focused tests, `uv run cortex-bench` -> 125/125 passed | Keeps graph/vector/sparse fusion behind stable redacted contracts before adding dependencies. |
 | GATEWAY-TRACE-PERSISTENCE-001 | Persist real agent runtime traces through the gateway | Codex | `runtime_trace.record/get/list`, SQLite round-trip, `uv run cortex-bench --no-write` -> 124/124 passed | Gateway returns metadata receipts without event summary text by default. |

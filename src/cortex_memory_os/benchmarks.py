@@ -262,6 +262,13 @@ from cortex_memory_os.skill_forge_dashboard import (
     SKILL_FORGE_CANDIDATE_LIST_POLICY_REF,
     build_skill_forge_candidate_list,
 )
+from cortex_memory_os.skill_metrics import (
+    SKILL_SUCCESS_METRICS_ID,
+    SKILL_SUCCESS_METRICS_POLICY_REF,
+    SkillOutcomeEvent,
+    build_skill_metric_card,
+    summarize_skill_outcomes,
+)
 from cortex_memory_os.skill_policy import (
     evaluate_skill_promotion,
     evaluate_skill_rollback,
@@ -384,6 +391,7 @@ def run_all() -> BenchmarkRunResult:
         case_skill_forge_detector,
         case_document_to_skill_derivation_contract,
         case_skill_forge_candidate_list_contract,
+        case_skill_success_metrics_contract,
         case_dashboard_shell_contract,
         case_dashboard_gateway_actions_contract,
         case_skill_promotion_gate,
@@ -767,6 +775,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "docs/product/original-goal-coverage.md",
         "docs/product/memory-palace-dashboard.md",
         "docs/product/skill-forge-candidate-list.md",
+        "docs/product/skill-success-metrics.md",
         "docs/product/cortex-dashboard-shell.md",
         "docs/research/frontier-agent-plugin-lessons-2026-04-29.md",
         "docs/architecture/browser-terminal-adapter-contracts.md",
@@ -805,6 +814,7 @@ def case_product_traceability_report_contract() -> BenchmarkCaseResult:
         "SKILL-FORGE-002",
         "SKILL-DOC-DERIVATION-001",
         "SKILL-FORGE-LIST-001",
+        SKILL_SUCCESS_METRICS_ID,
         DASHBOARD_SHELL_ID,
         "GATEWAY-CTX-001",
         "CODEX-PLUGIN-001",
@@ -9075,6 +9085,124 @@ def case_skill_forge_candidate_list_contract() -> BenchmarkCaseResult:
             "missing_doc_terms": missing_doc_terms,
             "action_tool_count": len(action_tools),
             "status_counts": candidate_list.status_counts,
+        },
+    )
+
+
+def case_skill_success_metrics_contract() -> BenchmarkCaseResult:
+    skill = SkillRecord.model_validate(load_json(TEST_FIXTURES / "skill_draft.json"))
+    events = [
+        SkillOutcomeEvent(
+            event_id="skill_metric_success_1",
+            skill_id=skill.skill_id,
+            task_id="task_success_1",
+            outcome=OutcomeStatus.SUCCESS,
+            maturity_level=skill.maturity_level,
+            execution_mode=skill.execution_mode,
+            risk_level=skill.risk_level,
+            verification_refs=["outcome:success_1"],
+        ),
+        SkillOutcomeEvent(
+            event_id="skill_metric_success_2",
+            skill_id=skill.skill_id,
+            task_id="task_success_2",
+            outcome=OutcomeStatus.SUCCESS,
+            maturity_level=skill.maturity_level,
+            execution_mode=skill.execution_mode,
+            risk_level=skill.risk_level,
+            verification_refs=["outcome:success_2"],
+        ),
+        SkillOutcomeEvent(
+            event_id="skill_metric_partial_1",
+            skill_id=skill.skill_id,
+            task_id="task_partial_1",
+            outcome=OutcomeStatus.PARTIAL,
+            maturity_level=skill.maturity_level,
+            execution_mode=skill.execution_mode,
+            risk_level=skill.risk_level,
+            user_correction_count=1,
+        ),
+        SkillOutcomeEvent(
+            event_id="skill_metric_failed_1",
+            skill_id=skill.skill_id,
+            task_id="task_failed_1",
+            outcome=OutcomeStatus.FAILED,
+            maturity_level=skill.maturity_level,
+            execution_mode=skill.execution_mode,
+            risk_level=skill.risk_level,
+            user_correction_count=2,
+        ),
+    ]
+    metrics = summarize_skill_outcomes(skill, events)
+    card = build_skill_metric_card(skill, metrics)
+    card_payload = json.dumps(card.model_dump(mode="json"), sort_keys=True)
+
+    docs_text = (
+        REPO_ROOT / "docs" / "product" / "skill-success-metrics.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (
+        REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    ).read_text(encoding="utf-8")
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    report_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        SKILL_SUCCESS_METRICS_ID,
+        SKILL_SUCCESS_METRICS_POLICY_REF,
+        "success/failure metrics",
+        "dashboard-safe",
+        "procedure redacted",
+        "autonomy_change_allowed",
+        "human promotion review",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        metrics.total_runs == 4
+        and metrics.success_count == 2
+        and metrics.failure_count == 1
+        and metrics.success_rate == 0.5
+        and metrics.correction_rate == 0.75
+        and metrics.promotion_blockers == ["user_approval_required"]
+        and not metrics.autonomy_change_allowed
+        and card.outcome_counts["success"] == 2
+        and card.procedure_redacted
+        and card.content_redacted
+        and not card.autonomy_change_allowed
+        and "Search current primary sources" not in card_payload
+        and "procedure_preview" not in card_payload
+        and "learned_from" not in card_payload
+        and not missing_doc_terms
+        and SKILL_SUCCESS_METRICS_ID in plan_text
+        and SKILL_SUCCESS_METRICS_ID in registry_text
+        and SKILL_SUCCESS_METRICS_ID in task_text
+        and SKILL_SUCCESS_METRICS_ID in report_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SKILL-SUCCESS-METRICS-001/outcome_summary_card",
+        suite=SKILL_SUCCESS_METRICS_ID,
+        passed=passed,
+        summary=(
+            "Skill Forge success metrics summarize outcomes and dashboard-safe "
+            "review cards without promoting skills or exposing procedure text."
+        ),
+        metrics={
+            "total_runs": metrics.total_runs,
+            "success_count": metrics.success_count,
+            "failure_count": metrics.failure_count,
+            "verification_ref_count": metrics.verification_ref_count,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": SKILL_SUCCESS_METRICS_POLICY_REF,
+            "review_recommendation": metrics.review_recommendation,
+            "promotion_blockers": metrics.promotion_blockers,
+            "missing_doc_terms": missing_doc_terms,
         },
     )
 

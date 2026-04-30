@@ -72,6 +72,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `SKILL-FORGE-002` | Repeated scenes create draft-only skill candidates. | Repetition jumps directly to autonomy. |
 | `SKILL-DOC-DERIVATION-001` | Workflow documents derive candidate-only draft skills with provenance and review paths. | A document approves, executes, hides provenance, omits rollback/deletion, or bypasses hostile-source checks. |
 | `SKILL-FORGE-LIST-001` | Skill Forge candidate cards expose safe previews, source counts, promotion blockers, and review action plans without external effects. | Candidate list leaks secret-like procedure text, omits approval blockers, hides source counts, or includes action plans with external effects. |
+| `SKILL-SUCCESS-METRICS-001` | Skill Forge success/failure metrics summarize outcomes and dashboard-safe review cards without changing autonomy. | Metrics promote a skill, expose procedure/content, accept draft external effects, or omit promotion blockers. |
 | `SKILL-GATE-001` | Skill maturity promotions are incremental and approved. | Skill promotion skips approval or maturity levels. |
 | `SKILL-ROLLBACK-001` | Failed skills can roll back to lower maturity. | Rollback expands permissions or lacks failure/user evidence. |
 | `SKILL-AUDIT-001` | Skill maturity decisions persist redacted audit receipts. | Skill audit copies procedure content or lacks human visibility. |
