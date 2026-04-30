@@ -25,6 +25,7 @@ from cortex_memory_os.hybrid_index import (
 HYBRID_FUSION_CONTEXT_PACK_INTEGRATION_ID = (
     "HYBRID-FUSION-CONTEXT-PACK-INTEGRATION-001"
 )
+CONTEXT_FUSION_STRESS_ID = "CONTEXT-FUSION-STRESS-001"
 
 
 def build_context_fusion_diagnostics(

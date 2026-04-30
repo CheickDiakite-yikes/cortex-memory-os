@@ -7,7 +7,7 @@ def test_synthetic_benchmarks_pass():
     result = run_all()
 
     assert result.passed
-    assert len(result.case_results) == 134
+    assert len(result.case_results) == 135
     assert {case.suite for case in result.case_results} >= {
         "MEM-RECALL-001",
         "RETRIEVAL-SCORE-001",
@@ -15,6 +15,7 @@ def test_synthetic_benchmarks_pass():
         "CONTEXT-FUSION-INDEX-STUB-001",
         "REAL-VECTOR-INDEX-ADAPTER-001",
         "HYBRID-FUSION-CONTEXT-PACK-INTEGRATION-001",
+        "CONTEXT-FUSION-STRESS-001",
         "PERF-LAT-001",
         "PERF-HISTORY-001",
         "GATEWAY-HISTORY-001",
