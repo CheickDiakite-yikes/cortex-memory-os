@@ -31,6 +31,7 @@ from cortex_memory_os.contracts import (
     MemoryStatus,
     ObservationEvent,
     ObservationEventType,
+    OutcomeRecord,
     OutcomeStatus,
     PerceptionEventEnvelope,
     PerceptionRoute,
@@ -186,6 +187,11 @@ from cortex_memory_os.runtime_trace import (
     runtime_trace_persistence_receipt,
     summarize_runtime_trace,
     trace_evidence_refs,
+)
+from cortex_memory_os.outcome_postmortem import (
+    OUTCOME_POSTMORTEM_TRACE_ID,
+    OUTCOME_POSTMORTEM_TRACE_POLICY_REF,
+    compile_outcome_postmortem_from_trace,
 )
 from cortex_memory_os.temporal_graph import compile_temporal_edge
 from cortex_memory_os.swarm_governance import (
@@ -411,6 +417,7 @@ def run_all() -> BenchmarkRunResult:
         case_swarm_governance_contract,
         case_agent_runtime_trace_contract,
         case_gateway_runtime_trace_persistence_contract,
+        case_outcome_postmortem_trace_handoff_contract,
         case_perception_event_envelope_contract,
         case_perception_firewall_handoff_contract,
         case_evidence_eligibility_handoff_contract,
@@ -1740,6 +1747,96 @@ def case_gateway_runtime_trace_persistence_contract() -> BenchmarkCaseResult:
             "summary_text_returned": int(
                 "Blocked untrusted external browser content" in safe_payload
             ),
+        },
+    )
+
+
+def case_outcome_postmortem_trace_handoff_contract() -> BenchmarkCaseResult:
+    trace = AgentRuntimeTrace.model_validate(
+        load_json("tests/fixtures/agent_runtime_trace.json")
+    )
+    outcome = OutcomeRecord(
+        outcome_id="outcome_onboarding_debug_001",
+        task_id=trace.task_id,
+        agent_id=trace.agent_id,
+        status=OutcomeStatus.SUCCESS,
+        evidence_refs=["outcome:onboarding-debug-local-tests"],
+        created_at=datetime(2026, 4, 30, 6, 0, tzinfo=UTC),
+    )
+    postmortem = compile_outcome_postmortem_from_trace(
+        trace,
+        outcome,
+        created_at=datetime(2026, 4, 30, 6, 1, tzinfo=UTC),
+    )
+    safe_payload = json.dumps(postmortem.model_dump(mode="json"), sort_keys=True)
+    event_summary_leaks = [
+        event.summary for event in trace.events if event.summary in safe_payload
+    ]
+
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "outcome-postmortem-trace-handoff.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (
+        REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    ).read_text(encoding="utf-8")
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    report_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        OUTCOME_POSTMORTEM_TRACE_ID,
+        OUTCOME_POSTMORTEM_TRACE_POLICY_REF,
+        "safe trace metadata",
+        "summary_text_redacted",
+        "event_summaries_included",
+        "Self-Improvement Engine",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        postmortem.trace_id == trace.trace_id
+        and postmortem.outcome_id == outcome.outcome_id
+        and postmortem.event_count == 11
+        and postmortem.approval_count == 1
+        and postmortem.retry_count == 1
+        and postmortem.highest_risk == ActionRisk.HIGH
+        and postmortem.summary_text_redacted
+        and not postmortem.event_summaries_included
+        and postmortem.content_redacted
+        and "retry_observed" in postmortem.safe_findings
+        and "high_risk_observed" in postmortem.safe_findings
+        and OUTCOME_POSTMORTEM_TRACE_POLICY_REF in postmortem.policy_refs
+        and not event_summary_leaks
+        and not missing_doc_terms
+        and OUTCOME_POSTMORTEM_TRACE_ID in plan_text
+        and OUTCOME_POSTMORTEM_TRACE_ID in registry_text
+        and OUTCOME_POSTMORTEM_TRACE_ID in task_text
+        and OUTCOME_POSTMORTEM_TRACE_ID in report_text
+    )
+    return BenchmarkCaseResult(
+        case_id="OUTCOME-POSTMORTEM-TRACE-001/safe_trace_metadata",
+        suite=OUTCOME_POSTMORTEM_TRACE_ID,
+        passed=passed,
+        summary=(
+            "Outcome postmortems consume safe runtime trace metadata while "
+            "redacting event summary text and keeping self-improvement as "
+            "review-only follow-ups."
+        ),
+        metrics={
+            "event_count": postmortem.event_count,
+            "follow_up_count": len(postmortem.follow_up_task_ids),
+            "event_summary_leak_count": len(event_summary_leaks),
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": OUTCOME_POSTMORTEM_TRACE_POLICY_REF,
+            "trace_id": postmortem.trace_id,
+            "safe_findings": postmortem.safe_findings,
+            "missing_doc_terms": missing_doc_terms,
         },
     )
 

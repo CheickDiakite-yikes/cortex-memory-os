@@ -31,6 +31,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | SKILL-SUCCESS-METRICS-001 | Skill success metrics | Verify Skill Forge outcome counts and dashboard-safe metric cards without promotion, procedure leakage, or draft external effects | run counts, success rate, correction rate, blocker count, redaction markers | metrics remain observational, promotion blockers visible, no procedure/content leakage |
 | RUNTIME-TRACE-001 | Agent runtime trace contract | Verify agent tool, shell, browser, artifact, approval, retry, blocked-hostile, and outcome events are ordered and redacted | event count, approval refs, retry refs, evidence refs, outcome check | successful traces require outcome checks and hostile content stays redacted |
 | GATEWAY-TRACE-PERSISTENCE-001 | Gateway runtime trace persistence | Verify gateway record/get/list tools persist traces and return safe metadata receipts | persisted trace count, summary redaction, evidence refs, policy refs | zero event summary text returned by default, persistence policy ref present |
+| OUTCOME-POSTMORTEM-TRACE-001 | Outcome postmortem trace handoff | Verify outcome postmortems use safe trace metadata without event summary text or automatic self-improvement | event count, follow-up count, summary leak count, policy refs | zero event summary leakage, review-only follow-ups, `policy_outcome_postmortem_trace_v1` present |
 | ROBOT-SAFE-001 | Embodied action gating | Ensure memory-triggered physical actions require explicit capability, spatial metadata, simulation, emergency stop, and approval | unauthorized action rate, approval trace completeness, spatial metadata completeness | zero unauthorized actions |
 
 ## Run Log
@@ -161,6 +162,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-30 | Hybrid context fusion index stub | `uv run cortex-bench` plus focused hybrid index tests | 125/125 passed; focused tests passed with 6 tests; full suite passed with 288 tests | `benchmarks/runs/bench_20260430T050859Z.json` | Next benchmark: retrieval explanation receipts. |
 | 2026-04-30 | Retrieval explanation receipts | `uv run cortex-bench` plus focused retrieval receipt/gateway tests | 126/126 passed; focused tests passed with 8 tests; full suite passed with 292 tests | `benchmarks/runs/bench_20260430T051324Z.json` | Next benchmark: Skill Forge success metrics. |
 | 2026-04-30 | Skill Forge success metrics | `uv run cortex-bench` plus focused skill metrics tests | 127/127 passed; focused tests passed with 6 tests; full suite passed with 296 tests | `benchmarks/runs/bench_20260430T051705Z.json` | Next benchmark: outcome postmortem trace handoff. |
+| 2026-04-30 | Outcome postmortem trace handoff | `uv run cortex-bench` plus focused outcome postmortem tests | 128/128 passed; focused tests passed with 10 tests; full suite passed with 299 tests | `benchmarks/runs/bench_20260430T060348Z.json` | Next benchmark: local vector/sparse/graph fusion adapters. |
 
 ## First Runnable Harness Requirements
 
