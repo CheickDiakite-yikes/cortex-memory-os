@@ -65,6 +65,8 @@ DASHBOARD_SHELL_ID = "MEMORY-PALACE-SKILL-FORGE-UI-001"
 DASHBOARD_SHELL_POLICY_REF = "policy_cortex_dashboard_shell_v1"
 DASHBOARD_FOCUS_INSPECTOR_ID = "DASHBOARD-FOCUS-INSPECTOR-001"
 DASHBOARD_FOCUS_INSPECTOR_POLICY_REF = "policy_dashboard_focus_inspector_v1"
+DASHBOARD_DEMO_PATH_ID = "DEMO-READINESS-001"
+DASHBOARD_DEMO_PATH_POLICY_REF = "policy_demo_readiness_v1"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DASHBOARD_DATA_PATH = REPO_ROOT / "ui" / "cortex-dashboard" / "dashboard-data.js"
 
@@ -151,6 +153,45 @@ class DashboardFocusInspector(StrictModel):
         return self
 
 
+class DashboardDemoPathStep(StrictModel):
+    step_id: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+    surface: str = Field(min_length=1)
+    state: str = Field(min_length=1)
+    proof: str = Field(min_length=1)
+    safety_note: str = Field(min_length=1)
+    command: str | None = None
+    content_redacted: bool = True
+    source_refs_redacted: bool = True
+
+
+class DashboardDemoPath(StrictModel):
+    path_id: str = DASHBOARD_DEMO_PATH_ID
+    title: str = "Safe Demo Path"
+    summary: str = Field(min_length=1)
+    synthetic_only: bool = True
+    real_capture_started: bool = False
+    raw_storage_enabled: bool = False
+    mutation_enabled: bool = False
+    blocked_effects: list[str] = Field(default_factory=list)
+    steps: list[DashboardDemoPathStep] = Field(default_factory=list)
+    policy_refs: list[str] = Field(default_factory=lambda: [DASHBOARD_DEMO_PATH_POLICY_REF])
+
+    @model_validator(mode="after")
+    def keep_demo_path_safe(self) -> DashboardDemoPath:
+        if not self.synthetic_only:
+            raise ValueError("dashboard demo path must stay synthetic-only")
+        if self.real_capture_started:
+            raise ValueError("dashboard demo path cannot start real capture")
+        if self.raw_storage_enabled:
+            raise ValueError("dashboard demo path cannot enable raw storage")
+        if self.mutation_enabled:
+            raise ValueError("dashboard demo path cannot enable mutation")
+        if DASHBOARD_DEMO_PATH_POLICY_REF not in self.policy_refs:
+            raise ValueError("dashboard demo path requires policy ref")
+        return self
+
+
 class CortexDashboardShell(StrictModel):
     shell_id: str = DASHBOARD_SHELL_ID
     generated_at: datetime
@@ -168,6 +209,7 @@ class CortexDashboardShell(StrictModel):
     retrieval_debug: RetrievalReceiptsDashboard
     safe_receipts: list[DashboardSafeReceipt] = Field(default_factory=list)
     insight_panels: list[DashboardInsightPanel] = Field(default_factory=list)
+    demo_path: DashboardDemoPath
     focus_inspector: DashboardFocusInspector
     gateway_action_receipts: list[DashboardGatewayActionReceipt] = Field(default_factory=list)
     policy_refs: list[str] = Field(default_factory=list)
@@ -200,6 +242,7 @@ class DashboardShellSmokeResult(StrictModel):
     retrieval_receipts_present: bool
     procedure_text_retained: bool
     retrieval_source_refs_retained: bool
+    demo_path_present: bool
     missing_ui_terms: list[str] = Field(default_factory=list)
     missing_doc_terms: list[str] = Field(default_factory=list)
 
@@ -289,6 +332,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
         skill_metrics=skill_metrics,
         retrieval_debug=retrieval_debug,
         safe_receipts=_sample_safe_receipts(timestamp),
+        demo_path=_sample_demo_path(),
         gateway_action_receipts=build_dashboard_gateway_action_receipts(
             memory_dashboard,
             skill_list,
@@ -303,6 +347,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             RETRIEVAL_RECEIPTS_DASHBOARD_POLICY_REF,
             DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
             DASHBOARD_FOCUS_INSPECTOR_POLICY_REF,
+            DASHBOARD_DEMO_PATH_POLICY_REF,
             MEMORY_ENCRYPTION_DEFAULT_POLICY_REF,
         ],
         design_notes=[
@@ -312,6 +357,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Status strip exposes observation, project, consent, and firewall state.",
             "Evidence, context, firewall, and ops health use calm count-only panels.",
             "Selected details live in a sparse focus inspector instead of every queue card.",
+            "Demo path shows the safe localhost narrative without adding another dense work queue.",
             "Action controls are declarative UI plans; this shell does not execute mutations.",
         ],
         safety_notes=[
@@ -372,6 +418,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "Encryption Default",
         "Ops Quality",
         "Focus Inspector",
+        "Safe Demo Path",
+        "DEMO-READINESS-001",
         "window.CORTEX_DASHBOARD_DATA",
     ]
     missing_ui_terms = _missing_terms(ui_text + "\n" + data_js, required_ui_terms)
@@ -448,6 +496,17 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and shell.focus_inspector.source_refs_redacted
         and shell.focus_inspector.procedure_redacted
     )
+    demo_path_payload = shell.demo_path.model_dump_json()
+    demo_path_present = (
+        "Safe Demo Path" in ui_text + "\n" + data_js
+        and shell.demo_path.synthetic_only
+        and not shell.demo_path.real_capture_started
+        and not shell.demo_path.raw_storage_enabled
+        and not shell.demo_path.mutation_enabled
+        and DASHBOARD_DEMO_PATH_POLICY_REF in shell.policy_refs
+        and "raw://" not in demo_path_payload
+        and "encrypted_blob://" not in demo_path_payload
+    )
 
     passed = (
         ui_files_present
@@ -459,6 +518,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and len(shell.insight_panels) >= 4
         and encryption_default_visible
         and focus_inspector_present
+        and demo_path_present
         and gateway_actions_present
         and not secret_retained
         and not raw_private_data_retained
@@ -495,6 +555,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         retrieval_receipts_present=retrieval_receipts_present,
         procedure_text_retained=procedure_text_retained,
         retrieval_source_refs_retained=retrieval_source_refs_retained,
+        demo_path_present=demo_path_present,
         missing_ui_terms=missing_ui_terms,
         missing_doc_terms=missing_doc_terms,
     )
@@ -818,6 +879,60 @@ def _sample_safe_receipts(now: datetime) -> list[DashboardSafeReceipt]:
             timestamp=now,
         ),
     ]
+
+
+def _sample_demo_path() -> DashboardDemoPath:
+    blocked_effects = [
+        "real_screen_capture",
+        "durable_raw_screen_storage",
+        "raw_private_refs",
+        "secret_echo",
+        "mutation",
+        "export",
+        "draft_execution",
+        "external_effect",
+    ]
+    return DashboardDemoPath(
+        summary="A localhost-only walkthrough that proves the brain loop using synthetic data.",
+        blocked_effects=blocked_effects,
+        steps=[
+            DashboardDemoPathStep(
+                step_id="demo_dashboard",
+                label="Dashboard",
+                surface="localhost static UI",
+                state="ready",
+                proof="Shadow Pointer, Memory Palace, Skill Forge, guardrails, receipts.",
+                safety_note="Synthetic view model only; no live capture starts.",
+                command="python3 -m http.server 8792 --bind 127.0.0.1",
+            ),
+            DashboardDemoPathStep(
+                step_id="demo_ladder",
+                label="Capture Ladder",
+                surface="cortex-synthetic-capture-ladder",
+                state="ready",
+                proof="Temp raw ref expires; audited synthetic memory retrieves.",
+                safety_note="Secret fixture is masked before raw or memory write.",
+                command="uv run cortex-synthetic-capture-ladder --json",
+            ),
+            DashboardDemoPathStep(
+                step_id="demo_index",
+                label="Encrypted Index",
+                surface="memory.search_index",
+                state="ready",
+                proof="Metadata-only search over sealed memory and HMAC terms.",
+                safety_note="Content, source refs, graph terms, and query text stay redacted.",
+            ),
+            DashboardDemoPathStep(
+                step_id="demo_context",
+                label="Context Pack",
+                surface="memory.get_context_pack",
+                state="ready",
+                proof="Policy refs and redacted retrieval diagnostics are visible.",
+                safety_note="No mutation, export, draft execution, or external effect is enabled.",
+            ),
+        ],
+        policy_refs=[DASHBOARD_DEMO_PATH_POLICY_REF, DASHBOARD_SHELL_POLICY_REF],
+    )
 
 
 def _sample_insight_panels() -> list[DashboardInsightPanel]:

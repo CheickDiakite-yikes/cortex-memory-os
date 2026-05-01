@@ -166,6 +166,11 @@ from cortex_memory_os.synthetic_capture_ladder import (
     SYNTHETIC_CAPTURE_LADDER_POLICY_REF,
     run_synthetic_capture_ladder,
 )
+from cortex_memory_os.demo_readiness import (
+    DEMO_READINESS_ID,
+    DEMO_READINESS_POLICY_REF,
+    run_demo_readiness,
+)
 from cortex_memory_os.dashboard_gateway_actions import (
     DASHBOARD_GATEWAY_ACTIONS_ID,
     DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
@@ -541,6 +546,7 @@ def run_all() -> BenchmarkRunResult:
         case_dashboard_readonly_action_live_proof_contract,
         case_live_run_computer_safe_task_contract,
         case_synthetic_capture_ladder_contract,
+        case_demo_readiness_contract,
         case_skill_promotion_gate,
         case_skill_rollback_gate,
         case_skill_maturity_audit_events,
@@ -11908,6 +11914,96 @@ def case_synthetic_capture_ladder_contract() -> BenchmarkCaseResult:
             "memory_id": result.memory_id,
             "evidence_id": result.evidence_id,
             "audit_event_id": result.audit_event_id,
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_demo_readiness_contract() -> BenchmarkCaseResult:
+    result = run_demo_readiness(now=datetime(2026, 5, 1, 18, 0, tzinfo=UTC))
+    docs_text = (
+        (REPO_ROOT / "docs" / "architecture" / "demo-readiness.md").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (REPO_ROOT / "docs" / "product" / "cortex-dashboard-shell.md").read_text(
+            encoding="utf-8"
+        )
+    )
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(encoding="utf-8")
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(encoding="utf-8")
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        DEMO_READINESS_ID,
+        DEMO_READINESS_POLICY_REF,
+        "Safe Demo Path",
+        "Synthetic capture ladder",
+        "encrypted index",
+        "context pack",
+        "No real screen capture",
+        "No durable raw screen storage",
+        "No secret echo",
+        "No mutation, export, or draft execution",
+    ]
+    missing_doc_terms = _missing_terms(docs_text + "\n" + plan_text + "\n" + registry_text, required_doc_terms)
+    passed = (
+        result.passed
+        and result.demo_ready
+        and result.safe_to_show_publicly
+        and result.synthetic_only
+        and result.localhost_only
+        and not result.real_screen_capture_started
+        and not result.durable_raw_screen_storage_enabled
+        and not result.raw_private_refs_returned
+        and not result.secret_values_read
+        and not result.model_secret_echo_attempted
+        and not result.mutation_export_or_draft_enabled
+        and not result.external_effect_enabled
+        and set(result.blocked_effects)
+        >= {
+            "real_screen_capture",
+            "durable_raw_screen_storage",
+            "secret_echo",
+            "mutation",
+            "export",
+            "draft_execution",
+            "external_effect",
+        }
+        and result.prohibited_marker_count == 0
+        and len(result.demo_steps) == 4
+        and all(check.passed for check in result.checks)
+        and "uv run cortex-demo --json" in result.required_commands
+        and not missing_doc_terms
+        and DEMO_READINESS_ID in task_text
+        and DEMO_READINESS_ID in registry_text
+        and DEMO_READINESS_ID in plan_text
+        and DEMO_READINESS_ID in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="DEMO-READINESS-001/safe_local_demo_receipt",
+        suite=DEMO_READINESS_ID,
+        passed=passed,
+        summary=(
+            "Safe local demo receipt composes dashboard, synthetic capture ladder, "
+            "encrypted-index gateway search, context-pack policy, and secret hygiene "
+            "without real capture, raw storage, mutation, export, draft execution, "
+            "or external effects."
+        ),
+        metrics={
+            "check_count": len(result.checks),
+            "demo_step_count": len(result.demo_steps),
+            "blocked_effect_count": len(result.blocked_effects),
+            "prohibited_marker_count": result.prohibited_marker_count,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": DEMO_READINESS_POLICY_REF,
+            "required_commands": result.required_commands,
             "missing_doc_terms": missing_doc_terms,
         },
     )

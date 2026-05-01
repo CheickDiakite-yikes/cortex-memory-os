@@ -10,6 +10,10 @@ Focus inspector benchmark: `DASHBOARD-FOCUS-INSPECTOR-001`
 
 Focus inspector policy: `policy_dashboard_focus_inspector_v1`
 
+Demo readiness benchmark: `DEMO-READINESS-001`
+
+Demo readiness policy: `policy_demo_readiness_v1`
+
 This slice turns the generated dashboard concept into a local, static,
 inspectable dashboard shell over safe view models. The goal is a usable product
 surface for Memory Palace and Skill Forge without introducing live capture,
@@ -20,7 +24,10 @@ anchor, then pares it down further after live visual review: primary work queues
 stay central, guardrails become a short summary strip, and default lists show a
 small focus queue with counts preserved. The next refinement adds a sparse
 Focus Inspector so selected memory/skill detail moves into one quiet band
-instead of making every card carry detail.
+instead of making every card carry detail. The demo-readiness refinement adds a
+compact Safe Demo Path rail so a local walkthrough can show the synthetic
+capture ladder, encrypted index, context pack, and safety off-switches without
+adding a distracting third queue.
 
 ## Design Source
 
@@ -34,6 +41,7 @@ The generated dashboard concept established the first visual direction:
   Candidate Workflows;
 - compact guardrail summaries for Context Pack Health, Privacy Firewall,
   Evidence Vault, Encryption Default, and Ops Quality;
+- a Safe Demo Path rail for the localhost synthetic demo sequence;
 - bottom rail for Recent Safe Receipts;
 - restrained local-ops palette with green, blue, amber, and red status
   accents;
@@ -73,6 +81,8 @@ The static app in `ui/cortex-dashboard/` must render:
   counts in the view model;
 - a Focus Inspector for selected memory or skill detail, with content, source
   refs, and procedure text redacted;
+- a Safe Demo Path for `DEMO-READINESS-001`, showing the dashboard, Synthetic
+  capture ladder, encrypted index, and context pack steps;
 - local filter controls for both lists;
 - icon-first action controls that update local UI state;
 - Recent Safe Receipts with redacted targets.
@@ -84,6 +94,20 @@ The static app in `ui/cortex-dashboard/` must render:
 All actions are receipt-gated previews. Only read-only explain/review actions
 may become prepared gateway calls in this slice. They do not mutate memory,
 execute skills, export data, or perform external effects.
+
+## Demo Path
+
+The Safe Demo Path is a small horizontal rail, not another dashboard panel. It
+exists so the product can be demoed coherently:
+
+1. Open the localhost dashboard.
+2. Run `uv run cortex-synthetic-capture-ladder --json`.
+3. Show metadata-only `memory.search_index` results over encrypted memory.
+4. Show `memory.get_context_pack` policy refs and redacted diagnostics.
+
+The corresponding command receipt is `uv run cortex-demo --json`. That receipt
+keeps real screen capture, durable raw screen storage, raw private refs, secret
+echo, mutation, export, draft execution, and external effects off.
 
 ## Live Desktop Proof
 
@@ -118,6 +142,8 @@ Observation pause previewed locally. Confirmation and audit receipt required.
   `policy_memory_encryption_default_v1`;
 - the visible shell includes the `Focus Inspector` tied to
   `policy_dashboard_focus_inspector_v1`;
+- the visible shell includes the `Safe Demo Path` tied to
+  `policy_demo_readiness_v1`;
 - dashboard docs, task board, benchmark plan, and benchmark registry name the
   slice;
 - local browser proof confirms the first viewport renders without overlapping

@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 from cortex_memory_os.dashboard_shell import (
+    DASHBOARD_DEMO_PATH_POLICY_REF,
     DASHBOARD_FOCUS_INSPECTOR_POLICY_REF,
     DASHBOARD_SHELL_ID,
     DASHBOARD_SHELL_POLICY_REF,
@@ -26,6 +27,7 @@ def test_dashboard_shell_composes_safe_view_models():
     assert DASHBOARD_SHELL_POLICY_REF in shell.policy_refs
     assert DASHBOARD_GATEWAY_ACTIONS_POLICY_REF in shell.policy_refs
     assert DASHBOARD_FOCUS_INSPECTOR_POLICY_REF in shell.policy_refs
+    assert DASHBOARD_DEMO_PATH_POLICY_REF in shell.policy_refs
     assert MEMORY_PALACE_DASHBOARD_POLICY_REF in shell.policy_refs
     assert SKILL_FORGE_CANDIDATE_LIST_POLICY_REF in shell.policy_refs
     assert SKILL_METRICS_DASHBOARD_POLICY_REF in shell.policy_refs
@@ -42,6 +44,14 @@ def test_dashboard_shell_composes_safe_view_models():
     assert shell.focus_inspector.procedure_redacted is True
     assert DASHBOARD_FOCUS_INSPECTOR_POLICY_REF in shell.focus_inspector.policy_refs
     assert any(action.gateway_tool == "memory.explain" for action in shell.focus_inspector.actions)
+    assert shell.demo_path.title == "Safe Demo Path"
+    assert shell.demo_path.synthetic_only is True
+    assert shell.demo_path.real_capture_started is False
+    assert shell.demo_path.raw_storage_enabled is False
+    assert shell.demo_path.mutation_enabled is False
+    assert DASHBOARD_DEMO_PATH_POLICY_REF in shell.demo_path.policy_refs
+    assert len(shell.demo_path.steps) == 4
+    assert "real_screen_capture" in shell.demo_path.blocked_effects
     assert len(shell.memory_palace.cards) >= 4
     assert len(shell.skill_forge.cards) >= 3
     assert len(shell.skill_metrics.cards) >= 3
@@ -80,6 +90,8 @@ def test_dashboard_data_js_is_redacted_and_static_app_ready():
     assert "raw://" not in data_js
     assert "Skill Metrics" in data_js
     assert "Retrieval Receipts" in data_js
+    assert "Safe Demo Path" in data_js
+    assert "DEMO-READINESS-001" in data_js
     assert "Search primary sources" not in data_js
     assert "external:https://example.invalid/attack" not in data_js
 
@@ -98,6 +110,7 @@ def test_dashboard_shell_smoke_contract_passes():
     assert result.safe_receipt_count >= 4
     assert result.insight_panel_count >= 5
     assert result.focus_inspector_present is True
+    assert result.demo_path_present is True
     assert result.encryption_default_visible is True
     assert result.gateway_action_receipt_count > 0
     assert result.gateway_actions_present is True

@@ -19,6 +19,7 @@ const icons = {
   more: '<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>',
   check: '<path d="m5 12 4 4L19 6"/>',
   pause: '<path d="M9 5v14"/><path d="M15 5v14"/>',
+  route: '<path d="M6 4h12"/><path d="M6 20h12"/><circle cx="6" cy="4" r="2"/><circle cx="18" cy="20" r="2"/><path d="M6 6c0 7 12 5 12 12"/>',
 };
 
 let memoryFilter = "all";
@@ -131,6 +132,40 @@ function renderInsights() {
       `,
     )
     .join("");
+}
+
+function renderDemoPath() {
+  const demoPath = data.demo_path;
+  const target = document.querySelector("#demo-path");
+  if (!target || !demoPath) return;
+  target.innerHTML = `
+    <div class="demo-path-copy">
+      <span class="demo-path-icon">${svgIcon("route")}</span>
+      <span>
+        <strong>${escapeHtml(demoPath.title)}</strong>
+        <span>${escapeHtml(demoPath.summary)}</span>
+      </span>
+    </div>
+    <ol class="demo-step-list">
+      ${(demoPath.steps || [])
+        .map(
+          (step, index) => `
+            <li data-state="${escapeHtml(step.state)}" title="${escapeHtml(step.safety_note)}">
+              <span>${index + 1}</span>
+              <strong>${escapeHtml(step.label)}</strong>
+              <em>${escapeHtml(step.surface)}</em>
+            </li>
+          `,
+        )
+        .join("")}
+    </ol>
+    <button class="text-command" type="button" id="demo-readiness-command">
+      cortex-demo
+    </button>
+  `;
+  document.querySelector("#demo-readiness-command").addEventListener("click", () => {
+    writeReceipt("DEMO-READINESS-001 selected. Run uv run cortex-demo --json for the safe demo receipt.");
+  });
 }
 
 function renderFocusInspector() {
@@ -532,6 +567,7 @@ if (!data) {
   bindHeaderActions();
   renderNav();
   renderStatusStrip();
+  renderDemoPath();
   renderInsights();
   renderFocusInspector();
   renderReceipts();
