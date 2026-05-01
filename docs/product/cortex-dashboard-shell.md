@@ -64,6 +64,22 @@ All actions are receipt-gated previews. Only read-only explain/review actions
 may become prepared gateway calls in this slice. They do not mutate memory,
 execute skills, export data, or perform external effects.
 
+## Live Desktop Proof
+
+`COMPUTER-DASHBOARD-LIVE-PROOF-001` validates this shell in a real Chrome
+window through Computer Use while storing only sanitized proof facts. The proof
+records the local dashboard origin, required visible terms, the clicked
+`Pause Observation` control, and the local preview receipt. It does not store a
+raw screenshot, raw accessibility tree, tab titles, private browser text,
+secrets, raw refs, durable memory writes, gateway mutations, or external
+effects.
+
+The required receipt class is a local preview receipt, such as:
+
+```text
+Observation pause previewed locally. Confirmation and audit receipt required.
+```
+
 ## Safety Gates
 
 `MEMORY-PALACE-SKILL-FORGE-UI-001` passes only when:
@@ -81,3 +97,7 @@ execute skills, export data, or perform external effects.
   slice;
 - local browser proof confirms the first viewport renders without overlapping
   primary UI.
+
+`COMPUTER-DASHBOARD-LIVE-PROOF-001` additionally passes only when the live
+proof observes a local browser origin, all required visible dashboard terms, a
+local preview receipt, and no durable memory write or raw live artifacts.

@@ -123,6 +123,12 @@ from cortex_memory_os.dashboard_shell import (
     build_dashboard_shell,
     run_dashboard_shell_smoke,
 )
+from cortex_memory_os.dashboard_live_proof import (
+    COMPUTER_DASHBOARD_LIVE_PROOF_ID,
+    COMPUTER_DASHBOARD_LIVE_PROOF_POLICY_REF,
+    build_sample_dashboard_live_observation,
+    validate_dashboard_live_proof,
+)
 from cortex_memory_os.dashboard_gateway_actions import (
     DASHBOARD_GATEWAY_ACTIONS_ID,
     DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
@@ -454,6 +460,7 @@ def run_all() -> BenchmarkRunResult:
         case_skill_metrics_dashboard_surface_contract,
         case_dashboard_shell_contract,
         case_dashboard_gateway_actions_contract,
+        case_computer_dashboard_live_proof_contract,
         case_skill_promotion_gate,
         case_skill_rollback_gate,
         case_skill_maturity_audit_events,
@@ -10879,6 +10886,83 @@ def case_dashboard_gateway_actions_contract() -> BenchmarkCaseResult:
             "policy_ref": DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
             "allowed_tools": sorted({receipt.gateway_tool for receipt in allowed}),
             "blocked_tools": sorted({receipt.gateway_tool for receipt in blocked}),
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_computer_dashboard_live_proof_contract() -> BenchmarkCaseResult:
+    observation = build_sample_dashboard_live_observation()
+    result = validate_dashboard_live_proof(observation)
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "dashboard-live-proof.md"
+    ).read_text(encoding="utf-8")
+    dashboard_docs_text = (
+        REPO_ROOT / "docs" / "product" / "cortex-dashboard-shell.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        COMPUTER_DASHBOARD_LIVE_PROOF_ID,
+        COMPUTER_DASHBOARD_LIVE_PROOF_POLICY_REF,
+        "SanitizedDashboardLiveObservation",
+        "Computer Use",
+        "raw accessibility tree",
+        "local preview receipt",
+        "no durable memory write",
+    ]
+    missing_doc_terms = _missing_terms(docs_text + "\n" + dashboard_docs_text, required_doc_terms)
+    passed = (
+        result.passed
+        and result.local_origin
+        and result.receipt_is_local_preview
+        and result.visible_required_count >= 7
+        and result.blocked_effect_count == 0
+        and result.prohibited_marker_count == 0
+        and not result.raw_capture_saved
+        and not result.raw_accessibility_tree_saved
+        and not result.raw_tab_titles_saved
+        and not result.secret_values_recorded
+        and not result.durable_memory_write
+        and not result.gateway_mutation_executed
+        and not result.external_effect_executed
+        and not missing_doc_terms
+        and COMPUTER_DASHBOARD_LIVE_PROOF_ID in plan_text
+        and COMPUTER_DASHBOARD_LIVE_PROOF_ID in registry_text
+        and COMPUTER_DASHBOARD_LIVE_PROOF_ID in task_text
+        and COMPUTER_DASHBOARD_LIVE_PROOF_ID in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="COMPUTER-DASHBOARD-LIVE-PROOF-001/sanitized_live_browser_receipt",
+        suite=COMPUTER_DASHBOARD_LIVE_PROOF_ID,
+        passed=passed,
+        summary=(
+            "Computer Use dashboard proof is reduced to sanitized local-browser "
+            "facts, required visible terms, and a local-preview receipt without "
+            "raw captures, tabs, secrets, durable memory writes, or mutations."
+        ),
+        metrics={
+            "visible_required_count": result.visible_required_count,
+            "blocked_effect_count": result.blocked_effect_count,
+            "prohibited_marker_count": result.prohibited_marker_count,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": COMPUTER_DASHBOARD_LIVE_PROOF_POLICY_REF,
+            "browser_name": result.browser_name,
+            "local_origin": result.local_origin,
+            "receipt_is_local_preview": result.receipt_is_local_preview,
+            "missing_required_terms": result.missing_required_terms,
             "missing_doc_terms": missing_doc_terms,
         },
     )
