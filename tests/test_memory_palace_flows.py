@@ -6,6 +6,8 @@ from cortex_memory_os.memory_lifecycle import recall_allowed
 from cortex_memory_os.memory_palace import MemoryPalaceService
 from cortex_memory_os.memory_palace_flows import (
     MemoryPalaceFlowId,
+    chronicle_control_flow_for_user_text,
+    default_chronicle_control_flows,
     default_memory_palace_flows,
     default_self_lesson_palace_flows,
     flow_for_user_text,
@@ -58,6 +60,51 @@ def test_memory_palace_flow_phrase_matching():
         MemoryPalaceFlowId.EXPORT
     )
     assert flow_for_user_text("tell me a joke") is None
+
+
+def test_chronicle_control_flows_cover_pause_delete_explain_and_scope():
+    flows = {flow.flow_id: flow for flow in default_chronicle_control_flows()}
+
+    assert set(flows) == {
+        MemoryPalaceFlowId.CHRONICLE_PAUSE,
+        MemoryPalaceFlowId.CHRONICLE_DELETE_RECENT,
+        MemoryPalaceFlowId.CHRONICLE_EXPLAIN_SOURCE,
+        MemoryPalaceFlowId.CHRONICLE_SCOPE_INFLUENCE,
+    }
+    assert flows[MemoryPalaceFlowId.CHRONICLE_PAUSE].mutation is True
+    assert flows[MemoryPalaceFlowId.CHRONICLE_PAUSE].requires_memory_anchor is False
+    assert "do not start new permission prompts while pausing" in (
+        flows[MemoryPalaceFlowId.CHRONICLE_PAUSE].safety_checks
+    )
+    assert flows[MemoryPalaceFlowId.CHRONICLE_DELETE_RECENT].requires_confirmation is True
+    assert "do not show raw screen, OCR, Accessibility, or DOM content during review" in (
+        flows[MemoryPalaceFlowId.CHRONICLE_DELETE_RECENT].safety_checks
+    )
+    assert flows[MemoryPalaceFlowId.CHRONICLE_EXPLAIN_SOURCE].mutation is False
+    assert "evidence_vs_inference_boundary" in (
+        flows[MemoryPalaceFlowId.CHRONICLE_EXPLAIN_SOURCE].user_visible_context
+    )
+    assert flows[MemoryPalaceFlowId.CHRONICLE_SCOPE_INFLUENCE].mutation is True
+    assert flows[MemoryPalaceFlowId.CHRONICLE_SCOPE_INFLUENCE].requires_confirmation is True
+    assert "do not increase autonomy from observation-derived memories" in (
+        flows[MemoryPalaceFlowId.CHRONICLE_SCOPE_INFLUENCE].safety_checks
+    )
+
+
+def test_chronicle_control_flow_phrase_matching():
+    assert chronicle_control_flow_for_user_text("pause observation").flow_id == (
+        MemoryPalaceFlowId.CHRONICLE_PAUSE
+    )
+    assert chronicle_control_flow_for_user_text("delete recent observation").flow_id == (
+        MemoryPalaceFlowId.CHRONICLE_DELETE_RECENT
+    )
+    assert chronicle_control_flow_for_user_text("explain observation source").flow_id == (
+        MemoryPalaceFlowId.CHRONICLE_EXPLAIN_SOURCE
+    )
+    assert chronicle_control_flow_for_user_text("scope this memory influence").flow_id == (
+        MemoryPalaceFlowId.CHRONICLE_SCOPE_INFLUENCE
+    )
+    assert chronicle_control_flow_for_user_text("make coffee") is None
 
 
 def test_self_lesson_flow_contract_covers_safe_review_actions():

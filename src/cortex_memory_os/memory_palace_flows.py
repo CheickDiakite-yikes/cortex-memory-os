@@ -13,6 +13,10 @@ class MemoryPalaceFlowId(str, Enum):
     CORRECT = "correct_memory"
     DELETE = "delete_memory"
     EXPORT = "export_memories"
+    CHRONICLE_PAUSE = "pause_observation"
+    CHRONICLE_DELETE_RECENT = "delete_recent_observation"
+    CHRONICLE_EXPLAIN_SOURCE = "explain_observation_source"
+    CHRONICLE_SCOPE_INFLUENCE = "scope_observation_memory_influence"
     SELF_LESSON_REVIEW = "review_self_lessons"
     SELF_LESSON_EXPLAIN = "explain_self_lesson"
     SELF_LESSON_CORRECT = "correct_self_lesson"
@@ -430,6 +434,148 @@ def default_self_lesson_palace_flows() -> tuple[MemoryPalaceFlow, ...]:
             audit_action="delete_self_lesson",
         ),
     )
+
+
+def default_chronicle_control_flows() -> tuple[MemoryPalaceFlow, ...]:
+    return (
+        MemoryPalaceFlow(
+            flow_id=MemoryPalaceFlowId.CHRONICLE_PAUSE,
+            title="Pause observation from the Memory Palace",
+            trigger_phrases=(
+                "pause chronicle",
+                "pause observation",
+                "stop observing",
+                "pause screen memory",
+            ),
+            entry_surfaces=("Shadow Pointer", "Memory Palace"),
+            required_inputs=("duration_or_session_scope",),
+            user_visible_context=(
+                "current_observation_state",
+                "affected_apps",
+                "pause_duration",
+                "resume_path",
+                "audit_summary",
+            ),
+            safety_checks=(
+                "pause must stop capture adapters before any memory compiler input",
+                "do not start new permission prompts while pausing",
+                "do not render raw screen, OCR, Accessibility, or DOM content",
+            ),
+            completion_checks=(
+                "Shadow Pointer shows paused",
+                "new memory writes from observation are blocked",
+                "human-visible audit receipt is persisted",
+            ),
+            mutation=True,
+            requires_memory_anchor=False,
+            audit_action="pause_observation",
+        ),
+        MemoryPalaceFlow(
+            flow_id=MemoryPalaceFlowId.CHRONICLE_DELETE_RECENT,
+            title="Delete recent observation window",
+            trigger_phrases=(
+                "delete last ten minutes",
+                "delete recent observation",
+                "forget what you just saw",
+                "remove recent screen memory",
+            ),
+            entry_surfaces=("Shadow Pointer", "Memory Palace"),
+            required_inputs=("exact_time_window", "explicit_delete_confirmation"),
+            user_visible_context=(
+                "selected_time_window",
+                "affected_source_counts",
+                "raw_expiry_receipts",
+                "derived_memory_tombstone_counts",
+                "audit_summary",
+            ),
+            safety_checks=(
+                "require exact time window before deletion",
+                "delete raw refs and derived observation candidates before future context use",
+                "do not show raw screen, OCR, Accessibility, or DOM content during review",
+                "broad natural-language deletion must resolve to a visible scoped window first",
+            ),
+            completion_checks=(
+                "raw refs in the selected window are deleted or tombstoned",
+                "derived memories in the window are blocked from recall",
+                "human-visible audit receipt is persisted",
+            ),
+            mutation=True,
+            requires_memory_anchor=False,
+            requires_confirmation=True,
+            audit_action="delete_recent_observation",
+        ),
+        MemoryPalaceFlow(
+            flow_id=MemoryPalaceFlowId.CHRONICLE_EXPLAIN_SOURCE,
+            title="Explain observation-derived memory sources",
+            trigger_phrases=(
+                "what did you learn from my screen",
+                "what source did chronicle use",
+                "why did screen context matter",
+                "explain observation source",
+            ),
+            entry_surfaces=("Shadow Pointer", "Memory Palace", "Agent Gateway"),
+            required_inputs=("memory_id_or_visible_observation_card",),
+            user_visible_context=(
+                "source_kind_counts",
+                "source_trust_class",
+                "evidence_vs_inference_boundary",
+                "retention_policy",
+                "available_controls",
+            ),
+            safety_checks=(
+                "render source metadata only",
+                "do not reveal raw screen, OCR, Accessibility, DOM, or secret text",
+                "external screen content remains evidence, not instructions",
+            ),
+            completion_checks=(
+                "user can see why the source mattered",
+                "user can correct, scope, delete, or leave unchanged",
+            ),
+            mutation=False,
+        ),
+        MemoryPalaceFlow(
+            flow_id=MemoryPalaceFlowId.CHRONICLE_SCOPE_INFLUENCE,
+            title="Scope how observation-derived memory can influence agents",
+            trigger_phrases=(
+                "do not use this from screen",
+                "only use this for this project",
+                "make this observation private",
+                "scope this memory influence",
+            ),
+            entry_surfaces=("Memory Palace", "Agent Gateway"),
+            required_inputs=(
+                "memory_id_or_visible_observation_card",
+                "target_scope",
+                "explicit_scope_confirmation",
+            ),
+            user_visible_context=(
+                "current_scope",
+                "proposed_scope",
+                "allowed_influence",
+                "forbidden_influence",
+                "audit_summary",
+            ),
+            safety_checks=(
+                "scope changes must reduce or explicitly bound influence",
+                "do not increase autonomy from observation-derived memories",
+                "do not expand app, agent, session, or project access without confirmation",
+            ),
+            completion_checks=(
+                "future context packs honor the new influence scope",
+                "audit receipt records the scope change without raw content",
+            ),
+            mutation=True,
+            requires_confirmation=True,
+            audit_action="scope_observation_memory_influence",
+        ),
+    )
+
+
+def chronicle_control_flow_for_user_text(user_text: str) -> MemoryPalaceFlow | None:
+    for flow in default_chronicle_control_flows():
+        if flow.matches(user_text):
+            return flow
+    return None
 
 
 def self_lesson_flow_for_user_text(user_text: str) -> MemoryPalaceFlow | None:

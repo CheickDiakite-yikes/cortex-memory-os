@@ -8,8 +8,13 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from cortex_memory_os.contracts import SourceTrust
+from cortex_memory_os.native_permission_smoke import NativePermissionSmokeResult
 
 
+SHADOW_POINTER_PERMISSION_ONBOARDING_ID = "SHADOW-POINTER-PERMISSION-ONBOARDING-001"
+SHADOW_POINTER_PERMISSION_ONBOARDING_POLICY_REF = (
+    "policy_shadow_pointer_permission_onboarding_v1"
+)
 SHADOW_POINTER_POINTING_POLICY_REF = "policy_shadow_pointer_pointing_proposal_v1"
 
 
@@ -211,6 +216,126 @@ class ShadowPointerPointingReceipt(BaseModel):
         if SHADOW_POINTER_POINTING_POLICY_REF not in self.policy_refs:
             raise ValueError("pointing receipt requires policy reference")
         return self
+
+
+class ShadowPointerPermissionOnboardingReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    proof_id: str = Field(min_length=1)
+    policy_ref: str = Field(min_length=1)
+    checked_at: datetime
+    screen_recording_preflight: bool
+    accessibility_trusted: bool
+    permission_status_visible: bool
+    resulting_snapshot: ShadowPointerSnapshot
+    prompt_requested: bool
+    capture_started: bool
+    accessibility_observer_started: bool
+    memory_write_allowed: bool
+    evidence_refs: list[str] = Field(default_factory=list)
+    allowed_effects: list[str] = Field(min_length=1)
+    blocked_effects: list[str] = Field(min_length=1)
+    passed: bool
+
+    @model_validator(mode="after")
+    def enforce_onboarding_boundary(self) -> ShadowPointerPermissionOnboardingReceipt:
+        if self.proof_id != SHADOW_POINTER_PERMISSION_ONBOARDING_ID:
+            raise ValueError("permission onboarding proof_id mismatch")
+        if self.policy_ref != SHADOW_POINTER_PERMISSION_ONBOARDING_POLICY_REF:
+            raise ValueError("permission onboarding policy_ref mismatch")
+        if not self.permission_status_visible:
+            raise ValueError("permission onboarding must render permission status")
+        if self.resulting_snapshot.state != ShadowPointerState.NEEDS_APPROVAL:
+            raise ValueError("permission onboarding must stop at needs-approval")
+        if self.prompt_requested:
+            raise ValueError("permission onboarding cannot request permission prompts")
+        if self.capture_started:
+            raise ValueError("permission onboarding cannot start screen capture")
+        if self.accessibility_observer_started:
+            raise ValueError("permission onboarding cannot start Accessibility observers")
+        if self.memory_write_allowed:
+            raise ValueError("permission onboarding cannot allow memory writes")
+        if self.evidence_refs:
+            raise ValueError("permission onboarding cannot emit evidence refs")
+        if set(self.allowed_effects) != {
+            "read_permission_status",
+            "render_shadow_pointer_permission_state",
+        }:
+            raise ValueError("permission onboarding allowed effects are too broad")
+        required_blocked = {
+            "request_screen_recording_permission",
+            "request_accessibility_permission",
+            "start_screen_capture",
+            "start_accessibility_observer",
+            "write_memory",
+            "store_raw_evidence",
+        }
+        if missing := sorted(required_blocked.difference(self.blocked_effects)):
+            raise ValueError(f"permission onboarding missing blocked effects: {missing}")
+        return self
+
+
+def build_permission_onboarding_receipt(
+    permission_result: NativePermissionSmokeResult,
+) -> ShadowPointerPermissionOnboardingReceipt:
+    """Render permission readiness without escalating into capture or writes."""
+
+    screen_status = (
+        "Screen Recording: ready"
+        if permission_result.screen_recording_preflight
+        else "Screen Recording: not ready"
+    )
+    accessibility_status = (
+        "Accessibility: ready"
+        if permission_result.accessibility_trusted
+        else "Accessibility: not ready"
+    )
+    approval_reason = (
+        "Start observation requires explicit consent."
+        if permission_result.screen_recording_preflight
+        and permission_result.accessibility_trusted
+        else "Review missing macOS permissions before observation can start."
+    )
+    snapshot = ShadowPointerSnapshot(
+        state=ShadowPointerState.NEEDS_APPROVAL,
+        workstream_label="Permission onboarding",
+        seeing=[screen_status, accessibility_status],
+        ignoring=[
+            "screen capture not started",
+            "accessibility observer not started",
+            "memory writes disabled",
+        ],
+        possible_memory=None,
+        possible_skill=None,
+        approval_reason=approval_reason,
+    )
+    return ShadowPointerPermissionOnboardingReceipt(
+        proof_id=SHADOW_POINTER_PERMISSION_ONBOARDING_ID,
+        policy_ref=SHADOW_POINTER_PERMISSION_ONBOARDING_POLICY_REF,
+        checked_at=permission_result.checked_at,
+        screen_recording_preflight=permission_result.screen_recording_preflight,
+        accessibility_trusted=permission_result.accessibility_trusted,
+        permission_status_visible=True,
+        resulting_snapshot=snapshot,
+        prompt_requested=permission_result.prompt_requested,
+        capture_started=permission_result.capture_started,
+        accessibility_observer_started=permission_result.accessibility_observer_started,
+        memory_write_allowed=False,
+        evidence_refs=[],
+        allowed_effects=[
+            "read_permission_status",
+            "render_shadow_pointer_permission_state",
+        ],
+        blocked_effects=[
+            "request_screen_recording_permission",
+            "request_accessibility_permission",
+            "start_screen_capture",
+            "start_accessibility_observer",
+            "write_memory",
+            "store_raw_evidence",
+        ],
+        passed=permission_result.passed,
+    )
 
 
 def transition(snapshot: ShadowPointerSnapshot, next_state: ShadowPointerState) -> ShadowPointerSnapshot:

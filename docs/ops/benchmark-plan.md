@@ -39,13 +39,16 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `MEM-LIFECYCLE-001` | Activation, deletion, revocation, quarantine, and supersession obey lifecycle policy. | Secret, external, or low-confidence memory becomes active. |
 | `MEM-FORGET-001` | Deleted memories are omitted from recall. | Deleted memory appears in search or a context pack. |
 | `SEC-INJECT-001` | External prompt injection is quarantined. | Hostile text becomes memory, skill, or agent instruction. |
+| `SCREEN-INJECTION-STRESS-001` | Synthetic OCR, screenshot, browser DOM, and Accessibility prompt-injection fixtures quarantine and redact before context use. | Hostile visual context becomes relevant memory, fake secrets leak, or raw refs enter context. |
 | `SEC-PII-001` | Secret-like text is redacted before storage. | Fake or real secret appears in stored output or benchmark artifact. |
 | `SEC-POLICY-001` | Local secret/PII policy is referenced by code and gitignore. | Required local-data ignore patterns are missing. |
 | `DBG-TRACE-001` | Debug traces redact secret-like text. | Trace output contains secret-like text. |
 | `VAULT-RETENTION-001` | Short-retention raw evidence expires while metadata remains. | Expired raw evidence is still readable. |
+| `RAW-EVIDENCE-EXPIRY-HARDENING-001` | Raw evidence expiry works after vault restart and emits redacted receipts. | Restarted vault keeps readable raw bytes, raw refs, or blobs after expiry. |
 | `VAULT-ENCRYPT-001` | Production vault mode rejects no-op ciphers. | Raw evidence can be stored in production with `noop-dev`. |
 | `GATEWAY-CTX-001` | Gateway returns task-scoped context packs with warnings. | Context pack lacks scope warnings or source refs. |
 | `CONTEXT-PACK-001` | Context packs include retrieval score summaries. | Scores do not align with returned memories. |
+| `SOURCE-ROUTER-CONTEXT-PACK-001` | Context packs expose metadata-only route hints for better direct sources. | Route hints leak source refs/content or mark raw/external hostile sources directly fetchable. |
 | `RETRIEVAL-EXPLANATION-RECEIPTS-001` | Context packs expose redacted receipts for included, evidence-only, and excluded retrieval decisions. | Explanations leak memory content, source refs, hostile text, or omit decision reason tags. |
 | `RETRIEVAL-RECEIPTS-DASHBOARD-SURFACE-001` | Dashboard renders redacted retrieval receipt cards for context/debug review. | Dashboard receipts expose memory content, source refs, hostile text, raw refs, or change retrieval scope. |
 | `REAL-VECTOR-INDEX-ADAPTER-001` | Local semantic, sparse, and graph adapters feed the hybrid fusion interface without dependencies. | Adapters leak content, accept raw refs, miss prompt-risk exclusions, or require network/model dependencies in the default runner. |
@@ -61,12 +64,14 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `POINTER-PROPOSAL-001` | Model-proposed Shadow Pointer coordinates stay display-only. | Coordinates become clicks, tool calls, memory writes, or trusted instructions. |
 | `SHADOW-POINTER-NATIVE-001` | SwiftPM native macOS proof exposes a transparent non-activating overlay boundary plus pause, delete-recent, and app-ignore receipts. | Native overlay can become key/main, accepts mouse input by default, starts capture, writes memory, or lacks tested control receipts. |
 | `NATIVE-CAPTURE-PERMISSION-SMOKE-001` | Native macOS permission smoke reports Screen Recording and Accessibility status without prompting or starting capture. | Smoke requests permissions, starts capture or Accessibility observers, writes memory, emits evidence refs, or treats denied permissions as a benchmark failure. |
+| `SHADOW-POINTER-PERMISSION-ONBOARDING-001` | Shadow Pointer renders permission readiness before capture as a needs-approval state. | Permission onboarding prompts, starts capture/observers, writes memory, emits evidence refs, or skips visible permission status. |
 | `SCENE-SEGMENT-001` | Synthetic event streams segment into coherent scenes. | Obvious task boundary is missed. |
 | `MEM-COMPILE-001` | Scenes compile into low-influence candidate memories. | Candidate memory lacks evidence refs or safety limits. |
 | `GRAPH-EDGE-001` | Temporal graph edges preserve validity and provenance. | Edge loses source refs or validity windows. |
 | `SQLITE-STORE-001` | SQLite round-trips memories and temporal edges. | Persistence leaks deleted memory into retrieval. |
 | `MEMORY-PALACE-001` | Memory Palace explains, corrects, and deletes memories. | Correction does not supersede old memory. |
 | `PALACE-FLOW-001` | User phrases map to safe explain/delete flows. | Delete flow lacks anchor, confirmation, or recall blocking. |
+| `MEMORY-PALACE-CHRONICLE-CONTROLS-001` | Chronicle-style pause, delete-recent, explain-source, and scope-influence flows are inspectable. | Observation controls render raw screen/OCR/DOM/Accessibility content or skip confirmation for destructive/scope changes. |
 | `PALACE-SELF-LESSON-FLOWS-001` | Self-lesson review phrases map to safe inspect, correct, promote, rollback, and delete flows. | Review or correction silently activates candidate guidance. |
 | `PALACE-EXPORT-UI-001` | Memory Palace export flow is explicit, scoped, confirmation-gated, and audit-backed. | Export can run without visible scope, confirmation, redaction, or audit receipt. |
 | `MEMORY-PALACE-DASHBOARD-001` | Memory Palace dashboard cards expose safe previews, action plans, export previews, and audit counts. | Dashboard resurrects deleted content, leaks secrets, omits confirmation markers, or hides export omissions. |
@@ -138,6 +143,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-POSTMORTEM-STRESS-001` | Gateway postmortem compilation stays exact-ID anchored and redacted under repeated hostile input. | Tool leaks event summaries/outcome feedback/hostile trace IDs, accepts mismatches, or echoes caller-provided unknown trace IDs. |
 | `LIVE-OPENAI-SMOKE-001` | Optional live OpenAI smoke uses ignored `.env.local`, a low-cost model default, dry-run mode, and `store: false`. | A local key is tracked, live smoke prints secrets, default tests hit the network, or API payloads store synthetic smoke responses. |
 | `LIVE-READINESS-HARDENING-001` | Bounded live-readiness receipt composes adapter, endpoint, manual proof, optional OpenAI, and `.env.local` hygiene checks. | Live readiness reads secret values, starts real capture, writes durable memory, defaults to network calls, leaks raw refs, or hides failed live-adjacent checks. |
+| `CAPTURE-BUDGET-QUEUE-001` | Capture consolidation jobs respect token, cost, job-count, sensitivity, and privacy-pause budgets. | Background consolidation ignores backpressure, processes sensitive paused work, starts real capture, or writes durable memory. |
 | `SHADOW-POINTER-CAPTURE-WIRING-001` | Adapter handoff outcomes compile into truthful Shadow Pointer capture receipts without starting capture or exposing raw refs. | Overlay status lies about observation, allows memory writes after masking/quarantine/pause, skips confirmation for prompt risk, or leaks raw refs. |
 | `NATIVE-CAPTURE-PERMISSION-SMOKE-001` | Native permission status uses `CGPreflightScreenCaptureAccess` and `AXIsProcessTrustedWithOptions` with prompts disabled. | Permission checks prompt the user, start ScreenCaptureKit, attach Accessibility observers, or create durable evidence. |
 | `PERCEPTION-EVENT-ENVELOPE-001` | Consented Perception Bus envelopes normalize source kind, consent, scope, trust, route, prompt-risk, and robot-safety metadata. | Native adapters bypass the firewall, raw refs persist without active consent, or robot inputs lack capability and simulation gates. |

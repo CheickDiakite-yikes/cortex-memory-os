@@ -526,6 +526,7 @@ class HybridFusionContextDiagnostic(StrictModel):
 
 
 CONTEXT_BUDGET_POLICY_REF = "policy_context_pack_budget_v1"
+SOURCE_ROUTE_HINT_POLICY_REF = "policy_source_router_context_pack_v1"
 
 
 class ContextBudget(StrictModel):
@@ -565,6 +566,37 @@ class AuditMetadata(StrictModel):
     human_visible: bool = True
 
 
+class SourceRouteHint(StrictModel):
+    route_id: str = Field(min_length=1)
+    source_kind: str = Field(min_length=1)
+    tool_hint: str = Field(min_length=1)
+    source_count: int = Field(ge=1)
+    reason_tags: list[str] = Field(min_length=1)
+    safe_to_fetch_directly: bool
+    requires_user_consent: bool = True
+    target_ref_redacted: bool = True
+    content_redacted: bool = True
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [SOURCE_ROUTE_HINT_POLICY_REF]
+    )
+
+    @model_validator(mode="after")
+    def keep_source_route_hint_metadata_only(self) -> SourceRouteHint:
+        if not self.target_ref_redacted:
+            raise ValueError("source route hints must redact target refs")
+        if not self.content_redacted:
+            raise ValueError("source route hints cannot include source content")
+        if SOURCE_ROUTE_HINT_POLICY_REF not in self.policy_refs:
+            raise ValueError("source route hints require policy ref")
+        if self.safe_to_fetch_directly and self.source_kind in {
+            "raw_evidence",
+            "external_untrusted",
+            "unknown",
+        }:
+            raise ValueError("unsafe source kinds cannot be marked directly fetchable")
+        return self
+
+
 class ContextPack(StrictModel):
     context_pack_id: str = Field(min_length=1)
     goal: str = Field(min_length=1)
@@ -586,6 +618,7 @@ class ContextPack(StrictModel):
         default_factory=list
     )
     audit_metadata: list[AuditMetadata] = Field(default_factory=list)
+    source_route_hints: list[SourceRouteHint] = Field(default_factory=list)
     blocked_memory_ids: list[str] = Field(default_factory=list)
     untrusted_evidence_refs: list[str] = Field(default_factory=list)
     context_policy_refs: list[str] = Field(default_factory=list)

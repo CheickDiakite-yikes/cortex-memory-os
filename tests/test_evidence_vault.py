@@ -6,6 +6,7 @@ from cortex_memory_os.contracts import EvidenceRecord, RetentionPolicy
 from cortex_memory_os.evidence_vault import (
     EvidenceVault,
     NoopDevCipher,
+    RAW_EVIDENCE_EXPIRY_HARDENING_POLICY_REF,
     VaultRuntimeMode,
     assess_vault_cipher,
 )
@@ -51,6 +52,38 @@ def test_vault_expires_raw_payload_but_keeps_metadata(tmp_path):
     assert metadata.blob_path is None
     assert metadata.raw_deleted_at is not None
     assert vault.read_raw("ev_expire", now=created_at + timedelta(minutes=11)) is None
+
+
+def test_vault_expiry_receipt_survives_restart_without_raw_content(tmp_path):
+    created_at = datetime(2026, 5, 1, 12, 0, tzinfo=UTC)
+    evidence = _evidence(
+        evidence_id="ev_restart_expire",
+        timestamp=created_at.isoformat(),
+        retention_policy=RetentionPolicy.DELETE_RAW_AFTER_10M.value,
+    )
+
+    EvidenceVault(tmp_path).store(evidence, b"restart-expiring raw bytes", now=created_at)
+    restarted = EvidenceVault(tmp_path)
+    receipts = restarted.expire_with_receipts(
+        created_at + timedelta(minutes=11),
+        survived_restart=True,
+    )
+    metadata = restarted.get_metadata("ev_restart_expire")
+
+    assert len(receipts) == 1
+    receipt = receipts[0]
+    assert receipt.evidence_id == "ev_restart_expire"
+    assert receipt.raw_deleted is True
+    assert receipt.metadata_retained is True
+    assert receipt.survived_restart is True
+    assert receipt.raw_ref_removed is True
+    assert receipt.blob_removed is True
+    assert receipt.content_redacted is True
+    assert RAW_EVIDENCE_EXPIRY_HARDENING_POLICY_REF in receipt.policy_refs
+    assert metadata is not None
+    assert metadata.raw_ref is None
+    assert metadata.blob_path is None
+    assert restarted.read_raw("ev_restart_expire") is None
 
 
 def test_discard_policy_never_writes_raw_blob(tmp_path):

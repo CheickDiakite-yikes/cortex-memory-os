@@ -10,11 +10,13 @@ from enum import Enum
 from pathlib import Path
 from typing import Protocol
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from cortex_memory_os.contracts import EvidenceRecord, RetentionPolicy
 
 EVIDENCE_VAULT_ENCRYPTION_POLICY_REF = "policy_evidence_vault_encryption_v1"
+RAW_EVIDENCE_EXPIRY_HARDENING_ID = "RAW-EVIDENCE-EXPIRY-HARDENING-001"
+RAW_EVIDENCE_EXPIRY_HARDENING_POLICY_REF = "policy_raw_evidence_expiry_hardening_v1"
 
 
 class VaultRuntimeMode(str, Enum):
@@ -73,6 +75,34 @@ class EvidenceVaultMetadata(BaseModel):
     expires_at: datetime | None
     raw_deleted_at: datetime | None = None
     cipher: str = Field(min_length=1)
+
+
+class EvidenceExpiryReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    evidence_id: str = Field(min_length=1)
+    expired_at: datetime
+    raw_deleted: bool
+    metadata_retained: bool
+    survived_restart: bool
+    raw_ref_removed: bool
+    blob_removed: bool
+    content_redacted: bool = True
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [RAW_EVIDENCE_EXPIRY_HARDENING_POLICY_REF]
+    )
+
+    @model_validator(mode="after")
+    def enforce_expiry_receipt_boundary(self) -> EvidenceExpiryReceipt:
+        if RAW_EVIDENCE_EXPIRY_HARDENING_POLICY_REF not in self.policy_refs:
+            raise ValueError("expiry receipt requires policy ref")
+        if not self.content_redacted:
+            raise ValueError("expiry receipts cannot include raw content")
+        if not self.raw_deleted or not self.raw_ref_removed or not self.blob_removed:
+            raise ValueError("expiry receipt must prove raw evidence removal")
+        if not self.metadata_retained:
+            raise ValueError("expiry receipt must retain metadata for auditability")
+        return self
 
 
 class EvidenceVault:
@@ -215,6 +245,55 @@ class EvidenceVault:
                 expired_ids.append(evidence_id)
 
         return expired_ids
+
+    def expire_with_receipts(
+        self,
+        now: datetime | None = None,
+        *,
+        survived_restart: bool = False,
+    ) -> list[EvidenceExpiryReceipt]:
+        """Expire raw blobs and return non-content receipts for audit/debugging."""
+
+        current = _ensure_utc(now or datetime.now(UTC))
+        with self._connect() as con:
+            rows = con.execute(
+                """
+                SELECT evidence_id, blob_path
+                FROM evidence_metadata
+                WHERE raw_deleted_at IS NULL
+                  AND expires_at IS NOT NULL
+                  AND expires_at <= ?
+                """,
+                (current.isoformat(),),
+            ).fetchall()
+
+        blob_paths_by_id = {evidence_id: blob_path for evidence_id, blob_path in rows}
+        expired_ids = self.expire(current)
+        receipts: list[EvidenceExpiryReceipt] = []
+        for evidence_id in expired_ids:
+            previous_blob_path = blob_paths_by_id.get(evidence_id)
+            metadata = self.get_metadata(evidence_id)
+            blob_removed = True
+            if previous_blob_path:
+                blob_removed = not (self.root / previous_blob_path).exists()
+            receipts.append(
+                EvidenceExpiryReceipt(
+                    evidence_id=evidence_id,
+                    expired_at=current,
+                    raw_deleted=metadata is not None and metadata.raw_deleted_at is not None,
+                    metadata_retained=metadata is not None,
+                    survived_restart=survived_restart,
+                    raw_ref_removed=(
+                        metadata is not None
+                        and metadata.raw_ref is None
+                        and metadata.blob_path is None
+                    ),
+                    blob_removed=blob_removed,
+                    content_redacted=True,
+                    policy_refs=[RAW_EVIDENCE_EXPIRY_HARDENING_POLICY_REF],
+                )
+            )
+        return receipts
 
     def get_metadata(self, evidence_id: str) -> EvidenceVaultMetadata | None:
         with self._connect() as con:

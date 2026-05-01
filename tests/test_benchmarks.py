@@ -7,7 +7,7 @@ def test_synthetic_benchmarks_pass():
     result = run_all()
 
     assert result.passed
-    assert len(result.case_results) == 147
+    assert len(result.case_results) == 153
     assert {case.suite for case in result.case_results} >= {
         "MEM-RECALL-001",
         "RETRIEVAL-SCORE-001",
@@ -24,13 +24,16 @@ def test_synthetic_benchmarks_pass():
         "MEM-LIFECYCLE-001",
         "MEM-FORGET-001",
         "SEC-INJECT-001",
+        "SCREEN-INJECTION-STRESS-001",
         "SEC-PII-001",
         "SEC-POLICY-001",
         "DBG-TRACE-001",
         "VAULT-RETENTION-001",
+        "RAW-EVIDENCE-EXPIRY-HARDENING-001",
         "VAULT-ENCRYPT-001",
         "GATEWAY-CTX-001",
         "CONTEXT-PACK-001",
+        "SOURCE-ROUTER-CONTEXT-PACK-001",
         "RETRIEVAL-EXPLANATION-RECEIPTS-001",
         "RETRIEVAL-RECEIPTS-DASHBOARD-SURFACE-001",
         "CONTEXT-BUDGET-001",
@@ -84,6 +87,7 @@ def test_synthetic_benchmarks_pass():
         "POINTER-PROPOSAL-001",
         "SHADOW-POINTER-NATIVE-001",
         "NATIVE-CAPTURE-PERMISSION-SMOKE-001",
+        "SHADOW-POINTER-PERMISSION-ONBOARDING-001",
         "SHADOW-POINTER-CAPTURE-WIRING-001",
         "SCENE-SEGMENT-001",
         "MEM-COMPILE-001",
@@ -91,6 +95,7 @@ def test_synthetic_benchmarks_pass():
         "SQLITE-STORE-001",
         "MEMORY-PALACE-001",
         "PALACE-FLOW-001",
+        "MEMORY-PALACE-CHRONICLE-CONTROLS-001",
         "PALACE-SELF-LESSON-FLOWS-001",
         "PALACE-SELF-LESSON-REVIEW-FLOW-001",
         "PALACE-EXPORT-UI-001",
@@ -144,6 +149,7 @@ def test_synthetic_benchmarks_pass():
         "MANUAL-ADAPTER-PROOF-001",
         "LIVE-OPENAI-SMOKE-001",
         "LIVE-READINESS-HARDENING-001",
+        "CAPTURE-BUDGET-QUEUE-001",
         "GATEWAY-SELF-LESSON-001",
         "SELF-LESSON-STORE-001",
         "GATEWAY-SELF-LESSON-PROMOTE-001",

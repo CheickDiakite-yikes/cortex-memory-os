@@ -73,6 +73,10 @@ from cortex_memory_os.self_lesson_audit import (
     SELF_LESSON_AUDIT_POLICY_REF,
     record_self_lesson_decision_audit,
 )
+from cortex_memory_os.source_router import (
+    SOURCE_ROUTER_CONTEXT_PACK_POLICY_REF,
+    build_source_route_hints,
+)
 from cortex_memory_os.self_lessons import (
     SELF_LESSON_POLICY_REF,
     SelfLessonChangeType,
@@ -1272,6 +1276,9 @@ class CortexMCPServer:
             temporal_edges=_context_pack_temporal_edges(self.store),
             limit=limit,
         )
+        source_route_hints = build_source_route_hints(
+            ranked.memory for ranked in ranked_memories
+        )
         audit_metadata = _audit_metadata_for_self_lessons(self.store, self_lessons)
         evidence_refs = [
             *[ref for memory in memories for ref in memory.source_refs],
@@ -1307,6 +1314,7 @@ class CortexMCPServer:
             retrieval_explanation_receipts=retrieval_explanation_receipts,
             hybrid_fusion_diagnostics=hybrid_fusion_diagnostics,
             audit_metadata=audit_metadata,
+            source_route_hints=source_route_hints,
             blocked_memory_ids=blocked_memory_ids,
             untrusted_evidence_refs=untrusted_evidence_refs,
             context_policy_refs=[
@@ -1315,6 +1323,7 @@ class CortexMCPServer:
                 RETRIEVAL_EXPLANATION_POLICY_REF,
                 HYBRID_FUSION_CONTEXT_DIAGNOSTIC_POLICY_REF,
                 HYBRID_FUSION_CONTEXT_PACK_INTEGRATION_ID,
+                SOURCE_ROUTER_CONTEXT_PACK_POLICY_REF,
                 template.template_id,
             ],
             relevant_skills=list(template.suggested_skills),
