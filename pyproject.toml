@@ -22,6 +22,7 @@ cortex-manual-adapter-proof = "cortex_memory_os.manual_adapter_proof:main"
 cortex-dashboard-shell = "cortex_memory_os.dashboard_shell:main"
 cortex-dashboard-live-proof = "cortex_memory_os.dashboard_live_proof:main"
 cortex-dashboard-live-gateway = "cortex_memory_os.dashboard_live_gateway:main"
+cortex-live-run-safe-task = "cortex_memory_os.live_run_safe_task:main"
 cortex-plugin-enable-plan = "cortex_memory_os.plugin_enable_plan:main"
 cortex-native-permission-smoke = "cortex_memory_os.native_permission_smoke:main"
 

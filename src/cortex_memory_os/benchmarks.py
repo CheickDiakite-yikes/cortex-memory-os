@@ -146,6 +146,12 @@ from cortex_memory_os.dashboard_live_gateway import (
     build_skill_review_live_summaries,
     execute_dashboard_gateway_receipts,
 )
+from cortex_memory_os.live_run_safe_task import (
+    LIVE_RUN_COMPUTER_SAFE_TASK_ID,
+    LIVE_RUN_COMPUTER_SAFE_TASK_POLICY_REF,
+    build_sample_live_run_safe_task_observation,
+    validate_live_run_safe_task,
+)
 from cortex_memory_os.dashboard_gateway_actions import (
     DASHBOARD_GATEWAY_ACTIONS_ID,
     DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
@@ -484,6 +490,7 @@ def run_all() -> BenchmarkRunResult:
         case_dashboard_skill_review_live_summary_contract,
         case_dashboard_ops_quality_panel_contract,
         case_dashboard_readonly_action_live_proof_contract,
+        case_live_run_computer_safe_task_contract,
         case_skill_promotion_gate,
         case_skill_rollback_gate,
         case_skill_maturity_audit_events,
@@ -11321,6 +11328,89 @@ def case_dashboard_readonly_action_live_proof_contract() -> BenchmarkCaseResult:
         },
         evidence={
             "policy_ref": READONLY_ACTION_LIVE_PROOF_POLICY_REF,
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_live_run_computer_safe_task_contract() -> BenchmarkCaseResult:
+    result = validate_live_run_safe_task(build_sample_live_run_safe_task_observation())
+    docs_text = (
+        (REPO_ROOT / "docs" / "architecture" / "live-run-computer-safe-task.md").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (REPO_ROOT / "docs" / "architecture" / "dashboard-live-proof.md").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + _dashboard_live_gateway_docs_text()
+    )
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(encoding="utf-8")
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(encoding="utf-8")
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        LIVE_RUN_COMPUTER_SAFE_TASK_ID,
+        LIVE_RUN_COMPUTER_SAFE_TASK_POLICY_REF,
+        "Computer Use",
+        "real capture off",
+        "durable memory write off",
+        "raw screen storage off",
+        "safe localhost task",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        result.passed
+        and result.local_origin
+        and result.dashboard_static_server_running
+        and result.gateway_runtime_checked
+        and result.computer_use_task_observed
+        and result.dashboard_proof_passed
+        and result.gateway_read_only_execution_count > 0
+        and result.gateway_blocked_count > 0
+        and result.gateway_failed_count == 0
+        and result.gateway_raw_payload_count == 0
+        and result.gateway_external_effect_count == 0
+        and not result.real_screen_capture_running
+        and not result.durable_memory_writer_running
+        and not result.raw_screen_storage_enabled
+        and not result.raw_accessibility_storage_enabled
+        and not result.raw_evidence_ref_created
+        and not result.model_secret_echo_attempted
+        and not result.mutation_tool_enabled
+        and not result.export_tool_enabled
+        and not result.draft_execution_enabled
+        and not result.external_effect_enabled
+        and result.prohibited_marker_count == 0
+        and not missing_doc_terms
+        and LIVE_RUN_COMPUTER_SAFE_TASK_ID in task_text
+        and LIVE_RUN_COMPUTER_SAFE_TASK_ID in registry_text
+        and LIVE_RUN_COMPUTER_SAFE_TASK_ID in plan_text
+        and LIVE_RUN_COMPUTER_SAFE_TASK_ID in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="LIVE-RUN-COMPUTER-SAFE-TASK-001/bounded_local_run",
+        suite=LIVE_RUN_COMPUTER_SAFE_TASK_ID,
+        passed=passed,
+        summary=(
+            "Bounded live run keeps local dashboard and read-only gateway receipts on "
+            "while real capture, durable writes, raw refs, and external effects stay off."
+        ),
+        metrics={
+            "gateway_read_only_execution_count": result.gateway_read_only_execution_count,
+            "gateway_blocked_count": result.gateway_blocked_count,
+            "blocked_effect_count": result.blocked_effect_count,
+            "prohibited_marker_count": result.prohibited_marker_count,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": LIVE_RUN_COMPUTER_SAFE_TASK_POLICY_REF,
+            "computer_use_task_observed": result.computer_use_task_observed,
             "missing_doc_terms": missing_doc_terms,
         },
     )
