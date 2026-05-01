@@ -1,6 +1,6 @@
 # Benchmark Registry
 
-Last updated: 2026-04-30
+Last updated: 2026-05-01
 
 Benchmarks should become runnable as soon as implementation begins. Until then, this registry defines what must be measurable.
 
@@ -24,6 +24,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | CODEX-PLUGIN-001 | Codex plugin skeleton | Verify plugin manifest, local MCP config, progressive-disclosure skills, source-trust references, and no-secret gateway packaging | manifest coverage, skill coverage, blocked secret refs, research traceability | zero secret refs in plugin MCP config |
 | PLUGIN-INSTALL-SMOKE-001 | Cortex plugin install/discovery smoke | Verify the repo-local plugin can install into a Codex cache-shaped path and discover skills, references, MCP config, and secret-free installed metadata | discovery pass rate, skill count, blocked config hits, missing path count | installed config has zero blocked secret/raw-data refs |
 | CODEX-PLUGIN-REAL-ENABLE-001 | Real Codex plugin enable path | Verify dry-run default, exact approval phrase, temp-home apply/discovery, rollback path, and no real config mutation by default | dry-run write count, approval block count, discovery pass rate, rollback success, blocked secret refs | no writes without approval, temp-home install discovers, rollback removes plugin |
+| LIVE-READINESS-HARDENING-001 | Live-readiness hardening receipt | Verify bounded live-adjacent checks compose adapter, endpoint, manual proof, optional OpenAI, and `.env.local` hygiene without reading secrets or starting capture | check count, passed checks, live-effect checks, safety failures, git hygiene flags | zero secret reads, zero tracked local key files, zero real capture, zero durable memory writes |
 | SHADOW-POINTER-NATIVE-001 | Native Shadow Pointer overlay proof | Verify SwiftPM native macOS overlay boundary, display-only pointer behavior, and pause/delete/app-ignore receipt semantics | Swift build/test pass, overlay safety terms, control receipt coverage | non-activating overlay, no default mouse events, zero memory writes from blocked controls |
 | NATIVE-CAPTURE-PERMISSION-SMOKE-001 | Native capture permission smoke | Verify macOS Screen Recording and Accessibility status can be inspected without prompting, capture, observers, memory writes, or evidence refs | status receipt pass, allowed effect count, blocked effect count, evidence ref count | only read permission status, zero prompts, zero capture/observer starts |
 | SHADOW-POINTER-CAPTURE-WIRING-001 | Shadow Pointer capture wiring | Verify adapter handoff outcomes become truthful overlay receipts for observing, masking, approval, paused, and off states without raw refs | state mapping pass rate, blocked memory writes, confirmation gates, raw-ref exposure count | zero raw refs, no memory writes from masked/quarantined/paused outcomes |
@@ -181,6 +182,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | 2026-04-30 | Context fusion stress coverage | `uv run cortex-bench` plus focused context fusion tests | 135/135 passed; full suite passed with 316 tests | `benchmarks/runs/bench_20260430T132537Z.json` | Next benchmark: gateway outcome postmortem stress coverage. |
 | 2026-04-30 | Gateway postmortem stress coverage | `uv run cortex-bench` plus focused gateway postmortem stress tests | 136/136 passed; full suite passed with 317 tests | `benchmarks/runs/bench_20260430T132942Z.json` | Next benchmark: retrieval scope stress coverage. |
 | 2026-04-30 | Retrieval scope stress coverage | `uv run cortex-bench` plus focused retrieval scope stress tests | 137/137 passed; full suite passed with 319 tests; gateway smoke, Ruff, and ops-quality aggregate passed | `benchmarks/runs/bench_20260430T133555Z.json` | Next benchmark: _None_. |
+| 2026-05-01 | Live-readiness hardening receipt | `uv run cortex-bench`, focused live-readiness tests, `uv run cortex-live-readiness --openai-live --json` | 138/138 passed; full suite passed with 323 tests; live OpenAI smoke passed with 47 total tokens | `benchmarks/runs/bench_20260501T003714Z.json` | Next benchmark: _None_. |
 
 ## First Runnable Harness Requirements
 

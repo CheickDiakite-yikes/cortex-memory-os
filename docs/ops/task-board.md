@@ -1,6 +1,6 @@
 # Cortex Memory OS Task Board
 
-Last updated: 2026-04-30
+Last updated: 2026-05-01
 
 ## Active
 
@@ -24,6 +24,7 @@ Last updated: 2026-04-30
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
+| LIVE-READINESS-HARDENING-001 | Add bounded live-readiness hardening receipt | Codex | `uv run pytest` -> 323 passed, `uv run cortex-bench` -> 138/138 passed, `uv run cortex-live-readiness --json`, `uv run cortex-live-readiness --include-openai --json`, `uv run cortex-live-readiness --openai-live --json`, `uv run cortex-mcp --smoke`, `uvx ruff check` | Live-readiness receipt composes adapter, endpoint, manual proof, optional OpenAI dry-run/live smoke, and `.env.local` git hygiene without reading secrets, starting capture, or writing durable memory. Live OpenAI check used `gpt-5-nano`, `store_false`, and 47 total tokens. |
 | RETRIEVAL-SCOPE-STRESS-001 | Stress retrieval scope boundaries across many projects, agents, sessions, and statuses | Codex | `uv run pytest` -> 319 passed, `uv run cortex-bench` -> 137/137 passed, `uv run cortex-mcp --smoke`, `uvx ruff check`, `uv run cortex-ops-quality --format json` -> 137/137 aggregate-only | Direct rank, gateway search, and context packs block cross-project, cross-agent, cross-session, lifecycle-ineligible, secret, never-store, and global-excluded memory leakage. |
 | GATEWAY-POSTMORTEM-STRESS-001 | Stress gateway outcome postmortem exact-ID and redaction boundaries | Codex | `uv run pytest` -> 317 passed, `uv run cortex-bench` -> 136/136 passed | Repeated gateway postmortems reject mismatches, fixed unknown trace errors no longer echo caller IDs, and event summaries/outcome feedback stay redacted. |
 | CONTEXT-FUSION-STRESS-001 | Stress hybrid fusion diagnostics under large hostile/safe candidate mixes | Codex | `uv run pytest` -> 316 passed, `uv run cortex-bench` -> 135/135 passed | Deterministic mixed-candidate stress keeps diagnostics metadata-only, excludes hostile and secret candidates, and rejects raw refs. |

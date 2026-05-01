@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
@@ -93,6 +94,11 @@ from cortex_memory_os.live_openai_smoke import (
     build_responses_payload,
     load_live_openai_config,
     run_smoke,
+)
+from cortex_memory_os.live_readiness import (
+    LIVE_READINESS_HARDENING_ID,
+    LIVE_READINESS_POLICY_REF,
+    run_live_readiness,
 )
 from cortex_memory_os.live_adapters import (
     LIVE_ADAPTER_POLICY_REF,
@@ -477,6 +483,7 @@ def run_all() -> BenchmarkRunResult:
         case_local_adapter_endpoint_contract,
         case_manual_adapter_proof_contract,
         case_live_openai_smoke_contract,
+        case_live_readiness_hardening_contract,
         case_gateway_self_lesson_proposal_tool,
         case_self_lesson_sqlite_persistence,
         case_gateway_self_lesson_promotion_rollback,
@@ -3587,6 +3594,96 @@ def case_live_openai_smoke_contract() -> BenchmarkCaseResult:
             "default_model": config.model,
             "command": "uv run cortex-openai-smoke --dry-run",
             "env_example_tracked": True,
+        },
+    )
+
+
+def case_live_readiness_hardening_contract() -> BenchmarkCaseResult:
+    credential_name = "_".join(["OPENAI", "API", "KEY"])
+    previous_credential = os.environ.get(credential_name)
+    os.environ[credential_name] = "benchmark-key-redacted"
+    try:
+        result = run_live_readiness(include_openai=True)
+    finally:
+        if previous_credential is None:
+            os.environ.pop(credential_name, None)
+        else:
+            os.environ[credential_name] = previous_credential
+    check_map = {check.name: check for check in result.checks}
+    docs_text = (
+        REPO_ROOT / "docs" / "architecture" / "live-readiness-hardening.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (
+        REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    ).read_text(encoding="utf-8")
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    pyproject_text = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    serialized = result.model_dump_json()
+    required_doc_terms = [
+        LIVE_READINESS_HARDENING_ID,
+        LIVE_READINESS_POLICY_REF,
+        "cortex-live-readiness --json",
+        "cortex-live-readiness --include-openai --json",
+        "cortex-live-readiness --openai-live --json",
+        "does not read `.env.local` values",
+        "synthetic adapter payloads only",
+        "no real screen capture",
+        "no durable memory writes",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        result.passed
+        and result.secret_hygiene.ignored_by_git
+        and not result.secret_hygiene.tracked_by_git
+        and not result.secret_hygiene.secret_values_read
+        and check_map["env_local_secret_hygiene"].passed
+        and check_map["live_adapter_artifacts"].passed
+        and check_map["local_adapter_endpoint"].passed
+        and check_map["manual_adapter_proof"].passed
+        and check_map["openai_live_smoke"].passed
+        and check_map["openai_live_smoke"].details.get("status") == "dry_run"
+        and "_".join(["OPENAI", "API", "KEY"]) not in serialized
+        and "unit-test-key" not in serialized
+        and "test-key-secret" not in serialized
+        and not missing_doc_terms
+        and LIVE_READINESS_HARDENING_ID in plan_text
+        and LIVE_READINESS_HARDENING_ID in registry_text
+        and LIVE_READINESS_HARDENING_ID in task_text
+        and LIVE_READINESS_HARDENING_ID in traceability_text
+        and "cortex-live-readiness" in pyproject_text
+    )
+    return BenchmarkCaseResult(
+        case_id="LIVE-READINESS-HARDENING-001/bounded_live_receipt",
+        suite=LIVE_READINESS_HARDENING_ID,
+        passed=passed,
+        summary=(
+            "Bounded live-readiness receipt composes adapter, endpoint, manual proof, "
+            "OpenAI dry-run, and .env.local hygiene checks without reading secrets or "
+            "starting real capture."
+        ),
+        metrics={
+            "check_count": len(result.checks),
+            "passed_check_count": sum(1 for check in result.checks if check.passed),
+            "live_effect_check_count": sum(1 for check in result.checks if check.live_effect),
+            "safety_failure_count": len(result.safety_failures),
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": LIVE_READINESS_POLICY_REF,
+            "env_local_ignored": result.secret_hygiene.ignored_by_git,
+            "env_local_tracked": result.secret_hygiene.tracked_by_git,
+            "secret_values_read": result.secret_hygiene.secret_values_read,
+            "check_names": [check.name for check in result.checks],
+            "openai_status": check_map["openai_live_smoke"].details.get("status"),
+            "missing_doc_terms": missing_doc_terms,
         },
     )
 

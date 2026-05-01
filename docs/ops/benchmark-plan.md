@@ -1,6 +1,6 @@
 # Benchmark Plan
 
-Last updated: 2026-04-30
+Last updated: 2026-05-01
 
 This plan defines the minimum quality gates for Cortex Memory OS slices. The
 benchmark runner is intentionally synthetic-first so it can run locally without
@@ -128,6 +128,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-OUTCOME-POSTMORTEM-001` | Gateway compiles metadata-only postmortems from exact persisted trace and outcome IDs. | Tool accepts mismatched IDs, leaks runtime event summaries, or promotes self-lessons/skills while compiling. |
 | `GATEWAY-POSTMORTEM-STRESS-001` | Gateway postmortem compilation stays exact-ID anchored and redacted under repeated hostile input. | Tool leaks event summaries/outcome feedback/hostile trace IDs, accepts mismatches, or echoes caller-provided unknown trace IDs. |
 | `LIVE-OPENAI-SMOKE-001` | Optional live OpenAI smoke uses ignored `.env.local`, a low-cost model default, dry-run mode, and `store: false`. | A local key is tracked, live smoke prints secrets, default tests hit the network, or API payloads store synthetic smoke responses. |
+| `LIVE-READINESS-HARDENING-001` | Bounded live-readiness receipt composes adapter, endpoint, manual proof, optional OpenAI, and `.env.local` hygiene checks. | Live readiness reads secret values, starts real capture, writes durable memory, defaults to network calls, leaks raw refs, or hides failed live-adjacent checks. |
 | `SHADOW-POINTER-CAPTURE-WIRING-001` | Adapter handoff outcomes compile into truthful Shadow Pointer capture receipts without starting capture or exposing raw refs. | Overlay status lies about observation, allows memory writes after masking/quarantine/pause, skips confirmation for prompt risk, or leaks raw refs. |
 | `NATIVE-CAPTURE-PERMISSION-SMOKE-001` | Native permission status uses `CGPreflightScreenCaptureAccess` and `AXIsProcessTrustedWithOptions` with prompts disabled. | Permission checks prompt the user, start ScreenCaptureKit, attach Accessibility observers, or create durable evidence. |
 | `PERCEPTION-EVENT-ENVELOPE-001` | Consented Perception Bus envelopes normalize source kind, consent, scope, trust, route, prompt-risk, and robot-safety metadata. | Native adapters bypass the firewall, raw refs persist without active consent, or robot inputs lack capability and simulation gates. |

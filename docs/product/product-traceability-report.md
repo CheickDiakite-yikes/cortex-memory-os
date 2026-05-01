@@ -1,6 +1,6 @@
 # Product Traceability Report
 
-Last updated: 2026-04-30
+Last updated: 2026-05-01
 
 `PRODUCT-TRACEABILITY-REPORT-001` summarizes where Cortex Memory OS stands
 against the original roadmap, benchmark coverage, and current task board.
@@ -26,6 +26,7 @@ Source documents:
 - `docs/architecture/live-browser-terminal-adapters.md`
 - `docs/architecture/local-adapter-endpoint.md`
 - `docs/architecture/manual-adapter-proof.md`
+- `docs/architecture/live-readiness-hardening.md`
 - `docs/architecture/macos-perception-adapter-contracts.md`
 - `docs/architecture/browser-terminal-adapter-contracts.md`
 - `docs/architecture/context-pack-templates.md`
@@ -64,7 +65,7 @@ Source documents:
 | Agent Runtime Trace | Validated contract, gateway persistence receipts, safe postmortem handoff, gateway postmortem compilation, and gateway postmortem stress coverage | `RUNTIME-TRACE-001`, `GATEWAY-TRACE-PERSISTENCE-001`, `OUTCOME-POSTMORTEM-TRACE-001`, `GATEWAY-OUTCOME-POSTMORTEM-001`, `GATEWAY-POSTMORTEM-STRESS-001`, `docs/architecture/agent-runtime-trace.md`, `docs/architecture/outcome-postmortem-trace-handoff.md`, `docs/architecture/gateway-outcome-postmortem.md`, `docs/architecture/gateway-postmortem-stress.md`, runtime trace fixture, SQLite persistence, `runtime_trace.record`, `runtime_trace.get`, `runtime_trace.list`, `outcome.postmortem` | Connect postmortem receipts to self-improvement scoring without automatic promotion. |
 | Swarm Governance | Validated contract | `SWARM-GOVERNANCE-001`, `docs/adr/0005-swarm-governance-boundary.md` | Wire future parallel agents through governed gateway execution instead of direct delegation. |
 | Shadow Pointer | Validated native proof, static prototype, capture receipt wiring, and read-only permission status smoke | `SHADOW-POINTER-001`, `SHADOW-POINTER-CONTROLS-001`, `POINTER-PROPOSAL-001`, `SHADOW-POINTER-NATIVE-001`, `NATIVE-CAPTURE-PERMISSION-SMOKE-001`, `SHADOW-POINTER-CAPTURE-WIRING-001`, static UI prototype, `native/macos-shadow-pointer` | Feed live local endpoint and permission-status receipts into the native overlay panel. |
-| Native Perception Bus | Envelope, firewall handoff, evidence eligibility, browser/terminal contracts, macOS app/window and Accessibility contracts, live adapter smoke artifacts, local adapter endpoint, manual browser/terminal proof, Shadow Pointer capture receipt wiring, and native permission-status smoke validated | `PERCEPTION-EVENT-ENVELOPE-001`, `PERCEPTION-FIREWALL-HANDOFF-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001`, `NATIVE-CAPTURE-PERMISSION-SMOKE-001`, `SHADOW-POINTER-CAPTURE-WIRING-001`, `MACOS-PERCEPTION-ADAPTERS-001`, `BROWSER-TERMINAL-ADAPTERS-001`, `LIVE-BROWSER-TERMINAL-ADAPTERS-001`, `LOCAL-ADAPTER-ENDPOINT-001`, `MANUAL-ADAPTER-PROOF-001`, roadmap, and ADR | Wire the status receipt to onboarding and the Shadow Pointer without enabling real capture. |
+| Native Perception Bus | Envelope, firewall handoff, evidence eligibility, browser/terminal contracts, macOS app/window and Accessibility contracts, live adapter smoke artifacts, local adapter endpoint, manual browser/terminal proof, live-readiness hardening receipt, Shadow Pointer capture receipt wiring, and native permission-status smoke validated | `PERCEPTION-EVENT-ENVELOPE-001`, `PERCEPTION-FIREWALL-HANDOFF-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001`, `NATIVE-CAPTURE-PERMISSION-SMOKE-001`, `SHADOW-POINTER-CAPTURE-WIRING-001`, `MACOS-PERCEPTION-ADAPTERS-001`, `BROWSER-TERMINAL-ADAPTERS-001`, `LIVE-BROWSER-TERMINAL-ADAPTERS-001`, `LOCAL-ADAPTER-ENDPOINT-001`, `MANUAL-ADAPTER-PROOF-001`, `LIVE-READINESS-HARDENING-001`, roadmap, and ADR | Wire the status receipt to onboarding and the Shadow Pointer without enabling real capture. |
 | Robot readiness | Spatial safety contract validated | `ROBOT-SAFE-001`, `docs/architecture/robot-spatial-safety.md`, initial threat model | Keep physical integrations blocked until real simulation, capability, emergency-stop, and audit adapters exist. |
 | Production autonomy and real capture | Not started | No production capture daemon, no autonomous skill runner, and no robot executor are enabled | Keep disabled until consent UI, local endpoint, audit, rollback, and emergency-stop boundaries exist. |
 
