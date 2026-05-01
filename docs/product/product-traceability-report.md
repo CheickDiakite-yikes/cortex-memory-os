@@ -21,6 +21,7 @@ Source documents:
 - `docs/architecture/dashboard-live-gateway-runtime.md`
 - `docs/architecture/live-run-computer-safe-task.md`
 - `docs/architecture/synthetic-capture-ladder.md`
+- `docs/research/codex-chronicle-lessons-2026-05-01.md`
 - `docs/research/frontier-agent-plugin-lessons-2026-04-29.md`
 - `docs/ops/plugin-install-smoke.md`
 - `docs/ops/codex-plugin-real-enable.md`
@@ -129,6 +130,11 @@ User-facing pillars:
   DB with audit, retrieve that memory in search and context packs, and run a
   secret-in-screen negative test proving redaction before any write. Consented
   real screen capture stays later.
+- Codex Chronicle Research: `docs/research/codex-chronicle-lessons-2026-05-01.md`
+  validates that screen context can reduce restated context and identify better
+  primary sources, while also confirming the need for Cortex-specific
+  encryption, pre-write firewalling, visible observation state, scoped memory
+  influence, rate-limit backpressure, and prompt-injection stress tests.
 - Dashboard Live Gateway Runtime: validated
   `DASHBOARD-GATEWAY-RUNTIME-READONLY-001`,
   `DASHBOARD-GATEWAY-RUNTIME-BLOCKLIST-001`,

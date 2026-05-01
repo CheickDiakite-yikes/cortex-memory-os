@@ -6,13 +6,16 @@ Last updated: 2026-05-01
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| _None_ |  |  |  |  |
+| SHADOW-POINTER-PERMISSION-ONBOARDING-001 | Show Screen Recording and Accessibility readiness in Shadow Pointer without starting capture | Codex | Pending | Follow-up from Chronicle research: make permission/capability state legible before any real screen observation. |
+| SCREEN-INJECTION-STRESS-001 | Stress OCR/browser/screenshot prompt-injection strings through firewall and context-pack lanes | Codex | Pending | Follow-up from Chronicle research: screen content is adversarial and must never become instructions by default. |
 
 ## Next
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| _None_ |  |  |  |  |
+| CAPTURE-BUDGET-QUEUE-001 | Add capture/consolidation budget queue with rate-limit and cost backpressure | Codex | Pending | Chronicle warns background memory generation can consume rate limits quickly. |
+| RAW-EVIDENCE-EXPIRY-HARDENING-001 | Prove raw evidence expiry survives app restart and exposes receipts | Codex | Pending | Chronicle deletes old temp captures while running; Cortex should prove retention policy independently of runtime liveness. |
+| MEMORY-ENCRYPTION-DEFAULT-001 | Move durable sensitive memory toward encrypted storage by default | Codex | Pending | Chronicle's local Markdown memory is inspectable but not sufficient for Cortex's sensitive-memory threat model. |
 
 ## Backlog
 
@@ -24,6 +27,7 @@ Last updated: 2026-05-01
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
+| RESEARCH-CODEX-CHRONICLE-2026-05-01 | Research official Codex Chronicle lessons for Cortex Memory OS | Codex | `docs/research/codex-chronicle-lessons-2026-05-01.md`; updated `docs/ops/research-safety.md`; official OpenAI sources only; no Chronicle enablement, setup commands, or external code executed | Key lesson: adopt Chronicle's context-restatement and source-router value while differentiating with typed memory, encrypted evidence, pre-write firewall, Shadow Pointer, Memory Palace controls, context packs, and Skill Forge maturity gates. |
 | SYNTHETIC-CAPTURE-LADDER-001 | Prove synthetic capture page to durable memory and retrieval ladder | Codex | `uv run cortex-synthetic-capture-ladder --json` -> passed, temp disposable synthetic page only, `vault` raw ref readable before expiry and deleted after expiry, audited local test DB memory written, retrieval/context pack hit, secret fixture masked before write, raw/memory write blocked, leak count 0, real capture false; `uv run pytest` -> 345 passed; `uv run cortex-bench` -> 147/147 passed, `benchmarks/runs/bench_20260501T154233Z.json`; `uv run cortex-bench --no-write`; `uv run cortex-mcp --smoke`; `uv run cortex-ops-quality --format json` -> 147/147 aggregate-only and `raw_case_payloads_included: false`; `uvx ruff check`; `python3 -m compileall src`; `.env.local` ignored and untracked | Synthetic ladder is now the first capture-to-memory proof. It uses only disposable synthetic content and temp storage; consented real screen capture stays a later task. |
 | LIVE-RUN-COMPUTER-SAFE-TASK-001 | Prove a bounded Cortex live run while Computer Use performs a safe local task | Codex | Computer Use Chrome proof on `http://127.0.0.1:8787/index.html` clicked `memory.explain` and observed `Gateway receipt allows memory.explain read-only for mem_auth_redirect_root_cause. No mutation executed.`; `uv run cortex-live-run-safe-task --json` -> passed, 7 read-only, 27 blocked, 0 raw payloads, 0 external effects; `uv run pytest` -> 343 passed; `uv run cortex-bench` -> 146/146 passed, `benchmarks/runs/bench_20260501T035317Z.json`; `uv run cortex-mcp --smoke`; `uv run cortex-ops-quality --format json`; `uvx ruff check`; `python3 -m compileall src`; `.env.local` ignored and untracked | Local dashboard and read-only gateway receipts can be on for the proof; real capture, durable memory writer, raw screen storage, raw Accessibility storage, raw evidence refs, model secret echo attempts, mutation, export, draft execution, external network requirement, and external effects stayed off. |
 | DASHBOARD-GATEWAY-RUNTIME-READONLY-001 | Execute dashboard read-only receipts against local gateway runtime | Codex | `uv run cortex-dashboard-live-gateway --json` -> 7 read-only executions, 27 blocked, 0 failed, 0 raw payloads; `uv run pytest` -> 338 passed; `uv run cortex-bench` -> 145/145 passed, `benchmarks/runs/bench_20260501T015140Z.json`; `uv run cortex-mcp --smoke`; `uvx ruff check`; `python3 -m compileall src` | Only `memory.explain` and `skill.review_candidate` execute; summaries stay content/source/procedure redacted. |
