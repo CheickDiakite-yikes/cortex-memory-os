@@ -235,6 +235,16 @@ class CortexMCPServer:
                 },
             },
             {
+                "name": "skill.review_candidate",
+                "description": "Review one skill candidate as redacted metadata without procedure text or mutation.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {"skill_id": {"type": "string"}},
+                    "required": ["skill_id"],
+                    "additionalProperties": False,
+                },
+            },
+            {
                 "name": "skill.execute_draft",
                 "description": "Prepare reviewable draft-only skill outputs without external effects.",
                 "inputSchema": {
@@ -643,6 +653,19 @@ class CortexMCPServer:
                     OUTCOME_POSTMORTEM_TRACE_POLICY_REF,
                     GATEWAY_OUTCOME_POSTMORTEM_ID,
                 ],
+            }
+        if name == "skill.review_candidate":
+            skill_id = _require_string(arguments, "skill_id")
+            skill = self.skills.get(skill_id)
+            if skill is None:
+                raise JsonRpcError(-32602, f"unknown skill_id: {skill_id}")
+            return {
+                "review": serialize_skill_candidate_review(skill),
+                "content_redacted": True,
+                "procedure_redacted": True,
+                "mutation": False,
+                "external_effect": False,
+                "policy_refs": ["policy_skill_candidate_review_gateway_v1"],
             }
         if name == "skill.execute_draft":
             skill_id = _require_string(arguments, "skill_id")
@@ -1379,6 +1402,28 @@ def serialize_memory(memory: MemoryRecord) -> dict[str, Any]:
         "source_refs": memory.source_refs,
         "sensitivity": memory.sensitivity.value,
         "scope": memory.scope.value,
+    }
+
+
+def serialize_skill_candidate_review(skill: SkillRecord) -> dict[str, Any]:
+    return {
+        "skill_id": skill.skill_id,
+        "name": skill.name,
+        "status": skill.status.value,
+        "risk_level": skill.risk_level.value,
+        "maturity_level": skill.maturity_level,
+        "execution_mode": skill.execution_mode.value,
+        "learned_from_count": len(skill.learned_from),
+        "trigger_count": len(skill.trigger_conditions),
+        "procedure_step_count": len(skill.procedure),
+        "success_signal_count": len(skill.success_signals),
+        "failure_mode_count": len(skill.failure_modes),
+        "requires_confirmation_count": len(skill.requires_confirmation_before),
+        "content_redacted": True,
+        "procedure_redacted": True,
+        "external_effect": False,
+        "mutation": False,
+        "policy_refs": ["policy_skill_candidate_review_gateway_v1"],
     }
 
 

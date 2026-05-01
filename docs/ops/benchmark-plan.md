@@ -73,6 +73,12 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `MEMORY-PALACE-SKILL-FORGE-UI-001` | Static dashboard shell renders Memory Palace and Skill Forge safe view models with local-only action previews. | UI embeds raw private data, action controls execute mutations, generated data leaks secrets/raw refs, or primary panels fail to render. |
 | `DASHBOARD-GATEWAY-ACTIONS-001` | Dashboard action controls resolve to local gateway receipts that allow only read-only explain/review calls. | Dashboard buttons mutate memory, export data, execute draft skills, skip receipt checks, or hide blocked reasons. |
 | `COMPUTER-DASHBOARD-LIVE-PROOF-001` | Computer Use dashboard proof records only a sanitized local-browser observation and local preview receipt. | Proof stores raw screenshots, raw accessibility trees, tab titles, secrets, raw refs, durable memory writes, gateway mutations, or external effects. |
+| `DASHBOARD-GATEWAY-RUNTIME-READONLY-001` | Dashboard read-only receipts execute against the local gateway runtime for `memory.explain` and `skill.review_candidate`. | Dashboard read-only calls leak content/source refs/procedure text, return raw payloads, mutate state, export data, or call unapproved tools. |
+| `DASHBOARD-GATEWAY-RUNTIME-BLOCKLIST-001` | Dashboard mutation, export, and draft receipts are blocked before any gateway call. | `memory.forget`, `memory.export`, or `skill.execute_draft` reaches the gateway from the dashboard without explicit confirmation and a separate write contract. |
+| `DASHBOARD-CONTEXT-PACK-LIVE-SUMMARY-001` | Dashboard context-pack summary exposes count-only live metadata. | Summary leaks memory content, source refs, raw refs, hostile text, or hidden instructions. |
+| `DASHBOARD-SKILL-REVIEW-LIVE-SUMMARY-001` | Dashboard skill review summary exposes redacted candidate counts with no autonomy change. | Review leaks procedure text, performs mutation, executes drafts, or changes maturity/autonomy. |
+| `DASHBOARD-OPS-QUALITY-PANEL-001` | Dashboard ops panel exposes aggregate-only benchmark status. | Panel leaks benchmark case payloads, evidence payloads, raw artifact contents, raw refs, hostile text, secrets, or absolute private paths. |
+| `DASHBOARD-READONLY-ACTION-LIVE-PROOF-001` | Live browser proof includes sanitized read-only gateway receipt text. | Live proof records raw screenshots/accessibility trees/tab titles, durable writes, unsafe gateway actions, mutations, or external effects. |
 | `AUDIT-001` | Memory mutations persist human-visible audits. | Mutation lacks a redacted audit event. |
 | `EXPORT-001` | User memory export is scoped, redacted, and deletion-aware. | Deleted/revoked content appears in export output. |
 | `EXPORT-AUDIT-001` | Memory exports persist redacted audit receipts. | Export audit copies memory content or secret-like text. |
@@ -201,7 +207,8 @@ The following failures block merge, release, or wider use:
 Near-term suites:
 
 - User-approved real Codex plugin enable/rollback path beyond temporary smoke.
-- Live gateway-backed dashboard interactions after the static shell.
+- Wire live gateway-backed dashboard summaries into visible panels after the
+  runtime receipt contracts.
 
 Longer-term suites:
 

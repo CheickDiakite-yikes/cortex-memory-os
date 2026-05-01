@@ -7,7 +7,7 @@ def test_synthetic_benchmarks_pass():
     result = run_all()
 
     assert result.passed
-    assert len(result.case_results) == 139
+    assert len(result.case_results) == 145
     assert {case.suite for case in result.case_results} >= {
         "MEM-RECALL-001",
         "RETRIEVAL-SCORE-001",
@@ -98,6 +98,12 @@ def test_synthetic_benchmarks_pass():
         "AUDIT-001",
         "DASHBOARD-GATEWAY-ACTIONS-001",
         "COMPUTER-DASHBOARD-LIVE-PROOF-001",
+        "DASHBOARD-GATEWAY-RUNTIME-READONLY-001",
+        "DASHBOARD-GATEWAY-RUNTIME-BLOCKLIST-001",
+        "DASHBOARD-CONTEXT-PACK-LIVE-SUMMARY-001",
+        "DASHBOARD-SKILL-REVIEW-LIVE-SUMMARY-001",
+        "DASHBOARD-OPS-QUALITY-PANEL-001",
+        "DASHBOARD-READONLY-ACTION-LIVE-PROOF-001",
         "EXPORT-001",
         "EXPORT-AUDIT-001",
         "SKILL-FORGE-002",

@@ -35,6 +35,7 @@ def test_lists_memory_tools():
         "runtime_trace.get",
         "runtime_trace.list",
         "outcome.postmortem",
+        "skill.review_candidate",
         "skill.execute_draft",
         "self_lesson.propose",
         "self_lesson.list",
@@ -498,6 +499,33 @@ def test_skill_execute_draft_tool_returns_reviewable_outputs_without_effects():
         "draft_plan",
         "review_checklist",
     ]
+
+
+def test_skill_review_candidate_tool_returns_redacted_metadata_without_effects():
+    server = default_server()
+
+    response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 34,
+            "method": "tools/call",
+            "params": {
+                "name": "skill.review_candidate",
+                "arguments": {"skill_id": "skill_research_synthesis_v1"},
+            },
+        }
+    )
+
+    review = response["result"]["review"]
+    serialized = json.dumps(response["result"])
+    assert review["skill_id"] == "skill_research_synthesis_v1"
+    assert review["procedure_step_count"] == 6
+    assert review["content_redacted"] is True
+    assert review["procedure_redacted"] is True
+    assert response["result"]["mutation"] is False
+    assert response["result"]["external_effect"] is False
+    assert "Search current primary sources" not in serialized
+    assert "Cite load-bearing claims" not in serialized
 
 
 def test_skill_execute_draft_tool_blocks_external_effect_requests():

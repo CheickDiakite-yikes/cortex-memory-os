@@ -2,9 +2,15 @@
 
 Last updated: 2026-05-01
 
-Benchmark: `COMPUTER-DASHBOARD-LIVE-PROOF-001`
+Benchmarks:
 
-Policy reference: `policy_computer_dashboard_live_proof_v1`
+- `COMPUTER-DASHBOARD-LIVE-PROOF-001`
+- `DASHBOARD-READONLY-ACTION-LIVE-PROOF-001`
+
+Policy references:
+
+- `policy_computer_dashboard_live_proof_v1`
+- `policy_dashboard_readonly_action_live_proof_v1`
 
 This slice adds a safe proof boundary for using Computer Use to validate the
 local Cortex dashboard in a real desktop browser.
@@ -41,6 +47,21 @@ Observation pause previewed locally. Confirmation and audit receipt required.
 That is a local preview receipt. It is not a memory mutation, not a durable
 write, not a capture-start command, not a gateway mutation, and not an external
 effect.
+
+## Read-Only Gateway Action Receipt
+
+`DASHBOARD-READONLY-ACTION-LIVE-PROOF-001` extends the proof with a sanitized
+read-only gateway receipt. The browser proof may record only sanitized receipt
+text such as:
+
+```text
+Gateway receipt allows memory.explain read-only for mem_auth_redirect_root_cause. No mutation executed.
+```
+
+The receipt must include `Gateway receipt allows`, `read-only`, and
+`No mutation executed`. It must not mention `memory.forget`, `memory.export`,
+`skill.execute_draft`, raw refs, screenshots, secrets, durable writes, gateway
+mutations, or external effects.
 
 ## Redaction Boundary
 

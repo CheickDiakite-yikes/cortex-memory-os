@@ -31,6 +31,7 @@ def test_sample_dashboard_live_proof_passes_with_sanitized_observation():
     assert result.durable_memory_write is False
     assert result.gateway_mutation_executed is False
     assert result.external_effect_executed is False
+    assert result.read_only_action_receipt_count == 1
     assert result.safety_failures == []
 
 
@@ -100,6 +101,21 @@ def test_dashboard_live_proof_rejects_non_preview_receipt():
 
     assert not result.passed
     assert "receipt_not_local_preview" in result.safety_failures
+
+
+def test_dashboard_live_proof_rejects_unsafe_read_only_action_receipt():
+    observation = build_sample_dashboard_live_observation().model_copy(
+        update={
+            "read_only_action_receipts": [
+                "Gateway receipt allows memory.forget read-only for mem_1. No mutation executed."
+            ]
+        }
+    )
+
+    result = validate_dashboard_live_proof(observation)
+
+    assert not result.passed
+    assert "read_only_action_receipt_not_safe" in result.safety_failures
 
 
 def test_sanitized_observation_removes_duplicate_visible_terms():

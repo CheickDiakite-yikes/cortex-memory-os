@@ -18,6 +18,7 @@ Source documents:
 - `docs/product/cortex-dashboard-shell.md`
 - `docs/product/dashboard-gateway-actions.md`
 - `docs/architecture/dashboard-live-proof.md`
+- `docs/architecture/dashboard-live-gateway-runtime.md`
 - `docs/research/frontier-agent-plugin-lessons-2026-04-29.md`
 - `docs/ops/plugin-install-smoke.md`
 - `docs/ops/codex-plugin-real-enable.md`
@@ -54,15 +55,15 @@ Source documents:
 | Area | Status | Evidence | Gap |
 | --- | --- | --- | --- |
 | Engineering control plane | Validated | Task board, benchmark registry, research safety ledger, ADRs | Keep reports current after each slice. |
-| Ops Quality Surface | Validated aggregate status receipt | `OPS-QUALITY-SURFACE-001`, `uv run cortex-ops-quality`, `docs/architecture/ops-quality-surface.md` | Feed the sanitized receipt into future local dashboard ops panels without raw benchmark artifacts. |
+| Ops Quality Surface | Validated aggregate status receipt plus dashboard aggregate panel contract | `OPS-QUALITY-SURFACE-001`, `DASHBOARD-OPS-QUALITY-PANEL-001`, `uv run cortex-ops-quality`, `docs/architecture/ops-quality-surface.md`, `docs/architecture/dashboard-live-gateway-runtime.md` | Wire the aggregate panel into the visible dashboard UI without raw benchmark artifacts. |
 | Contract layer | Validated | Typed contracts, fixtures, `tests/test_contracts.py` | Add migration/versioning policy as schemas evolve. |
 | Privacy + Safety Firewall | Validated | `SEC-INJECT-001`, `SEC-PII-001`, `CTX-HOSTILE-001` | Expand from synthetic text to app/browser/source classifiers. |
 | Evidence Vault | Validated skeleton | `VAULT-RETENTION-001`, `VAULT-ENCRYPT-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001` | Replace dev cipher with production key management before real private data. |
 | Scene, memory, and graph pipeline | Validated skeleton | `SCENE-SEGMENT-001`, `MEM-COMPILE-001`, `GRAPH-EDGE-001` | Add richer multimodal segmentation and contradiction handling. |
-| Retrieval and context packs | Validated budgeted skeleton plus scope stress coverage, hybrid fusion interface, local fusion adapters, metadata-only context-pack fusion diagnostics, context-fusion stress coverage, redacted explanation receipts, and dashboard receipt surface | `RETRIEVAL-SCORE-001`, `SCOPE-POLICY-001`, `RETRIEVAL-SCOPE-STRESS-001`, `CONTEXT-FUSION-INDEX-STUB-001`, `REAL-VECTOR-INDEX-ADAPTER-001`, `HYBRID-FUSION-CONTEXT-PACK-INTEGRATION-001`, `CONTEXT-FUSION-STRESS-001`, `RETRIEVAL-EXPLANATION-RECEIPTS-001`, `RETRIEVAL-RECEIPTS-DASHBOARD-SURFACE-001`, `CONTEXT-PACK-001`, `CONTEXT-BUDGET-001`, scoped self-lesson suites | Feed diagnostics into live dashboard context/debug panels. |
-| Memory Palace | Validated dashboard contract, static UI shell, read-only gateway action receipts, and sanitized Computer Use browser proof | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, `MEMORY-PALACE-DASHBOARD-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, `DASHBOARD-GATEWAY-ACTIONS-001`, `COMPUTER-DASHBOARD-LIVE-PROOF-001`, self-lesson review flows | Wire safe read-only calls to the local gateway runtime; keep correction/delete/export confirmation-gated. |
-| Skill Forge | Validated skeleton plus candidate list, success metrics, dashboard metrics surface, static UI shell, read-only review receipts, and sanitized Computer Use browser proof | `SKILL-FORGE-002`, `SKILL-DOC-DERIVATION-001`, `SKILL-FORGE-LIST-001`, `SKILL-SUCCESS-METRICS-001`, `SKILL-METRICS-DASHBOARD-SURFACE-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, `DASHBOARD-GATEWAY-ACTIONS-001`, `COMPUTER-DASHBOARD-LIVE-PROOF-001`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add workflow clustering and live draft-only execution previews behind receipts. |
-| Agent Gateway | Validated skeleton plus install-smoked and approval-gated Codex plugin package | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, self-lesson and skill tools, `CODEX-PLUGIN-001`, `PLUGIN-INSTALL-SMOKE-001`, `CODEX-PLUGIN-REAL-ENABLE-001`, `plugins/cortex-memory-os` | Bridge additional clients and keep real user config changes explicit. |
+| Retrieval and context packs | Validated budgeted skeleton plus scope stress coverage, hybrid fusion interface, local fusion adapters, metadata-only context-pack fusion diagnostics, context-fusion stress coverage, redacted explanation receipts, dashboard receipt surface, and live count-only context-pack summary | `RETRIEVAL-SCORE-001`, `SCOPE-POLICY-001`, `RETRIEVAL-SCOPE-STRESS-001`, `CONTEXT-FUSION-INDEX-STUB-001`, `REAL-VECTOR-INDEX-ADAPTER-001`, `HYBRID-FUSION-CONTEXT-PACK-INTEGRATION-001`, `CONTEXT-FUSION-STRESS-001`, `RETRIEVAL-EXPLANATION-RECEIPTS-001`, `RETRIEVAL-RECEIPTS-DASHBOARD-SURFACE-001`, `DASHBOARD-CONTEXT-PACK-LIVE-SUMMARY-001`, `CONTEXT-PACK-001`, `CONTEXT-BUDGET-001`, scoped self-lesson suites | Wire count-only live context metadata into visible dashboard context/debug panels. |
+| Memory Palace | Validated dashboard contract, static UI shell, read-only gateway action receipts, live gateway runtime explain calls, sanitized read-only action live proof, and sanitized Computer Use browser proof | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, `MEMORY-PALACE-DASHBOARD-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, `DASHBOARD-GATEWAY-ACTIONS-001`, `DASHBOARD-GATEWAY-RUNTIME-READONLY-001`, `DASHBOARD-GATEWAY-RUNTIME-BLOCKLIST-001`, `DASHBOARD-READONLY-ACTION-LIVE-PROOF-001`, `COMPUTER-DASHBOARD-LIVE-PROOF-001`, self-lesson review flows | Keep correction/delete/export confirmation-gated and wire the safe read-only summaries into the visible dashboard. |
+| Skill Forge | Validated skeleton plus candidate list, success metrics, dashboard metrics surface, static UI shell, read-only review receipts, live gateway-backed candidate review summaries, and sanitized Computer Use browser proof | `SKILL-FORGE-002`, `SKILL-DOC-DERIVATION-001`, `SKILL-FORGE-LIST-001`, `SKILL-SUCCESS-METRICS-001`, `SKILL-METRICS-DASHBOARD-SURFACE-001`, `DASHBOARD-SKILL-REVIEW-LIVE-SUMMARY-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, `DASHBOARD-GATEWAY-ACTIONS-001`, `COMPUTER-DASHBOARD-LIVE-PROOF-001`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add workflow clustering and live draft-only execution previews behind receipts. |
+| Agent Gateway | Validated skeleton plus install-smoked Codex plugin, approval-gated plugin package, and dashboard read-only runtime with unsafe action blocklist | `GATEWAY-CTX-001`, `GATEWAY-PALACE-001`, `DASHBOARD-GATEWAY-RUNTIME-READONLY-001`, `DASHBOARD-GATEWAY-RUNTIME-BLOCKLIST-001`, self-lesson and skill tools, `CODEX-PLUGIN-001`, `PLUGIN-INSTALL-SMOKE-001`, `CODEX-PLUGIN-REAL-ENABLE-001`, `plugins/cortex-memory-os` | Bridge additional clients and keep real user config changes explicit. |
 | Agent Runtime Trace | Validated contract, gateway persistence receipts, safe postmortem handoff, gateway postmortem compilation, and gateway postmortem stress coverage | `RUNTIME-TRACE-001`, `GATEWAY-TRACE-PERSISTENCE-001`, `OUTCOME-POSTMORTEM-TRACE-001`, `GATEWAY-OUTCOME-POSTMORTEM-001`, `GATEWAY-POSTMORTEM-STRESS-001`, `docs/architecture/agent-runtime-trace.md`, `docs/architecture/outcome-postmortem-trace-handoff.md`, `docs/architecture/gateway-outcome-postmortem.md`, `docs/architecture/gateway-postmortem-stress.md`, runtime trace fixture, SQLite persistence, `runtime_trace.record`, `runtime_trace.get`, `runtime_trace.list`, `outcome.postmortem` | Connect postmortem receipts to self-improvement scoring without automatic promotion. |
 | Swarm Governance | Validated contract | `SWARM-GOVERNANCE-001`, `docs/adr/0005-swarm-governance-boundary.md` | Wire future parallel agents through governed gateway execution instead of direct delegation. |
 | Shadow Pointer | Validated native proof, static prototype, capture receipt wiring, and read-only permission status smoke | `SHADOW-POINTER-001`, `SHADOW-POINTER-CONTROLS-001`, `POINTER-PROPOSAL-001`, `SHADOW-POINTER-NATIVE-001`, `NATIVE-CAPTURE-PERMISSION-SMOKE-001`, `SHADOW-POINTER-CAPTURE-WIRING-001`, static UI prototype, `native/macos-shadow-pointer` | Feed live local endpoint and permission-status receipts into the native overlay panel. |
@@ -97,8 +98,9 @@ User-facing pillars:
 - Memory Palace: validated inspect, explain, correct, delete, export,
   dashboard cards, export previews, action plans, self-lesson review flows, and
   the Real Memory Palace and Skill Forge UI shell using the safe dashboard view
-  models, plus read-only dashboard gateway receipts and sanitized Computer Use
-  browser proof.
+  models, plus read-only dashboard gateway receipts, live gateway runtime
+  explain calls, unsafe action blocklist, sanitized read-only action receipt
+  proof, and sanitized Computer Use browser proof.
 - Skill Forge: validated repeated-workflow detector, document-to-skill candidate
   derivation, candidate-list cards, success/failure metrics, maturity gates,
   dashboard metric cards, rollback, audits, and draft-only execution, plus the
@@ -111,7 +113,18 @@ User-facing pillars:
   Computer Use observations become commit-safe visible-term and local-preview
   receipts without raw screenshots, raw accessibility trees, tab titles,
   secrets, raw refs, durable memory writes, gateway mutations, or external
-  effects.
+  effects. `DASHBOARD-READONLY-ACTION-LIVE-PROOF-001` adds sanitized
+  read-only gateway action receipt text without allowing mutation, export,
+  draft execution, durable writes, or external effects.
+- Dashboard Live Gateway Runtime: validated
+  `DASHBOARD-GATEWAY-RUNTIME-READONLY-001`,
+  `DASHBOARD-GATEWAY-RUNTIME-BLOCKLIST-001`,
+  `DASHBOARD-CONTEXT-PACK-LIVE-SUMMARY-001`,
+  `DASHBOARD-SKILL-REVIEW-LIVE-SUMMARY-001`, and
+  `DASHBOARD-OPS-QUALITY-PANEL-001` so local dashboard panels can use gateway
+  summaries, blocked-action receipts, context-pack counts, skill-review counts,
+  and aggregate ops status without content, procedure text, source refs, raw
+  payloads, memory writes, or external effects.
 - Retrieval Fusion: validated dependency-free semantic, sparse, and graph
   adapters under `REAL-VECTOR-INDEX-ADAPTER-001` that feed redacted hybrid
   fusion candidates without model services or network calls, plus
@@ -154,9 +167,8 @@ capture realism:
    Next is permission-status onboarding without starting capture.
 2. Wire the Shadow Pointer native overlay proof to live permission-status and
    local endpoint receipt streams.
-3. Execute the read-only dashboard gateway receipts against the local gateway
-   runtime, building on `COMPUTER-DASHBOARD-LIVE-PROOF-001`, with no mutation
-   paths enabled.
+3. Wire the live gateway runtime summaries into visible dashboard panels without
+   adding raw payloads or write paths.
 4. Connect gateway postmortem receipts to self-improvement scoring without
    automatic lesson or skill promotion.
 5. Feed metadata-only hybrid fusion diagnostics into live dashboard context/debug

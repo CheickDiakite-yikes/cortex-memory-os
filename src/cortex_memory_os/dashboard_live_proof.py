@@ -13,7 +13,9 @@ from pydantic import Field, field_validator
 from cortex_memory_os.contracts import StrictModel
 
 COMPUTER_DASHBOARD_LIVE_PROOF_ID = "COMPUTER-DASHBOARD-LIVE-PROOF-001"
+READONLY_ACTION_LIVE_PROOF_ID = "DASHBOARD-READONLY-ACTION-LIVE-PROOF-001"
 COMPUTER_DASHBOARD_LIVE_PROOF_POLICY_REF = "policy_computer_dashboard_live_proof_v1"
+READONLY_ACTION_LIVE_PROOF_POLICY_REF = "policy_dashboard_readonly_action_live_proof_v1"
 
 REQUIRED_DASHBOARD_TERMS = [
     "Cortex Memory OS",
@@ -31,6 +33,11 @@ LOCAL_PREVIEW_RECEIPT_MARKERS = [
 ]
 NO_GATEWAY_RECEIPT_MARKERS = [
     "No gateway action executed",
+]
+READ_ONLY_GATEWAY_RECEIPT_MARKERS = [
+    "Gateway receipt allows",
+    "read-only",
+    "No mutation executed",
 ]
 PROHIBITED_PROOF_MARKERS = [
     "OPENAI_API_KEY=",
@@ -52,6 +59,7 @@ class SanitizedDashboardLiveObservation(StrictModel):
     visible_terms: list[str] = Field(min_length=1)
     clicked_control_label: str = Field(min_length=1)
     receipt_text: str = Field(min_length=1)
+    read_only_action_receipts: list[str] = Field(default_factory=list)
     raw_screenshot_saved: bool = False
     raw_accessibility_tree_saved: bool = False
     raw_tab_titles_saved: bool = False
@@ -97,6 +105,8 @@ class DashboardLiveProofResult(StrictModel):
     durable_memory_write: bool
     gateway_mutation_executed: bool
     external_effect_executed: bool
+    read_only_action_receipt_count: int = Field(ge=0)
+    read_only_action_live_proof_id: str = READONLY_ACTION_LIVE_PROOF_ID
     safety_failures: list[str] = Field(default_factory=list)
 
 
@@ -124,6 +134,12 @@ def build_sample_dashboard_live_observation(
             "Observation pause previewed locally. "
             "Confirmation and audit receipt required."
         ),
+        read_only_action_receipts=[
+            (
+                "Gateway receipt allows memory.explain read-only for "
+                "mem_auth_redirect_root_cause. No mutation executed."
+            )
+        ],
     )
 
 
@@ -136,6 +152,7 @@ def validate_dashboard_live_proof(
             observation.clicked_control_label,
             observation.receipt_text,
             *observation.visible_terms,
+            *observation.read_only_action_receipts,
         ]
     )
     missing_required_terms = _missing_terms(visible_blob, REQUIRED_DASHBOARD_TERMS)
@@ -161,6 +178,8 @@ def validate_dashboard_live_proof(
         safety_failures.append("missing_required_visible_terms")
     if not receipt_is_local_preview:
         safety_failures.append("receipt_not_local_preview")
+    if not _read_only_action_receipts_are_safe(observation.read_only_action_receipts):
+        safety_failures.append("read_only_action_receipt_not_safe")
     if prohibited_marker_count:
         safety_failures.append("prohibited_marker_in_sanitized_observation")
     safety_failures.extend(name for name, enabled in blocked_flags.items() if enabled)
@@ -181,6 +200,7 @@ def validate_dashboard_live_proof(
         durable_memory_write=observation.durable_memory_write,
         gateway_mutation_executed=observation.gateway_mutation_executed,
         external_effect_executed=observation.external_effect_executed,
+        read_only_action_receipt_count=len(observation.read_only_action_receipts),
         safety_failures=safety_failures,
     )
 
@@ -192,6 +212,16 @@ def _missing_terms(text: str, terms: list[str]) -> list[str]:
 def _receipt_is_local_preview(receipt_text: str) -> bool:
     return all(marker in receipt_text for marker in LOCAL_PREVIEW_RECEIPT_MARKERS) or all(
         marker in receipt_text for marker in NO_GATEWAY_RECEIPT_MARKERS
+    )
+
+
+def _read_only_action_receipts_are_safe(receipts: list[str]) -> bool:
+    return all(
+        all(marker in receipt for marker in READ_ONLY_GATEWAY_RECEIPT_MARKERS)
+        and "memory.forget" not in receipt
+        and "memory.export" not in receipt
+        and "skill.execute_draft" not in receipt
+        for receipt in receipts
     )
 
 

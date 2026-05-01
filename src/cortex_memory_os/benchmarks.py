@@ -126,8 +126,25 @@ from cortex_memory_os.dashboard_shell import (
 from cortex_memory_os.dashboard_live_proof import (
     COMPUTER_DASHBOARD_LIVE_PROOF_ID,
     COMPUTER_DASHBOARD_LIVE_PROOF_POLICY_REF,
+    READONLY_ACTION_LIVE_PROOF_ID,
+    READONLY_ACTION_LIVE_PROOF_POLICY_REF,
     build_sample_dashboard_live_observation,
     validate_dashboard_live_proof,
+)
+from cortex_memory_os.dashboard_live_gateway import (
+    DASHBOARD_CONTEXT_PACK_LIVE_SUMMARY_ID,
+    DASHBOARD_CONTEXT_PACK_LIVE_SUMMARY_POLICY_REF,
+    DASHBOARD_GATEWAY_RUNTIME_BLOCKLIST_ID,
+    DASHBOARD_GATEWAY_RUNTIME_POLICY_REF,
+    DASHBOARD_GATEWAY_RUNTIME_READONLY_ID,
+    DASHBOARD_OPS_QUALITY_PANEL_ID,
+    DASHBOARD_OPS_QUALITY_PANEL_POLICY_REF,
+    DASHBOARD_SKILL_REVIEW_LIVE_SUMMARY_ID,
+    DASHBOARD_SKILL_REVIEW_LIVE_SUMMARY_POLICY_REF,
+    build_context_pack_live_summary,
+    build_ops_quality_panel,
+    build_skill_review_live_summaries,
+    execute_dashboard_gateway_receipts,
 )
 from cortex_memory_os.dashboard_gateway_actions import (
     DASHBOARD_GATEWAY_ACTIONS_ID,
@@ -461,6 +478,12 @@ def run_all() -> BenchmarkRunResult:
         case_dashboard_shell_contract,
         case_dashboard_gateway_actions_contract,
         case_computer_dashboard_live_proof_contract,
+        case_dashboard_gateway_runtime_readonly_contract,
+        case_dashboard_gateway_runtime_blocklist_contract,
+        case_dashboard_context_pack_live_summary_contract,
+        case_dashboard_skill_review_live_summary_contract,
+        case_dashboard_ops_quality_panel_contract,
+        case_dashboard_readonly_action_live_proof_contract,
         case_skill_promotion_gate,
         case_skill_rollback_gate,
         case_skill_maturity_audit_events,
@@ -10966,6 +10989,347 @@ def case_computer_dashboard_live_proof_contract() -> BenchmarkCaseResult:
             "missing_doc_terms": missing_doc_terms,
         },
     )
+
+
+def case_dashboard_gateway_runtime_readonly_contract() -> BenchmarkCaseResult:
+    batch = execute_dashboard_gateway_receipts(now=datetime(2026, 5, 1, 9, 30, tzinfo=UTC))
+    executed = [receipt for receipt in batch.receipts if receipt.gateway_called]
+    docs_text = _dashboard_live_gateway_docs_text()
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(encoding="utf-8")
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(encoding="utf-8")
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        DASHBOARD_GATEWAY_RUNTIME_READONLY_ID,
+        DASHBOARD_GATEWAY_RUNTIME_POLICY_REF,
+        "memory.explain",
+        "skill.review_candidate",
+        "read-only",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        batch.executed_count > 0
+        and batch.failed_count == 0
+        and batch.raw_payload_count == 0
+        and {receipt.gateway_tool for receipt in executed}
+        == {"memory.explain", "skill.review_candidate"}
+        and all(receipt.status == "executed_read_only" for receipt in executed)
+        and all(receipt.content_redacted for receipt in executed)
+        and all(receipt.source_refs_redacted for receipt in executed)
+        and all(receipt.procedure_redacted for receipt in executed)
+        and not missing_doc_terms
+        and DASHBOARD_GATEWAY_RUNTIME_READONLY_ID in task_text
+        and DASHBOARD_GATEWAY_RUNTIME_READONLY_ID in registry_text
+        and DASHBOARD_GATEWAY_RUNTIME_READONLY_ID in plan_text
+        and DASHBOARD_GATEWAY_RUNTIME_READONLY_ID in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="DASHBOARD-GATEWAY-RUNTIME-READONLY-001/runtime_read_only_calls",
+        suite=DASHBOARD_GATEWAY_RUNTIME_READONLY_ID,
+        passed=passed,
+        summary=(
+            "Dashboard read-only receipts execute against the local gateway runtime "
+            "only for memory explain and skill candidate review."
+        ),
+        metrics={
+            "executed_count": batch.executed_count,
+            "failed_count": batch.failed_count,
+            "raw_payload_count": batch.raw_payload_count,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": DASHBOARD_GATEWAY_RUNTIME_POLICY_REF,
+            "called_tools": sorted({receipt.gateway_tool for receipt in executed}),
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_dashboard_gateway_runtime_blocklist_contract() -> BenchmarkCaseResult:
+    batch = execute_dashboard_gateway_receipts(now=datetime(2026, 5, 1, 9, 30, tzinfo=UTC))
+    blocked = [receipt for receipt in batch.receipts if not receipt.gateway_called]
+    blocked_tools = {receipt.gateway_tool for receipt in blocked}
+    docs_text = _dashboard_live_gateway_docs_text()
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(encoding="utf-8")
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(encoding="utf-8")
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        DASHBOARD_GATEWAY_RUNTIME_BLOCKLIST_ID,
+        "blocked_before_gateway",
+        "memory.forget",
+        "memory.export",
+        "skill.execute_draft",
+        "no durable memory write",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        batch.blocked_count > 0
+        and {"memory.forget", "memory.export", "skill.execute_draft"} <= blocked_tools
+        and all(receipt.status == "blocked_before_gateway" for receipt in blocked)
+        and all(receipt.blocked_reasons for receipt in blocked)
+        and batch.mutation_count > 0
+        and batch.data_egress_count > 0
+        and batch.external_effect_count == 0
+        and batch.raw_payload_count == 0
+        and not missing_doc_terms
+        and DASHBOARD_GATEWAY_RUNTIME_BLOCKLIST_ID in task_text
+        and DASHBOARD_GATEWAY_RUNTIME_BLOCKLIST_ID in registry_text
+        and DASHBOARD_GATEWAY_RUNTIME_BLOCKLIST_ID in plan_text
+        and DASHBOARD_GATEWAY_RUNTIME_BLOCKLIST_ID in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="DASHBOARD-GATEWAY-RUNTIME-BLOCKLIST-001/no_mutation_calls",
+        suite=DASHBOARD_GATEWAY_RUNTIME_BLOCKLIST_ID,
+        passed=passed,
+        summary=(
+            "Dashboard mutation, export, and draft receipts are blocked before any "
+            "gateway call is made."
+        ),
+        metrics={
+            "blocked_count": batch.blocked_count,
+            "mutation_count": batch.mutation_count,
+            "data_egress_count": batch.data_egress_count,
+            "raw_payload_count": batch.raw_payload_count,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": DASHBOARD_GATEWAY_RUNTIME_POLICY_REF,
+            "blocked_tools": sorted(blocked_tools),
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_dashboard_context_pack_live_summary_contract() -> BenchmarkCaseResult:
+    summary = build_context_pack_live_summary(now=datetime(2026, 5, 1, 9, 30, tzinfo=UTC))
+    serialized = summary.model_dump_json()
+    docs_text = _dashboard_live_gateway_docs_text()
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(encoding="utf-8")
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(encoding="utf-8")
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        DASHBOARD_CONTEXT_PACK_LIVE_SUMMARY_ID,
+        DASHBOARD_CONTEXT_PACK_LIVE_SUMMARY_POLICY_REF,
+        "count-only",
+        "no memory content",
+        "source refs redacted",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    leaks_content = any(
+        marker in serialized
+        for marker in ["User consistently asks", "project:cortex-memory-os", "terminal:test_auth_flow"]
+    )
+    passed = (
+        summary.relevant_memory_count > 0
+        and summary.retrieval_receipt_count > 0
+        and summary.fusion_diagnostic_count > 0
+        and summary.warning_count > 0
+        and summary.content_redacted
+        and summary.source_refs_redacted
+        and not summary.raw_payload_returned
+        and not leaks_content
+        and not missing_doc_terms
+        and DASHBOARD_CONTEXT_PACK_LIVE_SUMMARY_ID in task_text
+        and DASHBOARD_CONTEXT_PACK_LIVE_SUMMARY_ID in registry_text
+        and DASHBOARD_CONTEXT_PACK_LIVE_SUMMARY_ID in plan_text
+        and DASHBOARD_CONTEXT_PACK_LIVE_SUMMARY_ID in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="DASHBOARD-CONTEXT-PACK-LIVE-SUMMARY-001/count_only_context",
+        suite=DASHBOARD_CONTEXT_PACK_LIVE_SUMMARY_ID,
+        passed=passed,
+        summary="Live gateway context packs summarize counts without memory content or source refs.",
+        metrics={
+            "relevant_memory_count": summary.relevant_memory_count,
+            "retrieval_receipt_count": summary.retrieval_receipt_count,
+            "fusion_diagnostic_count": summary.fusion_diagnostic_count,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": DASHBOARD_CONTEXT_PACK_LIVE_SUMMARY_POLICY_REF,
+            "content_leak": leaks_content,
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_dashboard_skill_review_live_summary_contract() -> BenchmarkCaseResult:
+    summaries = build_skill_review_live_summaries(now=datetime(2026, 5, 1, 9, 30, tzinfo=UTC))
+    serialized = "\n".join(summary.model_dump_json() for summary in summaries)
+    docs_text = _dashboard_live_gateway_docs_text()
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(encoding="utf-8")
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(encoding="utf-8")
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        DASHBOARD_SKILL_REVIEW_LIVE_SUMMARY_ID,
+        DASHBOARD_SKILL_REVIEW_LIVE_SUMMARY_POLICY_REF,
+        "procedure text",
+        "no autonomy change",
+        "skill.review_candidate",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    procedure_leak = any(
+        marker in serialized
+        for marker in [
+            "Reproduce the local login flow",
+            "Gather approved metrics",
+            "Search primary sources",
+        ]
+    )
+    passed = (
+        bool(summaries)
+        and all(summary.procedure_step_count > 0 for summary in summaries)
+        and all(summary.content_redacted for summary in summaries)
+        and all(summary.procedure_redacted for summary in summaries)
+        and all(not summary.mutation for summary in summaries)
+        and all(not summary.external_effect for summary in summaries)
+        and not procedure_leak
+        and not missing_doc_terms
+        and DASHBOARD_SKILL_REVIEW_LIVE_SUMMARY_ID in task_text
+        and DASHBOARD_SKILL_REVIEW_LIVE_SUMMARY_ID in registry_text
+        and DASHBOARD_SKILL_REVIEW_LIVE_SUMMARY_ID in plan_text
+        and DASHBOARD_SKILL_REVIEW_LIVE_SUMMARY_ID in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="DASHBOARD-SKILL-REVIEW-LIVE-SUMMARY-001/redacted_skill_review",
+        suite=DASHBOARD_SKILL_REVIEW_LIVE_SUMMARY_ID,
+        passed=passed,
+        summary="Gateway-backed skill candidate reviews expose counts only and do not change autonomy.",
+        metrics={
+            "skill_review_count": len(summaries),
+            "procedure_leak": int(procedure_leak),
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": DASHBOARD_SKILL_REVIEW_LIVE_SUMMARY_POLICY_REF,
+            "skill_ids": [summary.skill_id for summary in summaries],
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_dashboard_ops_quality_panel_contract() -> BenchmarkCaseResult:
+    panel = build_ops_quality_panel(now=datetime(2026, 5, 1, 9, 30, tzinfo=UTC))
+    docs_text = _dashboard_live_gateway_docs_text()
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(encoding="utf-8")
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(encoding="utf-8")
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        DASHBOARD_OPS_QUALITY_PANEL_ID,
+        DASHBOARD_OPS_QUALITY_PANEL_POLICY_REF,
+        "aggregate-only",
+        "no raw case payloads",
+        "benchmark status",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        panel.total_cases > 0
+        and panel.passed_cases == panel.total_cases
+        and panel.failed_cases == 0
+        and panel.all_passed
+        and panel.content_redacted
+        and not panel.raw_case_payloads_included
+        and panel.artifact_payload_redacted
+        and not missing_doc_terms
+        and DASHBOARD_OPS_QUALITY_PANEL_ID in task_text
+        and DASHBOARD_OPS_QUALITY_PANEL_ID in registry_text
+        and DASHBOARD_OPS_QUALITY_PANEL_ID in plan_text
+        and DASHBOARD_OPS_QUALITY_PANEL_ID in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="DASHBOARD-OPS-QUALITY-PANEL-001/aggregate_status",
+        suite=DASHBOARD_OPS_QUALITY_PANEL_ID,
+        passed=passed,
+        summary="Dashboard ops quality panel exposes benchmark status as aggregate-only metadata.",
+        metrics={
+            "total_cases": panel.total_cases,
+            "passed_cases": panel.passed_cases,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": DASHBOARD_OPS_QUALITY_PANEL_POLICY_REF,
+            "artifact_name": panel.artifact_name,
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_dashboard_readonly_action_live_proof_contract() -> BenchmarkCaseResult:
+    result = validate_dashboard_live_proof(build_sample_dashboard_live_observation())
+    docs_text = _dashboard_live_gateway_docs_text() + "\n" + (
+        REPO_ROOT / "docs" / "architecture" / "dashboard-live-proof.md"
+    ).read_text(encoding="utf-8")
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(encoding="utf-8")
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(encoding="utf-8")
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        READONLY_ACTION_LIVE_PROOF_ID,
+        READONLY_ACTION_LIVE_PROOF_POLICY_REF,
+        "Gateway receipt allows",
+        "No mutation executed",
+        "sanitized receipt text",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        result.passed
+        and result.read_only_action_receipt_count > 0
+        and not result.gateway_mutation_executed
+        and not result.external_effect_executed
+        and not missing_doc_terms
+        and READONLY_ACTION_LIVE_PROOF_ID in task_text
+        and READONLY_ACTION_LIVE_PROOF_ID in registry_text
+        and READONLY_ACTION_LIVE_PROOF_ID in plan_text
+        and READONLY_ACTION_LIVE_PROOF_ID in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="DASHBOARD-READONLY-ACTION-LIVE-PROOF-001/sanitized_action_receipt",
+        suite=READONLY_ACTION_LIVE_PROOF_ID,
+        passed=passed,
+        summary="Live browser proof now covers sanitized read-only gateway action receipt text.",
+        metrics={
+            "read_only_action_receipt_count": result.read_only_action_receipt_count,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": READONLY_ACTION_LIVE_PROOF_POLICY_REF,
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def _dashboard_live_gateway_docs_text() -> str:
+    return (
+        REPO_ROOT / "docs" / "architecture" / "dashboard-live-gateway-runtime.md"
+    ).read_text(encoding="utf-8")
 
 
 def case_skill_promotion_gate() -> BenchmarkCaseResult:
