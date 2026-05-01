@@ -152,6 +152,11 @@ from cortex_memory_os.live_run_safe_task import (
     build_sample_live_run_safe_task_observation,
     validate_live_run_safe_task,
 )
+from cortex_memory_os.synthetic_capture_ladder import (
+    SYNTHETIC_CAPTURE_LADDER_ID,
+    SYNTHETIC_CAPTURE_LADDER_POLICY_REF,
+    run_synthetic_capture_ladder,
+)
 from cortex_memory_os.dashboard_gateway_actions import (
     DASHBOARD_GATEWAY_ACTIONS_ID,
     DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
@@ -491,6 +496,7 @@ def run_all() -> BenchmarkRunResult:
         case_dashboard_ops_quality_panel_contract,
         case_dashboard_readonly_action_live_proof_contract,
         case_live_run_computer_safe_task_contract,
+        case_synthetic_capture_ladder_contract,
         case_skill_promotion_gate,
         case_skill_rollback_gate,
         case_skill_maturity_audit_events,
@@ -11411,6 +11417,94 @@ def case_live_run_computer_safe_task_contract() -> BenchmarkCaseResult:
         evidence={
             "policy_ref": LIVE_RUN_COMPUTER_SAFE_TASK_POLICY_REF,
             "computer_use_task_observed": result.computer_use_task_observed,
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_synthetic_capture_ladder_contract() -> BenchmarkCaseResult:
+    result = run_synthetic_capture_ladder(
+        now=datetime(2026, 5, 1, 12, 0, tzinfo=UTC)
+    )
+    docs_text = (
+        (REPO_ROOT / "docs" / "architecture" / "synthetic-capture-ladder.md").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (REPO_ROOT / "docs" / "architecture" / "live-run-computer-safe-task.md").read_text(
+            encoding="utf-8"
+        )
+    )
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(encoding="utf-8")
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(encoding="utf-8")
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_doc_terms = [
+        SYNTHETIC_CAPTURE_LADDER_ID,
+        SYNTHETIC_CAPTURE_LADDER_POLICY_REF,
+        "Synthetic disposable capture page only",
+        "Ephemeral raw ref in temp storage, auto-deleted",
+        "Durable synthetic memory write to local test DB with audit",
+        "Retrieval/context pack from synthetic memory",
+        "Secret-in-screen negative test proving redaction before any write",
+        "consented real screen capture later",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        result.passed
+        and result.synthetic_disposable_page_created
+        and result.synthetic_page_only
+        and result.temp_storage_used
+        and result.raw_ref_created
+        and result.raw_ref_scheme == "vault"
+        and result.raw_ref_readable_before_expiry
+        and result.raw_ref_deleted_after_expiry
+        and result.durable_synthetic_memory_written
+        and result.local_test_db_used
+        and result.audit_written
+        and result.audit_human_visible
+        and result.retrieval_hit
+        and result.context_pack_hit
+        and result.secret_redaction_count > 0
+        and result.secret_raw_write_blocked
+        and result.secret_memory_write_blocked
+        and result.secret_redacted_before_write
+        and result.secret_value_leak_count == 0
+        and not result.real_screen_capture_started
+        and not result.consented_real_capture_started
+        and not result.raw_payload_committed
+        and not missing_doc_terms
+        and SYNTHETIC_CAPTURE_LADDER_ID in task_text
+        and SYNTHETIC_CAPTURE_LADDER_ID in registry_text
+        and SYNTHETIC_CAPTURE_LADDER_ID in plan_text
+        and SYNTHETIC_CAPTURE_LADDER_ID in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SYNTHETIC-CAPTURE-LADDER-001/safe_capture_write_retrieve",
+        suite=SYNTHETIC_CAPTURE_LADDER_ID,
+        passed=passed,
+        summary=(
+            "Synthetic capture ladder exercises temp raw evidence expiry, durable "
+            "test memory write, audit, retrieval, context pack, and secret negative path."
+        ),
+        metrics={
+            "raw_ref_created": int(result.raw_ref_created),
+            "raw_ref_deleted_after_expiry": int(result.raw_ref_deleted_after_expiry),
+            "retrieval_hit": int(result.retrieval_hit),
+            "context_pack_hit": int(result.context_pack_hit),
+            "secret_redaction_count": result.secret_redaction_count,
+            "secret_value_leak_count": result.secret_value_leak_count,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": SYNTHETIC_CAPTURE_LADDER_POLICY_REF,
+            "memory_id": result.memory_id,
+            "evidence_id": result.evidence_id,
+            "audit_event_id": result.audit_event_id,
             "missing_doc_terms": missing_doc_terms,
         },
     )

@@ -20,6 +20,7 @@ Source documents:
 - `docs/architecture/dashboard-live-proof.md`
 - `docs/architecture/dashboard-live-gateway-runtime.md`
 - `docs/architecture/live-run-computer-safe-task.md`
+- `docs/architecture/synthetic-capture-ladder.md`
 - `docs/research/frontier-agent-plugin-lessons-2026-04-29.md`
 - `docs/ops/plugin-install-smoke.md`
 - `docs/ops/codex-plugin-real-enable.md`
@@ -59,8 +60,8 @@ Source documents:
 | Ops Quality Surface | Validated aggregate status receipt plus dashboard aggregate panel contract | `OPS-QUALITY-SURFACE-001`, `DASHBOARD-OPS-QUALITY-PANEL-001`, `uv run cortex-ops-quality`, `docs/architecture/ops-quality-surface.md`, `docs/architecture/dashboard-live-gateway-runtime.md` | Wire the aggregate panel into the visible dashboard UI without raw benchmark artifacts. |
 | Contract layer | Validated | Typed contracts, fixtures, `tests/test_contracts.py` | Add migration/versioning policy as schemas evolve. |
 | Privacy + Safety Firewall | Validated | `SEC-INJECT-001`, `SEC-PII-001`, `CTX-HOSTILE-001` | Expand from synthetic text to app/browser/source classifiers. |
-| Evidence Vault | Validated skeleton | `VAULT-RETENTION-001`, `VAULT-ENCRYPT-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001` | Replace dev cipher with production key management before real private data. |
-| Scene, memory, and graph pipeline | Validated skeleton | `SCENE-SEGMENT-001`, `MEM-COMPILE-001`, `GRAPH-EDGE-001` | Add richer multimodal segmentation and contradiction handling. |
+| Evidence Vault | Validated skeleton plus synthetic temp raw-ref expiry ladder | `VAULT-RETENTION-001`, `VAULT-ENCRYPT-001`, `EVIDENCE-ELIGIBILITY-HANDOFF-001`, `SYNTHETIC-CAPTURE-LADDER-001` | Replace dev cipher with production key management before real private data. |
+| Scene, memory, and graph pipeline | Validated skeleton plus synthetic capture-to-memory write/retrieval ladder | `SCENE-SEGMENT-001`, `MEM-COMPILE-001`, `GRAPH-EDGE-001`, `SYNTHETIC-CAPTURE-LADDER-001` | Add richer multimodal segmentation and contradiction handling. |
 | Retrieval and context packs | Validated budgeted skeleton plus scope stress coverage, hybrid fusion interface, local fusion adapters, metadata-only context-pack fusion diagnostics, context-fusion stress coverage, redacted explanation receipts, dashboard receipt surface, and live count-only context-pack summary | `RETRIEVAL-SCORE-001`, `SCOPE-POLICY-001`, `RETRIEVAL-SCOPE-STRESS-001`, `CONTEXT-FUSION-INDEX-STUB-001`, `REAL-VECTOR-INDEX-ADAPTER-001`, `HYBRID-FUSION-CONTEXT-PACK-INTEGRATION-001`, `CONTEXT-FUSION-STRESS-001`, `RETRIEVAL-EXPLANATION-RECEIPTS-001`, `RETRIEVAL-RECEIPTS-DASHBOARD-SURFACE-001`, `DASHBOARD-CONTEXT-PACK-LIVE-SUMMARY-001`, `CONTEXT-PACK-001`, `CONTEXT-BUDGET-001`, scoped self-lesson suites | Wire count-only live context metadata into visible dashboard context/debug panels. |
 | Memory Palace | Validated dashboard contract, static UI shell, read-only gateway action receipts, live gateway runtime explain calls, sanitized read-only action live proof, bounded Computer Use safe-task live run, and sanitized Computer Use browser proof | `MEMORY-PALACE-001`, `PALACE-FLOW-001`, `MEMORY-PALACE-DASHBOARD-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, `DASHBOARD-GATEWAY-ACTIONS-001`, `DASHBOARD-GATEWAY-RUNTIME-READONLY-001`, `DASHBOARD-GATEWAY-RUNTIME-BLOCKLIST-001`, `DASHBOARD-READONLY-ACTION-LIVE-PROOF-001`, `LIVE-RUN-COMPUTER-SAFE-TASK-001`, `COMPUTER-DASHBOARD-LIVE-PROOF-001`, self-lesson review flows | Keep correction/delete/export confirmation-gated and wire the safe read-only summaries into the visible dashboard. |
 | Skill Forge | Validated skeleton plus candidate list, success metrics, dashboard metrics surface, static UI shell, read-only review receipts, live gateway-backed candidate review summaries, and sanitized Computer Use browser proof | `SKILL-FORGE-002`, `SKILL-DOC-DERIVATION-001`, `SKILL-FORGE-LIST-001`, `SKILL-SUCCESS-METRICS-001`, `SKILL-METRICS-DASHBOARD-SURFACE-001`, `DASHBOARD-SKILL-REVIEW-LIVE-SUMMARY-001`, `MEMORY-PALACE-SKILL-FORGE-UI-001`, `DASHBOARD-GATEWAY-ACTIONS-001`, `COMPUTER-DASHBOARD-LIVE-PROOF-001`, `SKILL-GATE-001`, `SKILL-EXECUTION-001` | Add workflow clustering and live draft-only execution previews behind receipts. |
@@ -122,6 +123,12 @@ User-facing pillars:
   and read-only gateway receipts are on, and real capture, durable memory
   writes, raw screen storage, raw refs, model secret echo attempts, mutations,
   exports, draft execution, and external effects are off.
+- Synthetic Capture Ladder: validated `SYNTHETIC-CAPTURE-LADDER-001` so a
+  synthetic disposable capture page only path can create an ephemeral raw ref in
+  temp storage, auto-delete it, write a durable synthetic memory to a local test
+  DB with audit, retrieve that memory in search and context packs, and run a
+  secret-in-screen negative test proving redaction before any write. Consented
+  real screen capture stays later.
 - Dashboard Live Gateway Runtime: validated
   `DASHBOARD-GATEWAY-RUNTIME-READONLY-001`,
   `DASHBOARD-GATEWAY-RUNTIME-BLOCKLIST-001`,
