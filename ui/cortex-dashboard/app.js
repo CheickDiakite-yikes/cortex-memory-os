@@ -103,6 +103,35 @@ function renderStatusStrip() {
   });
 }
 
+function bindHeaderActions() {
+  const auditLog = document.querySelector("#audit-log");
+  if (!auditLog) return;
+  auditLog.addEventListener("click", () => {
+    writeReceipt("Audit log selected. Receipts stay redacted and local.");
+  });
+}
+
+function renderInsights() {
+  const list = document.querySelector("#insight-list");
+  if (!list) return;
+  list.innerHTML = (data.insight_panels || [])
+    .map(
+      (panel) => `
+        <article class="insight-panel" data-state="${escapeHtml(panel.state)}">
+          <div class="insight-top">
+            <span class="insight-icon">${svgIcon(panel.panel_id === "encryption_default" ? "shield" : panel.panel_id === "evidence_vault" ? "folder" : "check")}</span>
+            <span>
+              <strong>${escapeHtml(panel.title)}</strong>
+              <span>${escapeHtml(panel.detail)}</span>
+            </span>
+            <em>${escapeHtml(panel.value)}</em>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
 function renderTabs() {
   const memoryCounts = data.memory_palace.status_counts;
   const memoryTabs = [
@@ -171,7 +200,8 @@ function filteredSkills() {
 }
 
 function renderMemoryCards() {
-  const cards = filteredMemories();
+  const cards = takeVisibleCards(filteredMemories(), 2);
+  const hiddenCount = filteredMemories().length - cards.length;
   document.querySelector("#memory-count").textContent = data.memory_palace.cards.length;
   const list = document.querySelector("#memory-list");
   if (!cards.length) {
@@ -205,7 +235,7 @@ function renderMemoryCards() {
         </section>
       `,
     )
-    .join("");
+    .join("") + hiddenSummary(hiddenCount, "memory");
   list.querySelectorAll("[data-action-tool]").forEach(bindActionButton);
 }
 
@@ -226,7 +256,8 @@ function memoryActionButton(card, plan) {
 }
 
 function renderSkillCards() {
-  const cards = filteredSkills();
+  const cards = takeVisibleCards(filteredSkills(), 1);
+  const hiddenCount = filteredSkills().length - cards.length;
   document.querySelector("#skill-count").textContent = data.skill_forge.candidate_count;
   const list = document.querySelector("#skill-list");
   if (!cards.length) {
@@ -262,20 +293,40 @@ function renderSkillCards() {
       `;
       },
     )
-    .join("");
+    .join("") + hiddenSummary(hiddenCount, "skill");
   list.querySelectorAll("[data-action-tool]").forEach(bindActionButton);
+}
+
+function takeVisibleCards(cards, maxVisible) {
+  return cards.slice(0, maxVisible);
+}
+
+function hiddenSummary(count, label) {
+  if (count <= 0) return "";
+  return `<div class="list-summary">${count} more ${label} ${count === 1 ? "item" : "items"} available in the full queue.</div>`;
 }
 
 function renderSkillMetric(metric) {
   const totalRuns = Object.values(metric.outcome_counts || {}).reduce((total, count) => total + Number(count || 0), 0);
+  const reviewLabel = compactReviewLabel(metric.review_recommendation);
   return `
     <div class="metric-strip" aria-label="Skill Metrics">
       <div><span class="meta-label">Runs</span><strong>${totalRuns}</strong></div>
       <div><span class="meta-label">Success</span><strong>${Math.round(Number(metric.success_rate || 0) * 100)}%</strong></div>
       <div><span class="meta-label">Corrections</span><strong>${Number(metric.correction_rate || 0).toFixed(2)}</strong></div>
-      <div><span class="meta-label">Review</span><strong>${formatToken(metric.review_recommendation)}</strong></div>
+      <div><span class="meta-label">Review</span><strong title="${formatToken(metric.review_recommendation)}">${reviewLabel}</strong></div>
     </div>
   `;
+}
+
+function compactReviewLabel(value) {
+  const formatted = formatToken(value);
+  const labels = {
+    "safety review before reuse": "review before reuse",
+    "eligible for human promotion review": "human review",
+    "monitor for more evidence": "monitor evidence",
+  };
+  return labels[formatted] || formatted;
 }
 
 function skillCommandButtons(card) {
@@ -329,7 +380,7 @@ function renderReceipts() {
   const retrievalReceipts = data.retrieval_debug?.cards || [];
   list.innerHTML = [
     '<div class="receipt-section-label">Safe Receipts</div>',
-    ...data.safe_receipts.map(
+    ...data.safe_receipts.slice(0, 3).map(
       (receipt) => `
         <div class="receipt-item" data-state="${escapeHtml(receipt.state)}">
           <span class="receipt-dot">${svgIcon(receipt.state === "warning" ? "pause" : "check")}</span>
@@ -341,7 +392,7 @@ function renderReceipts() {
       `,
     ),
     '<div class="receipt-section-label">Gateway Action Receipts</div>',
-    ...gatewayReceipts.slice(0, 6).map(
+    ...gatewayReceipts.slice(0, 3).map(
       (receipt) => `
         <div class="receipt-item" data-state="${receipt.allowed_gateway_call ? "healthy" : "warning"}">
           <span class="receipt-dot">${svgIcon(receipt.allowed_gateway_call ? "check" : "pause")}</span>
@@ -353,7 +404,7 @@ function renderReceipts() {
       `,
     ),
     '<div class="receipt-section-label">Retrieval Receipts</div>',
-    ...retrievalReceipts.slice(0, 4).map(
+    ...retrievalReceipts.slice(0, 2).map(
       (receipt) => `
         <div class="receipt-item retrieval-receipt" data-state="${receipt.decision === "included" ? "healthy" : "warning"}">
           <span class="receipt-dot">${svgIcon(receipt.decision === "included" ? "check" : "pause")}</span>
@@ -380,8 +431,10 @@ function renderDashboard() {
 if (!data) {
   document.body.innerHTML = '<main class="empty-state">Dashboard data missing.</main>';
 } else {
+  bindHeaderActions();
   renderNav();
   renderStatusStrip();
+  renderInsights();
   renderReceipts();
   renderDashboard();
 }

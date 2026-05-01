@@ -31,6 +31,7 @@ from cortex_memory_os.memory_palace_dashboard import (
     MemoryPalaceDashboard,
     build_memory_palace_dashboard,
 )
+from cortex_memory_os.memory_encryption import MEMORY_ENCRYPTION_DEFAULT_POLICY_REF
 from cortex_memory_os.dashboard_gateway_actions import (
     DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
     DashboardGatewayActionReceipt,
@@ -91,6 +92,24 @@ class DashboardSafeReceipt(StrictModel):
     content_redacted: bool = True
 
 
+class DashboardInsightMetric(StrictModel):
+    label: str = Field(min_length=1)
+    value: str = Field(min_length=1)
+    state: str = Field(min_length=1)
+
+
+class DashboardInsightPanel(StrictModel):
+    panel_id: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    value: str = Field(min_length=1)
+    detail: str = Field(min_length=1)
+    state: str = Field(min_length=1)
+    metrics: list[DashboardInsightMetric] = Field(default_factory=list)
+    content_redacted: bool = True
+    source_refs_redacted: bool = True
+    policy_refs: list[str] = Field(default_factory=list)
+
+
 class CortexDashboardShell(StrictModel):
     shell_id: str = DASHBOARD_SHELL_ID
     generated_at: datetime
@@ -107,6 +126,7 @@ class CortexDashboardShell(StrictModel):
     skill_metrics: SkillMetricsDashboard
     retrieval_debug: RetrievalReceiptsDashboard
     safe_receipts: list[DashboardSafeReceipt] = Field(default_factory=list)
+    insight_panels: list[DashboardInsightPanel] = Field(default_factory=list)
     gateway_action_receipts: list[DashboardGatewayActionReceipt] = Field(default_factory=list)
     policy_refs: list[str] = Field(default_factory=list)
     design_notes: list[str] = Field(default_factory=list)
@@ -124,9 +144,11 @@ class DashboardShellSmokeResult(StrictModel):
     skill_metric_run_count: int = Field(ge=0)
     retrieval_receipt_card_count: int = Field(ge=0)
     safe_receipt_count: int = Field(ge=0)
+    insight_panel_count: int = Field(ge=0)
     gateway_action_receipt_count: int = Field(ge=0)
     read_only_gateway_action_count: int = Field(ge=0)
     blocked_gateway_action_count: int = Field(ge=0)
+    encryption_default_visible: bool
     secret_retained: bool
     raw_private_data_retained: bool
     action_plans_present: bool
@@ -236,12 +258,14 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             SKILL_METRICS_DASHBOARD_POLICY_REF,
             RETRIEVAL_RECEIPTS_DASHBOARD_POLICY_REF,
             DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
+            MEMORY_ENCRYPTION_DEFAULT_POLICY_REF,
         ],
         design_notes=[
-            "Two primary work areas: Memory Palace review queue and Skill Forge candidates.",
+            "Two primary work areas stay centered while guardrail insight panels stay compact.",
             "Skill Metrics are shown as outcome summaries, not procedure previews.",
             "Retrieval Receipts are shown as redacted context/debug metadata.",
             "Status strip exposes observation, project, consent, and firewall state.",
+            "Evidence, context, firewall, and ops health use calm count-only panels.",
             "Action controls are declarative UI plans; this shell does not execute mutations.",
         ],
         safety_notes=[
@@ -251,6 +275,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Skill metric cards do not include procedure text, task content, or autonomy-changing controls.",
             "Retrieval receipt cards do not include memory content, source refs, or hostile text.",
         ],
+        insight_panels=_sample_insight_panels(),
     )
 
 
@@ -295,6 +320,11 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "Gateway Action Receipts",
         "Skill Metrics",
         "Retrieval Receipts",
+        "Context Pack Health",
+        "Privacy Firewall",
+        "Evidence Vault",
+        "Encryption Default",
+        "Ops Quality",
         "window.CORTEX_DASHBOARD_DATA",
     ]
     missing_ui_terms = _missing_terms(ui_text + "\n" + data_js, required_ui_terms)
@@ -357,6 +387,14 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and shell.retrieval_debug.source_refs_redacted
         and not shell.retrieval_debug.hostile_text_included
     )
+    insight_text = json.dumps(
+        [panel.model_dump(mode="json") for panel in shell.insight_panels],
+        sort_keys=True,
+    )
+    encryption_default_visible = (
+        "Encryption Default" in ui_text + "\n" + data_js + "\n" + insight_text
+        and MEMORY_ENCRYPTION_DEFAULT_POLICY_REF in serialized
+    )
 
     passed = (
         ui_files_present
@@ -365,6 +403,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and skill_metrics_present
         and retrieval_receipts_present
         and shell.safe_receipts
+        and len(shell.insight_panels) >= 4
+        and encryption_default_visible
         and gateway_actions_present
         and not secret_retained
         and not raw_private_data_retained
@@ -383,6 +423,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         skill_metric_run_count=shell.skill_metrics.total_run_count,
         retrieval_receipt_card_count=len(shell.retrieval_debug.cards),
         safe_receipt_count=len(shell.safe_receipts),
+        insight_panel_count=len(shell.insight_panels),
         gateway_action_receipt_count=len(shell.gateway_action_receipts),
         read_only_gateway_action_count=sum(
             int(receipt.allowed_gateway_call) for receipt in shell.gateway_action_receipts
@@ -390,6 +431,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         blocked_gateway_action_count=sum(
             int(not receipt.allowed_gateway_call) for receipt in shell.gateway_action_receipts
         ),
+        encryption_default_visible=encryption_default_visible,
         secret_retained=secret_retained,
         raw_private_data_retained=raw_private_data_retained,
         action_plans_present=action_plans_present,
@@ -719,6 +761,76 @@ def _sample_safe_receipts(now: datetime) -> list[DashboardSafeReceipt]:
             actor="user",
             state="warning",
             timestamp=now,
+        ),
+    ]
+
+
+def _sample_insight_panels() -> list[DashboardInsightPanel]:
+    return [
+        DashboardInsightPanel(
+            panel_id="context_pack_health",
+            title="Context Pack Health",
+            value="Healthy",
+            detail="Count-only summaries, no source refs",
+            state="healthy",
+            metrics=[
+                DashboardInsightMetric(label="Live requests", value="3", state="healthy"),
+                DashboardInsightMetric(label="Warnings", value="0", state="healthy"),
+                DashboardInsightMetric(label="Raw refs", value="0", state="healthy"),
+            ],
+            policy_refs=[DASHBOARD_SHELL_POLICY_REF],
+        ),
+        DashboardInsightPanel(
+            panel_id="privacy_firewall",
+            title="Privacy Firewall",
+            value="Strict",
+            detail="Prompt-risk and secret lanes stay pre-write",
+            state="healthy",
+            metrics=[
+                DashboardInsightMetric(label="Blocked", value="23", state="warning"),
+                DashboardInsightMetric(label="Redacted", value="156", state="healthy"),
+                DashboardInsightMetric(label="Quarantined", value="8", state="warning"),
+            ],
+            policy_refs=[DASHBOARD_SHELL_POLICY_REF],
+        ),
+        DashboardInsightPanel(
+            panel_id="evidence_vault",
+            title="Evidence Vault",
+            value="Raw expires",
+            detail="Synthetic raw refs auto-delete; metadata remains",
+            state="healthy",
+            metrics=[
+                DashboardInsightMetric(label="Raw auto-delete", value="6h", state="healthy"),
+                DashboardInsightMetric(label="Restart expiry", value="on", state="healthy"),
+                DashboardInsightMetric(label="Raw payloads", value="0 shown", state="healthy"),
+            ],
+            policy_refs=[DASHBOARD_SHELL_POLICY_REF],
+        ),
+        DashboardInsightPanel(
+            panel_id="encryption_default",
+            title="Encryption Default",
+            value="Required",
+            detail="Durable memory content needs authenticated encryption",
+            state="healthy",
+            metrics=[
+                DashboardInsightMetric(label="Sensitive writes", value="sealed", state="healthy"),
+                DashboardInsightMetric(label="No-op cipher", value="blocked", state="healthy"),
+                DashboardInsightMetric(label="Plaintext JSON", value="0", state="healthy"),
+            ],
+            policy_refs=[DASHBOARD_SHELL_POLICY_REF, MEMORY_ENCRYPTION_DEFAULT_POLICY_REF],
+        ),
+        DashboardInsightPanel(
+            panel_id="ops_quality",
+            title="Ops Quality",
+            value="Passing",
+            detail="Aggregate-only benchmark status",
+            state="healthy",
+            metrics=[
+                DashboardInsightMetric(label="Suites", value="tracked", state="healthy"),
+                DashboardInsightMetric(label="Raw cases", value="hidden", state="healthy"),
+                DashboardInsightMetric(label="Artifacts", value="ignored", state="healthy"),
+            ],
+            policy_refs=[DASHBOARD_SHELL_POLICY_REF],
         ),
     ]
 

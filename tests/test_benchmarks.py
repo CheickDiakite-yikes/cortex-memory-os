@@ -7,7 +7,7 @@ def test_synthetic_benchmarks_pass():
     result = run_all()
 
     assert result.passed
-    assert len(result.case_results) == 153
+    assert len(result.case_results) == 154
     assert {case.suite for case in result.case_results} >= {
         "MEM-RECALL-001",
         "RETRIEVAL-SCORE-001",
@@ -31,6 +31,7 @@ def test_synthetic_benchmarks_pass():
         "VAULT-RETENTION-001",
         "RAW-EVIDENCE-EXPIRY-HARDENING-001",
         "VAULT-ENCRYPT-001",
+        "MEMORY-ENCRYPTION-DEFAULT-001",
         "GATEWAY-CTX-001",
         "CONTEXT-PACK-001",
         "SOURCE-ROUTER-CONTEXT-PACK-001",

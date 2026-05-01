@@ -11,7 +11,7 @@
   --blue: #156fd1;
   --amber: #b36b00;
   --red: #c53532;
-  --shadow: 0 14px 36px rgba(18, 24, 32, 0.08);
+  --shadow: 0 6px 18px rgba(18, 24, 32, 0.04);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -134,7 +134,7 @@ button {
 }
 
 .health-panel {
-  margin-top: auto;
+  margin-top: 10px;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -174,25 +174,71 @@ button {
 
 .main-area {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 14px;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  gap: 12px;
+  width: min(1280px, 100%);
   min-width: 0;
+  margin: 0 auto;
   padding: 14px;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 74px;
+  padding: 6px 2px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dashboard-header h1 {
+  margin: 3px 0 0;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.dashboard-header p:last-child {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.system-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #cfe6d5;
+  border-radius: 8px;
+  background: #f4fbf6;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 850;
 }
 
 .status-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(160px, auto);
+  gap: 8px;
 }
 
 .status-item {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 9px;
   align-items: center;
-  min-height: 64px;
-  padding: 12px;
+  min-height: 52px;
+  padding: 9px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
@@ -201,8 +247,8 @@ button {
 .status-icon {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 8px;
   background: #edf8f1;
   color: var(--green);
@@ -227,7 +273,7 @@ button {
 .status-value {
   display: block;
   margin-top: 2px;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -245,7 +291,7 @@ button {
   gap: 8px;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
+  min-height: 52px;
   padding: 0 12px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
@@ -258,8 +304,9 @@ button {
 
 .workspace-grid {
   display: grid;
-  grid-template-columns: minmax(420px, 1fr) minmax(420px, 1.05fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
+  align-items: start;
   min-height: 0;
 }
 
@@ -284,9 +331,88 @@ button {
 
 .panel-heading h1 {
   margin: 3px 0 0;
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1.2;
   letter-spacing: 0;
+}
+
+.insight-strip {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.insight-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.insight-panel {
+  display: block;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.insight-top {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.insight-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: #eef8f2;
+  color: var(--green);
+}
+
+.insight-icon svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.2;
+}
+
+.insight-top strong,
+.insight-top span span {
+  display: block;
+  min-width: 0;
+}
+
+.insight-top strong {
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.insight-top span span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.insight-top em {
+  grid-column: 2;
+  margin-top: 4px;
+  color: var(--green);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 850;
+  white-space: nowrap;
 }
 
 .tab-row {
@@ -324,17 +450,16 @@ button {
 .card-list {
   display: grid;
   align-content: start;
-  gap: 10px;
+  gap: 9px;
   min-height: 0;
-  overflow: auto;
   padding-right: 2px;
 }
 
 .memory-card,
 .skill-card {
   display: grid;
-  gap: 12px;
-  padding: 14px;
+  gap: 10px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-left-width: 4px;
   border-radius: 8px;
@@ -371,8 +496,8 @@ button {
 .card-copy {
   margin: 6px 0 0;
   color: #435363;
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .meta-grid {
@@ -555,7 +680,7 @@ button {
 
 .receipt-list {
   display: grid;
-  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
   gap: 8px;
 }
 
@@ -651,6 +776,16 @@ button {
   text-align: center;
 }
 
+.list-summary {
+  padding: 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: center;
+}
+
 @media (max-width: 1100px) {
   .dashboard-shell {
     grid-template-columns: 82px minmax(0, 1fr);
@@ -674,7 +809,8 @@ button {
   }
 
   .status-strip,
-  .workspace-grid {
+  .workspace-grid,
+  .insight-list {
     grid-template-columns: 1fr;
   }
 

@@ -11,6 +11,11 @@ inspectable dashboard shell over safe view models. The goal is a usable product
 surface for Memory Palace and Skill Forge without introducing live capture,
 private memory fixtures, or gateway side effects.
 
+The 2026-05-01 refresh uses a quieter generated dashboard concept as the visual
+anchor, then pares it down further after live visual review: primary work queues
+stay central, guardrails become a short summary strip, and default lists show a
+small focus queue with counts preserved.
+
 ## Design Source
 
 The generated dashboard concept established the first visual direction:
@@ -21,6 +26,8 @@ The generated dashboard concept established the first visual direction:
   Safety Firewall;
 - two primary work areas for Memory Palace Review Queue and Skill Forge
   Candidate Workflows;
+- compact guardrail summaries for Context Pack Health, Privacy Firewall,
+  Evidence Vault, Encryption Default, and Ops Quality;
 - bottom rail for Recent Safe Receipts;
 - restrained local-ops palette with green, blue, amber, and red status
   accents;
@@ -54,11 +61,17 @@ The static app in `ui/cortex-dashboard/` must render:
   review recommendation;
 - Retrieval Receipts that show included/evidence-only/excluded decisions without
   memory content or source refs;
+- guardrail insight summaries that expose aggregate safety and ops status without
+  raw case payloads, raw refs, source refs, or private memory content;
+- shortened default queues that keep the screen calm while preserving full
+  counts in the view model;
 - local filter controls for both lists;
 - icon-first action controls that update local UI state;
 - Recent Safe Receipts with redacted targets.
 - Gateway Action Receipts that distinguish read-only prepared calls from
   blocked mutation, export, and draft-execution previews.
+- Encryption Default status showing that durable memory content requires
+  authenticated encryption.
 
 All actions are receipt-gated previews. Only read-only explain/review actions
 may become prepared gateway calls in this slice. They do not mutate memory,
@@ -93,6 +106,8 @@ Observation pause previewed locally. Confirmation and audit receipt required.
   autonomy-changing controls;
 - generated Retrieval Receipts have no memory content, source refs, hostile
   text, or raw evidence refs;
+- the visible shell includes the `Encryption Default` guardrail tied to
+  `policy_memory_encryption_default_v1`;
 - dashboard docs, task board, benchmark plan, and benchmark registry name the
   slice;
 - local browser proof confirms the first viewport renders without overlapping

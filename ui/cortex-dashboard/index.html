@@ -31,7 +31,26 @@
       </aside>
 
       <main class="main-area">
+        <header class="dashboard-header" aria-label="Dashboard summary">
+          <div>
+            <p class="section-label">Dashboard</p>
+            <h1>Cortex Memory OS</h1>
+            <p>Live system overview and memory brain health.</p>
+          </div>
+          <div class="header-actions">
+            <span class="system-pill" data-state="healthy">System healthy</span>
+            <button class="text-command" type="button" id="audit-log">Audit Log</button>
+          </div>
+        </header>
+
         <header class="status-strip" id="status-strip" aria-label="Current Cortex status"></header>
+
+        <section class="insight-strip" aria-label="System guardrails">
+          <div class="rail-heading">
+            <h2>System Guardrails</h2>
+          </div>
+          <div id="insight-list" class="insight-list"></div>
+        </section>
 
         <section class="workspace-grid" aria-label="Dashboard work queues">
           <article class="work-panel memory-panel" aria-labelledby="memory-heading">

@@ -14,6 +14,7 @@ from cortex_memory_os.skill_metrics_dashboard import SKILL_METRICS_DASHBOARD_POL
 from cortex_memory_os.retrieval_receipts_dashboard import (
     RETRIEVAL_RECEIPTS_DASHBOARD_POLICY_REF,
 )
+from cortex_memory_os.memory_encryption import MEMORY_ENCRYPTION_DEFAULT_POLICY_REF
 
 
 def test_dashboard_shell_composes_safe_view_models():
@@ -27,7 +28,12 @@ def test_dashboard_shell_composes_safe_view_models():
     assert SKILL_FORGE_CANDIDATE_LIST_POLICY_REF in shell.policy_refs
     assert SKILL_METRICS_DASHBOARD_POLICY_REF in shell.policy_refs
     assert RETRIEVAL_RECEIPTS_DASHBOARD_POLICY_REF in shell.policy_refs
+    assert MEMORY_ENCRYPTION_DEFAULT_POLICY_REF in shell.policy_refs
     assert len(shell.status_strip) == 4
+    assert len(shell.insight_panels) >= 5
+    assert any(panel.title == "Encryption Default" for panel in shell.insight_panels)
+    assert all(panel.content_redacted for panel in shell.insight_panels)
+    assert all(panel.source_refs_redacted for panel in shell.insight_panels)
     assert len(shell.memory_palace.cards) >= 4
     assert len(shell.skill_forge.cards) >= 3
     assert len(shell.skill_metrics.cards) >= 3
@@ -82,6 +88,8 @@ def test_dashboard_shell_smoke_contract_passes():
     assert result.skill_metric_run_count >= 5
     assert result.retrieval_receipt_card_count >= 2
     assert result.safe_receipt_count >= 4
+    assert result.insight_panel_count >= 5
+    assert result.encryption_default_visible is True
     assert result.gateway_action_receipt_count > 0
     assert result.gateway_actions_present is True
     assert result.skill_metrics_present is True

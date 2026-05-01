@@ -177,6 +177,12 @@ from cortex_memory_os.evidence_vault import (
     VaultRuntimeMode,
     assess_vault_cipher,
 )
+from cortex_memory_os.memory_encryption import (
+    MEMORY_ENCRYPTION_DEFAULT_ID,
+    MEMORY_ENCRYPTION_DEFAULT_POLICY_REF,
+    EncryptedMemoryStore,
+    MemoryEncryptionRequiredError,
+)
 from cortex_memory_os.evidence_eligibility import (
     EVIDENCE_ELIGIBILITY_HANDOFF_POLICY_REF,
     EvidenceWriteMode,
@@ -437,6 +443,7 @@ def run_all() -> BenchmarkRunResult:
         case_vault_raw_expiry,
         case_raw_evidence_expiry_hardening_contract,
         case_vault_encryption_boundary,
+        case_memory_encryption_default_contract,
         case_gateway_context_pack,
         case_context_pack_scored_retrieval,
         case_source_router_context_pack_contract,
@@ -13045,6 +13052,117 @@ def case_vault_encryption_boundary() -> BenchmarkCaseResult:
             "policy_ref": EVIDENCE_VAULT_ENCRYPTION_POLICY_REF,
             "noop_reason": noop_decision.reason,
             "accepted_cipher": metadata.cipher,
+        },
+    )
+
+
+def case_memory_encryption_default_contract() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    class ToyAuthenticatedCipher:
+        name = "toy-memory-aead-test"
+        authenticated_encryption = True
+
+        def seal(self, plaintext: bytes) -> bytes:
+            return b"sealed-memory:" + plaintext[::-1]
+
+        def open(self, ciphertext: bytes) -> bytes:
+            if not ciphertext.startswith(b"sealed-memory:"):
+                raise ValueError("missing toy memory seal")
+            return ciphertext.removeprefix(b"sealed-memory:")[::-1]
+
+    memory = MemoryRecord(
+        memory_id="mem_bench_private_encrypted_default",
+        type=MemoryType.PREFERENCE,
+        content="Sensitive durable benchmark memory must be sealed before sqlite storage.",
+        source_refs=["scene_memory_encryption_default"],
+        evidence_type=EvidenceType.OBSERVED_AND_INFERRED,
+        confidence=0.91,
+        status=MemoryStatus.ACTIVE,
+        created_at=datetime(2026, 5, 1, 12, 0, tzinfo=UTC),
+        valid_from=date(2026, 5, 1),
+        valid_to=None,
+        sensitivity=Sensitivity.PRIVATE_WORK,
+        scope=ScopeLevel.PROJECT_SPECIFIC,
+        influence_level=InfluenceLevel.PLANNING,
+        allowed_influence=["storage_policy"],
+        forbidden_influence=["external_export"],
+        decay_policy="review_after_90_days",
+        contradicts=[],
+        user_visible=True,
+        requires_user_confirmation=False,
+    )
+
+    blocked_reason = ""
+    blocked_content_echo = False
+    sealed_db_hides_content = False
+    sealed_db_hides_source = False
+    restored = None
+    receipt = None
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        try:
+            EncryptedMemoryStore(root / "blocked.sqlite3").add_memory(memory)
+        except MemoryEncryptionRequiredError as error:
+            blocked_reason = error.decision.reason
+            blocked_content_echo = memory.content in str(error) or memory.source_refs[0] in str(
+                error
+            )
+
+        db_path = root / "sealed.sqlite3"
+        store = EncryptedMemoryStore(db_path, cipher=ToyAuthenticatedCipher())
+        receipt = store.add_memory(memory)
+        restored = store.get_memory(memory.memory_id)
+        raw_db = db_path.read_bytes()
+        sealed_db_hides_content = memory.content.encode("utf-8") not in raw_db
+        sealed_db_hides_source = memory.source_refs[0].encode("utf-8") not in raw_db
+
+    docs_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "docs" / "security" / "memory-encryption-default.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+            REPO_ROOT / "docs" / "ops" / "task-board.md",
+            REPO_ROOT / "docs" / "product" / "product-traceability-report.md",
+        ]
+        if path.exists()
+    )
+    passed = (
+        blocked_reason == "authenticated_encryption_required_for_durable_memory"
+        and not blocked_content_echo
+        and receipt is not None
+        and receipt.decision.allowed
+        and receipt.decision.requires_authenticated_encryption
+        and receipt.decision.content_redacted
+        and receipt.decision.source_refs_redacted
+        and restored == memory
+        and sealed_db_hides_content
+        and sealed_db_hides_source
+        and MEMORY_ENCRYPTION_DEFAULT_ID in docs_text
+        and MEMORY_ENCRYPTION_DEFAULT_POLICY_REF in docs_text
+    )
+    return BenchmarkCaseResult(
+        case_id="MEMORY-ENCRYPTION-DEFAULT-001/durable_memory_sealed_store",
+        suite=MEMORY_ENCRYPTION_DEFAULT_ID,
+        passed=passed,
+        summary=(
+            "Durable memory writes route through an encrypted store boundary; noop "
+            "writes are rejected and authenticated cipher writes persist sealed payloads."
+        ),
+        metrics={
+            "blocked_noop_write": int(
+                blocked_reason == "authenticated_encryption_required_for_durable_memory"
+            ),
+            "sealed_db_hides_content": int(sealed_db_hides_content),
+            "sealed_db_hides_source": int(sealed_db_hides_source),
+        },
+        evidence={
+            "policy_ref": MEMORY_ENCRYPTION_DEFAULT_POLICY_REF,
+            "blocked_reason": blocked_reason,
+            "accepted_cipher": receipt.cipher_name if receipt else None,
+            "content_redacted": receipt.content_redacted if receipt else False,
+            "source_refs_redacted": receipt.source_refs_redacted if receipt else False,
         },
     )
 
