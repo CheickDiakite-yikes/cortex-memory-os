@@ -23,6 +23,7 @@ const icons = {
 
 let memoryFilter = "all";
 let skillFilter = "all";
+let selectedFocus = data.focus_inspector || null;
 const gatewayReceiptByAction = new Map(
   (data.gateway_action_receipts || []).map((receipt) => [receipt.action_key, receipt]),
 );
@@ -132,6 +133,90 @@ function renderInsights() {
     .join("");
 }
 
+function renderFocusInspector() {
+  const inspector = document.querySelector("#focus-inspector");
+  if (!inspector || !selectedFocus) return;
+  inspector.innerHTML = `
+    <div class="focus-copy">
+      <p class="section-label">${escapeHtml(selectedFocus.title || "Focus Inspector")}</p>
+      <h2>${escapeHtml(selectedFocus.target_ref)}</h2>
+      <p>${escapeHtml(selectedFocus.summary)}</p>
+    </div>
+    <div class="focus-metrics">
+      ${(selectedFocus.metrics || [])
+        .map(
+          (metric) => `
+            <div class="focus-metric" data-state="${escapeHtml(metric.state)}">
+              <span>${escapeHtml(metric.label)}</span>
+              <strong>${escapeHtml(metric.value)}</strong>
+            </div>
+          `,
+        )
+        .join("")}
+    </div>
+    <div class="focus-actions">
+      ${(selectedFocus.actions || [])
+        .map(
+          (action) => `
+            <button class="text-command" type="button" data-focus-tool="${escapeHtml(action.gateway_tool)}">
+              ${escapeHtml(action.label)}
+            </button>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+  inspector.querySelectorAll("[data-focus-tool]").forEach((button) => {
+    button.addEventListener("click", () => {
+      writeReceipt(`${button.dataset.focusTool} selected from Focus Inspector. Gateway receipt still required.`);
+    });
+  });
+}
+
+function setMemoryFocus(card) {
+  selectedFocus = {
+    title: "Focus Inspector",
+    subject_type: "memory",
+    target_ref: card.memory_id,
+    summary: `${formatToken(card.status)} memory · ${formatToken(card.scope)} scope · sources redacted to count ${card.source_count}.`,
+    state: card.recall_eligible ? "healthy" : "warning",
+    metrics: [
+      { label: "Confidence", value: Number(card.confidence).toFixed(2), state: "healthy" },
+      { label: "Scope", value: formatToken(card.scope), state: "neutral" },
+      { label: "Recall", value: card.recall_eligible ? "allowed" : "blocked", state: card.recall_eligible ? "healthy" : "warning" },
+    ],
+    actions: (card.action_plans || []).slice(0, 3).map((plan) => ({
+      label: plan.gateway_tool.split(".").pop(),
+      gateway_tool: plan.gateway_tool,
+      requires_confirmation: plan.requires_confirmation,
+      allowed_gateway_call: plan.gateway_tool === "memory.explain",
+    })),
+  };
+  renderFocusInspector();
+}
+
+function setSkillFocus(card) {
+  selectedFocus = {
+    title: "Focus Inspector",
+    subject_type: "skill",
+    target_ref: card.skill_id,
+    summary: `${card.name} · ${formatToken(card.risk_level)} risk · procedure remains redacted until explicit review.`,
+    state: card.risk_level === "high" ? "warning" : "healthy",
+    metrics: [
+      { label: "Maturity", value: `Level ${card.maturity_level}`, state: "neutral" },
+      { label: "Evidence", value: `${card.learned_from_count} refs`, state: "healthy" },
+      { label: "Mode", value: formatToken(card.execution_mode), state: "healthy" },
+    ],
+    actions: (card.action_plans || []).slice(0, 3).map((plan) => ({
+      label: plan.gateway_tool.split(".").pop(),
+      gateway_tool: plan.gateway_tool,
+      requires_confirmation: plan.requires_confirmation,
+      allowed_gateway_call: plan.gateway_tool === "skill.review_candidate",
+    })),
+  };
+  renderFocusInspector();
+}
+
 function renderTabs() {
   const memoryCounts = data.memory_palace.status_counts;
   const memoryTabs = [
@@ -237,6 +322,12 @@ function renderMemoryCards() {
     )
     .join("") + hiddenSummary(hiddenCount, "memory");
   list.querySelectorAll("[data-action-tool]").forEach(bindActionButton);
+  list.querySelectorAll("[data-memory-id]").forEach((cardElement) => {
+    cardElement.addEventListener("click", () => {
+      const card = data.memory_palace.cards.find((item) => item.memory_id === cardElement.dataset.memoryId);
+      if (card) setMemoryFocus(card);
+    });
+  });
 }
 
 function memoryActionButton(card, plan) {
@@ -295,6 +386,12 @@ function renderSkillCards() {
     )
     .join("") + hiddenSummary(hiddenCount, "skill");
   list.querySelectorAll("[data-action-tool]").forEach(bindActionButton);
+  list.querySelectorAll("[data-skill-id]").forEach((cardElement) => {
+    cardElement.addEventListener("click", () => {
+      const card = data.skill_forge.cards.find((item) => item.skill_id === cardElement.dataset.skillId);
+      if (card) setSkillFocus(card);
+    });
+  });
 }
 
 function takeVisibleCards(cards, maxVisible) {
@@ -355,7 +452,8 @@ function skillCommandButtons(card) {
 }
 
 function bindActionButton(button) {
-  button.addEventListener("click", () => {
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
     const actionKey = `${button.dataset.actionTool}:${button.dataset.targetRef}`;
     const receipt = gatewayReceiptByAction.get(actionKey);
     if (!receipt) {
@@ -435,6 +533,7 @@ if (!data) {
   renderNav();
   renderStatusStrip();
   renderInsights();
+  renderFocusInspector();
   renderReceipts();
   renderDashboard();
 }

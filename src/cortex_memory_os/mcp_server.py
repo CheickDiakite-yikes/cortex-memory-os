@@ -48,6 +48,9 @@ from cortex_memory_os.context_templates import (
 )
 from cortex_memory_os.firewall import detect_prompt_injection
 from cortex_memory_os.fixtures import load_json
+from cortex_memory_os.encrypted_graph_index import (
+    UNIFIED_ENCRYPTED_GRAPH_INDEX_POLICY_REF,
+)
 from cortex_memory_os.memory_export import export_memories_with_audit
 from cortex_memory_os.memory_palace import MemoryExplanation, MemoryPalaceService
 from cortex_memory_os.memory_palace_flows import (
@@ -486,6 +489,26 @@ class CortexMCPServer:
                 },
             },
         ]
+        if hasattr(self.store, "search_index"):
+            tools.append(
+                {
+                    "name": "memory.search_index",
+                    "description": "Search the encrypted graph/index surface and return redacted metadata-only hits.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "query": {"type": "string"},
+                            "limit": {"type": "integer", "minimum": 1, "maximum": 20},
+                            "active_project": {"type": "string"},
+                            "agent_id": {"type": "string"},
+                            "session_id": {"type": "string"},
+                            "include_global": {"type": "boolean"},
+                        },
+                        "required": ["query"],
+                        "additionalProperties": False,
+                    },
+                }
+            )
         if self.palace is not None:
             tools.extend(
                 [
@@ -578,6 +601,15 @@ class CortexMCPServer:
     def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         if name == "memory.search":
             return {"memories": [serialize_memory(memory) for memory in self.memory_search(arguments)]}
+        if name == "memory.search_index":
+            store = _require_unified_index_store(self.store)
+            query = _require_string(arguments, "query")
+            limit = _optional_int_range(arguments, "limit", default=5, minimum=1, maximum=20)
+            return store.search_index(
+                query,
+                limit=limit,
+                scope=_retrieval_scope_from_arguments(arguments),
+            ).model_dump(mode="json")
         if name == "memory.get_context_pack":
             return self.get_context_pack(arguments).model_dump(mode="json")
         if name == "runtime_trace.record":
@@ -1324,6 +1356,7 @@ class CortexMCPServer:
                 HYBRID_FUSION_CONTEXT_DIAGNOSTIC_POLICY_REF,
                 HYBRID_FUSION_CONTEXT_PACK_INTEGRATION_ID,
                 SOURCE_ROUTER_CONTEXT_PACK_POLICY_REF,
+                *_store_context_policy_refs(self.store),
                 template.template_id,
             ],
             relevant_skills=list(template.suggested_skills),
@@ -1948,6 +1981,22 @@ def _search_store(
     if hasattr(store, "search"):
         return store.search(query, limit=limit, scope=scope)
     raise TypeError("store does not support memory search")
+
+
+def _require_unified_index_store(store: Any) -> Any:
+    if not hasattr(store, "search_index"):
+        raise JsonRpcError(-32601, "encrypted graph index search is not configured")
+    return store
+
+
+def _store_context_policy_refs(store: Any) -> list[str]:
+    if hasattr(store, "context_policy_refs"):
+        refs = list(store.context_policy_refs())
+        if refs:
+            return refs
+    if hasattr(store, "search_index"):
+        return [UNIFIED_ENCRYPTED_GRAPH_INDEX_POLICY_REF]
+    return []
 
 
 def _retrieval_scope_from_arguments(arguments: dict[str, Any]) -> RetrievalScope:

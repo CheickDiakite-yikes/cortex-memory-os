@@ -125,6 +125,8 @@ from cortex_memory_os.capture_budget_queue import (
     schedule_capture_consolidation,
 )
 from cortex_memory_os.dashboard_shell import (
+    DASHBOARD_FOCUS_INSPECTOR_ID,
+    DASHBOARD_FOCUS_INSPECTOR_POLICY_REF,
     DASHBOARD_SHELL_ID,
     DASHBOARD_SHELL_POLICY_REF,
     build_dashboard_shell,
@@ -182,6 +184,11 @@ from cortex_memory_os.memory_encryption import (
     MEMORY_ENCRYPTION_DEFAULT_POLICY_REF,
     EncryptedMemoryStore,
     MemoryEncryptionRequiredError,
+)
+from cortex_memory_os.encrypted_graph_index import (
+    UNIFIED_ENCRYPTED_GRAPH_INDEX_ID,
+    UNIFIED_ENCRYPTED_GRAPH_INDEX_POLICY_REF,
+    UnifiedEncryptedGraphIndex,
 )
 from cortex_memory_os.evidence_eligibility import (
     EVIDENCE_ELIGIBILITY_HANDOFF_POLICY_REF,
@@ -444,6 +451,7 @@ def run_all() -> BenchmarkRunResult:
         case_raw_evidence_expiry_hardening_contract,
         case_vault_encryption_boundary,
         case_memory_encryption_default_contract,
+        case_unified_encrypted_graph_index_contract,
         case_gateway_context_pack,
         case_context_pack_scored_retrieval,
         case_source_router_context_pack_contract,
@@ -522,6 +530,7 @@ def run_all() -> BenchmarkRunResult:
         case_skill_success_metrics_contract,
         case_skill_metrics_dashboard_surface_contract,
         case_dashboard_shell_contract,
+        case_dashboard_focus_inspector_contract,
         case_dashboard_gateway_actions_contract,
         case_computer_dashboard_live_proof_contract,
         case_dashboard_gateway_runtime_readonly_contract,
@@ -11169,6 +11178,69 @@ def case_dashboard_shell_contract() -> BenchmarkCaseResult:
     )
 
 
+def case_dashboard_focus_inspector_contract() -> BenchmarkCaseResult:
+    shell = build_dashboard_shell(now=datetime(2026, 5, 1, 11, 0, tzinfo=UTC))
+    inspector = shell.focus_inspector
+    serialized = inspector.model_dump_json()
+    ui_paths = [
+        REPO_ROOT / "ui" / "cortex-dashboard" / "index.html",
+        REPO_ROOT / "ui" / "cortex-dashboard" / "styles.css",
+        REPO_ROOT / "ui" / "cortex-dashboard" / "app.js",
+        REPO_ROOT / "ui" / "cortex-dashboard" / "dashboard-data.js",
+    ]
+    ui_text = "\n".join(path.read_text(encoding="utf-8") for path in ui_paths if path.exists())
+    docs_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "docs" / "product" / "cortex-dashboard-shell.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+            REPO_ROOT / "docs" / "ops" / "task-board.md",
+        ]
+        if path.exists()
+    )
+    required_ui_terms = [
+        "Focus Inspector",
+        "focus-inspector",
+        "setMemoryFocus",
+        "setSkillFocus",
+        "data-focus-tool",
+    ]
+    missing_ui_terms = _missing_terms(ui_text, required_ui_terms)
+    passed = (
+        inspector.title == "Focus Inspector"
+        and inspector.content_redacted
+        and inspector.source_refs_redacted
+        and inspector.procedure_redacted
+        and any(action.gateway_tool == "memory.explain" for action in inspector.actions)
+        and not missing_ui_terms
+        and DASHBOARD_FOCUS_INSPECTOR_ID in docs_text
+        and DASHBOARD_FOCUS_INSPECTOR_POLICY_REF in docs_text
+        and "raw://" not in serialized
+        and "encrypted_blob://" not in serialized
+        and "Search primary sources" not in serialized
+    )
+    return BenchmarkCaseResult(
+        case_id="DASHBOARD-FOCUS-INSPECTOR-001/sparse_selected_detail",
+        suite=DASHBOARD_FOCUS_INSPECTOR_ID,
+        passed=passed,
+        summary=(
+            "Dashboard selected-item detail moved into a sparse focus inspector "
+            "with redacted content, source refs, procedure text, and preview-only actions."
+        ),
+        metrics={
+            "metric_count": len(inspector.metrics),
+            "action_count": len(inspector.actions),
+            "missing_ui_terms": len(missing_ui_terms),
+        },
+        evidence={
+            "policy_ref": DASHBOARD_FOCUS_INSPECTOR_POLICY_REF,
+            "target_ref": inspector.target_ref,
+            "missing_ui_terms": missing_ui_terms,
+        },
+    )
+
+
 def case_dashboard_gateway_actions_contract() -> BenchmarkCaseResult:
     shell = build_dashboard_shell(now=datetime(2026, 4, 30, 11, 0, tzinfo=UTC))
     receipts = shell.gateway_action_receipts
@@ -13163,6 +13235,132 @@ def case_memory_encryption_default_contract() -> BenchmarkCaseResult:
             "accepted_cipher": receipt.cipher_name if receipt else None,
             "content_redacted": receipt.content_redacted if receipt else False,
             "source_refs_redacted": receipt.source_refs_redacted if receipt else False,
+        },
+    )
+
+
+def case_unified_encrypted_graph_index_contract() -> BenchmarkCaseResult:
+    from tempfile import TemporaryDirectory
+
+    class ToyAuthenticatedCipher:
+        name = "toy-unified-index-aead-bench"
+        authenticated_encryption = True
+
+        def seal(self, plaintext: bytes) -> bytes:
+            return b"sealed-unified-bench:" + plaintext[::-1]
+
+        def open(self, ciphertext: bytes) -> bytes:
+            if not ciphertext.startswith(b"sealed-unified-bench:"):
+                raise ValueError("missing toy unified bench seal")
+            return ciphertext.removeprefix(b"sealed-unified-bench:")[::-1]
+
+    memory = MemoryRecord(
+        memory_id="mem_bench_unified_index_route",
+        type=MemoryType.PROCEDURAL,
+        content="Callback route debugging memory should be sealed while indexed safely.",
+        source_refs=["project:cortex-memory-os", "scene_unified_index_private"],
+        evidence_type=EvidenceType.OBSERVED_AND_INFERRED,
+        confidence=0.92,
+        status=MemoryStatus.ACTIVE,
+        created_at=datetime(2026, 5, 1, 14, 30, tzinfo=UTC),
+        valid_from=date(2026, 5, 1),
+        valid_to=None,
+        sensitivity=Sensitivity.PRIVATE_WORK,
+        scope=ScopeLevel.PROJECT_SPECIFIC,
+        influence_level=InfluenceLevel.PLANNING,
+        allowed_influence=["debugging_plan"],
+        forbidden_influence=["production_credentials"],
+        decay_policy="review_after_90_days",
+        contradicts=[],
+        user_visible=True,
+        requires_user_confirmation=False,
+    )
+    edge = TemporalEdge(
+        edge_id="edge_bench_unified_index_route",
+        subject="user",
+        predicate="debugs",
+        object="OAuth callback route mismatch",
+        valid_from=date(2026, 5, 1),
+        valid_to=None,
+        confidence=0.86,
+        source_refs=["scene_unified_index_private"],
+        status=MemoryStatus.ACTIVE,
+        supersedes=[],
+    )
+
+    with TemporaryDirectory() as tmp:
+        db_path = Path(tmp) / "unified.sqlite3"
+        store = UnifiedEncryptedGraphIndex(
+            db_path,
+            cipher=ToyAuthenticatedCipher(),
+            index_key=b"cortex-benchmark-index-key-32-bytes",
+        )
+        write_receipt = store.add_memory(memory)
+        graph_receipt = store.add_edge(edge, related_memory_ids=[memory.memory_id])
+        search = store.search_index(
+            "callback route debugging",
+            scope=RetrievalScope(active_project="cortex-memory-os"),
+        )
+        context_server = CortexMCPServer(store=store)
+        context_pack = context_server.get_context_pack(
+            {
+                "goal": "continue callback route debugging",
+                "active_project": "cortex-memory-os",
+            }
+        )
+        raw_db = db_path.read_bytes()
+        db_hides_memory_content = memory.content.encode("utf-8") not in raw_db
+        db_hides_source_refs = memory.source_refs[1].encode("utf-8") not in raw_db
+        db_hides_graph_terms = edge.object.encode("utf-8") not in raw_db
+
+    docs_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "docs" / "architecture" / "unified-encrypted-graph-index.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+            REPO_ROOT / "docs" / "ops" / "task-board.md",
+        ]
+        if path.exists()
+    )
+    passed = (
+        write_receipt.content_redacted
+        and write_receipt.source_refs_redacted
+        and graph_receipt.graph_terms_redacted
+        and search.hits
+        and search.hits[0].memory_id == memory.memory_id
+        and search.hits[0].content_redacted
+        and search.hits[0].source_refs_redacted
+        and search.receipt.query_redacted
+        and search.receipt.candidate_open_count == 1
+        and UNIFIED_ENCRYPTED_GRAPH_INDEX_POLICY_REF
+        in context_pack.context_policy_refs
+        and db_hides_memory_content
+        and db_hides_source_refs
+        and db_hides_graph_terms
+        and UNIFIED_ENCRYPTED_GRAPH_INDEX_ID in docs_text
+        and UNIFIED_ENCRYPTED_GRAPH_INDEX_POLICY_REF in docs_text
+    )
+    return BenchmarkCaseResult(
+        case_id="UNIFIED-ENCRYPTED-GRAPH-INDEX-001/redacted_hmac_index",
+        suite=UNIFIED_ENCRYPTED_GRAPH_INDEX_ID,
+        passed=passed,
+        summary=(
+            "Unified encrypted graph/index storage keeps payloads sealed, stores "
+            "HMAC-derived index terms, and returns metadata-only search receipts."
+        ),
+        metrics={
+            "search_hit_count": len(search.hits),
+            "candidate_open_count": search.receipt.candidate_open_count,
+            "db_hides_memory_content": int(db_hides_memory_content),
+            "db_hides_source_refs": int(db_hides_source_refs),
+            "db_hides_graph_terms": int(db_hides_graph_terms),
+        },
+        evidence={
+            "policy_ref": UNIFIED_ENCRYPTED_GRAPH_INDEX_POLICY_REF,
+            "write_token_digest_count": write_receipt.token_digest_count,
+            "graph_token_digest_count": graph_receipt.graph_token_digest_count,
+            "context_policy_refs": context_pack.context_policy_refs,
         },
     )
 

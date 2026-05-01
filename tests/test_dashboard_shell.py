@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 from cortex_memory_os.dashboard_shell import (
+    DASHBOARD_FOCUS_INSPECTOR_POLICY_REF,
     DASHBOARD_SHELL_ID,
     DASHBOARD_SHELL_POLICY_REF,
     build_dashboard_shell,
@@ -24,6 +25,7 @@ def test_dashboard_shell_composes_safe_view_models():
     assert shell.shell_id == DASHBOARD_SHELL_ID
     assert DASHBOARD_SHELL_POLICY_REF in shell.policy_refs
     assert DASHBOARD_GATEWAY_ACTIONS_POLICY_REF in shell.policy_refs
+    assert DASHBOARD_FOCUS_INSPECTOR_POLICY_REF in shell.policy_refs
     assert MEMORY_PALACE_DASHBOARD_POLICY_REF in shell.policy_refs
     assert SKILL_FORGE_CANDIDATE_LIST_POLICY_REF in shell.policy_refs
     assert SKILL_METRICS_DASHBOARD_POLICY_REF in shell.policy_refs
@@ -34,6 +36,12 @@ def test_dashboard_shell_composes_safe_view_models():
     assert any(panel.title == "Encryption Default" for panel in shell.insight_panels)
     assert all(panel.content_redacted for panel in shell.insight_panels)
     assert all(panel.source_refs_redacted for panel in shell.insight_panels)
+    assert shell.focus_inspector.title == "Focus Inspector"
+    assert shell.focus_inspector.content_redacted is True
+    assert shell.focus_inspector.source_refs_redacted is True
+    assert shell.focus_inspector.procedure_redacted is True
+    assert DASHBOARD_FOCUS_INSPECTOR_POLICY_REF in shell.focus_inspector.policy_refs
+    assert any(action.gateway_tool == "memory.explain" for action in shell.focus_inspector.actions)
     assert len(shell.memory_palace.cards) >= 4
     assert len(shell.skill_forge.cards) >= 3
     assert len(shell.skill_metrics.cards) >= 3
@@ -89,6 +97,7 @@ def test_dashboard_shell_smoke_contract_passes():
     assert result.retrieval_receipt_card_count >= 2
     assert result.safe_receipt_count >= 4
     assert result.insight_panel_count >= 5
+    assert result.focus_inspector_present is True
     assert result.encryption_default_visible is True
     assert result.gateway_action_receipt_count > 0
     assert result.gateway_actions_present is True

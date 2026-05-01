@@ -6,6 +6,10 @@ Benchmark: `MEMORY-PALACE-SKILL-FORGE-UI-001`
 
 Policy reference: `policy_cortex_dashboard_shell_v1`
 
+Focus inspector benchmark: `DASHBOARD-FOCUS-INSPECTOR-001`
+
+Focus inspector policy: `policy_dashboard_focus_inspector_v1`
+
 This slice turns the generated dashboard concept into a local, static,
 inspectable dashboard shell over safe view models. The goal is a usable product
 surface for Memory Palace and Skill Forge without introducing live capture,
@@ -14,7 +18,9 @@ private memory fixtures, or gateway side effects.
 The 2026-05-01 refresh uses a quieter generated dashboard concept as the visual
 anchor, then pares it down further after live visual review: primary work queues
 stay central, guardrails become a short summary strip, and default lists show a
-small focus queue with counts preserved.
+small focus queue with counts preserved. The next refinement adds a sparse
+Focus Inspector so selected memory/skill detail moves into one quiet band
+instead of making every card carry detail.
 
 ## Design Source
 
@@ -65,6 +71,8 @@ The static app in `ui/cortex-dashboard/` must render:
   raw case payloads, raw refs, source refs, or private memory content;
 - shortened default queues that keep the screen calm while preserving full
   counts in the view model;
+- a Focus Inspector for selected memory or skill detail, with content, source
+  refs, and procedure text redacted;
 - local filter controls for both lists;
 - icon-first action controls that update local UI state;
 - Recent Safe Receipts with redacted targets.
@@ -108,6 +116,8 @@ Observation pause previewed locally. Confirmation and audit receipt required.
   text, or raw evidence refs;
 - the visible shell includes the `Encryption Default` guardrail tied to
   `policy_memory_encryption_default_v1`;
+- the visible shell includes the `Focus Inspector` tied to
+  `policy_dashboard_focus_inspector_v1`;
 - dashboard docs, task board, benchmark plan, and benchmark registry name the
   slice;
 - local browser proof confirms the first viewport renders without overlapping

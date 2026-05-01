@@ -7,7 +7,7 @@ import json
 from datetime import UTC, date, datetime
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from cortex_memory_os.contracts import (
     ActionRisk,
@@ -63,6 +63,8 @@ from cortex_memory_os.skill_metrics_dashboard import (
 
 DASHBOARD_SHELL_ID = "MEMORY-PALACE-SKILL-FORGE-UI-001"
 DASHBOARD_SHELL_POLICY_REF = "policy_cortex_dashboard_shell_v1"
+DASHBOARD_FOCUS_INSPECTOR_ID = "DASHBOARD-FOCUS-INSPECTOR-001"
+DASHBOARD_FOCUS_INSPECTOR_POLICY_REF = "policy_dashboard_focus_inspector_v1"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DASHBOARD_DATA_PATH = REPO_ROOT / "ui" / "cortex-dashboard" / "dashboard-data.js"
 
@@ -110,6 +112,45 @@ class DashboardInsightPanel(StrictModel):
     policy_refs: list[str] = Field(default_factory=list)
 
 
+class DashboardFocusAction(StrictModel):
+    label: str = Field(min_length=1)
+    gateway_tool: str = Field(min_length=1)
+    requires_confirmation: bool
+    allowed_gateway_call: bool
+
+
+class DashboardFocusInspector(StrictModel):
+    inspector_id: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    subject_type: str = Field(min_length=1)
+    target_ref: str = Field(min_length=1)
+    summary: str = Field(min_length=1)
+    state: str = Field(min_length=1)
+    metrics: list[DashboardInsightMetric] = Field(default_factory=list)
+    actions: list[DashboardFocusAction] = Field(default_factory=list)
+    content_redacted: bool = True
+    source_refs_redacted: bool = True
+    procedure_redacted: bool = True
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [
+            DASHBOARD_FOCUS_INSPECTOR_POLICY_REF,
+            DASHBOARD_SHELL_POLICY_REF,
+        ]
+    )
+
+    @model_validator(mode="after")
+    def keep_focus_inspector_redacted(self) -> DashboardFocusInspector:
+        if not self.content_redacted:
+            raise ValueError("focus inspector cannot include memory or skill content")
+        if not self.source_refs_redacted:
+            raise ValueError("focus inspector cannot include source refs")
+        if not self.procedure_redacted:
+            raise ValueError("focus inspector cannot include skill procedure text")
+        if DASHBOARD_FOCUS_INSPECTOR_POLICY_REF not in self.policy_refs:
+            raise ValueError("focus inspector requires policy ref")
+        return self
+
+
 class CortexDashboardShell(StrictModel):
     shell_id: str = DASHBOARD_SHELL_ID
     generated_at: datetime
@@ -127,6 +168,7 @@ class CortexDashboardShell(StrictModel):
     retrieval_debug: RetrievalReceiptsDashboard
     safe_receipts: list[DashboardSafeReceipt] = Field(default_factory=list)
     insight_panels: list[DashboardInsightPanel] = Field(default_factory=list)
+    focus_inspector: DashboardFocusInspector
     gateway_action_receipts: list[DashboardGatewayActionReceipt] = Field(default_factory=list)
     policy_refs: list[str] = Field(default_factory=list)
     design_notes: list[str] = Field(default_factory=list)
@@ -145,6 +187,7 @@ class DashboardShellSmokeResult(StrictModel):
     retrieval_receipt_card_count: int = Field(ge=0)
     safe_receipt_count: int = Field(ge=0)
     insight_panel_count: int = Field(ge=0)
+    focus_inspector_present: bool
     gateway_action_receipt_count: int = Field(ge=0)
     read_only_gateway_action_count: int = Field(ge=0)
     blocked_gateway_action_count: int = Field(ge=0)
@@ -251,6 +294,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             skill_list,
             now=timestamp,
         ),
+        focus_inspector=_sample_focus_inspector(),
         policy_refs=[
             DASHBOARD_SHELL_POLICY_REF,
             MEMORY_PALACE_DASHBOARD_POLICY_REF,
@@ -258,6 +302,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             SKILL_METRICS_DASHBOARD_POLICY_REF,
             RETRIEVAL_RECEIPTS_DASHBOARD_POLICY_REF,
             DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
+            DASHBOARD_FOCUS_INSPECTOR_POLICY_REF,
             MEMORY_ENCRYPTION_DEFAULT_POLICY_REF,
         ],
         design_notes=[
@@ -266,6 +311,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Retrieval Receipts are shown as redacted context/debug metadata.",
             "Status strip exposes observation, project, consent, and firewall state.",
             "Evidence, context, firewall, and ops health use calm count-only panels.",
+            "Selected details live in a sparse focus inspector instead of every queue card.",
             "Action controls are declarative UI plans; this shell does not execute mutations.",
         ],
         safety_notes=[
@@ -325,6 +371,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "Evidence Vault",
         "Encryption Default",
         "Ops Quality",
+        "Focus Inspector",
         "window.CORTEX_DASHBOARD_DATA",
     ]
     missing_ui_terms = _missing_terms(ui_text + "\n" + data_js, required_ui_terms)
@@ -395,6 +442,12 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "Encryption Default" in ui_text + "\n" + data_js + "\n" + insight_text
         and MEMORY_ENCRYPTION_DEFAULT_POLICY_REF in serialized
     )
+    focus_inspector_present = (
+        "Focus Inspector" in ui_text + "\n" + data_js
+        and shell.focus_inspector.content_redacted
+        and shell.focus_inspector.source_refs_redacted
+        and shell.focus_inspector.procedure_redacted
+    )
 
     passed = (
         ui_files_present
@@ -405,6 +458,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and shell.safe_receipts
         and len(shell.insight_panels) >= 4
         and encryption_default_visible
+        and focus_inspector_present
         and gateway_actions_present
         and not secret_retained
         and not raw_private_data_retained
@@ -424,6 +478,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         retrieval_receipt_card_count=len(shell.retrieval_debug.cards),
         safe_receipt_count=len(shell.safe_receipts),
         insight_panel_count=len(shell.insight_panels),
+        focus_inspector_present=focus_inspector_present,
         gateway_action_receipt_count=len(shell.gateway_action_receipts),
         read_only_gateway_action_count=sum(
             int(receipt.allowed_gateway_call) for receipt in shell.gateway_action_receipts
@@ -833,6 +888,46 @@ def _sample_insight_panels() -> list[DashboardInsightPanel]:
             policy_refs=[DASHBOARD_SHELL_POLICY_REF],
         ),
     ]
+
+
+def _sample_focus_inspector() -> DashboardFocusInspector:
+    return DashboardFocusInspector(
+        inspector_id="focus_inspector_default",
+        title="Focus Inspector",
+        subject_type="memory",
+        target_ref="mem_smallest_safe_change",
+        summary=(
+            "Active project-scoped memory. Content and source refs stay governed; "
+            "review actions are routed through read-only gateway receipts first."
+        ),
+        state="healthy",
+        metrics=[
+            DashboardInsightMetric(label="Confidence", value="0.92", state="healthy"),
+            DashboardInsightMetric(label="Scope", value="project", state="healthy"),
+            DashboardInsightMetric(label="Action mode", value="preview", state="neutral"),
+        ],
+        actions=[
+            DashboardFocusAction(
+                label="Explain",
+                gateway_tool="memory.explain",
+                requires_confirmation=False,
+                allowed_gateway_call=True,
+            ),
+            DashboardFocusAction(
+                label="Correct",
+                gateway_tool="memory.correct",
+                requires_confirmation=True,
+                allowed_gateway_call=False,
+            ),
+            DashboardFocusAction(
+                label="Forget",
+                gateway_tool="memory.forget",
+                requires_confirmation=True,
+                allowed_gateway_call=False,
+            ),
+        ],
+        policy_refs=[DASHBOARD_FOCUS_INSPECTOR_POLICY_REF, DASHBOARD_SHELL_POLICY_REF],
+    )
 
 
 def _timestamp(now: datetime | None) -> datetime:

@@ -1,12 +1,19 @@
 import json
-from datetime import date
+from datetime import UTC, date, datetime
 
 from cortex_memory_os.contracts import (
     EvidenceType,
     InfluenceLevel,
+    MemoryRecord,
     MemoryStatus,
+    MemoryType,
     ScopeLevel,
     SelfLesson,
+    Sensitivity,
+)
+from cortex_memory_os.encrypted_graph_index import (
+    UNIFIED_ENCRYPTED_GRAPH_INDEX_POLICY_REF,
+    UnifiedEncryptedGraphIndex,
 )
 from cortex_memory_os.fixtures import load_json
 from cortex_memory_os.mcp_server import (
@@ -18,8 +25,52 @@ from cortex_memory_os.mcp_server import (
     encode_self_lesson_review_queue_cursor,
 )
 from cortex_memory_os.memory_store import InMemoryMemoryStore
-from cortex_memory_os.contracts import MemoryRecord
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
+
+
+class _ToyUnifiedIndexCipher:
+    name = "toy-mcp-unified-index-aead-test"
+    authenticated_encryption = True
+
+    def seal(self, plaintext: bytes) -> bytes:
+        return b"sealed-mcp-index:" + plaintext[::-1]
+
+    def open(self, ciphertext: bytes) -> bytes:
+        if not ciphertext.startswith(b"sealed-mcp-index:"):
+            raise ValueError("missing toy mcp index seal")
+        return ciphertext.removeprefix(b"sealed-mcp-index:")[::-1]
+
+
+def _configured_unified_index(tmp_path) -> UnifiedEncryptedGraphIndex:
+    store = UnifiedEncryptedGraphIndex(
+        tmp_path / "mcp-unified.sqlite3",
+        cipher=_ToyUnifiedIndexCipher(),
+        index_key=b"cortex-mcp-index-key-32-bytes",
+    )
+    store.add_memory(
+        MemoryRecord(
+            memory_id="mem_mcp_unified_index_route",
+            type=MemoryType.PROCEDURAL,
+            content="Route callback diagnosis should remain sealed while retrieval works.",
+            source_refs=["project:cortex-memory-os", "scene_mcp_unified_index_route"],
+            evidence_type=EvidenceType.OBSERVED_AND_INFERRED,
+            confidence=0.91,
+            status=MemoryStatus.ACTIVE,
+            created_at=datetime(2026, 5, 1, 15, 0, tzinfo=UTC),
+            valid_from=date(2026, 5, 1),
+            valid_to=None,
+            sensitivity=Sensitivity.PRIVATE_WORK,
+            scope=ScopeLevel.PROJECT_SPECIFIC,
+            influence_level=InfluenceLevel.PLANNING,
+            allowed_influence=["debugging_plan"],
+            forbidden_influence=["production_credentials"],
+            decay_policy="review_after_90_days",
+            contradicts=[],
+            user_visible=True,
+            requires_user_confirmation=False,
+        )
+    )
+    return store
 
 
 def test_lists_memory_tools():
@@ -126,6 +177,72 @@ def test_context_pack_is_task_scoped_and_warned():
     assert "template_research_synthesis_v1" in pack["context_policy_refs"]
     assert "skill_research_synthesis_v1" in pack["relevant_skills"]
     assert pack["evidence_refs"]
+
+
+def test_encrypted_graph_index_tool_lists_only_when_configured(tmp_path):
+    store = _configured_unified_index(tmp_path)
+    server = CortexMCPServer(store=store)
+
+    response = server.handle_jsonrpc({"jsonrpc": "2.0", "id": 33, "method": "tools/list"})
+
+    tool_names = {tool["name"] for tool in response["result"]["tools"]}
+    assert "memory.search_index" in tool_names
+
+
+def test_encrypted_graph_index_gateway_returns_redacted_hits(tmp_path):
+    store = _configured_unified_index(tmp_path)
+    server = CortexMCPServer(store=store)
+
+    response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 34,
+            "method": "tools/call",
+            "params": {
+                "name": "memory.search_index",
+                "arguments": {
+                    "query": "callback route debugging",
+                    "active_project": "cortex-memory-os",
+                },
+            },
+        }
+    )
+
+    result = response["result"]
+    payload = json.dumps(result, sort_keys=True)
+    assert result["hits"][0]["memory_id"] == "mem_mcp_unified_index_route"
+    assert result["hits"][0]["content_redacted"] is True
+    assert result["hits"][0]["source_refs_redacted"] is True
+    assert result["receipt"]["query_redacted"] is True
+    assert result["receipt"]["candidate_open_count"] == 1
+    assert UNIFIED_ENCRYPTED_GRAPH_INDEX_POLICY_REF in result["policy_refs"]
+    assert "Route callback diagnosis should remain sealed" not in payload
+    assert "scene_mcp_unified_index_route" not in payload
+    assert "callback route debugging" not in payload
+
+
+def test_context_pack_carries_encrypted_index_policy_when_store_is_configured(tmp_path):
+    store = _configured_unified_index(tmp_path)
+    server = CortexMCPServer(store=store)
+
+    response = server.handle_jsonrpc(
+        {
+            "jsonrpc": "2.0",
+            "id": 35,
+            "method": "tools/call",
+            "params": {
+                "name": "memory.get_context_pack",
+                "arguments": {
+                    "goal": "continue callback route debugging",
+                    "active_project": "cortex-memory-os",
+                },
+            },
+        }
+    )
+
+    pack = response["result"]
+    assert pack["relevant_memories"][0]["memory_id"] == "mem_mcp_unified_index_route"
+    assert UNIFIED_ENCRYPTED_GRAPH_INDEX_POLICY_REF in pack["context_policy_refs"]
 
 
 def test_runtime_trace_gateway_records_and_returns_safe_metadata(tmp_path):
