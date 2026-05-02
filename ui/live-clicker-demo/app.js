@@ -1,6 +1,7 @@
 const clicker = document.querySelector("#shadow-clicker");
 const eventList = document.querySelector("#event-list");
 const pointerReadout = document.querySelector("#pointer-readout");
+const demoToken = document.querySelector('meta[name="cortex-demo-token"]')?.content || "";
 
 const fields = {
   observation: document.querySelector("#observation-state"),
@@ -51,16 +52,32 @@ async function submitObservation(action, targetLabel) {
 
   const response = await fetch("/observe", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Cortex-Demo-Token": demoToken,
+    },
     body: JSON.stringify(payload),
   });
   const receipt = await response.json();
   if (!response.ok) {
-    fields.observation.textContent = "rejected";
-    fields.firewall.textContent = receipt.error || "invalid";
+    renderRejectedReceipt(receipt, targetLabel);
     return;
   }
   renderReceipt(receipt);
+}
+
+function renderRejectedReceipt(receipt, targetLabel) {
+  fields.observation.textContent = "rejected";
+  fields.firewall.textContent = receipt.error || "invalid";
+  fields.evidence.textContent = "not written";
+  fields.memory.textContent = "blocked";
+  fields.latestTarget.textContent = targetLabel;
+  fields.shadow.textContent = "blocked";
+  fields.retrieval.textContent = "not run";
+  fields.context.textContent = "not run";
+  fields.rawRef.textContent = "none";
+  fields.memory.className = "warn";
+  fields.rawRef.className = "good";
 }
 
 function renderReceipt(receipt) {

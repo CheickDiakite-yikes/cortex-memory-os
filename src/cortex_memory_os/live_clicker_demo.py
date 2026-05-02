@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import mimetypes
+import re
+import secrets
 import tempfile
 import threading
 from collections.abc import Mapping
@@ -48,12 +51,30 @@ from cortex_memory_os.shadow_pointer_capture import (
 from cortex_memory_os.sqlite_store import SQLiteMemoryGraphStore
 
 LIVE_CLICKER_DEMO_ID = "LIVE-CLICKER-DEMO-001"
+LIVE_CLICKER_HARDENING_ID = "LIVE-CLICKER-HARDENING-001"
 LIVE_CLICKER_DEMO_POLICY_REF = "policy_live_clicker_demo_v1"
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 UI_ROOT = REPO_ROOT / "ui" / "live-clicker-demo"
 DEFAULT_LIVE_CLICKER_HOST = "127.0.0.1"
 DEFAULT_LIVE_CLICKER_PORT = 8795
+LIVE_CLICKER_MAX_OBSERVATIONS = 64
+LIVE_CLICKER_DEMO_TOKEN_HEADER = "X-Cortex-Demo-Token"
+LIVE_CLICKER_DEMO_TOKEN_PLACEHOLDER = "__CORTEX_DEMO_TOKEN__"
+LIVE_CLICKER_SECURITY_HEADERS = {
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Content-Security-Policy": (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self'; "
+        "img-src 'self' data:; "
+        "connect-src 'self'; "
+        "base-uri 'none'; "
+        "frame-ancestors 'none'"
+    ),
+}
 
 _PROHIBITED_MARKERS = [
     "OPENAI_API_KEY=",
@@ -108,6 +129,14 @@ class LiveClickerObservationReceipt(StrictModel):
     safety_notes: list[str] = Field(default_factory=list)
 
 
+class LiveClickerDemoRejected(ValueError):
+    def __init__(self, *, error: str, status: HTTPStatus, message: str) -> None:
+        self.error = error
+        self.status = status
+        self.message = message
+        super().__init__(message)
+
+
 class LiveClickerDemoResult(StrictModel):
     proof_id: str = LIVE_CLICKER_DEMO_ID
     policy_ref: str = LIVE_CLICKER_DEMO_POLICY_REF
@@ -125,23 +154,59 @@ class LiveClickerDemoResult(StrictModel):
     durable_private_memory_written: bool = False
     demo_temp_store_used: bool = True
     prohibited_marker_count: int = Field(ge=0)
+    rejected_observation_count: int = Field(ge=0)
+    max_observations: int = Field(ge=1)
+    token_required: bool = True
+    origin_enforced: bool = True
+    content_type_enforced: bool = True
     latest_shadow_pointer_state: str | None = None
     observed_memory_ids: list[str] = Field(default_factory=list)
+    safety_failures: list[str] = Field(default_factory=list)
+
+
+class LiveClickerHardeningResult(StrictModel):
+    proof_id: str = LIVE_CLICKER_HARDENING_ID
+    policy_ref: str = LIVE_CLICKER_DEMO_POLICY_REF
+    passed: bool
+    generated_at: datetime
+    token_required: bool
+    origin_enforced: bool
+    content_type_enforced: bool
+    observation_cap_enforced: bool
+    security_headers_present: bool
+    no_memory_written_for_rejected_requests: bool
+    rejected_observation_count: int = Field(ge=0)
+    memory_write_count: int = Field(ge=0)
     safety_failures: list[str] = Field(default_factory=list)
 
 
 class LiveClickerDemoSession:
     """Small live session store used by the localhost demo server."""
 
-    def __init__(self, *, db_path: Path, now: datetime | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        db_path: Path,
+        now: datetime | None = None,
+        max_observations: int = LIVE_CLICKER_MAX_OBSERVATIONS,
+    ) -> None:
         self.store = SQLiteMemoryGraphStore(db_path)
         self._receipts: list[LiveClickerObservationReceipt] = []
         self._lock = threading.Lock()
         self._fixed_now = _ensure_utc(now) if now else None
+        self.max_observations = max_observations
+        self.rejected_observation_count = 0
 
     def observe(self, payload: Mapping[str, Any]) -> LiveClickerObservationReceipt:
         observation = LiveClickerObservationInput.model_validate(payload)
         with self._lock:
+            if len(self._receipts) >= self.max_observations:
+                self.rejected_observation_count += 1
+                raise LiveClickerDemoRejected(
+                    error="observation_limit_exceeded",
+                    status=HTTPStatus.TOO_MANY_REQUESTS,
+                    message="live clicker demo observation limit exceeded",
+                )
             sequence = len(self._receipts) + 1
             timestamp = self._timestamp(sequence)
             event_id = f"live_clicker_obs_{sequence:03d}"
@@ -252,9 +317,14 @@ class LiveClickerDemoSession:
             self._receipts.append(receipt)
             return receipt
 
+    def record_rejection(self) -> None:
+        with self._lock:
+            self.rejected_observation_count += 1
+
     def result(self) -> LiveClickerDemoResult:
         with self._lock:
             receipts = list(self._receipts)
+            rejected_observation_count = self.rejected_observation_count
         safety_failures: list[str] = []
         local_origin_only = all(receipt.local_origin for receipt in receipts) if receipts else False
         shadow_clicker_followed = all(
@@ -295,6 +365,8 @@ class LiveClickerDemoSession:
             raw_ref_retained_count=raw_ref_retained_count,
             external_effect_count=external_effect_count,
             prohibited_marker_count=prohibited_marker_count,
+            rejected_observation_count=rejected_observation_count,
+            max_observations=self.max_observations,
             latest_shadow_pointer_state=latest_shadow_state,
             observed_memory_ids=[
                 receipt.memory_id
@@ -315,6 +387,13 @@ class LiveClickerDemoHandler(BaseHTTPRequestHandler):
     server_version = "CortexLiveClickerDemo/0.1"
 
     def do_GET(self) -> None:  # noqa: N802
+        if not self._request_is_loopback():
+            self._write_error(
+                "non_loopback_request",
+                HTTPStatus.FORBIDDEN,
+                "live clicker demo serves localhost requests only",
+            )
+            return
         path = urlparse(self.path).path
         if path == "/":
             path = "/index.html"
@@ -326,10 +405,11 @@ class LiveClickerDemoHandler(BaseHTTPRequestHandler):
             self.send_error(HTTPStatus.NOT_FOUND, "not found")
             return
         content_type = mimetypes.guess_type(static_path.name)[0] or "application/octet-stream"
-        data = static_path.read_bytes()
+        data = self._static_bytes(static_path)
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(data)))
+        self._write_security_headers()
         self.end_headers()
         self.wfile.write(data)
 
@@ -337,23 +417,35 @@ class LiveClickerDemoHandler(BaseHTTPRequestHandler):
         if urlparse(self.path).path != "/observe":
             self.send_error(HTTPStatus.NOT_FOUND, "not found")
             return
+        error = self._observation_request_error()
+        if error is not None:
+            code, status, message = error
+            self._session().record_rejection()
+            self._write_error(code, status, message)
+            return
         content_length = int(self.headers.get("Content-Length", "0") or "0")
         if content_length > 64 * 1024:
-            self._write_json({"error": "payload_too_large"}, status=HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
+            self._session().record_rejection()
+            self._write_error(
+                "payload_too_large",
+                HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+                "live clicker observation payload is too large",
+            )
             return
         try:
             payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
             if not isinstance(payload, dict):
                 raise ValueError("payload must be object")
             receipt = self._session().observe(payload)
+        except LiveClickerDemoRejected as error:
+            self._write_error(error.error, error.status, error.message)
+            return
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError, ValidationError) as error:
-            self._write_json(
-                {
-                    "error": "invalid_observation",
-                    "message": str(error),
-                    "policy_ref": LIVE_CLICKER_DEMO_POLICY_REF,
-                },
-                status=HTTPStatus.UNPROCESSABLE_ENTITY,
+            self._session().record_rejection()
+            self._write_error(
+                "invalid_observation",
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+                str(error),
             )
             return
         self._write_json(receipt.model_dump(mode="json"))
@@ -366,6 +458,60 @@ class LiveClickerDemoHandler(BaseHTTPRequestHandler):
             raise RuntimeError("live clicker demo server missing session")
         return self.server.session
 
+    def _static_bytes(self, static_path: Path) -> bytes:
+        text_suffixes = {".html", ".js", ".css"}
+        if static_path.suffix not in text_suffixes:
+            return static_path.read_bytes()
+        text = static_path.read_text(encoding="utf-8")
+        if static_path.name == "index.html":
+            text = text.replace(
+                LIVE_CLICKER_DEMO_TOKEN_PLACEHOLDER,
+                self._server().demo_token,
+            )
+        return text.encode("utf-8")
+
+    def _server(self) -> "LiveClickerDemoHTTPServer":
+        if not isinstance(self.server, LiveClickerDemoHTTPServer):
+            raise RuntimeError("live clicker demo server missing typed server")
+        return self.server
+
+    def _request_is_loopback(self) -> bool:
+        client_host = self.client_address[0] if self.client_address else ""
+        host_header = self.headers.get("Host", "")
+        return _is_loopback_host(client_host) and _is_loopback_host(_header_hostname(host_header))
+
+    def _observation_request_error(
+        self,
+    ) -> tuple[str, HTTPStatus, str] | None:
+        if not self._request_is_loopback():
+            return (
+                "non_loopback_request",
+                HTTPStatus.FORBIDDEN,
+                "live clicker demo accepts localhost requests only",
+            )
+        content_type = self.headers.get("Content-Type", "")
+        if content_type.split(";", 1)[0].strip().lower() != "application/json":
+            return (
+                "unsupported_content_type",
+                HTTPStatus.UNSUPPORTED_MEDIA_TYPE,
+                "live clicker observations must be application/json",
+            )
+        origin = self.headers.get("Origin")
+        if not origin or not _is_local_url(origin):
+            return (
+                "invalid_origin",
+                HTTPStatus.FORBIDDEN,
+                "live clicker observations require a localhost origin",
+            )
+        token = self.headers.get(LIVE_CLICKER_DEMO_TOKEN_HEADER, "")
+        if not secrets.compare_digest(token, self._server().demo_token):
+            return (
+                "invalid_demo_token",
+                HTTPStatus.FORBIDDEN,
+                "live clicker observation token is missing or invalid",
+            )
+        return None
+
     def _write_json(
         self,
         payload: Mapping[str, Any],
@@ -376,8 +522,23 @@ class LiveClickerDemoHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
+        self._write_security_headers()
         self.end_headers()
         self.wfile.write(data)
+
+    def _write_error(self, error: str, status: HTTPStatus, message: str) -> None:
+        self._write_json(
+            {
+                "error": error,
+                "message": message,
+                "policy_ref": LIVE_CLICKER_DEMO_POLICY_REF,
+            },
+            status=status,
+        )
+
+    def _write_security_headers(self) -> None:
+        for name, value in LIVE_CLICKER_SECURITY_HEADERS.items():
+            self.send_header(name, value)
 
 
 class LiveClickerDemoHTTPServer(ThreadingHTTPServer):
@@ -385,9 +546,11 @@ class LiveClickerDemoHTTPServer(ThreadingHTTPServer):
         self,
         server_address: tuple[str, int],
         session: LiveClickerDemoSession,
+        demo_token: str,
     ) -> None:
         super().__init__(server_address, LiveClickerDemoHandler)
         self.session = session
+        self.demo_token = demo_token
 
 
 @dataclass
@@ -415,14 +578,20 @@ def start_live_clicker_demo(
     *,
     host: str = DEFAULT_LIVE_CLICKER_HOST,
     port: int = DEFAULT_LIVE_CLICKER_PORT,
+    max_observations: int = LIVE_CLICKER_MAX_OBSERVATIONS,
 ) -> RunningLiveClickerDemo:
     if host not in {"127.0.0.1", "localhost", "::1"}:
         raise ValueError("live clicker demo must bind localhost")
     temp_dir = tempfile.TemporaryDirectory(prefix="cortex-live-clicker-demo-")
     session = LiveClickerDemoSession(
         db_path=Path(temp_dir.name) / "live-clicker-demo.sqlite3",
+        max_observations=max_observations,
     )
-    server = LiveClickerDemoHTTPServer((host, port), session)
+    server = LiveClickerDemoHTTPServer(
+        (host, port),
+        session,
+        demo_token=secrets.token_urlsafe(24),
+    )
     thread = threading.Thread(target=server.serve_forever, name="cortex-live-clicker-demo")
     thread.daemon = True
     thread.start()
@@ -474,6 +643,107 @@ def run_live_clicker_demo_smoke() -> LiveClickerDemoResult:
                 }
             )
         return session.result()
+
+
+def run_live_clicker_hardening_smoke() -> LiveClickerHardeningResult:
+    demo = start_live_clicker_demo(port=0, max_observations=1)
+    failures: list[str] = []
+    try:
+        index_status, index_headers, index_body = _http_demo_request(
+            demo.base_url,
+            "GET",
+            "/",
+        )
+        token = _extract_demo_token(index_body)
+        security_headers_present = (
+            index_status == HTTPStatus.OK
+            and index_headers.get("Cache-Control") == "no-store"
+            and "frame-ancestors 'none'" in index_headers.get("Content-Security-Policy", "")
+        )
+        payload = _demo_http_payload("Open research note", sequence=1)
+        missing_token_status, _, _ = _http_demo_request(
+            demo.base_url,
+            "POST",
+            "/observe",
+            body=json.dumps(payload),
+            headers={
+                "Content-Type": "application/json",
+                "Origin": demo.base_url,
+            },
+        )
+        wrong_origin_status, _, _ = _http_demo_request(
+            demo.base_url,
+            "POST",
+            "/observe",
+            body=json.dumps(payload),
+            headers={
+                "Content-Type": "application/json",
+                "Origin": "https://example.invalid",
+                LIVE_CLICKER_DEMO_TOKEN_HEADER: token,
+            },
+        )
+        wrong_type_status, _, _ = _http_demo_request(
+            demo.base_url,
+            "POST",
+            "/observe",
+            body=json.dumps(payload),
+            headers={
+                "Content-Type": "text/plain",
+                "Origin": demo.base_url,
+                LIVE_CLICKER_DEMO_TOKEN_HEADER: token,
+            },
+        )
+        valid_status, _, _ = _http_demo_request(
+            demo.base_url,
+            "POST",
+            "/observe",
+            body=json.dumps(payload),
+            headers={
+                "Content-Type": "application/json",
+                "Origin": demo.base_url,
+                LIVE_CLICKER_DEMO_TOKEN_HEADER: token,
+            },
+        )
+        cap_status, _, _ = _http_demo_request(
+            demo.base_url,
+            "POST",
+            "/observe",
+            body=json.dumps(_demo_http_payload("Compare source", sequence=2)),
+            headers={
+                "Content-Type": "application/json",
+                "Origin": demo.base_url,
+                LIVE_CLICKER_DEMO_TOKEN_HEADER: token,
+            },
+        )
+        result = demo.result()
+    finally:
+        demo.stop()
+
+    checks = {
+        "token_required": missing_token_status == HTTPStatus.FORBIDDEN,
+        "origin_enforced": wrong_origin_status == HTTPStatus.FORBIDDEN,
+        "content_type_enforced": wrong_type_status == HTTPStatus.UNSUPPORTED_MEDIA_TYPE,
+        "valid_observation_allowed": valid_status == HTTPStatus.OK,
+        "observation_cap_enforced": cap_status == HTTPStatus.TOO_MANY_REQUESTS,
+        "security_headers_present": security_headers_present,
+        "no_memory_written_for_rejected_requests": result.memory_write_count == 1,
+    }
+    failures.extend(name for name, passed in checks.items() if not passed)
+    return LiveClickerHardeningResult(
+        passed=not failures,
+        generated_at=datetime.now(UTC),
+        token_required=checks["token_required"],
+        origin_enforced=checks["origin_enforced"],
+        content_type_enforced=checks["content_type_enforced"],
+        observation_cap_enforced=checks["observation_cap_enforced"],
+        security_headers_present=checks["security_headers_present"],
+        no_memory_written_for_rejected_requests=checks[
+            "no_memory_written_for_rejected_requests"
+        ],
+        rejected_observation_count=result.rejected_observation_count,
+        memory_write_count=result.memory_write_count,
+        safety_failures=failures,
+    )
 
 
 def _build_envelope(
@@ -586,6 +856,16 @@ def _is_local_url(url: str) -> bool:
     return parsed.scheme == "http" and parsed.hostname in {"127.0.0.1", "localhost", "::1"}
 
 
+def _is_loopback_host(host: str | None) -> bool:
+    return host in {"127.0.0.1", "localhost", "::1"}
+
+
+def _header_hostname(value: str) -> str:
+    if not value:
+        return ""
+    return urlparse(f"//{value}").hostname or ""
+
+
 def _ensure_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=UTC)
@@ -601,11 +881,50 @@ def _ordered_policy_refs(*groups: list[str] | tuple[str, ...]) -> list[str]:
     return refs
 
 
+def _http_demo_request(
+    base_url: str,
+    method: str,
+    path: str,
+    *,
+    body: str | None = None,
+    headers: Mapping[str, str] | None = None,
+) -> tuple[int, dict[str, str], str]:
+    parsed = urlparse(base_url)
+    conn = http.client.HTTPConnection(parsed.hostname or "127.0.0.1", parsed.port or 80)
+    try:
+        conn.request(method, path, body=body, headers=dict(headers or {}))
+        response = conn.getresponse()
+        data = response.read().decode("utf-8")
+        return response.status, {key: value for key, value in response.getheaders()}, data
+    finally:
+        conn.close()
+
+
+def _extract_demo_token(html: str) -> str:
+    match = re.search(r'name="cortex-demo-token" content="([^"]+)"', html)
+    if not match:
+        raise ValueError("demo token missing from live clicker page")
+    return match.group(1)
+
+
+def _demo_http_payload(target_label: str, *, sequence: int) -> dict[str, Any]:
+    return {
+        "action": "click",
+        "target_label": target_label,
+        "pointer_x": 120,
+        "pointer_y": 240,
+        "page_url": "http://127.0.0.1:8795/",
+        "visible_text": f"{target_label}. safe local hardening smoke",
+        "sequence": sequence,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default=DEFAULT_LIVE_CLICKER_HOST)
     parser.add_argument("--port", default=DEFAULT_LIVE_CLICKER_PORT, type=int)
     parser.add_argument("--smoke", action="store_true")
+    parser.add_argument("--hardening-smoke", action="store_true")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
@@ -622,6 +941,19 @@ def main(argv: list[str] | None = None) -> int:
                 f"{result.memory_write_count} demo memories"
             )
         return 0 if result.passed else 1
+
+    if args.hardening_smoke:
+        hardening_result = run_live_clicker_hardening_smoke()
+        payload = hardening_result.model_dump(mode="json")
+        if args.json:
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            print(
+                "live clicker hardening "
+                f"{'passed' if hardening_result.passed else 'failed'}: "
+                f"{hardening_result.rejected_observation_count} rejected observations"
+            )
+        return 0 if hardening_result.passed else 1
 
     demo = start_live_clicker_demo(host=args.host, port=args.port)
     try:

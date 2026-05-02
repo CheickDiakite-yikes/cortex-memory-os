@@ -164,7 +164,9 @@ from cortex_memory_os.live_run_safe_task import (
 from cortex_memory_os.live_clicker_demo import (
     LIVE_CLICKER_DEMO_ID,
     LIVE_CLICKER_DEMO_POLICY_REF,
+    LIVE_CLICKER_HARDENING_ID,
     run_live_clicker_demo_smoke,
+    run_live_clicker_hardening_smoke,
 )
 from cortex_memory_os.synthetic_capture_ladder import (
     SYNTHETIC_CAPTURE_LADDER_ID,
@@ -556,6 +558,7 @@ def run_all() -> BenchmarkRunResult:
         case_dashboard_readonly_action_live_proof_contract,
         case_live_run_computer_safe_task_contract,
         case_live_clicker_demo_contract,
+        case_live_clicker_hardening_contract,
         case_synthetic_capture_ladder_contract,
         case_demo_readiness_contract,
         case_demo_stress_contract,
@@ -11876,6 +11879,7 @@ def case_live_clicker_demo_contract() -> BenchmarkCaseResult:
     required_ui_terms = [
         "shadow-clicker",
         'fetch("/observe"',
+        "X-Cortex-Demo-Token",
         "demo_candidate_memory_written",
         "Observation Receipts",
     ]
@@ -11926,6 +11930,65 @@ def case_live_clicker_demo_contract() -> BenchmarkCaseResult:
             "observed_memory_ids": result.observed_memory_ids,
             "missing_doc_terms": missing_doc_terms,
             "missing_ui_terms": missing_ui_terms,
+        },
+    )
+
+
+def case_live_clicker_hardening_contract() -> BenchmarkCaseResult:
+    result = run_live_clicker_hardening_smoke()
+    docs_text = (
+        (REPO_ROOT / "docs" / "architecture" / "live-clicker-demo.md").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(encoding="utf-8")
+        + "\n"
+        + (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+            encoding="utf-8"
+        )
+    )
+    required_doc_terms = [
+        LIVE_CLICKER_HARDENING_ID,
+        "per-session token",
+        "localhost origin",
+        "observation cap",
+        "unsupported content types",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        result.passed
+        and result.token_required
+        and result.origin_enforced
+        and result.content_type_enforced
+        and result.observation_cap_enforced
+        and result.security_headers_present
+        and result.no_memory_written_for_rejected_requests
+        and result.rejected_observation_count >= 4
+        and result.memory_write_count == 1
+        and not missing_doc_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="LIVE-CLICKER-HARDENING-001/request_boundary_hardening",
+        suite=LIVE_CLICKER_HARDENING_ID,
+        passed=passed,
+        summary=(
+            "Live Shadow Clicker HTTP boundary rejects missing tokens, wrong "
+            "origins, unsupported content types, and observation floods before "
+            "demo memory writes."
+        ),
+        metrics={
+            "rejected_observation_count": result.rejected_observation_count,
+            "memory_write_count": result.memory_write_count,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": LIVE_CLICKER_DEMO_POLICY_REF,
+            "token_required": result.token_required,
+            "origin_enforced": result.origin_enforced,
+            "content_type_enforced": result.content_type_enforced,
+            "observation_cap_enforced": result.observation_cap_enforced,
+            "security_headers_present": result.security_headers_present,
+            "missing_doc_terms": missing_doc_terms,
         },
     )
 

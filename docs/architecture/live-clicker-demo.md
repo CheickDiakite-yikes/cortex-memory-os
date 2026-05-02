@@ -70,6 +70,37 @@ than real screen capture. The next step toward arbitrary safe sites is a
 consented browser-extension path that emits the same receipt shape from an
 explicit allowlisted origin.
 
+## Known Gaps
+
+The live proof intentionally stops short of the final product:
+
+- the Shadow Clicker is a browser-page overlay, not the native macOS overlay;
+- observations are page-local synthetic events, not arbitrary screen capture;
+- candidate memories use a temp demo store, not durable private memory;
+- the safe site is localhost, not a user-approved allowlisted external origin;
+- the demo does not yet capture real Accessibility trees, screenshots, OCR, or
+  raw evidence refs.
+
+These gaps are product boundaries, not failures. The next live ladder should
+reuse the same receipt shape from an allowlisted browser-extension origin before
+moving to consented real screen capture.
+
+## Request Hardening
+
+`LIVE-CLICKER-HARDENING-001` closes the first demo-server gaps without widening
+capture:
+
+- `/observe` requires a per-session token injected into the served page;
+- `/observe` requires a localhost origin and loopback client/host;
+- `/observe` rejects unsupported content types before reading observation JSON;
+- the demo session enforces an observation cap to prevent floods;
+- rejected requests increment a redacted rejection count but do not create demo
+  memories;
+- rejected requests render as blocked in every status field so stale memory
+  results are not left visible after a failed write;
+- responses include no-store, nosniff, no-referrer, and restrictive
+  Content-Security-Policy headers.
+
 ## Verification
 
 Automated coverage:
@@ -95,3 +126,11 @@ receipt passed with 4 observations, 4 demo candidate memories, 4 retrieval
 hits, 4 context-pack hits, 0 raw refs, and 0 external effects. A regression
 test keeps target-specific retrieval visible after the session grows beyond the
 default result limit.
+
+2026-05-02 hardening proof: restarting the server invalidated the old page
+token, and the stale page received `invalid_demo_token` without a memory write.
+After reload, the same Computer Use click path passed with 4 valid observations,
+4 demo memories, 4 retrieval/context hits, 1 rejected stale-token request, 0 raw
+refs, and 0 external effects. Automated hardening smoke also rejects missing
+token, wrong origin, wrong content type, and over-cap observations before memory
+write.
