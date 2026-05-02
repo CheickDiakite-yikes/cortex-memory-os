@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cortex Live Clicker Demo</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="shadow-clicker" id="shadow-clicker" aria-hidden="true">
+      <span class="halo"></span>
+      <span class="dot"></span>
+      <span class="tag">Cortex observing</span>
+    </div>
+
+    <main class="demo-shell">
+      <section class="safe-site" aria-label="Disposable safe site">
+        <header>
+          <p class="eyebrow">Disposable Localhost Site</p>
+          <h1>Safe Research Task</h1>
+          <p>
+            Use this page to test visible pointer observation, redaction gates,
+            and demo memory receipts without visiting private pages.
+          </p>
+        </header>
+
+        <div class="task-board" aria-label="Safe task controls">
+          <button type="button" data-observe="Open research note">
+            <span>1</span>
+            Open research note
+          </button>
+          <button type="button" data-observe="Compare source">
+            <span>2</span>
+            Compare source
+          </button>
+          <label class="note-field">
+            <span>Capture task note</span>
+            <textarea
+              id="safe-note"
+              rows="4"
+              data-observe-input="Capture task note"
+            >compare primary sources before synthesis</textarea>
+          </label>
+          <button type="button" data-observe="Record conclusion">
+            <span>3</span>
+            Record conclusion
+          </button>
+        </div>
+      </section>
+
+      <aside class="cortex-panel" aria-label="Cortex live observations">
+        <header>
+          <p class="eyebrow">Cortex Shadow Clicker</p>
+          <h2>Live Observation Loop</h2>
+          <p id="pointer-readout">Move or click on the safe site.</p>
+        </header>
+
+        <section class="status-grid" aria-label="Current memory status">
+          <div>
+            <span>Observation</span>
+            <strong id="observation-state">waiting</strong>
+          </div>
+          <div>
+            <span>Firewall</span>
+            <strong id="firewall-state">not run</strong>
+          </div>
+          <div>
+            <span>Evidence</span>
+            <strong id="evidence-state">not written</strong>
+          </div>
+          <div>
+            <span>Memory</span>
+            <strong id="memory-state">none yet</strong>
+          </div>
+        </section>
+
+        <section class="result-card" aria-label="Memory system result">
+          <p class="eyebrow">Latest Memory System Result</p>
+          <h3 id="latest-target">No event yet</h3>
+          <dl>
+            <div>
+              <dt>Shadow state</dt>
+              <dd id="shadow-state">waiting</dd>
+            </div>
+            <div>
+              <dt>Retrieval</dt>
+              <dd id="retrieval-state">waiting</dd>
+            </div>
+            <div>
+              <dt>Context pack</dt>
+              <dd id="context-state">waiting</dd>
+            </div>
+            <div>
+              <dt>Raw refs</dt>
+              <dd id="raw-ref-state">none</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="event-log" aria-label="Observation receipts">
+          <p class="eyebrow">Observation Receipts</p>
+          <ol id="event-list"></ol>
+        </section>
+      </aside>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

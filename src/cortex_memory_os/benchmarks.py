@@ -161,6 +161,11 @@ from cortex_memory_os.live_run_safe_task import (
     build_sample_live_run_safe_task_observation,
     validate_live_run_safe_task,
 )
+from cortex_memory_os.live_clicker_demo import (
+    LIVE_CLICKER_DEMO_ID,
+    LIVE_CLICKER_DEMO_POLICY_REF,
+    run_live_clicker_demo_smoke,
+)
 from cortex_memory_os.synthetic_capture_ladder import (
     SYNTHETIC_CAPTURE_LADDER_ID,
     SYNTHETIC_CAPTURE_LADDER_POLICY_REF,
@@ -550,6 +555,7 @@ def run_all() -> BenchmarkRunResult:
         case_dashboard_ops_quality_panel_contract,
         case_dashboard_readonly_action_live_proof_contract,
         case_live_run_computer_safe_task_contract,
+        case_live_clicker_demo_contract,
         case_synthetic_capture_ladder_contract,
         case_demo_readiness_contract,
         case_demo_stress_contract,
@@ -11833,6 +11839,93 @@ def case_live_run_computer_safe_task_contract() -> BenchmarkCaseResult:
             "policy_ref": LIVE_RUN_COMPUTER_SAFE_TASK_POLICY_REF,
             "computer_use_task_observed": result.computer_use_task_observed,
             "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_live_clicker_demo_contract() -> BenchmarkCaseResult:
+    result = run_live_clicker_demo_smoke()
+    docs_text = (
+        (REPO_ROOT / "docs" / "architecture" / "live-clicker-demo.md").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(encoding="utf-8")
+    )
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(encoding="utf-8")
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    pyproject_text = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    ui_text = "\n".join(
+        (REPO_ROOT / "ui" / "live-clicker-demo" / name).read_text(encoding="utf-8")
+        for name in ("index.html", "app.js", "styles.css")
+    )
+    required_doc_terms = [
+        LIVE_CLICKER_DEMO_ID,
+        LIVE_CLICKER_DEMO_POLICY_REF,
+        "Cortex Shadow Clicker",
+        "Computer Use",
+        "candidate memories use the demo temp store",
+        "retrieval and context-pack hits",
+        "no raw screen capture",
+    ]
+    required_ui_terms = [
+        "shadow-clicker",
+        'fetch("/observe"',
+        "demo_candidate_memory_written",
+        "Observation Receipts",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    missing_ui_terms = _missing_terms(ui_text, required_ui_terms)
+    passed = (
+        result.passed
+        and result.local_origin_only
+        and result.shadow_clicker_followed
+        and result.observation_count >= 3
+        and result.memory_write_count >= 3
+        and result.retrieval_hit_count >= 3
+        and result.context_pack_hit_count >= 3
+        and result.raw_ref_retained_count == 0
+        and result.external_effect_count == 0
+        and not result.real_screen_capture_started
+        and not result.durable_private_memory_written
+        and result.demo_temp_store_used
+        and result.prohibited_marker_count == 0
+        and not missing_doc_terms
+        and not missing_ui_terms
+        and LIVE_CLICKER_DEMO_ID in task_text
+        and LIVE_CLICKER_DEMO_ID in registry_text
+        and LIVE_CLICKER_DEMO_ID in traceability_text
+        and "cortex-live-clicker-demo" in pyproject_text
+    )
+    return BenchmarkCaseResult(
+        case_id="LIVE-CLICKER-DEMO-001/visible_shadow_clicker_memory_loop",
+        suite=LIVE_CLICKER_DEMO_ID,
+        passed=passed,
+        summary=(
+            "Visible localhost Shadow Clicker demo turns Computer Use page actions "
+            "into observation receipts, demo candidate memories, retrieval hits, "
+            "and context-pack hits without raw capture or external effects."
+        ),
+        metrics={
+            "observation_count": result.observation_count,
+            "memory_write_count": result.memory_write_count,
+            "retrieval_hit_count": result.retrieval_hit_count,
+            "context_pack_hit_count": result.context_pack_hit_count,
+            "raw_ref_retained_count": result.raw_ref_retained_count,
+            "missing_doc_terms": len(missing_doc_terms),
+            "missing_ui_terms": len(missing_ui_terms),
+        },
+        evidence={
+            "policy_ref": LIVE_CLICKER_DEMO_POLICY_REF,
+            "latest_shadow_pointer_state": result.latest_shadow_pointer_state,
+            "observed_memory_ids": result.observed_memory_ids,
+            "missing_doc_terms": missing_doc_terms,
+            "missing_ui_terms": missing_ui_terms,
         },
     )
 

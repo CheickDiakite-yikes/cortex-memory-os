@@ -1,6 +1,6 @@
 # Debug Journal
 
-Last updated: 2026-05-01
+Last updated: 2026-05-02
 
 Use this file for failures that teach us something. Keep entries reproducible, concise, and privacy-aware.
 
@@ -21,6 +21,7 @@ Use this file for failures that teach us something. Keep entries reproducible, c
 | DBG-005 | 2026-04-29 | The native overlay proof initially used a direct `accessibilityLabel` assignment that this AppKit SDK did not accept for `NSPanel`. | Switched the panel setup to `setAccessibilityLabel("Cortex Shadow Pointer")`. | `swift build --package-path native/macos-shadow-pointer`; `swift test --package-path native/macos-shadow-pointer` -> 5 passed; `swift run --package-path native/macos-shadow-pointer cortex-shadow-pointer-smoke` -> `passed: true`. |
 | DBG-006 | 2026-04-30 | Swift 6 rejected direct access to Apple `kAXTrustedCheckOptionPrompt` as concurrency-unsafe while compiling the native permission smoke. | Imported ApplicationServices with `@preconcurrency` and kept the prompt option explicitly false. | `swift build --package-path native/macos-shadow-pointer`; `swift test --package-path native/macos-shadow-pointer` -> 7 passed; `swift run --package-path native/macos-shadow-pointer cortex-permission-smoke` -> `passed: true`. |
 | DBG-007 | 2026-05-01 | `MEMORY-PALACE-CHRONICLE-CONTROLS-001` initially failed because the benchmark required the exact `pause_observation` audit action in the architecture note and the note only described it in prose. | Added explicit Chronicle control audit action names to `docs/architecture/chronicle-hardening-slices.md`. | `uv run pytest tests/test_benchmarks.py` -> 2 passed; `uv run pytest` -> 356 passed; `uv run cortex-bench` -> 153/153 passed. |
+| DBG-008 | 2026-05-02 | The live clicker panel showed candidate memory writes but the newest clicks could show `no hit` once generic retrieval had more than five similar demo memories. | Retrieval/context proof now uses the observation action and target label, and a regression test covers seven same-session observations beyond the default result limit. | `uv run pytest tests/test_live_clicker_demo.py` -> 4 passed; Computer Use live proof showed `hit` for retrieval and context pack on the latest click. |
 
 ## Incident Template
 
