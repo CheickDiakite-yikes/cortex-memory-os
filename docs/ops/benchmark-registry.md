@@ -68,6 +68,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 
 | Date | Benchmark | Command / Method | Result | Evidence | Follow-up |
 | --- | --- | --- | --- | --- | --- |
+| 2026-05-02 | Dashboard navigation simplification | `uv run pytest`; `uv run cortex-bench --no-write`; Playwright localhost tab switching | 376 tests passed; 158/158 no-write benchmarks passed; real tabs switched visible sections | `cortex-dashboard-shell --smoke` reported `nav_view_switching_present: true`; browser verified Overview, Memory Palace, Skill Forge, Audit, and Policies views plus mobile no-overflow | Next: add a tiny command-center summary for whichever view is active, if the current view still feels too sparse. |
 | 2026-05-02 | Bounded live stress demo | `uv run cortex-demo-stress --iterations 12 --json`; `uv run pytest`; `uv run cortex-bench` | 12/12 stress iterations passed; 376 tests passed; 158/158 benchmarks passed | `benchmarks/runs/bench_20260502T010601Z.json`; Playwright clicked `cortex-demo-stress` on localhost and saw the `DEMO-STRESS-001` receipt | Next: turn this into a reusable demo script that starts/stops localhost and prints the short operator checklist. |
 | 2026-04-27 | Registry initialized | Manual documentation pass | Not runnable yet | This file | Add runnable harness after first implementation skeleton. |
 | 2026-04-27 | Architecture intake benchmark plan | Manual architecture pass | Not runnable yet | `docs/security/initial-threat-model.md`, `docs/product/build-roadmap.md` | Implement `BENCH-002` with synthetic fixtures. |

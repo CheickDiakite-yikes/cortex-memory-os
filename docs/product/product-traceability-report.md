@@ -108,11 +108,12 @@ User-facing pillars:
   the Real Memory Palace and Skill Forge UI shell using the safe dashboard view
   models, plus read-only dashboard gateway receipts, live gateway runtime
   explain calls, unsafe action blocklist, sanitized read-only action receipt
-  proof, and sanitized Computer Use browser proof.
+  proof, sanitized Computer Use browser proof, and real tab views that hide
+  unrelated panels so Memory Palace can be read as one focused queue.
 - Skill Forge: validated repeated-workflow detector, document-to-skill candidate
   derivation, candidate-list cards, success/failure metrics, maturity gates,
   dashboard metric cards, rollback, audits, and draft-only execution, plus the
-  shared dashboard shell.
+  shared dashboard shell with a focused Skill Forge tab view.
 - Agent Gateway: validated budgeted context packs, scoped actions, audit
   receipts, retrieval explanation receipts, review queues, draft skill
   execution, and repo-local Codex plugin packaging plus temporary cache-shaped

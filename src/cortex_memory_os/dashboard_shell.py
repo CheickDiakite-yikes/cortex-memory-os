@@ -245,6 +245,7 @@ class DashboardShellSmokeResult(StrictModel):
     procedure_text_retained: bool
     retrieval_source_refs_retained: bool
     demo_path_present: bool
+    nav_view_switching_present: bool
     missing_ui_terms: list[str] = Field(default_factory=list)
     missing_doc_terms: list[str] = Field(default_factory=list)
 
@@ -424,6 +425,9 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "DEMO-READINESS-001",
         "DEMO-STRESS-001",
         "cortex-demo-stress",
+        "data-view-section",
+        "applyActiveView",
+        "View updated locally",
         "window.CORTEX_DASHBOARD_DATA",
     ]
     missing_ui_terms = _missing_terms(ui_text + "\n" + data_js, required_ui_terms)
@@ -439,6 +443,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "safe view models",
         "no raw private memory",
         "local UI state",
+        "real tab views",
+        "simplified overview",
     ]
     missing_doc_terms = _missing_terms(doc_text, required_doc_terms)
     action_plans_present = any(
@@ -511,6 +517,13 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and "raw://" not in demo_path_payload
         and "encrypted_blob://" not in demo_path_payload
     )
+    nav_view_switching_present = (
+        "data-view-section" in ui_text
+        and "data-work-panel" in ui_text
+        and "applyActiveView" in ui_text
+        and "View updated locally" in ui_text
+        and "[hidden]" in ui_text
+    )
 
     passed = (
         ui_files_present
@@ -523,6 +536,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and encryption_default_visible
         and focus_inspector_present
         and demo_path_present
+        and nav_view_switching_present
         and gateway_actions_present
         and not secret_retained
         and not raw_private_data_retained
@@ -560,6 +574,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         procedure_text_retained=procedure_text_retained,
         retrieval_source_refs_retained=retrieval_source_refs_retained,
         demo_path_present=demo_path_present,
+        nav_view_switching_present=nav_view_switching_present,
         missing_ui_terms=missing_ui_terms,
         missing_doc_terms=missing_doc_terms,
     )

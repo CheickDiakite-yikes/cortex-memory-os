@@ -95,6 +95,7 @@ def test_dashboard_data_js_is_redacted_and_static_app_ready():
     assert "Safe Demo Path" in data_js
     assert "DEMO-READINESS-001" in data_js
     assert "cortex-demo-stress" in data_js
+    assert "data-view-section" not in data_js
     assert "Search primary sources" not in data_js
     assert "external:https://example.invalid/attack" not in data_js
 
@@ -114,6 +115,7 @@ def test_dashboard_shell_smoke_contract_passes():
     assert result.insight_panel_count >= 5
     assert result.focus_inspector_present is True
     assert result.demo_path_present is True
+    assert result.nav_view_switching_present is True
     assert result.encryption_default_visible is True
     assert result.gateway_action_receipt_count > 0
     assert result.gateway_actions_present is True

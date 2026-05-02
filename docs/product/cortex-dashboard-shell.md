@@ -33,6 +33,12 @@ compact Safe Demo Path rail so a local walkthrough can show the synthetic
 capture ladder, encrypted index, context pack, and safety off-switches without
 adding a distracting third queue.
 
+The 2026-05-02 navigation refinement makes the sidebar real tab views instead
+of a static highlight. The default screen is now a simplified overview showing
+only system status, the Safe Demo Path, and guardrail health. Memory Palace,
+Skill Forge, Agent Gateway, Audit, and Policies each reveal their own focused
+surface so the dashboard can be read one job at a time.
+
 ## Design Source
 
 The generated dashboard concept established the first visual direction:
@@ -46,6 +52,8 @@ The generated dashboard concept established the first visual direction:
 - compact guardrail summaries for Context Pack Health, Privacy Firewall,
   Evidence Vault, Encryption Default, and Ops Quality;
 - a Safe Demo Path rail for the localhost synthetic demo sequence;
+- real tab views for Overview, Memory Palace, Skill Forge, Agent Gateway,
+  Audit, and Policies;
 - bottom rail for Recent Safe Receipts;
 - restrained local-ops palette with green, blue, amber, and red status
   accents;
@@ -87,6 +95,8 @@ The static app in `ui/cortex-dashboard/` must render:
   refs, and procedure text redacted;
 - a Safe Demo Path for `DEMO-READINESS-001`, showing the dashboard, Synthetic
   capture ladder, encrypted index, and context pack steps;
+- real tab views that hide unrelated panels when the user moves between
+  Memory Palace, Skill Forge, Agent Gateway, Audit, and Policies;
 - local filter controls for both lists;
 - icon-first action controls that update local UI state;
 - Recent Safe Receipts with redacted targets.

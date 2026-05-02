@@ -33,9 +33,9 @@
       <main class="main-area">
         <header class="dashboard-header" aria-label="Dashboard summary">
           <div>
-            <p class="section-label">Dashboard</p>
-            <h1>Cortex Memory OS</h1>
-            <p>Live system overview and memory brain health.</p>
+            <p class="section-label" id="view-label">Overview</p>
+            <h1 id="view-title">Cortex Memory OS</h1>
+            <p id="view-copy">Live system overview and memory brain health.</p>
           </div>
           <div class="header-actions">
             <span class="system-pill" data-state="healthy">System healthy</span>
@@ -43,25 +43,42 @@
           </div>
         </header>
 
-        <header class="status-strip" id="status-strip" aria-label="Current Cortex status"></header>
+        <header
+          class="status-strip"
+          id="status-strip"
+          aria-label="Current Cortex status"
+          data-view-section="overview"
+        ></header>
 
-        <section class="demo-path-rail" aria-label="Safe Demo Path">
+        <section class="demo-path-rail" aria-label="Safe Demo Path" data-view-section="overview agent_gateway">
           <div id="demo-path" class="demo-path-inner"></div>
         </section>
 
-        <section class="insight-strip" aria-label="System guardrails">
+        <section class="insight-strip" aria-label="System guardrails" data-view-section="overview policies">
           <div class="rail-heading">
             <h2>System Guardrails</h2>
           </div>
           <div id="insight-list" class="insight-list"></div>
         </section>
 
-        <section class="focus-inspector" aria-label="Focus Inspector">
+        <section
+          class="focus-inspector"
+          aria-label="Focus Inspector"
+          data-view-section="memory_palace skill_forge"
+        >
           <div id="focus-inspector" class="focus-inspector-inner"></div>
         </section>
 
-        <section class="workspace-grid" aria-label="Dashboard work queues">
-          <article class="work-panel memory-panel" aria-labelledby="memory-heading">
+        <section
+          class="workspace-grid"
+          aria-label="Dashboard work queues"
+          data-view-section="memory_palace skill_forge"
+        >
+          <article
+            class="work-panel memory-panel"
+            aria-labelledby="memory-heading"
+            data-work-panel="memory_palace"
+          >
             <div class="panel-heading">
               <div>
                 <p class="section-label">Memory Palace</p>
@@ -73,7 +90,11 @@
             <div id="memory-list" class="card-list" aria-live="polite"></div>
           </article>
 
-          <article class="work-panel skill-panel" aria-labelledby="skill-heading">
+          <article
+            class="work-panel skill-panel"
+            aria-labelledby="skill-heading"
+            data-work-panel="skill_forge"
+          >
             <div class="panel-heading">
               <div>
                 <p class="section-label">Skill Forge</p>
@@ -86,7 +107,7 @@
           </article>
         </section>
 
-        <section class="audit-rail" aria-label="Recent Safe Receipts">
+        <section class="audit-rail" aria-label="Recent Safe Receipts" data-view-section="agent_gateway audit">
           <div class="rail-heading">
             <h2>Recent Safe Receipts</h2>
             <button class="text-command" type="button" id="receipt-filter">All Receipts</button>

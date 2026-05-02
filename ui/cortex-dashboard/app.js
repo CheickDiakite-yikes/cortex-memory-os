@@ -29,6 +29,39 @@ const gatewayReceiptByAction = new Map(
   (data.gateway_action_receipts || []).map((receipt) => [receipt.action_key, receipt]),
 );
 const skillMetricById = new Map((data.skill_metrics?.cards || []).map((card) => [card.skill_id, card]));
+const viewCopy = {
+  overview: {
+    label: "Overview",
+    title: "Cortex Memory OS",
+    copy: "System status, demo readiness, and guardrail health.",
+  },
+  memory_palace: {
+    label: "Memory Palace",
+    title: "Memory Review Queue",
+    copy: "Inspectable memories with correction, scope, and forget receipts.",
+  },
+  skill_forge: {
+    label: "Skill Forge",
+    title: "Candidate Workflows",
+    copy: "Draft-only skills, maturity signals, and blocked promotion paths.",
+  },
+  agent_gateway: {
+    label: "Agent Gateway",
+    title: "Gateway Receipts",
+    copy: "Read-only context and review calls stay separate from blocked effects.",
+  },
+  audit: {
+    label: "Audit",
+    title: "Safe Receipts",
+    copy: "Recent local receipts and blocked gateway previews.",
+  },
+  policies: {
+    label: "Policies",
+    title: "Guardrail State",
+    copy: "Privacy, evidence, encryption, and ops quality gates.",
+  },
+};
+let activeView = initialView();
 
 function svgIcon(name) {
   return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${icons[name] || icons.file}</svg>`;
@@ -59,12 +92,53 @@ function writeReceipt(message) {
   document.querySelector("#interaction-receipt").textContent = message;
 }
 
+function initialView() {
+  const hashView = window.location.hash.replace("#", "");
+  if (viewCopy[hashView]) return hashView;
+  const queryView = new URLSearchParams(window.location.search).get("view");
+  if (queryView && viewCopy[queryView]) return queryView;
+  return "overview";
+}
+
+function updateHeaderForView() {
+  const copy = viewCopy[activeView] || viewCopy.overview;
+  document.querySelector("#view-label").textContent = copy.label;
+  document.querySelector("#view-title").textContent = copy.title;
+  document.querySelector("#view-copy").textContent = copy.copy;
+}
+
+function applyActiveView() {
+  updateHeaderForView();
+  document.body.dataset.activeView = activeView;
+  document.querySelectorAll("[data-view-section]").forEach((section) => {
+    const views = section.dataset.viewSection.split(/\s+/);
+    section.hidden = !views.includes(activeView);
+  });
+  document.querySelectorAll("[data-work-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.workPanel !== activeView;
+  });
+  const workspace = document.querySelector(".workspace-grid");
+  if (workspace) {
+    workspace.classList.toggle("single-view", ["memory_palace", "skill_forge"].includes(activeView));
+  }
+}
+
+function setActiveView(view) {
+  activeView = viewCopy[view] ? view : "overview";
+  renderNav();
+  applyActiveView();
+  if (window.location.hash !== `#${activeView}`) {
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${activeView}`);
+  }
+  writeReceipt(`${viewCopy[activeView].label} selected. View updated locally; no gateway action executed.`);
+}
+
 function renderNav() {
   const nav = document.querySelector("#nav-list");
   nav.innerHTML = data.nav_items
     .map(
       (item) => `
-        <button class="nav-item ${item.active ? "active" : ""}" type="button" data-nav="${escapeHtml(item.item_id)}" title="${escapeHtml(item.label)}">
+        <button class="nav-item ${item.item_id === activeView ? "active" : ""}" type="button" data-nav="${escapeHtml(item.item_id)}" title="${escapeHtml(item.label)}">
           ${svgIcon(item.item_id)}
           <span class="label">${escapeHtml(item.label)}</span>
           ${Number.isInteger(item.count) ? `<span class="nav-count">${item.count}</span>` : ""}
@@ -75,9 +149,7 @@ function renderNav() {
 
   nav.querySelectorAll(".nav-item").forEach((button) => {
     button.addEventListener("click", () => {
-      nav.querySelectorAll(".nav-item").forEach((item) => item.classList.remove("active"));
-      button.classList.add("active");
-      writeReceipt(`${button.textContent.trim()} selected. No gateway action executed.`);
+      setActiveView(button.dataset.nav);
     });
   });
 }
@@ -580,4 +652,5 @@ if (!data) {
   renderFocusInspector();
   renderReceipts();
   renderDashboard();
+  applyActiveView();
 }
