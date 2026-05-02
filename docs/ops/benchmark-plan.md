@@ -21,6 +21,8 @@ uv run cortex-demo --json
 uv run cortex-demo-stress --iterations 12 --json
 uv run cortex-capture-control-server --smoke --json
 uv run cortex-native-cursor-follow --json
+uv run cortex-native-screen-capture-probe --json
+uv run cortex-real-capture-hardening --json
 ```
 
 Use `uv run cortex-bench --no-write` for quick local checks. Use
@@ -118,6 +120,16 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `REAL-CAPTURE-EPHEMERAL-RAW-REF-001` | Real capture raw refs start as ephemeral raw refs with short TTL. | Raw refs are durable by default or can directly produce memory writes. |
 | `REAL-CAPTURE-OBSERVATION-SAMPLER-001` | Observation sampler starts with count-only receipts and prompt-injection screening. | Sampler includes raw pixels, window titles, accessibility values, or unscreened content by default. |
 | `DASHBOARD-CAPTURE-CONTROL-001` | Dashboard shows Capture Control, Turn On Cortex, readiness, and the `cortex-shadow-clicker` command honestly. | Static dashboard claims to directly start native capture, returns raw payloads, executes mutation, or hides missing permission state. |
+| `CAPTURE-CONTROL-TOKEN-001` | Capture control API requires an ephemeral session token. | Missing-token API calls can start, stop, probe, or inspect capture state. |
+| `CAPTURE-CONTROL-ORIGIN-CSRF-001` | Capture control rejects remote clients and bad browser `Origin` headers. | Non-local clients or hostile origins can drive the bridge. |
+| `CAPTURE-CONTROL-LIFECYCLE-001` | Capture control exposes explicit start, status, stop, and receipt lifecycle state. | Lifecycle state is hidden, stale, or accepts arbitrary commands. |
+| `CAPTURE-CONTROL-PERMISSION-BRIDGE-001` | Local bridge exposes prompt-free Screen Recording and Accessibility readiness. | Permission checks prompt, capture, observe Accessibility, write memory, or store evidence. |
+| `NATIVE-SCREEN-CAPTURE-PROBE-001` | Native probe can capture at most one in-memory frame and return metadata only. | Probe runs without explicit allow flag, returns raw pixels, stores raw refs, or writes memory. |
+| `CAPTURE-CONTROL-SCREEN-PROBE-BRIDGE-001` | Tokenized `screen-probe` endpoint returns metadata-only real-capture probe receipts. | Bridge returns raw pixels/raw refs or lets screen probing bypass token/origin checks. |
+| `DASHBOARD-SCREEN-PROBE-001` | Dashboard exposes `Screen Probe` and token config wiring. | UI hides the probe result, bypasses token config, or implies broad continuous capture. |
+| `CAPTURE-CONTROL-RECEIPT-AUDIT-001` | Capture control exposes count-only, raw-payload-free receipt summary. | Receipt audit leaks payloads, pixels, raw refs, or memory content. |
+| `RAW-REF-SCAVENGER-001` | Raw ref scavenger deletes expired temp refs without reading payloads. | Expired temp refs persist, or cleanup reads payloads/enables memory writes. |
+| `REAL-CAPTURE-NEXT-GATE-001` | Next ScreenCaptureKit gate is tokenized, permission-gated, metadata-only, and still blocks continuous capture. | Continuous capture, raw pixel return, sensitive app capture, or durable memory writes become default. |
 | `AUDIT-001` | Memory mutations persist human-visible audits. | Mutation lacks a redacted audit event. |
 | `EXPORT-001` | User memory export is scoped, redacted, and deletion-aware. | Deleted/revoked content appears in export output. |
 | `EXPORT-AUDIT-001` | Memory exports persist redacted audit receipts. | Export audit copies memory content or secret-like text. |

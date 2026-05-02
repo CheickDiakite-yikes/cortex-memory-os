@@ -231,11 +231,14 @@ Clicker readiness, Screen Recording and Accessibility readiness, and the
 
 The dashboard does not claim that static HTML can launch a native process.
 When served by `uv run cortex-capture-control-server --port 8799`, the same
-button calls localhost-only fixed endpoints and starts only the display-only
-native Shadow Clicker. When opened as static `file://` HTML, the button emits a
-local receipt with the native command and permission state. The native Shadow
-Clicker follows the system cursor without clicks, typing, raw payloads, durable
-memory writes, arbitrary shell commands, or screen storage.
+button calls localhost-only fixed endpoints with `CAPTURE-CONTROL-TOKEN-001`
+and `CAPTURE-CONTROL-ORIGIN-CSRF-001` protections, then starts only the
+display-only native Shadow Clicker. `DASHBOARD-SCREEN-PROBE-001` adds a
+`Screen Probe` control that uses the tokenized `screen-probe` endpoint for
+metadata-only real capture receipts. When opened as static `file://` HTML, the
+button emits a local receipt with the native command and permission state. The
+native Shadow Clicker follows the system cursor without clicks, typing, raw
+payloads, durable memory writes, arbitrary shell commands, or screen storage.
 
 ## Live Desktop Proof
 

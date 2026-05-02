@@ -1,4 +1,5 @@
 const data = window.CORTEX_DASHBOARD_DATA;
+const captureControlConfig = window.CORTEX_CAPTURE_CONTROL || null;
 
 const icons = {
   overview: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10.5V21h14V10.5"/><path d="M9 21v-6h6v6"/>',
@@ -96,10 +97,26 @@ async function callCaptureControl(action, payload = {}) {
   if (window.location.protocol === "file:") {
     throw new Error("capture control bridge is not available from file://");
   }
-  const response = await fetch(`/api/capture/${action}`, {
-    method: action === "status" ? "GET" : "POST",
-    headers: action === "status" ? undefined : { "Content-Type": "application/json" },
-    body: action === "status" ? undefined : JSON.stringify(payload),
+  if (!captureControlConfig?.token) {
+    throw new Error("capture control token is unavailable");
+  }
+  const configKeys = {
+    status: "statusPath",
+    start: "startPath",
+    stop: "stopPath",
+    permissions: "permissionsPath",
+    screenProbe: "screenProbePath",
+    receipts: "receiptsPath",
+  };
+  const path = captureControlConfig[configKeys[action]] || `/api/capture/${action}`;
+  const readOnly = action === "status" || action === "permissions" || action === "receipts";
+  const response = await fetch(path, {
+    method: readOnly ? "GET" : "POST",
+    headers: {
+      "X-Cortex-Capture-Token": captureControlConfig.token,
+      ...(readOnly ? {} : { "Content-Type": "application/json" }),
+    },
+    body: readOnly ? undefined : JSON.stringify(payload),
   });
   const receipt = await response.json();
   if (!response.ok) {
@@ -356,6 +373,15 @@ function renderCaptureControl() {
       <button class="text-command" type="button" id="capture-shadow-command">
         cortex-shadow-clicker
       </button>
+      <button class="text-command" type="button" id="capture-permissions">
+        Check Permissions
+      </button>
+      <button class="text-command" type="button" id="capture-screen-probe">
+        Screen Probe
+      </button>
+      <button class="text-command" type="button" id="capture-receipts">
+        Receipts
+      </button>
       <button class="text-command" type="button" id="capture-stop">
         ${escapeHtml(panel.stop_button_label)}
       </button>
@@ -377,6 +403,39 @@ function renderCaptureControl() {
   document.querySelector("#capture-shadow-command").addEventListener("click", () => {
     writeReceipt(`Native Shadow Clicker command: ${panel.native_cursor_command}. It follows the system cursor without clicks, typing, screen capture, or memory writes.`);
   });
+  document.querySelector("#capture-permissions").addEventListener("click", async () => {
+    try {
+      const receipt = await callCaptureControl("permissions");
+      writeReceipt(
+        `Permissions: Screen Recording=${receipt.screen_recording_preflight}; Accessibility=${receipt.accessibility_trusted}; prompts=${receipt.prompt_requested}.`,
+      );
+    } catch (_error) {
+      writeReceipt(describeCaptureBridgeFallback(panel));
+    }
+  });
+  document.querySelector("#capture-screen-probe").addEventListener("click", async () => {
+    try {
+      const receipt = await callCaptureControl("screenProbe", { allow_real_capture: true });
+      const dimensions = receipt.frame_captured
+        ? `${receipt.frame_width}x${receipt.frame_height}`
+        : "not captured";
+      writeReceipt(
+        `Screen Probe: attempted=${receipt.capture_attempted}; frame=${dimensions}; raw pixels=${receipt.raw_pixels_returned}; raw refs=${receipt.raw_ref_retained}; memory writes=${receipt.memory_write_allowed}.`,
+      );
+    } catch (_error) {
+      writeReceipt(describeCaptureBridgeFallback(panel));
+    }
+  });
+  document.querySelector("#capture-receipts").addEventListener("click", async () => {
+    try {
+      const receipt = await callCaptureControl("receipts");
+      writeReceipt(
+        `Receipts: ${receipt.receipt_count} local events; starts=${receipt.start_count}; stops=${receipt.stop_count}; screen probes=${receipt.screen_probe_count}; raw refs=${receipt.raw_ref_retained}; memory writes=${receipt.memory_write_allowed}.`,
+      );
+    } catch (_error) {
+      writeReceipt(describeCaptureBridgeFallback(panel));
+    }
+  });
   document.querySelector("#capture-stop").addEventListener("click", async () => {
     try {
       const receipt = await callCaptureControl("stop");
@@ -392,6 +451,7 @@ async function refreshCaptureRuntimeStatus(panel) {
   try {
     const receipt = await callCaptureControl("status");
     updateCaptureRuntime(receipt);
+    window.setTimeout(() => refreshCaptureRuntimeStatus(panel), 3000);
   } catch (_error) {
     const status = document.querySelector("#capture-runtime-status");
     const pid = document.querySelector("#capture-runtime-pid");

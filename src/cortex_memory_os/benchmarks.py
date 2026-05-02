@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import tempfile
 import time
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
@@ -497,6 +498,15 @@ from cortex_memory_os.native_cursor_follow import (
     NATIVE_CURSOR_FOLLOW_POLICY_REF,
     build_fixture_native_cursor_follow_smoke_result,
 )
+from cortex_memory_os.native_screen_capture_probe import (
+    NATIVE_SCREEN_CAPTURE_PROBE_ID,
+    NATIVE_SCREEN_CAPTURE_PROBE_POLICY_REF,
+    build_fixture_native_screen_capture_probe_result,
+)
+from cortex_memory_os.capture_control_server import (
+    CAPTURE_CONTROL_SERVER_POLICY_REF,
+    run_capture_control_server_smoke,
+)
 from cortex_memory_os.real_capture_control import (
     DASHBOARD_CAPTURE_CONTROL_ID,
     DASHBOARD_CAPTURE_CONTROL_POLICY_REF,
@@ -517,6 +527,14 @@ from cortex_memory_os.real_capture_control import (
     REAL_CAPTURE_STOP_RECEIPT_ID,
     REAL_CAPTURE_STOP_RECEIPT_POLICY_REF,
     build_real_capture_control_bundle,
+)
+from cortex_memory_os.real_capture_hardening import (
+    RAW_REF_SCAVENGER_ID,
+    RAW_REF_SCAVENGER_POLICY_REF,
+    REAL_CAPTURE_NEXT_GATE_ID,
+    REAL_CAPTURE_NEXT_GATE_POLICY_REF,
+    build_real_capture_next_gate_plan,
+    run_raw_ref_scavenger,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -691,6 +709,16 @@ def run_all() -> BenchmarkRunResult:
         case_real_capture_ephemeral_raw_ref_contract,
         case_real_capture_observation_sampler_contract,
         case_dashboard_capture_control_contract,
+        case_capture_control_token_contract,
+        case_capture_control_origin_csrf_contract,
+        case_capture_control_lifecycle_contract,
+        case_capture_permission_bridge_contract,
+        case_native_screen_capture_probe_contract,
+        case_capture_control_screen_probe_bridge_contract,
+        case_dashboard_screen_probe_contract,
+        case_capture_control_receipt_audit_contract,
+        case_raw_ref_scavenger_contract,
+        case_real_capture_next_gate_contract,
         case_skill_promotion_gate,
         case_skill_rollback_gate,
         case_skill_maturity_audit_events,
@@ -13537,6 +13565,320 @@ def case_dashboard_capture_control_contract() -> BenchmarkCaseResult:
         ),
         metrics={"missing_doc_terms": len(missing_terms)},
         evidence={"policy_ref": DASHBOARD_CAPTURE_CONTROL_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_capture_control_token_contract() -> BenchmarkCaseResult:
+    smoke = run_capture_control_server_smoke()
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        ["CAPTURE-CONTROL-TOKEN-001", CAPTURE_CONTROL_SERVER_POLICY_REF, "session token"],
+    )
+    passed = (
+        smoke.passed
+        and smoke.token_required
+        and smoke.config_status_code == 200
+        and smoke.missing_token_rejected_status_code == 403
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="CAPTURE-CONTROL-TOKEN-001/local_session_token",
+        suite="CAPTURE-CONTROL-TOKEN-001",
+        passed=passed,
+        summary="Local capture control requires an ephemeral session token for API calls.",
+        metrics={
+            "config_status_code": smoke.config_status_code,
+            "missing_token_status_code": smoke.missing_token_rejected_status_code,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={"policy_ref": CAPTURE_CONTROL_SERVER_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_capture_control_origin_csrf_contract() -> BenchmarkCaseResult:
+    smoke = run_capture_control_server_smoke()
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        ["CAPTURE-CONTROL-ORIGIN-CSRF-001", "Origin", "localhost-only"],
+    )
+    passed = (
+        smoke.passed
+        and smoke.remote_rejected_status_code == 403
+        and smoke.bad_origin_rejected_status_code == 403
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="CAPTURE-CONTROL-ORIGIN-CSRF-001/local_origin_boundary",
+        suite="CAPTURE-CONTROL-ORIGIN-CSRF-001",
+        passed=passed,
+        summary="Capture control rejects remote clients and bad browser origins.",
+        metrics={
+            "remote_status_code": smoke.remote_rejected_status_code,
+            "bad_origin_status_code": smoke.bad_origin_rejected_status_code,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={"policy_ref": CAPTURE_CONTROL_SERVER_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_capture_control_lifecycle_contract() -> BenchmarkCaseResult:
+    smoke = run_capture_control_server_smoke()
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        ["CAPTURE-CONTROL-LIFECYCLE-001", "start", "stop", "status"],
+    )
+    passed = (
+        smoke.passed
+        and smoke.start_receipt.running
+        and smoke.stop_receipt.state == "stopped"
+        and smoke.receipt_summary.start_count == 1
+        and smoke.receipt_summary.stop_count == 1
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="CAPTURE-CONTROL-LIFECYCLE-001/start_status_stop",
+        suite="CAPTURE-CONTROL-LIFECYCLE-001",
+        passed=passed,
+        summary="Capture control exposes start, status, stop, and receipt lifecycle state.",
+        metrics={
+            "start_count": smoke.receipt_summary.start_count,
+            "stop_count": smoke.receipt_summary.stop_count,
+            "receipt_count": smoke.receipt_summary.receipt_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={"policy_ref": CAPTURE_CONTROL_SERVER_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_capture_permission_bridge_contract() -> BenchmarkCaseResult:
+    smoke = run_capture_control_server_smoke()
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        ["CAPTURE-CONTROL-PERMISSION-BRIDGE-001", "permissions", "prompt-free"],
+    )
+    receipt = smoke.permission_receipt
+    passed = (
+        smoke.passed
+        and smoke.permission_status_code == 200
+        and receipt.passed
+        and not receipt.prompt_requested
+        and not receipt.capture_started
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="CAPTURE-CONTROL-PERMISSION-BRIDGE-001/prompt_free_status",
+        suite="CAPTURE-CONTROL-PERMISSION-BRIDGE-001",
+        passed=passed,
+        summary="Local bridge exposes prompt-free Screen Recording and Accessibility status.",
+        metrics={
+            "permission_status_code": smoke.permission_status_code,
+            "prompt_requested": int(receipt.prompt_requested),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={"policy_ref": CAPTURE_CONTROL_SERVER_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_native_screen_capture_probe_contract() -> BenchmarkCaseResult:
+    skipped = build_fixture_native_screen_capture_probe_result(
+        allow_real_capture=False,
+        screen_recording_preflight=True,
+        checked_at=datetime(2026, 5, 2, 19, 0, tzinfo=UTC),
+    )
+    captured = build_fixture_native_screen_capture_probe_result(
+        allow_real_capture=True,
+        screen_recording_preflight=True,
+        checked_at=datetime(2026, 5, 2, 19, 0, tzinfo=UTC),
+    )
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [NATIVE_SCREEN_CAPTURE_PROBE_ID, NATIVE_SCREEN_CAPTURE_PROBE_POLICY_REF, "metadata only"],
+    )
+    passed = (
+        skipped.passed
+        and not skipped.capture_attempted
+        and captured.capture_attempted
+        and captured.frame_captured
+        and not captured.raw_pixels_returned
+        and not captured.raw_ref_retained
+        and not captured.memory_write_allowed
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="NATIVE-SCREEN-CAPTURE-PROBE-001/metadata_only_frame",
+        suite=NATIVE_SCREEN_CAPTURE_PROBE_ID,
+        passed=passed,
+        summary="Native screen probe can capture one in-memory frame metadata receipt only.",
+        metrics={
+            "capture_attempted": int(captured.capture_attempted),
+            "frame_captured": int(captured.frame_captured),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={"policy_ref": NATIVE_SCREEN_CAPTURE_PROBE_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_capture_control_screen_probe_bridge_contract() -> BenchmarkCaseResult:
+    smoke = run_capture_control_server_smoke()
+    receipt = smoke.screen_probe_receipt
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        ["CAPTURE-CONTROL-SCREEN-PROBE-BRIDGE-001", "screen-probe", "metadata-only"],
+    )
+    passed = (
+        smoke.passed
+        and smoke.screen_probe_status_code == 200
+        and receipt.passed
+        and receipt.allow_real_capture
+        and receipt.capture_attempted
+        and receipt.frame_captured
+        and not receipt.raw_pixels_returned
+        and not receipt.raw_ref_retained
+        and not receipt.memory_write_allowed
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="CAPTURE-CONTROL-SCREEN-PROBE-BRIDGE-001/tokenized_probe",
+        suite="CAPTURE-CONTROL-SCREEN-PROBE-BRIDGE-001",
+        passed=passed,
+        summary="Local bridge exposes a tokenized screen-probe endpoint with metadata-only output.",
+        metrics={
+            "screen_probe_status_code": smoke.screen_probe_status_code,
+            "frame_captured": int(receipt.frame_captured),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={"policy_ref": CAPTURE_CONTROL_SERVER_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_dashboard_screen_probe_contract() -> BenchmarkCaseResult:
+    app_js = (REPO_ROOT / "ui" / "cortex-dashboard" / "app.js").read_text(encoding="utf-8")
+    index_html = (REPO_ROOT / "ui" / "cortex-dashboard" / "index.html").read_text(encoding="utf-8")
+    missing_terms = _missing_terms(
+        _real_capture_docs_text() + app_js + index_html,
+        ["DASHBOARD-SCREEN-PROBE-001", "Screen Probe", "capture-control-config.js"],
+    )
+    passed = (
+        "capture-screen-probe" in app_js
+        and "allow_real_capture" in app_js
+        and "capture-control-config.js" in index_html
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="DASHBOARD-SCREEN-PROBE-001/button_to_probe",
+        suite="DASHBOARD-SCREEN-PROBE-001",
+        passed=passed,
+        summary="Dashboard exposes a Screen Probe button wired to the tokenized local bridge.",
+        metrics={"missing_doc_terms": len(missing_terms)},
+        evidence={"policy_ref": CAPTURE_CONTROL_SERVER_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_capture_control_receipt_audit_contract() -> BenchmarkCaseResult:
+    smoke = run_capture_control_server_smoke()
+    summary = smoke.receipt_summary
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        ["CAPTURE-CONTROL-RECEIPT-AUDIT-001", "receipt summary", "raw-payload-free"],
+    )
+    passed = (
+        smoke.passed
+        and summary.receipt_count >= 4
+        and summary.permission_check_count == 1
+        and summary.screen_probe_count == 1
+        and not summary.raw_payloads_included
+        and not summary.raw_pixels_returned
+        and not summary.raw_ref_retained
+        and not summary.memory_write_allowed
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="CAPTURE-CONTROL-RECEIPT-AUDIT-001/count_only_receipts",
+        suite="CAPTURE-CONTROL-RECEIPT-AUDIT-001",
+        passed=passed,
+        summary="Capture control keeps a count-only receipt audit for bridge actions.",
+        metrics={
+            "receipt_count": summary.receipt_count,
+            "screen_probe_count": summary.screen_probe_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={"policy_ref": CAPTURE_CONTROL_SERVER_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_raw_ref_scavenger_contract() -> BenchmarkCaseResult:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        now = datetime(2026, 5, 2, 19, 0, tzinfo=UTC)
+        expired = root / "expired.raw"
+        retained = root / "retained.raw"
+        expired.write_text("expired synthetic payload", encoding="utf-8")
+        retained.write_text("fresh synthetic payload", encoding="utf-8")
+        old_ts = (now - timedelta(seconds=900)).timestamp()
+        fresh_ts = (now - timedelta(seconds=30)).timestamp()
+        os.utime(expired, (old_ts, old_ts))
+        os.utime(retained, (fresh_ts, fresh_ts))
+        receipt = run_raw_ref_scavenger(temp_root=root, now=now, ttl_seconds=600)
+        expired_deleted = not expired.exists()
+        retained_exists = retained.exists()
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [RAW_REF_SCAVENGER_ID, RAW_REF_SCAVENGER_POLICY_REF, "raw ref scavenger"],
+    )
+    passed = (
+        receipt.passed
+        and expired_deleted
+        and retained_exists
+        and receipt.deleted_count == 1
+        and receipt.retained_count == 1
+        and not receipt.raw_payloads_read
+        and not receipt.memory_write_allowed
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="RAW-REF-SCAVENGER-001/temp_cleanup",
+        suite=RAW_REF_SCAVENGER_ID,
+        passed=passed,
+        summary="Raw ref scavenger deletes expired temp files without reading payloads.",
+        metrics={
+            "deleted_count": receipt.deleted_count,
+            "retained_count": receipt.retained_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={"policy_ref": RAW_REF_SCAVENGER_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_real_capture_next_gate_contract() -> BenchmarkCaseResult:
+    plan = build_real_capture_next_gate_plan()
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [REAL_CAPTURE_NEXT_GATE_ID, REAL_CAPTURE_NEXT_GATE_POLICY_REF, "ScreenCaptureKit"],
+    )
+    passed = (
+        plan.passed
+        and "session_token_required" in plan.prerequisites
+        and "screen_recording_preflight_required" in plan.prerequisites
+        and "capture_one_frame_in_memory" in plan.allowed_effects
+        and "continuous_capture" in plan.blocked_effects
+        and "raw_pixel_return" in plan.blocked_effects
+        and "durable_memory_write" in plan.blocked_effects
+        and not plan.continuous_capture_allowed
+        and not plan.raw_pixel_return_allowed
+        and not plan.durable_memory_writes_allowed
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="REAL-CAPTURE-NEXT-GATE-001/screencapturekit_gate",
+        suite=REAL_CAPTURE_NEXT_GATE_ID,
+        passed=passed,
+        summary="Next ScreenCaptureKit gate remains tokenized, permission-gated, and metadata-only.",
+        metrics={
+            "prerequisite_count": len(plan.prerequisites),
+            "blocked_effect_count": len(plan.blocked_effects),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={"policy_ref": REAL_CAPTURE_NEXT_GATE_POLICY_REF, "missing_doc_terms": missing_terms},
     )
 
 

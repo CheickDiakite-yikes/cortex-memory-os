@@ -24,6 +24,10 @@ let package = Package(
             name: "cortex-shadow-clicker",
             targets: ["CortexShadowClicker"]
         ),
+        .executable(
+            name: "cortex-screen-capture-probe",
+            targets: ["CortexScreenCaptureProbe"]
+        ),
     ],
     targets: [
         .target(
@@ -39,6 +43,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "CortexShadowClicker",
+            dependencies: ["CortexShadowPointerNative"]
+        ),
+        .executableTarget(
+            name: "CortexScreenCaptureProbe",
             dependencies: ["CortexShadowPointerNative"]
         ),
         .testTarget(

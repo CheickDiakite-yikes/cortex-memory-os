@@ -151,4 +151,51 @@ final class ShadowPointerNativeTests: XCTestCase {
         XCTAssertTrue(result.externalEffects.isEmpty)
         XCTAssertTrue(result.overlaySpec.ignoresMouseEventsByDefault)
     }
+
+    func testScreenCaptureProbeDoesNotCaptureWithoutExplicitFlag() {
+        let result = NativeScreenCaptureProbeResult.run(
+            allowRealCapture: false,
+            probe: NativeCapturePermissionProbe(
+                screenRecordingPreflight: true,
+                accessibilityTrusted: false,
+                promptRequested: false
+            ),
+            checkedAt: Date(timeIntervalSince1970: 0),
+            frameProvider: { NativeScreenFrameMetadata(width: 1440, height: 900) }
+        )
+
+        XCTAssertTrue(result.passed)
+        XCTAssertEqual(result.benchmarkID, nativeScreenCaptureProbeBenchmarkID)
+        XCTAssertFalse(result.captureAttempted)
+        XCTAssertFalse(result.frameCaptured)
+        XCTAssertFalse(result.rawPixelsReturned)
+        XCTAssertFalse(result.rawRefRetained)
+        XCTAssertFalse(result.memoryWriteAllowed)
+        XCTAssertTrue(result.evidenceRefs.isEmpty)
+        XCTAssertEqual(result.allowedEffects, ["read_permission_status"])
+    }
+
+    func testScreenCaptureProbeCapturesMetadataOnlyWhenExplicitlyAllowed() {
+        let result = NativeScreenCaptureProbeResult.run(
+            allowRealCapture: true,
+            probe: NativeCapturePermissionProbe(
+                screenRecordingPreflight: true,
+                accessibilityTrusted: false,
+                promptRequested: false
+            ),
+            checkedAt: Date(timeIntervalSince1970: 0),
+            frameProvider: { NativeScreenFrameMetadata(width: 1440, height: 900) }
+        )
+
+        XCTAssertTrue(result.passed)
+        XCTAssertTrue(result.captureAttempted)
+        XCTAssertTrue(result.frameCaptured)
+        XCTAssertEqual(result.frameWidth, 1440)
+        XCTAssertEqual(result.frameHeight, 900)
+        XCTAssertFalse(result.rawPixelsReturned)
+        XCTAssertFalse(result.rawRefRetained)
+        XCTAssertFalse(result.memoryWriteAllowed)
+        XCTAssertTrue(result.blockedEffects.contains("return_raw_pixels"))
+        XCTAssertTrue(result.blockedEffects.contains("store_raw_evidence"))
+    }
 }

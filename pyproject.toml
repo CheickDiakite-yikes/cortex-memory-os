@@ -37,6 +37,8 @@ cortex-native-overlay-stream-smoke = "cortex_memory_os.native_overlay_stream_smo
 cortex-native-cursor-follow = "cortex_memory_os.native_cursor_follow:main"
 cortex-real-capture-control = "cortex_memory_os.real_capture_control:main"
 cortex-capture-control-server = "cortex_memory_os.capture_control_server:main"
+cortex-native-screen-capture-probe = "cortex_memory_os.native_screen_capture_probe:main"
+cortex-real-capture-hardening = "cortex_memory_os.real_capture_hardening:main"
 
 [build-system]
 requires = ["setuptools>=69"]

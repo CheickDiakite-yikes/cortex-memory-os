@@ -12,7 +12,7 @@ Click Turn On Cortex
 -> only then consider screen/accessibility capture
 ```
 
-The implementation is intentionally split into ten governed slices:
+The first implementation was intentionally split into ten governed slices:
 
 | ID | Policy | Purpose | Boundary |
 | --- | --- | --- | --- |
@@ -26,6 +26,21 @@ The implementation is intentionally split into ten governed slices:
 | `REAL-CAPTURE-OBSERVATION-SAMPLER-001` | `policy_real_capture_observation_sampler_v1` | Starts sampling as count-only receipts. | No raw pixels, private accessibility values, or window titles by default. |
 | `NATIVE-CURSOR-FOLLOW-001` | `policy_native_cursor_follow_v1` | Adds `cortex-shadow-clicker`, a native Shadow Clicker overlay that can follow the global cursor. | Uses `read_global_cursor_position`; display-only; no screen capture, Accessibility observer, click, type, export, raw ref, or memory write. |
 | `DASHBOARD-CAPTURE-CONTROL-001` | `policy_dashboard_capture_control_v1` | Exposes Capture Control and Turn On Cortex state in the dashboard. | Static dashboard HTML does not claim to launch native processes directly; when served by the localhost bridge it can call fixed start/status/stop endpoints for the display-only overlay. |
+
+The next ten slices harden the bridge and add the first metadata-only real screen probe:
+
+| ID | Policy | Purpose | Boundary |
+| --- | --- | --- | --- |
+| `CAPTURE-CONTROL-TOKEN-001` | `policy_capture_control_local_bridge_v1` | Serves an ephemeral session token to the dashboard. | API calls without the token are rejected. |
+| `CAPTURE-CONTROL-ORIGIN-CSRF-001` | `policy_capture_control_local_bridge_v1` | Enforces localhost-only client and `Origin` checks. | Remote clients and hostile origins are rejected. |
+| `CAPTURE-CONTROL-LIFECYCLE-001` | `policy_capture_control_local_bridge_v1` | Tracks `start`, `status`, and `stop` receipts. | No arbitrary command or shell text is accepted. |
+| `CAPTURE-CONTROL-PERMISSION-BRIDGE-001` | `policy_capture_control_local_bridge_v1` | Exposes prompt-free permission status through `/api/capture/permissions`. | It does not request permissions or start capture. |
+| `NATIVE-SCREEN-CAPTURE-PROBE-001` | `policy_native_screen_capture_probe_v1` | Adds `cortex-screen-capture-probe` for one metadata-only in-memory frame. | Requires `--allow-real-capture`; returns dimensions only, never raw pixels. |
+| `CAPTURE-CONTROL-SCREEN-PROBE-BRIDGE-001` | `policy_capture_control_local_bridge_v1` | Exposes tokenized `/api/capture/screen-probe`. | `screen-probe` is metadata-only and raw-payload-free. |
+| `DASHBOARD-SCREEN-PROBE-001` | `policy_capture_control_local_bridge_v1` | Adds the dashboard `Screen Probe` button and `capture-control-config.js` token bridge. | The button shows metadata receipts only. |
+| `CAPTURE-CONTROL-RECEIPT-AUDIT-001` | `policy_capture_control_local_bridge_v1` | Exposes a count-only receipt summary. | The receipt summary is raw-payload-free. |
+| `RAW-REF-SCAVENGER-001` | `policy_raw_ref_scavenger_v1` | Deletes expired temp raw refs without reading payloads. | No durable storage or memory writes are enabled. |
+| `REAL-CAPTURE-NEXT-GATE-001` | `policy_real_capture_next_gate_v1` | Defines the next ScreenCaptureKit gate. | Continuous capture, raw pixel return, and durable memory writes stay blocked. |
 
 ## Native Shadow Clicker
 
@@ -53,6 +68,24 @@ uv run cortex-capture-control-server --port 8799
 
 Open `http://127.0.0.1:8799/index.html`, then click `Turn On Cortex`. The bridge accepts only localhost requests and only launches the fixed `cortex-shadow-clicker` command; it does not run arbitrary shell text, start screen capture, write memory, or retain raw refs.
 
+## Native Screen Probe
+
+`cortex-screen-capture-probe` is the first real-capture-adjacent executable.
+
+Preflight-only smoke:
+
+```bash
+swift run --package-path native/macos-shadow-pointer cortex-screen-capture-probe --json
+```
+
+Explicit metadata-only probe:
+
+```bash
+swift run --package-path native/macos-shadow-pointer cortex-screen-capture-probe --allow-real-capture --json
+```
+
+The probe uses `CGPreflightScreenCaptureAccess` first. If Screen Recording is not preflight-ready, it returns a skipped receipt. If it is ready and `--allow-real-capture` is present, it may capture one frame in memory and return dimensions only. It never returns raw pixels, writes memory, stores raw refs, starts continuous capture, or reads Accessibility values.
+
 ## Default Safety State
 
 Real capture now has a stronger path, but defaults stay conservative:
@@ -63,4 +96,4 @@ Real capture now has a stronger path, but defaults stay conservative:
 - `REAL-CAPTURE-EPHEMERAL-RAW-REF-001` keeps raw refs temporary.
 - `REAL-CAPTURE-OBSERVATION-SAMPLER-001` begins with count-only receipts and prompt-injection screening.
 
-The next step after this is a session-token challenge around the localhost controller and then, only later, ScreenCaptureKit under the same receipt/audit boundary.
+The next step after this is ScreenCaptureKit under the same tokenized receipt/audit boundary, still starting with metadata-only checks before any raw evidence or durable memory path.

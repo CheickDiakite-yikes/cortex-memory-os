@@ -15,6 +15,8 @@ public let nativeCapturePermissionSmokeBenchmarkID = "NATIVE-CAPTURE-PERMISSION-
 public let nativeCapturePermissionSmokePolicyRef = "policy_native_capture_permission_smoke_v1"
 public let nativeCursorFollowBenchmarkID = "NATIVE-CURSOR-FOLLOW-001"
 public let nativeCursorFollowPolicyRef = "policy_native_cursor_follow_v1"
+public let nativeScreenCaptureProbeBenchmarkID = "NATIVE-SCREEN-CAPTURE-PROBE-001"
+public let nativeScreenCaptureProbePolicyRef = "policy_native_screen_capture_probe_v1"
 
 public enum ShadowPointerNativeState: String, Codable, CaseIterable, Sendable {
     case off
@@ -515,6 +517,103 @@ public struct NativeCursorFollowConfig: Codable, Equatable, Sendable {
             throw ShadowPointerNativeError.invalidControl("native cursor follow missing blocked effects")
         }
         return self
+    }
+}
+
+public struct NativeScreenFrameMetadata: Codable, Equatable, Sendable {
+    public var width: Int
+    public var height: Int
+
+    public init(width: Int, height: Int) {
+        self.width = width
+        self.height = height
+    }
+}
+
+public struct NativeScreenCaptureProbeResult: Codable, Equatable, Sendable {
+    public var benchmarkID: String
+    public var policyRef: String
+    public var checkedAt: Date
+    public var allowRealCapture: Bool
+    public var screenRecordingPreflight: Bool
+    public var promptRequested: Bool
+    public var captureAttempted: Bool
+    public var frameCaptured: Bool
+    public var frameWidth: Int?
+    public var frameHeight: Int?
+    public var rawPixelsReturned: Bool
+    public var rawRefRetained: Bool
+    public var memoryWriteAllowed: Bool
+    public var evidenceRefs: [String]
+    public var allowedEffects: [String]
+    public var blockedEffects: [String]
+    public var safetyNotes: [String]
+    public var passed: Bool
+
+    public static func run(
+        allowRealCapture: Bool = false,
+        probe: NativeCapturePermissionProbe = .readCurrentProcess(),
+        checkedAt: Date = Date(),
+        frameProvider: () -> NativeScreenFrameMetadata? = NativeScreenCaptureProbeResult.captureMainDisplayMetadata
+    ) -> NativeScreenCaptureProbeResult {
+        let captureAttempted = allowRealCapture && probe.screenRecordingPreflight
+        let frame = captureAttempted ? frameProvider() : nil
+        let frameCaptured = frame != nil
+        let allowedEffects = allowRealCapture
+            ? ["read_permission_status", "capture_one_frame_in_memory"]
+            : ["read_permission_status"]
+        let blockedEffects = [
+            "request_screen_recording_permission",
+            "start_continuous_screen_capture",
+            "return_raw_pixels",
+            "store_raw_evidence",
+            "write_memory",
+            "start_accessibility_observer",
+            "click",
+            "type_text",
+            "export_payload",
+        ]
+        let safetyNotes = [
+            "Real screen capture requires --allow-real-capture and Screen Recording preflight.",
+            "The probe captures at most one frame in memory and returns metadata only.",
+            "The probe never stores raw pixels, raw refs, evidence refs, or memories.",
+        ]
+        let passed = !probe.promptRequested
+            && (!captureAttempted || frameCaptured)
+            && !blockedEffects.isEmpty
+            && !allowedEffects.isEmpty
+
+        return NativeScreenCaptureProbeResult(
+            benchmarkID: nativeScreenCaptureProbeBenchmarkID,
+            policyRef: nativeScreenCaptureProbePolicyRef,
+            checkedAt: checkedAt,
+            allowRealCapture: allowRealCapture,
+            screenRecordingPreflight: probe.screenRecordingPreflight,
+            promptRequested: probe.promptRequested,
+            captureAttempted: captureAttempted,
+            frameCaptured: frameCaptured,
+            frameWidth: frame?.width,
+            frameHeight: frame?.height,
+            rawPixelsReturned: false,
+            rawRefRetained: false,
+            memoryWriteAllowed: false,
+            evidenceRefs: [],
+            allowedEffects: allowedEffects,
+            blockedEffects: blockedEffects,
+            safetyNotes: safetyNotes,
+            passed: passed
+        )
+    }
+
+    public static func captureMainDisplayMetadata() -> NativeScreenFrameMetadata? {
+        #if canImport(CoreGraphics)
+        guard let image = CGDisplayCreateImage(CGMainDisplayID()) else {
+            return nil
+        }
+        return NativeScreenFrameMetadata(width: image.width, height: image.height)
+        #else
+        return nil
+        #endif
     }
 }
 

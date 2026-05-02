@@ -1,0 +1,1 @@
+window.CORTEX_CAPTURE_CONTROL = window.CORTEX_CAPTURE_CONTROL || null;

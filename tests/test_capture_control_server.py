@@ -36,12 +36,28 @@ def test_capture_control_server_smoke_serves_dashboard_and_blocks_remote_probe()
 
     assert smoke.passed
     assert smoke.policy_ref == CAPTURE_CONTROL_SERVER_POLICY_REF
+    assert smoke.config_status_code == 200
+    assert smoke.token_required
+    assert smoke.missing_token_rejected_status_code == 403
+    assert smoke.bad_origin_rejected_status_code == 403
     assert smoke.status_code == 200
     assert smoke.start_status_code == 200
     assert smoke.stop_status_code == 200
+    assert smoke.permission_status_code == 200
+    assert smoke.screen_probe_status_code == 200
+    assert smoke.receipts_status_code == 200
     assert smoke.served_dashboard
     assert smoke.remote_rejected_status_code == 403
     assert smoke.start_receipt.fixed_command_only
     assert smoke.start_receipt.localhost_only
     assert "cortex-shadow-clicker" in smoke.start_receipt.command
+    assert smoke.permission_receipt.passed
+    assert smoke.screen_probe_receipt.passed
+    assert smoke.screen_probe_receipt.capture_attempted
+    assert not smoke.screen_probe_receipt.raw_pixels_returned
+    assert not smoke.screen_probe_receipt.raw_ref_retained
+    assert smoke.receipt_summary.receipt_count >= 4
+    assert smoke.receipt_summary.screen_probe_count == 1
+    assert not smoke.receipt_summary.raw_ref_retained
+    assert not smoke.receipt_summary.memory_write_allowed
     assert smoke.stop_receipt.action == "stop"
