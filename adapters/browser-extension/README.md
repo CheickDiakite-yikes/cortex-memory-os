@@ -6,8 +6,12 @@ This is a dormant Manifest V3 browser-extension scaffold for
 Safety defaults:
 
 - The extension is click-gated through the browser action.
-- `cortexEnabled` is `false` unless a local user explicitly enables it in
-  extension storage.
+- The manifest declares `Alt+Shift+C` as the suggested browser-action shortcut
+  for disposable live-test profiles. Chrome may still require the user to assign
+  or approve the shortcut, so the Extensions menu remains the reliable manual
+  activation path.
+- `cortexEnabled` defaults to `true` for local development profiles, but the
+  service worker still refuses non-localhost endpoints and non-HTTP tabs.
 - Only localhost Cortex endpoints are allowed.
 - Browser page text is always `external_untrusted` and `third_party_content`.
 - The adapter sends no raw DOM reference and does not mark browser content as

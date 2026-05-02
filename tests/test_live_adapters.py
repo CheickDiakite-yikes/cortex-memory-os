@@ -36,6 +36,7 @@ def test_browser_manifest_is_click_gated_and_localhost_only():
     assert manifest["manifest_version"] == 3
     assert manifest["permissions"] == ["activeTab", "scripting", "storage"]
     assert manifest["host_permissions"] == ["http://127.0.0.1/*", "http://localhost/*"]
+    assert manifest["commands"]["_execute_action"]["suggested_key"]["mac"] == "Alt+Shift+C"
     assert "chrome.action.onClicked" in service_worker
     assert "cortexEnabled: true" in service_worker
     assert "endpointAllowed" in service_worker

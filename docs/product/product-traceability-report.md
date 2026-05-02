@@ -144,8 +144,9 @@ User-facing pillars:
   extension can draw a visible Shadow Clicker on an explicitly activated real
   public page such as Google News, post visible-page evidence to localhost, and
   keep it `external_untrusted`, memory-ineligible, raw-ref-free, and
-  aggregate-only through `/results`. A user-confirmed Chrome extension load is
-  still required before the live Google News run.
+  aggregate-only through `/results`. The user-confirmed live Google News run
+  activated Cortex through Chrome's Extensions menu and produced 3 accepted
+  browser observations with 0 memory-eligible writes and 0 retained raw refs.
 - Synthetic Capture Ladder: validated `SYNTHETIC-CAPTURE-LADDER-001` so a
   synthetic disposable capture page only path can create an ephemeral raw ref in
   temp storage, auto-delete it, write a durable synthetic memory to a local test
