@@ -7,7 +7,7 @@ def test_synthetic_benchmarks_pass():
     result = run_all()
 
     assert result.passed
-    assert len(result.case_results) == 161
+    assert len(result.case_results) == 165
     assert {case.suite for case in result.case_results} >= {
         "MEM-RECALL-001",
         "RETRIEVAL-SCORE-001",
@@ -87,9 +87,13 @@ def test_synthetic_benchmarks_pass():
         "SHADOW-POINTER-001",
         "SHADOW-POINTER-CONTROLS-001",
         "POINTER-PROPOSAL-001",
+        "SHADOW-POINTER-STATE-MACHINE-001",
+        "SHADOW-POINTER-LIVE-RECEIPT-001",
+        "SPATIAL-PROPOSAL-SCHEMA-001",
         "SHADOW-POINTER-NATIVE-001",
         "NATIVE-CAPTURE-PERMISSION-SMOKE-001",
         "SHADOW-POINTER-PERMISSION-ONBOARDING-001",
+        "CONSENT-FIRST-ONBOARDING-001",
         "SHADOW-POINTER-CAPTURE-WIRING-001",
         "SCENE-SEGMENT-001",
         "MEM-COMPILE-001",

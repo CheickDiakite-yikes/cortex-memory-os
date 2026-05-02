@@ -16,6 +16,8 @@ Safety defaults:
 - Browser page text is always `external_untrusted` and `third_party_content`.
 - The adapter sends no raw DOM reference and does not mark browser content as
   memory eligible.
+- The injected overlay shows a compact **Shadow Pointer Live Receipt** with
+  mode, trust, memory eligibility, raw-ref status, and firewall/evidence policy.
 
 The current repo smoke test reads these files statically and runs synthetic
 handoffs through the Python firewall/evidence chain. Do not install this into a

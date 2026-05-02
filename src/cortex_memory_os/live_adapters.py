@@ -109,9 +109,11 @@ def run_live_adapter_smoke(
         _repo_relative(content_script_path): [
             LIVE_ADAPTER_POLICY_REF,
             "MAX_VISIBLE_TEXT_CHARS",
-            "Cortex Shadow Clicker",
+            "Cortex Shadow Pointer",
+            "Shadow Pointer Live Receipt",
             "pointermove",
             "shadow_pointer_visible",
+            "data-cortex-policy",
             "visible_text",
             "dom_ref: null",
             "source_trust: \"external_untrusted\"",

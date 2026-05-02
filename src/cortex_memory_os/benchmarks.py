@@ -343,20 +343,33 @@ from cortex_memory_os.robot_safety import (
     evaluate_robot_spatial_safety,
 )
 from cortex_memory_os.shadow_pointer import (
+    CONSENT_FIRST_ONBOARDING_ID,
+    CONSENT_FIRST_ONBOARDING_POLICY_REF,
     SHADOW_POINTER_PERMISSION_ONBOARDING_ID,
     SHADOW_POINTER_PERMISSION_ONBOARDING_POLICY_REF,
+    SHADOW_POINTER_LIVE_RECEIPT_ID,
+    SHADOW_POINTER_LIVE_RECEIPT_POLICY_REF,
     SHADOW_POINTER_POINTING_POLICY_REF,
+    SHADOW_POINTER_STATE_MACHINE_ID,
+    SHADOW_POINTER_STATE_MACHINE_POLICY_REF,
+    SPATIAL_PROPOSAL_SCHEMA_ID,
+    SPATIAL_PROPOSAL_SCHEMA_POLICY_REF,
     ShadowPointerCoordinateSpace,
     ShadowPointerControlAction,
     ShadowPointerControlCommand,
+    ShadowPointerObservationMode,
     ShadowPointerPointingAction,
     ShadowPointerPointingProposal,
     ShadowPointerSnapshot,
     ShadowPointerState,
     apply_control,
+    all_state_presentations,
+    build_live_receipt,
     build_permission_onboarding_receipt,
+    default_consent_first_onboarding_plan,
     default_shadow_pointer_snapshot,
     evaluate_pointing_proposal,
+    map_pointing_proposal_to_viewport,
 )
 from cortex_memory_os.shadow_pointer_capture import (
     SHADOW_POINTER_CAPTURE_WIRING_POLICY_REF,
@@ -527,9 +540,13 @@ def run_all() -> BenchmarkRunResult:
         case_shadow_pointer_state_contract,
         case_shadow_pointer_controls_contract,
         case_shadow_pointer_pointing_proposal_contract,
+        case_shadow_pointer_state_machine_contract,
+        case_shadow_pointer_live_receipt_contract,
+        case_spatial_proposal_schema_contract,
         case_shadow_pointer_native_overlay_contract,
         case_native_capture_permission_smoke_contract,
         case_shadow_pointer_permission_onboarding_contract,
+        case_consent_first_onboarding_contract,
         case_shadow_pointer_capture_wiring_contract,
         case_scene_segmentation,
         case_memory_compiler_candidate,
@@ -9424,6 +9441,333 @@ def case_shadow_pointer_pointing_proposal_contract() -> BenchmarkCaseResult:
     )
 
 
+def case_shadow_pointer_state_machine_contract() -> BenchmarkCaseResult:
+    presentations = all_state_presentations()
+    by_state = {presentation.state: presentation for presentation in presentations}
+    docs_text = (
+        (REPO_ROOT / "docs" / "architecture" / "shadow-pointer-live-receipts.md")
+        .read_text(encoding="utf-8")
+    )
+    shell_docs_text = (
+        REPO_ROOT / "docs" / "product" / "cortex-dashboard-shell.md"
+    ).read_text(encoding="utf-8")
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (
+        REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    ).read_text(encoding="utf-8")
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_terms = [
+        SHADOW_POINTER_STATE_MACHINE_ID,
+        SHADOW_POINTER_STATE_MACHINE_POLICY_REF,
+        "Off",
+        "Observing",
+        "Private Masking",
+        "Needs Approval",
+        "Paused",
+        "compact visual contract",
+    ]
+    missing_terms = _missing_terms(docs_text + "\n" + shell_docs_text, required_terms)
+    passed = (
+        set(by_state) == set(ShadowPointerState)
+        and all(
+            SHADOW_POINTER_STATE_MACHINE_POLICY_REF in presentation.policy_refs
+            for presentation in presentations
+        )
+        and by_state[ShadowPointerState.AGENT_ACTING].tone == "danger"
+        and "privileged_action_without_confirmation"
+        in by_state[ShadowPointerState.AGENT_ACTING].blocked_effects
+        and by_state[ShadowPointerState.OBSERVING].peripheral_cue == "steady halo"
+        and not missing_terms
+        and SHADOW_POINTER_STATE_MACHINE_ID in plan_text
+        and SHADOW_POINTER_STATE_MACHINE_ID in registry_text
+        and SHADOW_POINTER_STATE_MACHINE_ID in task_text
+        and SHADOW_POINTER_STATE_MACHINE_ID in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SHADOW-POINTER-STATE-MACHINE-001/compact_visual_contract",
+        suite=SHADOW_POINTER_STATE_MACHINE_ID,
+        passed=passed,
+        summary=(
+            "Shadow Pointer states now have compact, shared visual contracts for "
+            "native, browser-extension, and dashboard surfaces."
+        ),
+        metrics={
+            "state_count": len(presentations),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": SHADOW_POINTER_STATE_MACHINE_POLICY_REF,
+            "states": sorted(state.value for state in by_state),
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_shadow_pointer_live_receipt_contract() -> BenchmarkCaseResult:
+    receipt = build_live_receipt(
+        default_shadow_pointer_snapshot(),
+        observation_mode=ShadowPointerObservationMode.SESSION,
+        source_trust=SourceTrust.EXTERNAL_UNTRUSTED,
+        firewall_decision="ephemeral_only",
+        evidence_write_mode="derived_only",
+        memory_eligible=False,
+        raw_ref_retained=False,
+        latest_action="Google News click",
+    )
+    serialized = receipt.model_dump_json()
+    docs_text = (
+        (REPO_ROOT / "docs" / "architecture" / "shadow-pointer-live-receipts.md")
+        .read_text(encoding="utf-8")
+        + "\n"
+        + (REPO_ROOT / "docs" / "product" / "cortex-dashboard-shell.md")
+        .read_text(encoding="utf-8")
+    )
+    ui_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "ui" / "cortex-dashboard" / "index.html",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "app.js",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "styles.css",
+            REPO_ROOT / "adapters" / "browser-extension" / "content-script.js",
+        ]
+    )
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (
+        REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    ).read_text(encoding="utf-8")
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_terms = [
+        SHADOW_POINTER_LIVE_RECEIPT_ID,
+        SHADOW_POINTER_LIVE_RECEIPT_POLICY_REF,
+        "Shadow Pointer Live Receipt",
+        "external_untrusted",
+        "memory-ineligible",
+        "raw-ref-free",
+        "derived_only",
+    ]
+    missing_terms = _missing_terms(docs_text + "\n" + ui_text, required_terms)
+    passed = (
+        receipt.trust_class == SourceTrust.EXTERNAL_UNTRUSTED
+        and receipt.memory_eligible is False
+        and receipt.raw_ref_retained is False
+        and receipt.raw_payload_included is False
+        and receipt.compact_fields["trust"] == "external_untrusted"
+        and receipt.compact_fields["memory"] == "not eligible"
+        and receipt.compact_fields["raw_refs"] == "none"
+        and "durable_memory_write" in receipt.blocked_effects
+        and "trusted_instruction_promotion" in receipt.blocked_effects
+        and "raw://" not in serialized
+        and "encrypted_blob://" not in serialized
+        and not missing_terms
+        and SHADOW_POINTER_LIVE_RECEIPT_ID in plan_text
+        and SHADOW_POINTER_LIVE_RECEIPT_ID in registry_text
+        and SHADOW_POINTER_LIVE_RECEIPT_ID in task_text
+        and SHADOW_POINTER_LIVE_RECEIPT_ID in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SHADOW-POINTER-LIVE-RECEIPT-001/external_evidence_receipt",
+        suite=SHADOW_POINTER_LIVE_RECEIPT_ID,
+        passed=passed,
+        summary=(
+            "Shadow Pointer live receipts render trust, memory eligibility, raw-ref "
+            "status, and policy without carrying raw page payloads."
+        ),
+        metrics={
+            "compact_field_count": len(receipt.compact_fields),
+            "blocked_effect_count": len(receipt.blocked_effects),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": SHADOW_POINTER_LIVE_RECEIPT_POLICY_REF,
+            "trust_class": receipt.trust_class.value,
+            "memory_eligible": receipt.memory_eligible,
+            "raw_ref_retained": receipt.raw_ref_retained,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_spatial_proposal_schema_contract() -> BenchmarkCaseResult:
+    proposal = ShadowPointerPointingProposal(
+        proposal_id="point_spatial_bench_001",
+        source_trust=SourceTrust.EXTERNAL_UNTRUSTED,
+        coordinate_space=ShadowPointerCoordinateSpace.SCREEN_NORMALIZED,
+        x=0.375,
+        y=0.5,
+        target_label="Technology tab",
+        reason="Highlight a visible public-page tab.",
+        evidence_refs=["ev_public_page_visible_terms"],
+        confidence=0.74,
+        requested_action=ShadowPointerPointingAction.CLICK,
+    )
+    mapping = map_pointing_proposal_to_viewport(
+        proposal,
+        viewport_width_px=1440,
+        viewport_height_px=900,
+        device_pixel_ratio=2.0,
+    )
+    docs_text = (
+        (REPO_ROOT / "docs" / "architecture" / "shadow-pointer-pointing.md")
+        .read_text(encoding="utf-8")
+        + "\n"
+        + (REPO_ROOT / "docs" / "architecture" / "shadow-pointer-live-receipts.md")
+        .read_text(encoding="utf-8")
+    )
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (
+        REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    ).read_text(encoding="utf-8")
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_terms = [
+        SPATIAL_PROPOSAL_SCHEMA_ID,
+        SPATIAL_PROPOSAL_SCHEMA_POLICY_REF,
+        "display-only viewport mapping",
+        "x_css_px",
+        "x_device_px",
+    ]
+    missing_terms = _missing_terms(docs_text, required_terms)
+    passed = (
+        mapping.display_only is True
+        and mapping.x_css_px == 540
+        and mapping.y_css_px == 450
+        and mapping.x_device_px == 1080
+        and mapping.y_device_px == 900
+        and SPATIAL_PROPOSAL_SCHEMA_POLICY_REF in mapping.policy_refs
+        and SHADOW_POINTER_POINTING_POLICY_REF in mapping.policy_refs
+        and not missing_terms
+        and SPATIAL_PROPOSAL_SCHEMA_ID in plan_text
+        and SPATIAL_PROPOSAL_SCHEMA_ID in registry_text
+        and SPATIAL_PROPOSAL_SCHEMA_ID in task_text
+        and SPATIAL_PROPOSAL_SCHEMA_ID in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="SPATIAL-PROPOSAL-SCHEMA-001/display_only_viewport_mapping",
+        suite=SPATIAL_PROPOSAL_SCHEMA_ID,
+        passed=passed,
+        summary=(
+            "Normalized model pointing proposals map to bounded display pixels "
+            "without becoming clicks, tool calls, or memory writes."
+        ),
+        metrics={
+            "x_css_px": mapping.x_css_px,
+            "y_css_px": mapping.y_css_px,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": SPATIAL_PROPOSAL_SCHEMA_POLICY_REF,
+            "proposal_id": mapping.proposal_id,
+            "display_only": mapping.display_only,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_consent_first_onboarding_contract() -> BenchmarkCaseResult:
+    plan = default_consent_first_onboarding_plan()
+    serialized = plan.model_dump_json()
+    docs_text = (
+        (REPO_ROOT / "docs" / "architecture" / "shadow-pointer-live-receipts.md")
+        .read_text(encoding="utf-8")
+        + "\n"
+        + (REPO_ROOT / "docs" / "product" / "cortex-dashboard-shell.md")
+        .read_text(encoding="utf-8")
+    )
+    ui_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "ui" / "cortex-dashboard" / "index.html",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "app.js",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "dashboard-data.js",
+        ]
+        if path.exists()
+    )
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (
+        REPO_ROOT / "docs" / "ops" / "benchmark-registry.md"
+    ).read_text(encoding="utf-8")
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(
+        encoding="utf-8"
+    )
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    required_terms = [
+        CONSENT_FIRST_ONBOARDING_ID,
+        CONSENT_FIRST_ONBOARDING_POLICY_REF,
+        "Consent-first Onboarding",
+        "synthetic-only",
+        "delete_candidate_memory",
+        "show_audit_receipt",
+    ]
+    missing_terms = _missing_terms(docs_text + "\n" + ui_text, required_terms)
+    passed = (
+        plan.synthetic_only
+        and not plan.real_capture_started
+        and not plan.raw_storage_enabled
+        and not plan.durable_private_memory_write_enabled
+        and not plan.external_effect_enabled
+        and [step.step_id for step in plan.steps]
+        == [
+            "show_off",
+            "invoke_synthetic_observation",
+            "prove_masking",
+            "create_candidate_memory",
+            "delete_candidate_memory",
+            "show_audit_receipt",
+        ]
+        and "silent_retention" in plan.steps[4].blocked_effects
+        and "raw://" not in serialized
+        and "encrypted_blob://" not in serialized
+        and not missing_terms
+        and CONSENT_FIRST_ONBOARDING_ID in plan_text
+        and CONSENT_FIRST_ONBOARDING_ID in registry_text
+        and CONSENT_FIRST_ONBOARDING_ID in task_text
+        and CONSENT_FIRST_ONBOARDING_ID in traceability_text
+    )
+    return BenchmarkCaseResult(
+        case_id="CONSENT-FIRST-ONBOARDING-001/synthetic_before_capture",
+        suite=CONSENT_FIRST_ONBOARDING_ID,
+        passed=passed,
+        summary=(
+            "First-run onboarding teaches off, synthetic observation, masking, "
+            "candidate creation, deletion, and audit before any real capture."
+        ),
+        metrics={
+            "step_count": len(plan.steps),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": CONSENT_FIRST_ONBOARDING_POLICY_REF,
+            "observation_mode": plan.observation_mode.value,
+            "synthetic_only": plan.synthetic_only,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
 def case_shadow_pointer_native_overlay_contract() -> BenchmarkCaseResult:
     package_root = REPO_ROOT / "native" / "macos-shadow-pointer"
     package_path = package_root / "Package.swift"
@@ -12054,11 +12398,13 @@ def case_live_clicker_allowlisted_origin_contract() -> BenchmarkCaseResult:
         + (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(encoding="utf-8")
     )
     required_extension_terms = [
-        "Cortex Shadow Clicker",
+        "Cortex Shadow Pointer",
+        "Shadow Pointer Live Receipt",
         "pointermove",
         "shadow_pointer_visible",
         "eligible_for_memory",
         "raw_ref_retained",
+        "data-cortex-policy",
         "activeTab",
         "http://127.0.0.1/*",
     ]

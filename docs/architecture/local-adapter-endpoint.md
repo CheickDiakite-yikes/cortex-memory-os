@@ -28,8 +28,8 @@ Safety rules:
 - `dom_ref` and `raw_ref` are forbidden for live browser ingest;
 - prompt-injection text is quarantined before evidence storage;
 - browser content cannot become memory eligible through this endpoint.
-- visible Shadow Clicker fields from the extension are accepted as proof
-  metadata and stripped before adapter validation.
+- visible Shadow Pointer Live Receipt fields from the extension are accepted as
+  proof metadata and stripped before adapter validation.
 
 `GET /results` returns aggregate counts only: accepted/rejected events,
 browser/terminal counts, memory-eligible count, raw-ref count, prompt-risk

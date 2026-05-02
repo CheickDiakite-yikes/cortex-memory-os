@@ -20,9 +20,9 @@ It is intentionally click-gated:
 - the content script sends visible text only, not raw DOM HTML;
 - payloads are marked `external_untrusted` and `third_party_content`;
 - `dom_ref` and `raw_ref` are `null` so web content cannot become raw memory.
-- the content script renders a visible **Cortex Shadow Clicker** overlay on the
-  active page, follows pointer movement, and updates local firewall/evidence
-  status from the endpoint response.
+- the content script renders a visible **Cortex Shadow Pointer** overlay with a
+  **Shadow Pointer Live Receipt** on the active page, follows pointer movement,
+  and updates local firewall/evidence policy status from the endpoint response.
 
 This is the first real-page path. It can run on a page such as Google News after
 the user deliberately loads the unpacked extension and clicks the Cortex action.
@@ -64,7 +64,7 @@ Acceptance requires:
 
 - browser DOM remains external, third-party, raw-ref-free, and not memory
   eligible;
-- browser Shadow Clicker metadata is display/proof metadata only;
+- browser Shadow Pointer metadata is display/proof metadata only;
 - browser prompt-injection text is quarantined before evidence storage;
 - terminal secret text is masked and raw refs are dropped;
 - terminal events require explicit opt-in and local endpoints;

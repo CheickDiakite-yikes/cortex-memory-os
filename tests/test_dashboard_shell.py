@@ -17,6 +17,12 @@ from cortex_memory_os.retrieval_receipts_dashboard import (
     RETRIEVAL_RECEIPTS_DASHBOARD_POLICY_REF,
 )
 from cortex_memory_os.memory_encryption import MEMORY_ENCRYPTION_DEFAULT_POLICY_REF
+from cortex_memory_os.shadow_pointer import (
+    CONSENT_FIRST_ONBOARDING_POLICY_REF,
+    SHADOW_POINTER_LIVE_RECEIPT_POLICY_REF,
+    SHADOW_POINTER_STATE_MACHINE_POLICY_REF,
+    ShadowPointerState,
+)
 
 
 def test_dashboard_shell_composes_safe_view_models():
@@ -33,7 +39,20 @@ def test_dashboard_shell_composes_safe_view_models():
     assert SKILL_METRICS_DASHBOARD_POLICY_REF in shell.policy_refs
     assert RETRIEVAL_RECEIPTS_DASHBOARD_POLICY_REF in shell.policy_refs
     assert MEMORY_ENCRYPTION_DEFAULT_POLICY_REF in shell.policy_refs
+    assert SHADOW_POINTER_STATE_MACHINE_POLICY_REF in shell.policy_refs
+    assert SHADOW_POINTER_LIVE_RECEIPT_POLICY_REF in shell.policy_refs
+    assert CONSENT_FIRST_ONBOARDING_POLICY_REF in shell.policy_refs
     assert len(shell.status_strip) == 4
+    assert shell.shadow_pointer_live_receipt.memory_eligible is False
+    assert shell.shadow_pointer_live_receipt.raw_ref_retained is False
+    assert shell.shadow_pointer_live_receipt.raw_payload_included is False
+    assert shell.shadow_pointer_live_receipt.compact_fields["trust"] == "external_untrusted"
+    assert {state.state for state in shell.shadow_pointer_states} == set(ShadowPointerState)
+    assert shell.consent_onboarding.synthetic_only is True
+    assert shell.consent_onboarding.real_capture_started is False
+    assert shell.consent_onboarding.raw_storage_enabled is False
+    assert shell.consent_onboarding.durable_private_memory_write_enabled is False
+    assert shell.consent_onboarding.external_effect_enabled is False
     assert len(shell.insight_panels) >= 5
     assert any(panel.title == "Encryption Default" for panel in shell.insight_panels)
     assert all(panel.content_redacted for panel in shell.insight_panels)
@@ -92,6 +111,9 @@ def test_dashboard_data_js_is_redacted_and_static_app_ready():
     assert "raw://" not in data_js
     assert "Skill Metrics" in data_js
     assert "Retrieval Receipts" in data_js
+    assert "Shadow Pointer Live Receipt" in data_js
+    assert "Consent-first Onboarding" not in data_js
+    assert "consent_onboarding" in data_js
     assert "Safe Demo Path" in data_js
     assert "DEMO-READINESS-001" in data_js
     assert "cortex-demo-stress" in data_js
@@ -115,6 +137,8 @@ def test_dashboard_shell_smoke_contract_passes():
     assert result.insight_panel_count >= 5
     assert result.focus_inspector_present is True
     assert result.demo_path_present is True
+    assert result.shadow_pointer_live_receipt_present is True
+    assert result.consent_onboarding_present is True
     assert result.nav_view_switching_present is True
     assert result.encryption_default_visible is True
     assert result.gateway_action_receipt_count > 0

@@ -248,6 +248,44 @@ function renderDemoPath() {
   });
 }
 
+function renderShadowPointerLiveReceipt() {
+  const target = document.querySelector("#shadow-live-receipt");
+  const receipt = data.shadow_pointer_live_receipt;
+  const onboarding = data.consent_onboarding;
+  if (!target || !receipt) return;
+  const fields = receipt.compact_fields || {};
+  const onboardingSteps = onboarding?.steps || [];
+  target.innerHTML = `
+    <div class="shadow-live-copy">
+      <span class="shadow-live-icon">${svgIcon("pointer")}</span>
+      <span>
+        <strong>Shadow Pointer Live Receipt</strong>
+        <span>${escapeHtml(receipt.primary_line)}</span>
+      </span>
+    </div>
+    <div class="shadow-live-grid">
+      <div><span>Trust</span><strong>${formatToken(fields.trust)}</strong></div>
+      <div><span>Memory</span><strong>${formatToken(fields.memory)}</strong></div>
+      <div><span>Raw refs</span><strong>${formatToken(fields.raw_refs)}</strong></div>
+      <div><span>Policy</span><strong>${escapeHtml(fields.policy)}</strong></div>
+    </div>
+    <div class="shadow-live-actions">
+      <button class="text-command" type="button" id="shadow-receipt-details">Receipt</button>
+      <button class="text-command" type="button" id="consent-onboarding">Consent-first Onboarding</button>
+    </div>
+  `;
+  document.querySelector("#shadow-receipt-details").addEventListener("click", () => {
+    writeReceipt(
+      `${receipt.title}: ${formatToken(fields.trust)} · memory ${formatToken(fields.memory)} · raw refs ${formatToken(fields.raw_refs)}.`,
+    );
+  });
+  document.querySelector("#consent-onboarding").addEventListener("click", () => {
+    writeReceipt(
+      `Consent-first Onboarding has ${onboardingSteps.length} synthetic steps. Real capture and private durable writes stay off.`,
+    );
+  });
+}
+
 function renderFocusInspector() {
   const inspector = document.querySelector("#focus-inspector");
   if (!inspector || !selectedFocus) return;
@@ -647,6 +685,7 @@ if (!data) {
   bindHeaderActions();
   renderNav();
   renderStatusStrip();
+  renderShadowPointerLiveReceipt();
   renderDemoPath();
   renderInsights();
   renderFocusInspector();

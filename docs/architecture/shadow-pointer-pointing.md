@@ -29,6 +29,18 @@ Window-relative and element-relative coordinates require `window_ref` so the
 native overlay can avoid interpreting an ambiguous point as global screen
 authority.
 
+`SPATIAL-PROPOSAL-SCHEMA-001` adds the display-only viewport mapping boundary:
+
+- normalized proposal coordinates are mapped into CSS and device pixels only
+  after viewport dimensions are supplied;
+- mapped coordinates expose `x_css_px`, `y_css_px`, `x_device_px`, and
+  `y_device_px` for rendering receipts;
+- mapped points stay display-only;
+- device pixel ratio is explicit and bounded;
+- viewport mapping carries `policy_spatial_proposal_schema_v1`;
+- mapped coordinates are not clicks, drags, scrolls, text input, URL opens, or
+  tool calls.
+
 `ShadowPointerPointingReceipt` is the only object a native overlay should act
 on. It carries:
 
@@ -50,6 +62,7 @@ on. It carries:
 - Reject instruction-like labels or reasons, including prompt-injection phrases.
 - Store durable memory only through a separate governed memory proposal.
 - Record audit metadata for review without copying hostile content.
+- Clamp and audit coordinate mapping separately from action execution.
 
 ## Benchmark
 
@@ -61,3 +74,5 @@ on. It carries:
 - untrusted source promotion is blocked;
 - the resulting Shadow Pointer state is `needs_approval`;
 - memory writes are not allowed by the pointing receipt.
+- normalized coordinates map to bounded viewport/device pixels through the
+  spatial proposal schema without creating input events.

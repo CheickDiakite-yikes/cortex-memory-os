@@ -16,6 +16,14 @@ SHADOW_POINTER_PERMISSION_ONBOARDING_POLICY_REF = (
     "policy_shadow_pointer_permission_onboarding_v1"
 )
 SHADOW_POINTER_POINTING_POLICY_REF = "policy_shadow_pointer_pointing_proposal_v1"
+SHADOW_POINTER_STATE_MACHINE_ID = "SHADOW-POINTER-STATE-MACHINE-001"
+SHADOW_POINTER_STATE_MACHINE_POLICY_REF = "policy_shadow_pointer_state_machine_v1"
+SHADOW_POINTER_LIVE_RECEIPT_ID = "SHADOW-POINTER-LIVE-RECEIPT-001"
+SHADOW_POINTER_LIVE_RECEIPT_POLICY_REF = "policy_shadow_pointer_live_receipt_v1"
+CONSENT_FIRST_ONBOARDING_ID = "CONSENT-FIRST-ONBOARDING-001"
+CONSENT_FIRST_ONBOARDING_POLICY_REF = "policy_consent_first_onboarding_v1"
+SPATIAL_PROPOSAL_SCHEMA_ID = "SPATIAL-PROPOSAL-SCHEMA-001"
+SPATIAL_PROPOSAL_SCHEMA_POLICY_REF = "policy_spatial_proposal_schema_v1"
 
 
 class ShadowPointerState(str, Enum):
@@ -29,6 +37,14 @@ class ShadowPointerState(str, Enum):
     AGENT_ACTING = "agent_acting"
     NEEDS_APPROVAL = "needs_approval"
     PAUSED = "paused"
+
+
+class ShadowPointerObservationMode(str, Enum):
+    OFF = "off"
+    INVOKED = "invoked"
+    SESSION = "session"
+    PAUSED = "paused"
+    BLOCKED = "blocked"
 
 
 class ShadowPointerControlAction(str, Enum):
@@ -55,6 +71,34 @@ class ShadowPointerPointingAction(str, Enum):
     SCROLL = "scroll"
     OPEN_URL = "open_url"
     EXECUTE_TOOL = "execute_tool"
+
+
+class ShadowPointerStatePresentation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    state: ShadowPointerState
+    label: str = Field(min_length=1)
+    compact_label: str = Field(min_length=1, max_length=28)
+    icon: str = Field(min_length=1)
+    tone: str = Field(min_length=1)
+    pointer_shape: str = Field(min_length=1)
+    peripheral_cue: str = Field(min_length=1)
+    allowed_effects: list[str] = Field(min_length=1)
+    blocked_effects: list[str] = Field(default_factory=list)
+    policy_refs: tuple[str, ...] = Field(
+        default=(SHADOW_POINTER_STATE_MACHINE_POLICY_REF,)
+    )
+
+    @model_validator(mode="after")
+    def require_state_policy_ref(self) -> ShadowPointerStatePresentation:
+        if SHADOW_POINTER_STATE_MACHINE_POLICY_REF not in self.policy_refs:
+            raise ValueError("state presentation requires policy ref")
+        if self.state in {
+            ShadowPointerState.AGENT_ACTING,
+            ShadowPointerState.NEEDS_APPROVAL,
+        } and "privileged_action_without_confirmation" not in self.blocked_effects:
+            raise ValueError("high-attention states must block unconfirmed actions")
+        return self
 
 
 class ShadowPointerSnapshot(BaseModel):
@@ -218,6 +262,144 @@ class ShadowPointerPointingReceipt(BaseModel):
         return self
 
 
+class ShadowPointerLiveReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    receipt_id: str = Field(min_length=1)
+    state: ShadowPointerState
+    observation_mode: ShadowPointerObservationMode
+    title: str = Field(min_length=1, max_length=80)
+    primary_line: str = Field(min_length=1, max_length=160)
+    trust_class: SourceTrust
+    firewall_decision: str = Field(min_length=1)
+    evidence_write_mode: str = Field(min_length=1)
+    memory_eligible: bool
+    raw_ref_retained: bool
+    raw_payload_included: bool = False
+    action_required: bool
+    compact_fields: dict[str, str] = Field(default_factory=dict)
+    allowed_effects: list[str] = Field(min_length=1)
+    blocked_effects: list[str] = Field(default_factory=list)
+    policy_refs: tuple[str, ...] = Field(
+        default=(SHADOW_POINTER_LIVE_RECEIPT_POLICY_REF,)
+    )
+
+    @model_validator(mode="after")
+    def enforce_live_receipt_boundaries(self) -> ShadowPointerLiveReceipt:
+        if SHADOW_POINTER_LIVE_RECEIPT_POLICY_REF not in self.policy_refs:
+            raise ValueError("live receipt requires policy ref")
+        if self.raw_payload_included:
+            raise ValueError("live receipts cannot include raw payloads")
+        if self.trust_class in {
+            SourceTrust.EXTERNAL_UNTRUSTED,
+            SourceTrust.HOSTILE_UNTIL_SAFE,
+        }:
+            if self.memory_eligible:
+                raise ValueError("external live receipts cannot be memory eligible")
+            if self.raw_ref_retained:
+                raise ValueError("external live receipts cannot retain raw refs")
+        if self.observation_mode in {
+            ShadowPointerObservationMode.OFF,
+            ShadowPointerObservationMode.PAUSED,
+            ShadowPointerObservationMode.BLOCKED,
+        } and self.memory_eligible:
+            raise ValueError("inactive observation modes cannot be memory eligible")
+        required_fields = {"trust", "memory", "raw_refs", "policy"}
+        if missing := sorted(required_fields.difference(self.compact_fields)):
+            raise ValueError(f"live receipt missing compact fields: {missing}")
+        return self
+
+
+class ShadowPointerSpatialMapping(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    proposal_id: str = Field(min_length=1)
+    coordinate_space: ShadowPointerCoordinateSpace
+    viewport_width_px: int = Field(gt=0)
+    viewport_height_px: int = Field(gt=0)
+    device_pixel_ratio: float = Field(default=1.0, gt=0.0, le=8.0)
+    x_normalized: float = Field(ge=0.0, le=1.0)
+    y_normalized: float = Field(ge=0.0, le=1.0)
+    x_css_px: int = Field(ge=0)
+    y_css_px: int = Field(ge=0)
+    x_device_px: int = Field(ge=0)
+    y_device_px: int = Field(ge=0)
+    clamped: bool
+    display_only: bool = True
+    policy_refs: tuple[str, ...] = Field(
+        default=(
+            SPATIAL_PROPOSAL_SCHEMA_POLICY_REF,
+            SHADOW_POINTER_POINTING_POLICY_REF,
+        )
+    )
+
+    @model_validator(mode="after")
+    def enforce_spatial_mapping_boundary(self) -> ShadowPointerSpatialMapping:
+        if not self.display_only:
+            raise ValueError("spatial mapping must remain display-only")
+        if SPATIAL_PROPOSAL_SCHEMA_POLICY_REF not in self.policy_refs:
+            raise ValueError("spatial mapping requires policy ref")
+        if self.x_css_px > self.viewport_width_px:
+            raise ValueError("x_css_px exceeds viewport")
+        if self.y_css_px > self.viewport_height_px:
+            raise ValueError("y_css_px exceeds viewport")
+        return self
+
+
+class ConsentFirstOnboardingStep(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    step_id: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+    proof: str = Field(min_length=1)
+    allowed_effects: list[str] = Field(min_length=1)
+    blocked_effects: list[str] = Field(default_factory=list)
+    requires_user_action: bool
+
+
+class ConsentFirstOnboardingPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    plan_id: str = CONSENT_FIRST_ONBOARDING_ID
+    observation_mode: ShadowPointerObservationMode = ShadowPointerObservationMode.INVOKED
+    synthetic_only: bool = True
+    real_capture_started: bool = False
+    raw_storage_enabled: bool = False
+    durable_private_memory_write_enabled: bool = False
+    external_effect_enabled: bool = False
+    steps: list[ConsentFirstOnboardingStep] = Field(min_length=5)
+    policy_refs: tuple[str, ...] = Field(
+        default=(CONSENT_FIRST_ONBOARDING_POLICY_REF,)
+    )
+
+    @model_validator(mode="after")
+    def enforce_consent_first_boundaries(self) -> ConsentFirstOnboardingPlan:
+        if CONSENT_FIRST_ONBOARDING_POLICY_REF not in self.policy_refs:
+            raise ValueError("consent onboarding requires policy ref")
+        if not self.synthetic_only:
+            raise ValueError("onboarding plan must start synthetic-only")
+        if self.real_capture_started:
+            raise ValueError("onboarding cannot start real capture")
+        if self.raw_storage_enabled:
+            raise ValueError("onboarding cannot enable raw storage")
+        if self.durable_private_memory_write_enabled:
+            raise ValueError("onboarding cannot write private durable memory")
+        if self.external_effect_enabled:
+            raise ValueError("onboarding cannot create external effects")
+        required_steps = {
+            "show_off",
+            "invoke_synthetic_observation",
+            "prove_masking",
+            "create_candidate_memory",
+            "delete_candidate_memory",
+            "show_audit_receipt",
+        }
+        actual_steps = {step.step_id for step in self.steps}
+        if missing := sorted(required_steps.difference(actual_steps)):
+            raise ValueError(f"onboarding plan missing required steps: {missing}")
+        return self
+
+
 class ShadowPointerPermissionOnboardingReceipt(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -335,6 +517,162 @@ def build_permission_onboarding_receipt(
             "store_raw_evidence",
         ],
         passed=permission_result.passed,
+    )
+
+
+def state_presentation(state: ShadowPointerState) -> ShadowPointerStatePresentation:
+    """Return a compact visual contract for a Shadow Pointer state."""
+
+    return _STATE_PRESENTATIONS[state]
+
+
+def all_state_presentations() -> list[ShadowPointerStatePresentation]:
+    """Return the full state table used by native, browser, and dashboard surfaces."""
+
+    return [state_presentation(state) for state in ShadowPointerState]
+
+
+def build_live_receipt(
+    snapshot: ShadowPointerSnapshot,
+    *,
+    observation_mode: ShadowPointerObservationMode,
+    source_trust: SourceTrust,
+    firewall_decision: str,
+    evidence_write_mode: str,
+    memory_eligible: bool,
+    raw_ref_retained: bool,
+    raw_payload_included: bool = False,
+    latest_action: str = "Observation update",
+    receipt_id: str | None = None,
+) -> ShadowPointerLiveReceipt:
+    """Compile the small trust receipt shown near the Shadow Pointer."""
+
+    presentation = state_presentation(snapshot.state)
+    trust_label = source_trust.name.lower()
+    memory_label = "eligible" if memory_eligible else "not eligible"
+    raw_ref_label = "retained" if raw_ref_retained else "none"
+    policy_label = f"{firewall_decision}; {evidence_write_mode}"
+    action_required = snapshot.state == ShadowPointerState.NEEDS_APPROVAL
+    blocked_effects = list(presentation.blocked_effects)
+    if source_trust in {SourceTrust.EXTERNAL_UNTRUSTED, SourceTrust.HOSTILE_UNTIL_SAFE}:
+        blocked_effects = _append_unique(blocked_effects, "trusted_instruction_promotion")
+        blocked_effects = _append_unique(blocked_effects, "durable_memory_write")
+        blocked_effects = _append_unique(blocked_effects, "raw_ref_retention")
+
+    return ShadowPointerLiveReceipt(
+        receipt_id=receipt_id
+        or f"shadow_live_{snapshot.state.value}_{observation_mode.value}",
+        state=snapshot.state,
+        observation_mode=observation_mode,
+        title=presentation.label,
+        primary_line=f"{latest_action}: {snapshot.workstream_label}",
+        trust_class=source_trust,
+        firewall_decision=firewall_decision,
+        evidence_write_mode=evidence_write_mode,
+        memory_eligible=memory_eligible,
+        raw_ref_retained=raw_ref_retained,
+        raw_payload_included=raw_payload_included,
+        action_required=action_required,
+        compact_fields={
+            "trust": trust_label,
+            "memory": memory_label,
+            "raw_refs": raw_ref_label,
+            "policy": policy_label,
+        },
+        allowed_effects=list(presentation.allowed_effects),
+        blocked_effects=blocked_effects,
+        policy_refs=(
+            SHADOW_POINTER_LIVE_RECEIPT_POLICY_REF,
+            SHADOW_POINTER_STATE_MACHINE_POLICY_REF,
+        ),
+    )
+
+
+def map_pointing_proposal_to_viewport(
+    proposal: ShadowPointerPointingProposal,
+    *,
+    viewport_width_px: int,
+    viewport_height_px: int,
+    device_pixel_ratio: float = 1.0,
+) -> ShadowPointerSpatialMapping:
+    """Map normalized proposal coordinates to bounded display pixels."""
+
+    x_normalized = min(max(proposal.x, 0.0), 1.0)
+    y_normalized = min(max(proposal.y, 0.0), 1.0)
+    x_css = round(x_normalized * viewport_width_px)
+    y_css = round(y_normalized * viewport_height_px)
+    x_device = round(x_css * device_pixel_ratio)
+    y_device = round(y_css * device_pixel_ratio)
+    return ShadowPointerSpatialMapping(
+        proposal_id=proposal.proposal_id,
+        coordinate_space=proposal.coordinate_space,
+        viewport_width_px=viewport_width_px,
+        viewport_height_px=viewport_height_px,
+        device_pixel_ratio=device_pixel_ratio,
+        x_normalized=x_normalized,
+        y_normalized=y_normalized,
+        x_css_px=x_css,
+        y_css_px=y_css,
+        x_device_px=x_device,
+        y_device_px=y_device,
+        clamped=x_normalized != proposal.x or y_normalized != proposal.y,
+    )
+
+
+def default_consent_first_onboarding_plan() -> ConsentFirstOnboardingPlan:
+    """Build the safe first-run walkthrough before real observation."""
+
+    return ConsentFirstOnboardingPlan(
+        steps=[
+            ConsentFirstOnboardingStep(
+                step_id="show_off",
+                label="Show Cortex off",
+                proof="Shadow Pointer renders off state before any observation.",
+                allowed_effects=["render_shadow_pointer"],
+                blocked_effects=["screen_capture", "memory_write"],
+                requires_user_action=False,
+            ),
+            ConsentFirstOnboardingStep(
+                step_id="invoke_synthetic_observation",
+                label="Invoke disposable observation",
+                proof="Synthetic page event produces an ephemeral receipt.",
+                allowed_effects=["synthetic_observation", "ephemeral_receipt"],
+                blocked_effects=["real_screen_capture", "raw_ref_retention"],
+                requires_user_action=True,
+            ),
+            ConsentFirstOnboardingStep(
+                step_id="prove_masking",
+                label="Prove masking",
+                proof="Secret-looking fixture is redacted before any write.",
+                allowed_effects=["redaction_preview"],
+                blocked_effects=["secret_echo", "raw_payload_display"],
+                requires_user_action=False,
+            ),
+            ConsentFirstOnboardingStep(
+                step_id="create_candidate_memory",
+                label="Create synthetic memory candidate",
+                proof="Candidate is synthetic, scoped, and user-visible.",
+                allowed_effects=["candidate_memory_preview"],
+                blocked_effects=["private_durable_memory_write"],
+                requires_user_action=True,
+            ),
+            ConsentFirstOnboardingStep(
+                step_id="delete_candidate_memory",
+                label="Delete candidate",
+                proof="User can remove the candidate and see the tombstone receipt.",
+                allowed_effects=["candidate_delete", "audit_tombstone"],
+                blocked_effects=["silent_retention"],
+                requires_user_action=True,
+            ),
+            ConsentFirstOnboardingStep(
+                step_id="show_audit_receipt",
+                label="Show audit receipt",
+                proof="Final receipt explains what was seen, masked, stored, and deleted.",
+                allowed_effects=["audit_receipt_preview"],
+                blocked_effects=["external_effect"],
+                requires_user_action=False,
+            ),
+        ]
     )
 
 
@@ -590,3 +928,117 @@ def _privileged_pointing_effects(action: ShadowPointerPointingAction) -> list[st
     }:
         return []
     return [action.value]
+
+
+_STATE_PRESENTATIONS: dict[ShadowPointerState, ShadowPointerStatePresentation] = {
+    ShadowPointerState.OFF: ShadowPointerStatePresentation(
+        state=ShadowPointerState.OFF,
+        label="Observation Off",
+        compact_label="Off",
+        icon="power",
+        tone="neutral",
+        pointer_shape="hidden",
+        peripheral_cue="no halo",
+        allowed_effects=["render_off_badge"],
+        blocked_effects=["capture", "memory_write"],
+    ),
+    ShadowPointerState.OBSERVING: ShadowPointerStatePresentation(
+        state=ShadowPointerState.OBSERVING,
+        label="Observing With Consent",
+        compact_label="Observing",
+        icon="eye",
+        tone="healthy",
+        pointer_shape="soft_ring",
+        peripheral_cue="steady halo",
+        allowed_effects=["render_pointer", "show_receipt"],
+        blocked_effects=["raw_ref_retention_without_policy"],
+    ),
+    ShadowPointerState.PRIVATE_MASKING: ShadowPointerStatePresentation(
+        state=ShadowPointerState.PRIVATE_MASKING,
+        label="Private Masking",
+        compact_label="Masking",
+        icon="shield",
+        tone="warning",
+        pointer_shape="shield_ring",
+        peripheral_cue="amber shield pulse",
+        allowed_effects=["render_masking_state", "show_blocked_sources"],
+        blocked_effects=["memory_write", "raw_ref_retention"],
+    ),
+    ShadowPointerState.SEGMENTING: ShadowPointerStatePresentation(
+        state=ShadowPointerState.SEGMENTING,
+        label="Segmenting Workstream",
+        compact_label="Segmenting",
+        icon="route",
+        tone="info",
+        pointer_shape="dotted_ring",
+        peripheral_cue="slow dotted sweep",
+        allowed_effects=["render_pointer", "show_workstream_label"],
+        blocked_effects=["durable_skill_promotion"],
+    ),
+    ShadowPointerState.REMEMBERING: ShadowPointerStatePresentation(
+        state=ShadowPointerState.REMEMBERING,
+        label="Memory Candidate",
+        compact_label="Remembering",
+        icon="archive",
+        tone="info",
+        pointer_shape="small_badge",
+        peripheral_cue="brief save glint",
+        allowed_effects=["render_pointer", "show_memory_candidate"],
+        blocked_effects=["unreviewed_private_write"],
+    ),
+    ShadowPointerState.LEARNING_SKILL: ShadowPointerStatePresentation(
+        state=ShadowPointerState.LEARNING_SKILL,
+        label="Skill Candidate",
+        compact_label="Learning Skill",
+        icon="spark",
+        tone="info",
+        pointer_shape="small_badge",
+        peripheral_cue="brief pattern pulse",
+        allowed_effects=["render_pointer", "show_skill_candidate"],
+        blocked_effects=["autonomy_promotion_without_review"],
+    ),
+    ShadowPointerState.AGENT_CONTEXTING: ShadowPointerStatePresentation(
+        state=ShadowPointerState.AGENT_CONTEXTING,
+        label="Agent Contexting",
+        compact_label="Contexting",
+        icon="package",
+        tone="info",
+        pointer_shape="ring_with_dot",
+        peripheral_cue="blue context pulse",
+        allowed_effects=["render_pointer", "show_context_receipt"],
+        blocked_effects=["raw_context_dump"],
+    ),
+    ShadowPointerState.AGENT_ACTING: ShadowPointerStatePresentation(
+        state=ShadowPointerState.AGENT_ACTING,
+        label="Agent Action Pending",
+        compact_label="Acting",
+        icon="cursor",
+        tone="danger",
+        pointer_shape="attention_ring",
+        peripheral_cue="red approval pulse",
+        allowed_effects=["render_pointer", "show_action_receipt"],
+        blocked_effects=["privileged_action_without_confirmation"],
+    ),
+    ShadowPointerState.NEEDS_APPROVAL: ShadowPointerStatePresentation(
+        state=ShadowPointerState.NEEDS_APPROVAL,
+        label="Needs Approval",
+        compact_label="Approval",
+        icon="hand",
+        tone="warning",
+        pointer_shape="attention_ring",
+        peripheral_cue="amber approval pulse",
+        allowed_effects=["render_pointer", "show_approval_receipt"],
+        blocked_effects=["privileged_action_without_confirmation"],
+    ),
+    ShadowPointerState.PAUSED: ShadowPointerStatePresentation(
+        state=ShadowPointerState.PAUSED,
+        label="Observation Paused",
+        compact_label="Paused",
+        icon="pause",
+        tone="neutral",
+        pointer_shape="muted_ring",
+        peripheral_cue="dimmed halo",
+        allowed_effects=["render_pause_badge"],
+        blocked_effects=["capture", "memory_write"],
+    ),
+}

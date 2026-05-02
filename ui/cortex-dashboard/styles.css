@@ -323,6 +323,103 @@ button {
   min-width: 0;
 }
 
+.shadow-live-rail {
+  min-width: 0;
+}
+
+.shadow-live-inner {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(360px, 1.5fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px solid #cfe0ee;
+  border-radius: 8px;
+  background: #fbfdff;
+  box-shadow: var(--shadow);
+}
+
+.shadow-live-copy {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+}
+
+.shadow-live-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #edf6ff;
+  color: var(--blue);
+}
+
+.shadow-live-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.2;
+}
+
+.shadow-live-copy strong,
+.shadow-live-copy span span {
+  display: block;
+  min-width: 0;
+}
+
+.shadow-live-copy strong {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.shadow-live-copy span span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.shadow-live-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.shadow-live-grid div {
+  display: grid;
+  gap: 3px;
+  min-height: 46px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.shadow-live-grid span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.shadow-live-grid strong {
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shadow-live-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: flex-end;
+}
+
 .demo-path-inner {
   display: grid;
   grid-template-columns: minmax(220px, 0.8fr) minmax(360px, 1.5fr) auto;
@@ -1006,12 +1103,18 @@ button {
   .workspace-grid,
   .insight-list,
   .focus-inspector-inner,
+  .shadow-live-inner,
+  .shadow-live-grid,
   .demo-path-inner,
   .demo-step-list {
     grid-template-columns: 1fr;
   }
 
   .focus-actions {
+    justify-content: flex-start;
+  }
+
+  .shadow-live-actions {
     justify-content: flex-start;
   }
 

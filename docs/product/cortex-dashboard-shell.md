@@ -18,6 +18,14 @@ Stress demo benchmark: `DEMO-STRESS-001`
 
 Stress demo policy: `policy_demo_stress_v1`
 
+Shadow Pointer live receipt benchmark: `SHADOW-POINTER-LIVE-RECEIPT-001`
+
+Shadow Pointer live receipt policy: `policy_shadow_pointer_live_receipt_v1`
+
+Consent-first onboarding benchmark: `CONSENT-FIRST-ONBOARDING-001`
+
+Consent-first onboarding policy: `policy_consent_first_onboarding_v1`
+
 This slice turns the generated dashboard concept into a local, static,
 inspectable dashboard shell over safe view models. The goal is a usable product
 surface for Memory Palace and Skill Forge without introducing live capture,
@@ -39,6 +47,15 @@ only system status, the Safe Demo Path, and guardrail health. Memory Palace,
 Skill Forge, Agent Gateway, Audit, and Policies each reveal their own focused
 surface so the dashboard can be read one job at a time.
 
+The Shadow Pointer live receipt refinement moves the most important live trust
+facts out of the crowded review queues and into a compact receipt rail:
+`trust`, `memory`, `raw_refs`, and `policy`. This is the dashboard counterpart
+to the cursor-adjacent Shadow Pointer. It makes the current observation state
+readable without exposing raw browser text, OCR, Accessibility content, source
+refs, or raw evidence refs.
+External public-page observations are shown as `external_untrusted`,
+memory-ineligible, raw-ref-free receipts with derived-only evidence policy.
+
 ## Design Source
 
 The generated dashboard concept established the first visual direction:
@@ -52,6 +69,7 @@ The generated dashboard concept established the first visual direction:
 - compact guardrail summaries for Context Pack Health, Privacy Firewall,
   Evidence Vault, Encryption Default, and Ops Quality;
 - a Safe Demo Path rail for the localhost synthetic demo sequence;
+- a Shadow Pointer live receipt rail for compact observation trust state;
 - real tab views for Overview, Memory Palace, Skill Forge, Agent Gateway,
   Audit, and Policies;
 - bottom rail for Recent Safe Receipts;
@@ -68,6 +86,8 @@ safe view models:
 - `SkillForgeCandidateList`
 - `SkillMetricsDashboard`
 - `RetrievalReceiptsDashboard`
+- `ShadowPointerLiveReceipt`
+- `ConsentFirstOnboardingPlan`
 
 The generated `ui/cortex-dashboard/dashboard-data.js` contains synthetic,
 redacted, deterministic view-model data. It must contain no raw private memory,
@@ -95,6 +115,11 @@ The static app in `ui/cortex-dashboard/` must render:
   refs, and procedure text redacted;
 - a Safe Demo Path for `DEMO-READINESS-001`, showing the dashboard, Synthetic
   capture ladder, encrypted index, and context pack steps;
+- a Shadow Pointer live receipt for `SHADOW-POINTER-LIVE-RECEIPT-001`, showing
+  trust class, memory eligibility, raw-ref policy, and firewall/evidence
+  decision;
+- Consent-first Onboarding for `CONSENT-FIRST-ONBOARDING-001`, showing the
+  synthetic-only first-run path before real capture;
 - real tab views that hide unrelated panels when the user moves between
   Memory Palace, Skill Forge, Agent Gateway, Audit, and Policies;
 - local filter controls for both lists;
@@ -171,6 +196,10 @@ Observation pause previewed locally. Confirmation and audit receipt required.
   `policy_demo_readiness_v1`;
 - the visible shell includes the `DEMO-STRESS-001` command tied to
   `policy_demo_stress_v1`;
+- the visible shell includes the `Shadow Pointer Live Receipt` tied to
+  `policy_shadow_pointer_live_receipt_v1`;
+- the visible shell includes `Consent-first Onboarding` tied to
+  `policy_consent_first_onboarding_v1`;
 - dashboard docs, task board, benchmark plan, and benchmark registry name the
   slice;
 - local browser proof confirms the first viewport renders without overlapping

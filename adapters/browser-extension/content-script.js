@@ -137,13 +137,14 @@
       </style>
       <div class="cortex-pointer" data-cortex-pointer></div>
       <section class="cortex-panel" aria-label="Cortex live browser observation">
-        <div class="cortex-kicker">Cortex Shadow Clicker</div>
-        <div class="cortex-title">External Page Observation</div>
+        <div class="cortex-kicker">Cortex Shadow Pointer</div>
+        <div class="cortex-title">Shadow Pointer Live Receipt</div>
         <div class="cortex-grid">
-          <div class="cortex-cell"><span class="cortex-label">Observation</span><span class="cortex-value" data-cortex-observation>starting</span></div>
+          <div class="cortex-cell"><span class="cortex-label">Mode</span><span class="cortex-value" data-cortex-observation>starting</span></div>
           <div class="cortex-cell"><span class="cortex-label">Trust</span><span class="cortex-value">external_untrusted</span></div>
           <div class="cortex-cell"><span class="cortex-label">Memory</span><span class="cortex-value" data-cortex-memory>blocked</span></div>
           <div class="cortex-cell"><span class="cortex-label">Raw refs</span><span class="cortex-value" data-cortex-raw>none</span></div>
+          <div class="cortex-cell"><span class="cortex-label">Policy</span><span class="cortex-value" data-cortex-policy>derived only</span></div>
         </div>
         <div class="cortex-note" data-cortex-note>Visible text is sent to localhost as evidence only.</div>
       </section>
@@ -156,10 +157,12 @@
     const observation = overlay.querySelector("[data-cortex-observation]");
     const memory = overlay.querySelector("[data-cortex-memory]");
     const raw = overlay.querySelector("[data-cortex-raw]");
+    const policy = overlay.querySelector("[data-cortex-policy]");
     const note = overlay.querySelector("[data-cortex-note]");
     observation.textContent = status.observation || "sent";
     memory.textContent = status.memory || "not eligible";
     raw.textContent = status.raw || "none";
+    policy.textContent = status.policy || "external evidence";
     note.textContent = status.note || "External content is evidence, not instructions.";
   }
 
@@ -178,7 +181,12 @@
   function sendObservation(action, target) {
     sequence += 1;
     pulsePointer();
-    updateOverlay({ observation: "sending", memory: "blocked", raw: "none" });
+    updateOverlay({
+      observation: "session",
+      memory: "blocked",
+      raw: "none",
+      policy: "checking",
+    });
     const eventId = `browser_dom_${Date.now()}_${sequence}`;
     chrome.runtime.sendMessage(
       {
@@ -213,9 +221,14 @@
         const result = response && response.result ? response.result : {};
         const accepted = Boolean(response && response.ok);
         updateOverlay({
-          observation: accepted ? "accepted" : "blocked",
+          observation: accepted ? "session" : "blocked",
           memory: result.eligible_for_memory ? "eligible" : "not eligible",
           raw: result.raw_ref_retained ? "retained" : "none",
+          policy: accepted
+            ? `${result.firewall_decision || "unknown"}; ${
+                result.evidence_write_mode || "unknown"
+              }`
+            : "blocked",
           note: accepted
             ? `Firewall: ${result.firewall_decision || "unknown"}; evidence: ${result.evidence_write_mode || "unknown"}.`
             : `Adapter blocked: ${(response && response.reason) || result.error_code || "not accepted"}.`,
@@ -234,6 +247,11 @@
     { capture: true, passive: true },
   );
 
-  updateOverlay({ observation: "active", memory: "not eligible", raw: "none" });
+  updateOverlay({
+    observation: "session",
+    memory: "not eligible",
+    raw: "none",
+    policy: "external evidence",
+  });
   sendObservation("view", document.body);
 })();

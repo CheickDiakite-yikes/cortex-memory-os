@@ -45,6 +45,19 @@ from cortex_memory_os.retrieval_receipts_dashboard import (
     RetrievalReceiptsDashboard,
     build_retrieval_receipts_dashboard,
 )
+from cortex_memory_os.shadow_pointer import (
+    CONSENT_FIRST_ONBOARDING_POLICY_REF,
+    SHADOW_POINTER_LIVE_RECEIPT_POLICY_REF,
+    SHADOW_POINTER_STATE_MACHINE_POLICY_REF,
+    ConsentFirstOnboardingPlan,
+    ShadowPointerLiveReceipt,
+    ShadowPointerObservationMode,
+    ShadowPointerStatePresentation,
+    all_state_presentations,
+    build_live_receipt,
+    default_consent_first_onboarding_plan,
+    default_shadow_pointer_snapshot,
+)
 from cortex_memory_os.skill_forge import (
     DocumentSkillDerivationRequest,
     derive_skill_candidate_from_document,
@@ -211,6 +224,11 @@ class CortexDashboardShell(StrictModel):
     retrieval_debug: RetrievalReceiptsDashboard
     safe_receipts: list[DashboardSafeReceipt] = Field(default_factory=list)
     insight_panels: list[DashboardInsightPanel] = Field(default_factory=list)
+    shadow_pointer_live_receipt: ShadowPointerLiveReceipt
+    shadow_pointer_states: list[ShadowPointerStatePresentation] = Field(
+        default_factory=list
+    )
+    consent_onboarding: ConsentFirstOnboardingPlan
     demo_path: DashboardDemoPath
     focus_inspector: DashboardFocusInspector
     gateway_action_receipts: list[DashboardGatewayActionReceipt] = Field(default_factory=list)
@@ -245,6 +263,8 @@ class DashboardShellSmokeResult(StrictModel):
     procedure_text_retained: bool
     retrieval_source_refs_retained: bool
     demo_path_present: bool
+    shadow_pointer_live_receipt_present: bool
+    consent_onboarding_present: bool
     nav_view_switching_present: bool
     missing_ui_terms: list[str] = Field(default_factory=list)
     missing_doc_terms: list[str] = Field(default_factory=list)
@@ -334,6 +354,18 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
         skill_forge=skill_list,
         skill_metrics=skill_metrics,
         retrieval_debug=retrieval_debug,
+        shadow_pointer_live_receipt=build_live_receipt(
+            default_shadow_pointer_snapshot(),
+            observation_mode=ShadowPointerObservationMode.SESSION,
+            source_trust=SourceTrust.EXTERNAL_UNTRUSTED,
+            firewall_decision="ephemeral_only",
+            evidence_write_mode="derived_only",
+            memory_eligible=False,
+            raw_ref_retained=False,
+            latest_action="External page observation",
+        ),
+        shadow_pointer_states=all_state_presentations(),
+        consent_onboarding=default_consent_first_onboarding_plan(),
         safe_receipts=_sample_safe_receipts(timestamp),
         demo_path=_sample_demo_path(),
         gateway_action_receipts=build_dashboard_gateway_action_receipts(
@@ -352,6 +384,9 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             DASHBOARD_FOCUS_INSPECTOR_POLICY_REF,
             DASHBOARD_DEMO_PATH_POLICY_REF,
             MEMORY_ENCRYPTION_DEFAULT_POLICY_REF,
+            SHADOW_POINTER_STATE_MACHINE_POLICY_REF,
+            SHADOW_POINTER_LIVE_RECEIPT_POLICY_REF,
+            CONSENT_FIRST_ONBOARDING_POLICY_REF,
         ],
         design_notes=[
             "Two primary work areas stay centered while guardrail insight panels stay compact.",
@@ -362,6 +397,8 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Selected details live in a sparse focus inspector instead of every queue card.",
             "Demo path shows the safe localhost narrative without adding another dense work queue.",
             "Action controls are declarative UI plans; this shell does not execute mutations.",
+            "Shadow Pointer Live Receipt stays compact and policy-first.",
+            "Live Shadow Pointer receipt is compact and sits above deeper review queues.",
         ],
         safety_notes=[
             "Static fixture contains synthetic view-model data only.",
@@ -369,6 +406,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Action buttons resolve to gateway receipts before any tool call is allowed.",
             "Skill metric cards do not include procedure text, task content, or autonomy-changing controls.",
             "Retrieval receipt cards do not include memory content, source refs, or hostile text.",
+            "Shadow Pointer receipts do not include raw page payloads or raw refs.",
         ],
         insight_panels=_sample_insight_panels(),
     )
@@ -425,6 +463,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "DEMO-READINESS-001",
         "DEMO-STRESS-001",
         "cortex-demo-stress",
+        "Shadow Pointer Live Receipt",
+        "Consent-first Onboarding",
         "data-view-section",
         "applyActiveView",
         "View updated locally",
@@ -445,6 +485,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "local UI state",
         "real tab views",
         "simplified overview",
+        "Shadow Pointer live receipt",
     ]
     missing_doc_terms = _missing_terms(doc_text, required_doc_terms)
     action_plans_present = any(
@@ -517,6 +558,28 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and "raw://" not in demo_path_payload
         and "encrypted_blob://" not in demo_path_payload
     )
+    shadow_payload = shell.shadow_pointer_live_receipt.model_dump_json()
+    shadow_pointer_live_receipt_present = (
+        "Shadow Pointer Live Receipt" in ui_text + "\n" + data_js
+        and shell.shadow_pointer_live_receipt.memory_eligible is False
+        and shell.shadow_pointer_live_receipt.raw_ref_retained is False
+        and shell.shadow_pointer_live_receipt.raw_payload_included is False
+        and SHADOW_POINTER_LIVE_RECEIPT_POLICY_REF in shell.policy_refs
+        and "raw://" not in shadow_payload
+        and "encrypted_blob://" not in shadow_payload
+    )
+    onboarding_payload = shell.consent_onboarding.model_dump_json()
+    consent_onboarding_present = (
+        "Consent-first Onboarding" in ui_text + "\n" + data_js
+        and shell.consent_onboarding.synthetic_only
+        and not shell.consent_onboarding.real_capture_started
+        and not shell.consent_onboarding.raw_storage_enabled
+        and not shell.consent_onboarding.durable_private_memory_write_enabled
+        and not shell.consent_onboarding.external_effect_enabled
+        and CONSENT_FIRST_ONBOARDING_POLICY_REF in shell.policy_refs
+        and "raw://" not in onboarding_payload
+        and "encrypted_blob://" not in onboarding_payload
+    )
     nav_view_switching_present = (
         "data-view-section" in ui_text
         and "data-work-panel" in ui_text
@@ -536,6 +599,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and encryption_default_visible
         and focus_inspector_present
         and demo_path_present
+        and shadow_pointer_live_receipt_present
+        and consent_onboarding_present
         and nav_view_switching_present
         and gateway_actions_present
         and not secret_retained
@@ -574,6 +639,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         procedure_text_retained=procedure_text_retained,
         retrieval_source_refs_retained=retrieval_source_refs_retained,
         demo_path_present=demo_path_present,
+        shadow_pointer_live_receipt_present=shadow_pointer_live_receipt_present,
+        consent_onboarding_present=consent_onboarding_present,
         nav_view_switching_present=nav_view_switching_present,
         missing_ui_terms=missing_ui_terms,
         missing_doc_terms=missing_doc_terms,
