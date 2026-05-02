@@ -171,6 +171,11 @@ from cortex_memory_os.demo_readiness import (
     DEMO_READINESS_POLICY_REF,
     run_demo_readiness,
 )
+from cortex_memory_os.demo_stress import (
+    DEMO_STRESS_ID,
+    DEMO_STRESS_POLICY_REF,
+    run_demo_stress,
+)
 from cortex_memory_os.dashboard_gateway_actions import (
     DASHBOARD_GATEWAY_ACTIONS_ID,
     DASHBOARD_GATEWAY_ACTIONS_POLICY_REF,
@@ -547,6 +552,7 @@ def run_all() -> BenchmarkRunResult:
         case_live_run_computer_safe_task_contract,
         case_synthetic_capture_ladder_contract,
         case_demo_readiness_contract,
+        case_demo_stress_contract,
         case_skill_promotion_gate,
         case_skill_rollback_gate,
         case_skill_maturity_audit_events,
@@ -12003,6 +12009,98 @@ def case_demo_readiness_contract() -> BenchmarkCaseResult:
         },
         evidence={
             "policy_ref": DEMO_READINESS_POLICY_REF,
+            "required_commands": result.required_commands,
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_demo_stress_contract() -> BenchmarkCaseResult:
+    result = run_demo_stress(iterations=3, now=datetime(2026, 5, 1, 19, 0, tzinfo=UTC))
+    docs_text = (
+        (REPO_ROOT / "docs" / "architecture" / "demo-stress.md").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (REPO_ROOT / "docs" / "product" / "cortex-dashboard-shell.md").read_text(
+            encoding="utf-8"
+        )
+    )
+    task_text = (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(encoding="utf-8")
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(encoding="utf-8")
+    traceability_text = (
+        REPO_ROOT / "docs" / "product" / "product-traceability-report.md"
+    ).read_text(encoding="utf-8")
+    pyproject_text = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    required_doc_terms = [
+        DEMO_STRESS_ID,
+        DEMO_STRESS_POLICY_REF,
+        "bounded live stress demo",
+        "synthetic-only",
+        "localhost-only",
+        "screen injection stress",
+        "No real screen capture",
+        "No durable raw screen storage",
+        "No secret echo",
+        "No mutation, export, or draft execution",
+        "uv run cortex-demo-stress --iterations 12 --json",
+    ]
+    missing_doc_terms = _missing_terms(docs_text + "\n" + plan_text + "\n" + registry_text, required_doc_terms)
+    passed = (
+        result.passed
+        and result.stress_ready
+        and result.safe_to_show_publicly
+        and result.iterations_requested == 3
+        and result.iterations_completed == 3
+        and result.readiness_passed_count == 3
+        and result.screen_injection_passed_count == 3
+        and result.gateway_executed_count > 0
+        and result.gateway_blocked_count > 0
+        and result.gateway_failed_count == 0
+        and result.gateway_raw_payload_count == 0
+        and result.gateway_external_effect_count == 0
+        and result.prohibited_marker_count == 0
+        and result.synthetic_only
+        and result.localhost_only
+        and not result.real_screen_capture_started
+        and not result.durable_raw_screen_storage_enabled
+        and not result.raw_private_refs_returned
+        and not result.secret_values_read
+        and not result.model_secret_echo_attempted
+        and not result.mutation_export_or_draft_enabled
+        and not result.external_effect_enabled
+        and result.env_local_ignored_by_git
+        and not result.env_local_tracked_by_git
+        and not missing_doc_terms
+        and DEMO_STRESS_ID in task_text
+        and DEMO_STRESS_ID in registry_text
+        and DEMO_STRESS_ID in plan_text
+        and DEMO_STRESS_ID in traceability_text
+        and "cortex-demo-stress" in pyproject_text
+    )
+    return BenchmarkCaseResult(
+        case_id="DEMO-STRESS-001/bounded_live_stress_demo",
+        suite=DEMO_STRESS_ID,
+        passed=passed,
+        summary=(
+            "Bounded live stress demo repeatedly composes safe demo readiness, "
+            "screen-injection stress, and dashboard gateway receipts without real "
+            "capture, raw storage, secret echo, mutation, export, draft execution, "
+            "or external effects."
+        ),
+        metrics={
+            "iterations_completed": result.iterations_completed,
+            "readiness_passed_count": result.readiness_passed_count,
+            "screen_injection_passed_count": result.screen_injection_passed_count,
+            "gateway_failed_count": result.gateway_failed_count,
+            "prohibited_marker_count": result.prohibited_marker_count,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": DEMO_STRESS_POLICY_REF,
             "required_commands": result.required_commands,
             "missing_doc_terms": missing_doc_terms,
         },

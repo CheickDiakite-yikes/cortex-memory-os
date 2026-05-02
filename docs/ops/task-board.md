@@ -1,6 +1,6 @@
 # Cortex Memory OS Task Board
 
-Last updated: 2026-05-01
+Last updated: 2026-05-02
 
 ## Active
 
@@ -25,6 +25,7 @@ Last updated: 2026-05-01
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
+| DEMO-STRESS-001 | Add bounded live stress demo receipt and local rehearsal | Codex | `uv run cortex-demo-stress --iterations 12 --json` -> passed, 12/12 readiness, 12/12 screen-injection stress, 84 read-only gateway calls, 324 blocked unsafe previews, 0 raw payloads, 0 external effects, `.env.local` ignored/untracked; `uv run pytest` -> 376 passed; `uv run cortex-bench` -> 158/158 passed, `benchmarks/runs/bench_20260502T010601Z.json`; `uv run cortex-ops-quality --format json` -> 158/158 and `raw_case_payloads_included: false`; `uv run cortex-mcp --smoke`; `uvx ruff check`; `python3 -m compileall src`; Playwright on `http://127.0.0.1:8793/index.html?stress=1` clicked `cortex-demo-stress` and saw `DEMO-STRESS-001 selected...`; mobile width had `documentWidth == viewportWidth == 390` | Synthetic-only and localhost-only stress demo; no real capture, durable raw screen storage, raw private refs, secret echo, mutation, export, draft execution, or external effects. |
 | DEMO-REHEARSAL-001 | Run a browser-shaped local demo rehearsal against the Safe Demo Path | Codex | Playwright on `http://127.0.0.1:8792/index.html?demo=1`; desktop and mobile snapshots; `cortex-demo` button receipt returned `DEMO-READINESS-001 selected. Run uv run cortex-demo --json for the safe demo receipt.` | Localhost static server stopped after validation; screenshots and `.playwright-mcp` artifacts removed before commit. |
 | DEMO-READINESS-001 | Add safe local demo readiness receipt and dashboard Safe Demo Path | Codex | `src/cortex_memory_os/demo_readiness.py`; `uv run cortex-demo --json` -> `passed: true`, 5/5 checks, `prohibited_marker_count: 0`; `uv run pytest` -> 371 passed; `uv run cortex-bench` -> 157/157 passed, `benchmarks/runs/bench_20260501T214332Z.json`; `uv run cortex-ops-quality --format json` -> 157/157 and `raw_case_payloads_included: false`; `uvx ruff check`; `python3 -m compileall src`; `.env.local` ignored and untracked | Dashboard now renders a compact Safe Demo Path. Demo remains synthetic-only and localhost-only: no real screen capture, durable raw screen storage, raw private refs, secret echo, mutation, export, draft execution, or external effects. |
 | UNIFIED-ENCRYPTED-GRAPH-INDEX-001 | Plan migration from plaintext graph fixtures to unified encrypted graph/index storage | Codex | `docs/architecture/unified-encrypted-graph-index.md`; `policy_unified_encrypted_graph_index_v1`; `UNIFIED-ENCRYPTED-GRAPH-INDEX-001/redacted_hmac_index` benchmark; `uv run cortex-bench` -> 156/156 passed | Durable payloads stay encrypted; search stores only HMAC-derived token digests, counts, and explicit related memory IDs. |

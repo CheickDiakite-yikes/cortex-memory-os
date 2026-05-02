@@ -424,6 +424,13 @@ button {
   line-height: 1.2;
 }
 
+.demo-command-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: flex-end;
+}
+
 .focus-inspector {
   padding: 0;
 }

@@ -1,6 +1,6 @@
 # Benchmark Registry
 
-Last updated: 2026-05-01
+Last updated: 2026-05-02
 
 Benchmarks should become runnable as soon as implementation begins. Until then, this registry defines what must be measurable.
 
@@ -54,6 +54,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 | LIVE-RUN-COMPUTER-SAFE-TASK-001 | Live run Computer safe task | Verify Computer Use can perform a safe localhost dashboard task while only local dashboard and read-only gateway receipts are on | local origin, Computer Use task observed, read-only count, blocked count, off-surface flags | real capture off, durable memory write off, raw screen storage off, raw refs off, zero external effects |
 | SYNTHETIC-CAPTURE-LADDER-001 | Synthetic capture ladder | Verify the first safe capture-to-memory ladder using only disposable synthetic data | temp page created, raw ref expired, memory/audit write, retrieval hit, context hit, secret redaction count, leak count | synthetic only, temp storage only, raw ref deleted, audited local test memory, secret branch blocked before raw or memory write |
 | DEMO-READINESS-001 | Safe local demo readiness | Verify a localhost-only demo receipt composes dashboard, Synthetic capture ladder, encrypted index, context pack, and `.env.local` hygiene without unsafe effects | check count, demo step count, blocked effect count, prohibited marker count | safe demo ready, synthetic only, No real screen capture, No durable raw screen storage, No secret echo, No mutation, export, or draft execution |
+| DEMO-STRESS-001 | Bounded live stress demo | Verify repeated safe demo readiness, screen injection stress, and dashboard gateway receipts stay synthetic-only and localhost-only | iteration count, readiness pass count, screen injection pass count, gateway failure count, raw payload count, prohibited marker count | stress demo ready, No real screen capture, No durable raw screen storage, No secret echo, No mutation, export, or draft execution, zero raw payloads |
 | SKILL-SUCCESS-METRICS-001 | Skill success metrics | Verify Skill Forge outcome counts and dashboard-safe metric cards without promotion, procedure leakage, or draft external effects | run counts, success rate, correction rate, blocker count, redaction markers | metrics remain observational, promotion blockers visible, no procedure/content leakage |
 | SKILL-METRICS-DASHBOARD-SURFACE-001 | Skill Metrics dashboard surface | Verify dashboard Skill Metrics cards show outcome summaries without procedure text, task content, raw refs, or autonomy controls | metric card count, total run count, review-required count, redaction markers | metrics visible in UI data, no procedure/task text, no autonomy changes |
 | RUNTIME-TRACE-001 | Agent runtime trace contract | Verify agent tool, shell, browser, artifact, approval, retry, blocked-hostile, and outcome events are ordered and redacted | event count, approval refs, retry refs, evidence refs, outcome check | successful traces require outcome checks and hostile content stays redacted |
@@ -67,6 +68,7 @@ Benchmarks should become runnable as soon as implementation begins. Until then, 
 
 | Date | Benchmark | Command / Method | Result | Evidence | Follow-up |
 | --- | --- | --- | --- | --- | --- |
+| 2026-05-02 | Bounded live stress demo | `uv run cortex-demo-stress --iterations 12 --json`; `uv run pytest`; `uv run cortex-bench` | 12/12 stress iterations passed; 376 tests passed; 158/158 benchmarks passed | `benchmarks/runs/bench_20260502T010601Z.json`; Playwright clicked `cortex-demo-stress` on localhost and saw the `DEMO-STRESS-001` receipt | Next: turn this into a reusable demo script that starts/stops localhost and prints the short operator checklist. |
 | 2026-04-27 | Registry initialized | Manual documentation pass | Not runnable yet | This file | Add runnable harness after first implementation skeleton. |
 | 2026-04-27 | Architecture intake benchmark plan | Manual architecture pass | Not runnable yet | `docs/security/initial-threat-model.md`, `docs/product/build-roadmap.md` | Implement `BENCH-002` with synthetic fixtures. |
 | 2026-04-27 | First synthetic safety/memory harness | `uv run cortex-bench` | 6/6 passed | `benchmarks/runs/bench_20260427T184527Z.json` | Add vault expiry and MCP context-pack cases next. |

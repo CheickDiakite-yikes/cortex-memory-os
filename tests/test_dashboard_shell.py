@@ -49,6 +49,8 @@ def test_dashboard_shell_composes_safe_view_models():
     assert shell.demo_path.real_capture_started is False
     assert shell.demo_path.raw_storage_enabled is False
     assert shell.demo_path.mutation_enabled is False
+    assert shell.demo_path.stress_command == "uv run cortex-demo-stress --iterations 12 --json"
+    assert shell.demo_path.stress_iterations == 12
     assert DASHBOARD_DEMO_PATH_POLICY_REF in shell.demo_path.policy_refs
     assert len(shell.demo_path.steps) == 4
     assert "real_screen_capture" in shell.demo_path.blocked_effects
@@ -92,6 +94,7 @@ def test_dashboard_data_js_is_redacted_and_static_app_ready():
     assert "Retrieval Receipts" in data_js
     assert "Safe Demo Path" in data_js
     assert "DEMO-READINESS-001" in data_js
+    assert "cortex-demo-stress" in data_js
     assert "Search primary sources" not in data_js
     assert "external:https://example.invalid/attack" not in data_js
 

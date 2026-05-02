@@ -169,6 +169,8 @@ class DashboardDemoPath(StrictModel):
     path_id: str = DASHBOARD_DEMO_PATH_ID
     title: str = "Safe Demo Path"
     summary: str = Field(min_length=1)
+    stress_command: str = "uv run cortex-demo-stress --iterations 12 --json"
+    stress_iterations: int = Field(default=12, ge=1)
     synthetic_only: bool = True
     real_capture_started: bool = False
     raw_storage_enabled: bool = False
@@ -420,6 +422,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "Focus Inspector",
         "Safe Demo Path",
         "DEMO-READINESS-001",
+        "DEMO-STRESS-001",
+        "cortex-demo-stress",
         "window.CORTEX_DASHBOARD_DATA",
     ]
     missing_ui_terms = _missing_terms(ui_text + "\n" + data_js, required_ui_terms)
@@ -894,6 +898,8 @@ def _sample_demo_path() -> DashboardDemoPath:
     ]
     return DashboardDemoPath(
         summary="A localhost-only walkthrough that proves the brain loop using synthetic data.",
+        stress_command="uv run cortex-demo-stress --iterations 12 --json",
+        stress_iterations=12,
         blocked_effects=blocked_effects,
         steps=[
             DashboardDemoPathStep(

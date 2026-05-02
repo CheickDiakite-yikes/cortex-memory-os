@@ -1,6 +1,6 @@
 # Benchmark Plan
 
-Last updated: 2026-05-01
+Last updated: 2026-05-02
 
 This plan defines the minimum quality gates for Cortex Memory OS slices. The
 benchmark runner is intentionally synthetic-first so it can run locally without
@@ -18,6 +18,7 @@ python3 -m compileall src
 uv run cortex-mcp --smoke
 uv run cortex-plugin-install-smoke
 uv run cortex-demo --json
+uv run cortex-demo-stress --iterations 12 --json
 ```
 
 Use `uv run cortex-bench --no-write` for quick local checks. Use
@@ -91,6 +92,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `LIVE-RUN-COMPUTER-SAFE-TASK-001` | Bounded live run uses Computer Use on localhost while proving the dashboard and read-only gateway receipts are on. | Real capture, raw screen storage, raw refs, durable memory write, model secret echo attempt, mutation/export/draft execution, external network egress, or external effect happens. |
 | `SYNTHETIC-CAPTURE-LADDER-001` | Synthetic disposable capture page writes temp raw evidence, expires the raw ref, writes audited synthetic memory, retrieves it, and blocks a secret-in-screen fixture before write. | Real screen capture starts, raw refs persist after expiry, durable test memory lacks audit, retrieval/context misses the memory, or fake secrets leak into evidence, memory, audit, context, or artifacts. |
 | `DEMO-READINESS-001` | Safe localhost demo receipt composes the dashboard, Synthetic capture ladder, encrypted index, context pack, and `.env.local` hygiene. | No real screen capture, No durable raw screen storage, No secret echo, No mutation, export, or draft execution, no raw refs, and no external effect. |
+| `DEMO-STRESS-001` | Bounded live stress demo repeats demo readiness, screen injection stress, and dashboard gateway receipts while staying synthetic-only and localhost-only. | No real screen capture, No durable raw screen storage, No secret echo, No mutation, export, or draft execution, no raw refs, no raw payloads, and no external effect. |
 | `AUDIT-001` | Memory mutations persist human-visible audits. | Mutation lacks a redacted audit event. |
 | `EXPORT-001` | User memory export is scoped, redacted, and deletion-aware. | Deleted/revoked content appears in export output. |
 | `EXPORT-AUDIT-001` | Memory exports persist redacted audit receipts. | Export audit copies memory content or secret-like text. |

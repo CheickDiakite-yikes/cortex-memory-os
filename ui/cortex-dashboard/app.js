@@ -159,12 +159,20 @@ function renderDemoPath() {
         )
         .join("")}
     </ol>
-    <button class="text-command" type="button" id="demo-readiness-command">
-      cortex-demo
-    </button>
+    <div class="demo-command-group">
+      <button class="text-command" type="button" id="demo-readiness-command">
+        cortex-demo
+      </button>
+      <button class="text-command" type="button" id="demo-stress-command">
+        cortex-demo-stress
+      </button>
+    </div>
   `;
   document.querySelector("#demo-readiness-command").addEventListener("click", () => {
     writeReceipt("DEMO-READINESS-001 selected. Run uv run cortex-demo --json for the safe demo receipt.");
+  });
+  document.querySelector("#demo-stress-command").addEventListener("click", () => {
+    writeReceipt("DEMO-STRESS-001 selected. Run uv run cortex-demo-stress --iterations 12 --json for the bounded stress receipt.");
   });
 }
 

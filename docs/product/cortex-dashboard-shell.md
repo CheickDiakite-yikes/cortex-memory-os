@@ -1,6 +1,6 @@
 # Cortex Dashboard Shell
 
-Last updated: 2026-04-30
+Last updated: 2026-05-02
 
 Benchmark: `MEMORY-PALACE-SKILL-FORGE-UI-001`
 
@@ -13,6 +13,10 @@ Focus inspector policy: `policy_dashboard_focus_inspector_v1`
 Demo readiness benchmark: `DEMO-READINESS-001`
 
 Demo readiness policy: `policy_demo_readiness_v1`
+
+Stress demo benchmark: `DEMO-STRESS-001`
+
+Stress demo policy: `policy_demo_stress_v1`
 
 This slice turns the generated dashboard concept into a local, static,
 inspectable dashboard shell over safe view models. The goal is a usable product
@@ -109,6 +113,17 @@ The corresponding command receipt is `uv run cortex-demo --json`. That receipt
 keeps real screen capture, durable raw screen storage, raw private refs, secret
 echo, mutation, export, draft execution, and external effects off.
 
+The same rail also exposes a bounded stress receipt:
+
+```bash
+uv run cortex-demo-stress --iterations 12 --json
+```
+
+That command repeats the safe demo readiness path, screen injection stress, and
+read-only dashboard gateway receipts while staying synthetic-only and
+localhost-only. It keeps No real screen capture, No durable raw screen storage,
+No secret echo, and No mutation, export, or draft execution.
+
 ## Live Desktop Proof
 
 `COMPUTER-DASHBOARD-LIVE-PROOF-001` validates this shell in a real Chrome
@@ -144,6 +159,8 @@ Observation pause previewed locally. Confirmation and audit receipt required.
   `policy_dashboard_focus_inspector_v1`;
 - the visible shell includes the `Safe Demo Path` tied to
   `policy_demo_readiness_v1`;
+- the visible shell includes the `DEMO-STRESS-001` command tied to
+  `policy_demo_stress_v1`;
 - dashboard docs, task board, benchmark plan, and benchmark registry name the
   slice;
 - local browser proof confirms the first viewport renders without overlapping

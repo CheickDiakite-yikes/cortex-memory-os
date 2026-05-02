@@ -1,6 +1,6 @@
 # Product Traceability Report
 
-Last updated: 2026-05-01
+Last updated: 2026-05-02
 
 `PRODUCT-TRACEABILITY-REPORT-001` summarizes where Cortex Memory OS stands
 against the original roadmap, benchmark coverage, and current task board.
@@ -141,6 +141,11 @@ User-facing pillars:
   context pack policy refs, and `.env.local` hygiene while proving No real
   screen capture, No durable raw screen storage, No secret echo, and No
   mutation, export, or draft execution.
+- Live Stress Demo: validated `DEMO-STRESS-001` so the safe demo path can be
+  repeated as a bounded live stress demo over demo readiness, screen injection
+  stress, and dashboard gateway receipts while staying synthetic-only and
+  localhost-only. It preserves No real screen capture, No durable raw screen
+  storage, No secret echo, and No mutation, export, or draft execution.
 - Codex Chronicle Research: `docs/research/codex-chronicle-lessons-2026-05-01.md`
   validates that screen context can reduce restated context and identify better
   primary sources, while also confirming the need for Cortex-specific
