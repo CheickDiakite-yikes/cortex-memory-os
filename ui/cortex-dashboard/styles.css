@@ -323,6 +323,10 @@ button {
   min-width: 0;
 }
 
+.capture-control-rail {
+  min-width: 0;
+}
+
 .live-receipts-rail {
   min-width: 0;
 }
@@ -336,7 +340,8 @@ button {
 
 .shadow-live-inner,
 .encrypted-index-inner,
-.live-receipts-inner {
+.live-receipts-inner,
+.capture-control-inner {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;
@@ -360,9 +365,16 @@ button {
   background: #fcfffd;
 }
 
+.capture-control-inner {
+  min-height: 96px;
+  border-color: #d9dfeb;
+  background: #fcfcff;
+}
+
 .shadow-live-copy,
 .encrypted-index-copy,
-.live-receipts-copy {
+.live-receipts-copy,
+.capture-control-copy {
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr);
   gap: 9px;
@@ -372,7 +384,8 @@ button {
 
 .shadow-live-icon,
 .encrypted-index-icon,
-.live-receipts-icon {
+.live-receipts-icon,
+.capture-control-icon {
   display: grid;
   place-items: center;
   width: 30px;
@@ -392,9 +405,15 @@ button {
   color: var(--green);
 }
 
+.capture-control-icon {
+  background: #edf3fb;
+  color: #376487;
+}
+
 .shadow-live-icon svg,
 .encrypted-index-icon svg,
-.live-receipts-icon svg {
+.live-receipts-icon svg,
+.capture-control-icon svg {
   width: 18px;
   height: 18px;
   stroke-width: 2.2;
@@ -405,21 +424,25 @@ button {
 .encrypted-index-copy strong,
 .encrypted-index-copy span span,
 .live-receipts-copy strong,
-.live-receipts-copy span span {
+.live-receipts-copy span span,
+.capture-control-copy strong,
+.capture-control-copy span span {
   display: block;
   min-width: 0;
 }
 
 .shadow-live-copy strong,
 .encrypted-index-copy strong,
-.live-receipts-copy strong {
+.live-receipts-copy strong,
+.capture-control-copy strong {
   font-size: 14px;
   line-height: 1.2;
 }
 
 .shadow-live-copy span span,
 .encrypted-index-copy span span,
-.live-receipts-copy span span {
+.live-receipts-copy span span,
+.capture-control-copy span span {
   margin-top: 3px;
   color: var(--muted);
   font-size: 12px;
@@ -435,7 +458,8 @@ button {
 
 .shadow-live-grid,
 .encrypted-index-grid,
-.live-receipts-grid {
+.live-receipts-grid,
+.capture-control-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 7px;
@@ -447,7 +471,8 @@ button {
 
 .shadow-live-grid div,
 .encrypted-index-grid div,
-.live-receipts-grid div {
+.live-receipts-grid div,
+.capture-control-grid div {
   display: grid;
   gap: 3px;
   min-height: 46px;
@@ -459,7 +484,8 @@ button {
 
 .shadow-live-grid span,
 .encrypted-index-grid span,
-.live-receipts-grid span {
+.live-receipts-grid span,
+.capture-control-grid span {
   color: var(--muted);
   font-size: 10px;
   font-weight: 850;
@@ -468,7 +494,8 @@ button {
 
 .shadow-live-grid strong,
 .encrypted-index-grid strong,
-.live-receipts-grid strong {
+.live-receipts-grid strong,
+.capture-control-grid strong {
   overflow: hidden;
   font-size: 12px;
   line-height: 1.2;
@@ -1169,9 +1196,11 @@ button {
   .live-backbone-rail,
   .shadow-live-inner,
   .live-receipts-inner,
+  .capture-control-inner,
   .shadow-live-grid,
   .encrypted-index-grid,
   .live-receipts-grid,
+  .capture-control-grid,
   .demo-path-inner,
   .demo-step-list {
     grid-template-columns: 1fr;

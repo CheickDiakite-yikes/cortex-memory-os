@@ -92,6 +92,26 @@ function writeReceipt(message) {
   document.querySelector("#interaction-receipt").textContent = message;
 }
 
+async function callCaptureControl(action, payload = {}) {
+  if (window.location.protocol === "file:") {
+    throw new Error("capture control bridge is not available from file://");
+  }
+  const response = await fetch(`/api/capture/${action}`, {
+    method: action === "status" ? "GET" : "POST",
+    headers: action === "status" ? undefined : { "Content-Type": "application/json" },
+    body: action === "status" ? undefined : JSON.stringify(payload),
+  });
+  const receipt = await response.json();
+  if (!response.ok) {
+    throw new Error(receipt.error_code || `capture control ${action} failed`);
+  }
+  return receipt;
+}
+
+function describeCaptureBridgeFallback(panel) {
+  return `Local bridge unavailable. Run uv run cortex-capture-control-server --port 8799, then open http://127.0.0.1:8799/index.html. CLI fallback: ${panel.native_cursor_command}.`;
+}
+
 function initialView() {
   const hashView = window.location.hash.replace("#", "");
   if (viewCopy[hashView]) return hashView;
@@ -301,6 +321,91 @@ function renderDemoPath() {
   document.querySelector("#demo-stress-command").addEventListener("click", () => {
     writeReceipt("DEMO-STRESS-001 selected. Run uv run cortex-demo-stress --iterations 12 --json for the bounded stress receipt.");
   });
+}
+
+function renderCaptureControl() {
+  const target = document.querySelector("#capture-control");
+  const bundle = data.capture_control;
+  const panel = bundle?.dashboard_panel;
+  const readiness = bundle?.readiness;
+  const start = bundle?.start_receipt;
+  if (!target || !panel || !readiness || !start) return;
+  const missing = readiness.missing_permissions?.length
+    ? readiness.missing_permissions.map(formatToken).join(", ")
+    : "none";
+  target.innerHTML = `
+    <div class="capture-control-copy">
+      <span class="capture-control-icon">${svgIcon("pointer")}</span>
+      <span>
+        <strong>Capture Control</strong>
+        <span>Native Shadow Clicker readiness with explicit consent and local receipts.</span>
+      </span>
+    </div>
+    <div class="capture-control-grid">
+      <div><span>State</span><strong>${formatToken(panel.state)}</strong></div>
+      <div><span>Cursor</span><strong>${readiness.can_start_cursor_overlay ? "ready" : "blocked"}</strong></div>
+      <div><span>Screen</span><strong>${readiness.can_start_screen_capture ? "ready" : "needs permission"}</strong></div>
+      <div><span>Bridge</span><strong id="capture-runtime-status">checking</strong></div>
+      <div><span>Missing</span><strong>${escapeHtml(missing)}</strong></div>
+      <div><span>PID</span><strong id="capture-runtime-pid">none</strong></div>
+    </div>
+    <div class="shadow-live-actions">
+      <button class="text-command" type="button" id="capture-turn-on">
+        ${escapeHtml(panel.primary_button_label)}
+      </button>
+      <button class="text-command" type="button" id="capture-shadow-command">
+        cortex-shadow-clicker
+      </button>
+      <button class="text-command" type="button" id="capture-stop">
+        ${escapeHtml(panel.stop_button_label)}
+      </button>
+    </div>
+  `;
+  refreshCaptureRuntimeStatus(panel);
+  document.querySelector("#capture-turn-on").addEventListener("click", async () => {
+    writeReceipt(`${panel.primary_button_label}: asking localhost bridge to start display-only Shadow Clicker.`);
+    try {
+      const receipt = await callCaptureControl("start", { duration_seconds: 30 });
+      writeReceipt(
+        `${panel.primary_button_label}: Shadow Clicker running with pid ${receipt.pid}. Screen capture=${receipt.capture_started}; memory writes=${receipt.memory_write_allowed}; raw refs=${receipt.raw_ref_retained}.`,
+      );
+      updateCaptureRuntime(receipt);
+    } catch (_error) {
+      writeReceipt(describeCaptureBridgeFallback(panel));
+    }
+  });
+  document.querySelector("#capture-shadow-command").addEventListener("click", () => {
+    writeReceipt(`Native Shadow Clicker command: ${panel.native_cursor_command}. It follows the system cursor without clicks, typing, screen capture, or memory writes.`);
+  });
+  document.querySelector("#capture-stop").addEventListener("click", async () => {
+    try {
+      const receipt = await callCaptureControl("stop");
+      writeReceipt(`${panel.stop_button_label}: ${receipt.state}. Observation inactive and no capture artifacts retained.`);
+      updateCaptureRuntime(receipt);
+    } catch (_error) {
+      writeReceipt(`${panel.stop_button_label}: ${bundle.stop_receipt.audit_action}. Observation inactive and ephemeral refs expire by policy.`);
+    }
+  });
+}
+
+async function refreshCaptureRuntimeStatus(panel) {
+  try {
+    const receipt = await callCaptureControl("status");
+    updateCaptureRuntime(receipt);
+  } catch (_error) {
+    const status = document.querySelector("#capture-runtime-status");
+    const pid = document.querySelector("#capture-runtime-pid");
+    if (status) status.textContent = "static";
+    if (pid) pid.textContent = "none";
+    writeReceipt(describeCaptureBridgeFallback(panel));
+  }
+}
+
+function updateCaptureRuntime(receipt) {
+  const status = document.querySelector("#capture-runtime-status");
+  const pid = document.querySelector("#capture-runtime-pid");
+  if (status) status.textContent = receipt.running ? "running" : "ready";
+  if (pid) pid.textContent = receipt.pid ? String(receipt.pid) : "none";
 }
 
 function renderShadowPointerLiveReceipt() {
@@ -788,6 +893,7 @@ if (!data) {
   renderEncryptedIndexPanel();
   renderLiveDashboardReceipts();
   renderDemoPath();
+  renderCaptureControl();
   renderInsights();
   renderReceipts();
   renderDashboard();

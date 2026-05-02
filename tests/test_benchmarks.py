@@ -7,7 +7,7 @@ def test_synthetic_benchmarks_pass():
     result = run_all()
 
     assert result.passed
-    assert len(result.case_results) == 177
+    assert len(result.case_results) == 187
     assert {case.suite for case in result.case_results} >= {
         "MEM-RECALL-001",
         "RETRIEVAL-SCORE-001",
@@ -99,6 +99,7 @@ def test_synthetic_benchmarks_pass():
         "SPATIAL-PROPOSAL-SCHEMA-001",
         "NATIVE-SHADOW-POINTER-LIVE-FEED-001",
         "NATIVE-OVERLAY-STREAM-SMOKE-001",
+        "NATIVE-CURSOR-FOLLOW-001",
         "CLICKY-UX-COMPANION-001",
         "SHADOW-POINTER-NATIVE-001",
         "NATIVE-CAPTURE-PERMISSION-SMOKE-001",
@@ -132,6 +133,15 @@ def test_synthetic_benchmarks_pass():
         "SYNTHETIC-CAPTURE-LADDER-001",
         "DEMO-READINESS-001",
         "DEMO-STRESS-001",
+        "REAL-CAPTURE-INTENT-001",
+        "REAL-CAPTURE-READINESS-001",
+        "REAL-CAPTURE-SENSITIVE-APP-FILTER-001",
+        "REAL-CAPTURE-SESSION-PLAN-001",
+        "REAL-CAPTURE-START-RECEIPT-001",
+        "REAL-CAPTURE-STOP-RECEIPT-001",
+        "REAL-CAPTURE-EPHEMERAL-RAW-REF-001",
+        "REAL-CAPTURE-OBSERVATION-SAMPLER-001",
+        "DASHBOARD-CAPTURE-CONTROL-001",
         "EXPORT-001",
         "EXPORT-AUDIT-001",
         "SKILL-FORGE-002",

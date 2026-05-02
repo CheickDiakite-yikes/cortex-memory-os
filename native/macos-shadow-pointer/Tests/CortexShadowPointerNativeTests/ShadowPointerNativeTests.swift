@@ -118,4 +118,37 @@ final class ShadowPointerNativeTests: XCTestCase {
 
         XCTAssertFalse(probe.promptRequested)
     }
+
+    func testNativeCursorFollowConfigIsDisplayOnlyAndBounded() throws {
+        let config = try NativeCursorFollowConfig().validated()
+
+        XCTAssertEqual(config.policyRef, nativeCursorFollowPolicyRef)
+        XCTAssertTrue(config.displayOnly)
+        XCTAssertTrue(config.ignoresMouseEvents)
+        XCTAssertTrue(config.allowedEffects.contains("read_global_cursor_position"))
+        XCTAssertTrue(config.blockedEffects.contains("start_screen_capture"))
+        XCTAssertTrue(config.blockedEffects.contains("execute_click"))
+        XCTAssertTrue(config.blockedEffects.contains("write_memory"))
+    }
+
+    func testNativeCursorFollowSmokeUsesOnlyCursorSamples() throws {
+        let result = try NativeCursorFollowSmokeResult.run(
+            samples: [
+                NativeCursorSample(x: 10, y: 20, timestamp: Date(timeIntervalSince1970: 0)),
+                NativeCursorSample(x: 15, y: 25, timestamp: Date(timeIntervalSince1970: 0.1)),
+            ],
+            checkedAt: Date(timeIntervalSince1970: 0)
+        )
+
+        XCTAssertTrue(result.passed)
+        XCTAssertEqual(result.benchmarkID, nativeCursorFollowBenchmarkID)
+        XCTAssertEqual(result.policyRef, nativeCursorFollowPolicyRef)
+        XCTAssertTrue(result.displayOnly)
+        XCTAssertFalse(result.captureStarted)
+        XCTAssertFalse(result.accessibilityObserverStarted)
+        XCTAssertFalse(result.memoryWriteAllowed)
+        XCTAssertFalse(result.rawRefRetained)
+        XCTAssertTrue(result.externalEffects.isEmpty)
+        XCTAssertTrue(result.overlaySpec.ignoresMouseEventsByDefault)
+    }
 }

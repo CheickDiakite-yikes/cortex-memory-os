@@ -68,6 +68,29 @@ from cortex_memory_os.key_management import (
     KEY_MANAGEMENT_PLAN_POLICY_REF,
     KeyManagementPlan,
 )
+from cortex_memory_os.native_permission_smoke import build_fixture_permission_smoke_result
+from cortex_memory_os.real_capture_control import (
+    DASHBOARD_CAPTURE_CONTROL_ID,
+    DASHBOARD_CAPTURE_CONTROL_POLICY_REF,
+    REAL_CAPTURE_EPHEMERAL_RAW_REF_ID,
+    REAL_CAPTURE_EPHEMERAL_RAW_REF_POLICY_REF,
+    REAL_CAPTURE_INTENT_ID,
+    REAL_CAPTURE_INTENT_POLICY_REF,
+    REAL_CAPTURE_OBSERVATION_SAMPLER_ID,
+    REAL_CAPTURE_OBSERVATION_SAMPLER_POLICY_REF,
+    REAL_CAPTURE_READINESS_ID,
+    REAL_CAPTURE_READINESS_POLICY_REF,
+    REAL_CAPTURE_SENSITIVE_APP_FILTER_ID,
+    REAL_CAPTURE_SENSITIVE_APP_FILTER_POLICY_REF,
+    REAL_CAPTURE_SESSION_PLAN_ID,
+    REAL_CAPTURE_SESSION_PLAN_POLICY_REF,
+    REAL_CAPTURE_START_RECEIPT_ID,
+    REAL_CAPTURE_START_RECEIPT_POLICY_REF,
+    REAL_CAPTURE_STOP_RECEIPT_ID,
+    REAL_CAPTURE_STOP_RECEIPT_POLICY_REF,
+    RealCaptureControlBundle,
+    build_real_capture_control_bundle,
+)
 from cortex_memory_os.shadow_pointer_native_live_feed import (
     NATIVE_SHADOW_POINTER_LIVE_FEED_POLICY_REF,
     NativeShadowPointerLiveFeedReceipt,
@@ -270,6 +293,7 @@ class CortexDashboardShell(StrictModel):
     dashboard_live_gateway: DashboardLiveGatewayPanel
     dashboard_live_data_adapter: DashboardLiveDataAdapterSnapshot
     live_dashboard_receipts: LiveDashboardReceiptsPanel
+    capture_control: RealCaptureControlBundle
     key_management_plan: KeyManagementPlan
     encrypted_index_panel: DashboardEncryptedIndexPanel
     native_live_feed: NativeShadowPointerLiveFeedReceipt
@@ -318,6 +342,7 @@ class DashboardShellSmokeResult(StrictModel):
     clicky_ux_companion_present: bool
     dashboard_live_data_adapter_present: bool
     live_dashboard_receipts_present: bool
+    capture_control_present: bool
     missing_ui_terms: list[str] = Field(default_factory=list)
     missing_doc_terms: list[str] = Field(default_factory=list)
 
@@ -371,6 +396,14 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
     )
     live_dashboard_receipts = build_live_dashboard_receipts_panel(
         dashboard_live_data_adapter
+    )
+    capture_control = build_real_capture_control_bundle(
+        permission_smoke=build_fixture_permission_smoke_result(
+            screen_recording_preflight=False,
+            accessibility_trusted=False,
+            checked_at=timestamp,
+        ),
+        now=timestamp,
     )
 
     return CortexDashboardShell(
@@ -447,6 +480,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
         dashboard_live_gateway=dashboard_live_gateway,
         dashboard_live_data_adapter=dashboard_live_data_adapter,
         live_dashboard_receipts=live_dashboard_receipts,
+        capture_control=capture_control,
         focus_inspector=_sample_focus_inspector(),
         policy_refs=[
             DASHBOARD_SHELL_POLICY_REF,
@@ -470,6 +504,15 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             CLICKY_UX_COMPANION_POLICY_REF,
             DASHBOARD_LIVE_DATA_ADAPTER_POLICY_REF,
             LIVE_DASHBOARD_RECEIPTS_POLICY_REF,
+            DASHBOARD_CAPTURE_CONTROL_POLICY_REF,
+            REAL_CAPTURE_INTENT_POLICY_REF,
+            REAL_CAPTURE_READINESS_POLICY_REF,
+            REAL_CAPTURE_SENSITIVE_APP_FILTER_POLICY_REF,
+            REAL_CAPTURE_SESSION_PLAN_POLICY_REF,
+            REAL_CAPTURE_START_RECEIPT_POLICY_REF,
+            REAL_CAPTURE_STOP_RECEIPT_POLICY_REF,
+            REAL_CAPTURE_EPHEMERAL_RAW_REF_POLICY_REF,
+            REAL_CAPTURE_OBSERVATION_SAMPLER_POLICY_REF,
         ],
         design_notes=[
             "Two primary work areas stay centered while guardrail insight panels stay compact.",
@@ -485,6 +528,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Clicky-inspired UX keeps live presence cursor-adjacent and makes the dashboard a review space.",
             "Encrypted index receipts show counts and policy state instead of raw memory or query text.",
             "Live dashboard panels refresh from local read-only adapter receipts, not embedded raw payloads.",
+            "Capture control shows an honest button path for the native Shadow Clicker without claiming static HTML can launch it.",
         ],
         safety_notes=[
             "Dashboard data is generated from local safe read-only adapters and synthetic view-model seeds.",
@@ -496,6 +540,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Clicky UX lessons were treated as untrusted external evidence and no repo code was executed.",
             "Encrypted index dashboard panels never expose key material, token text, queries, or source refs.",
             "Live adapters expose aggregate counts only and keep write paths disabled.",
+            "Real capture control starts with cursor overlay readiness and keeps raw storage and memory writes disabled.",
         ],
         insight_panels=_sample_insight_panels(),
         key_management_plan=operational_backbone.key_management_plan,
@@ -575,6 +620,11 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "DASHBOARD-LIVE-DATA-ADAPTER-001",
         "LIVE-DASHBOARD-RECEIPTS-001",
         "renderLiveDashboardReceipts",
+        "Capture Control",
+        "Turn On Cortex",
+        "cortex-shadow-clicker",
+        "renderCaptureControl",
+        DASHBOARD_CAPTURE_CONTROL_ID,
     ]
     missing_ui_terms = _missing_terms(ui_text + "\n" + data_js, required_ui_terms)
     doc_text = (
@@ -597,6 +647,9 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "encrypted index receipts",
         "read-only adapter",
         "live safe receipts",
+        "Capture Control",
+        "native Shadow Clicker",
+        DASHBOARD_CAPTURE_CONTROL_ID,
     ]
     missing_doc_terms = _missing_terms(doc_text, required_doc_terms)
     action_plans_present = any(
@@ -794,6 +847,31 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and "raw://" not in live_receipts_payload
         and "encrypted_blob://" not in live_receipts_payload
     )
+    capture_control_payload = shell.capture_control.model_dump_json()
+    capture_control_present = (
+        "Capture Control" in ui_text + "\n" + data_js
+        and "Turn On Cortex" in ui_text + "\n" + data_js
+        and "cortex-shadow-clicker" in ui_text + "\n" + data_js
+        and shell.capture_control.passed
+        and shell.capture_control.dashboard_panel.panel_id == DASHBOARD_CAPTURE_CONTROL_ID
+        and shell.capture_control.intent.intent_id == REAL_CAPTURE_INTENT_ID
+        and shell.capture_control.readiness.readiness_id == REAL_CAPTURE_READINESS_ID
+        and shell.capture_control.sensitive_filter.filter_id == REAL_CAPTURE_SENSITIVE_APP_FILTER_ID
+        and shell.capture_control.session_plan.plan_id == REAL_CAPTURE_SESSION_PLAN_ID
+        and shell.capture_control.start_receipt.receipt_id == REAL_CAPTURE_START_RECEIPT_ID
+        and shell.capture_control.stop_receipt.receipt_id == REAL_CAPTURE_STOP_RECEIPT_ID
+        and shell.capture_control.ephemeral_raw_ref_policy.policy_id
+        == REAL_CAPTURE_EPHEMERAL_RAW_REF_ID
+        and shell.capture_control.sampler_plan.sampler_id == REAL_CAPTURE_OBSERVATION_SAMPLER_ID
+        and not shell.capture_control.dashboard_panel.raw_payload_returned
+        and not shell.capture_control.dashboard_panel.mutation_enabled
+        and not shell.capture_control.session_plan.raw_screen_storage_enabled
+        and not shell.capture_control.start_receipt.raw_screen_storage_enabled
+        and not shell.capture_control.start_receipt.memory_write_allowed
+        and DASHBOARD_CAPTURE_CONTROL_POLICY_REF in shell.policy_refs
+        and "raw://" not in capture_control_payload
+        and "encrypted_blob://" not in capture_control_payload
+    )
 
     passed = (
         ui_files_present
@@ -817,6 +895,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and clicky_ux_companion_present
         and dashboard_live_data_adapter_present
         and live_dashboard_receipts_present
+        and capture_control_present
         and gateway_actions_present
         and not secret_retained
         and not raw_private_data_retained
@@ -865,6 +944,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         clicky_ux_companion_present=clicky_ux_companion_present,
         dashboard_live_data_adapter_present=dashboard_live_data_adapter_present,
         live_dashboard_receipts_present=live_dashboard_receipts_present,
+        capture_control_present=capture_control_present,
         missing_ui_terms=missing_ui_terms,
         missing_doc_terms=missing_doc_terms,
     )

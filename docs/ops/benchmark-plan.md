@@ -19,6 +19,8 @@ uv run cortex-mcp --smoke
 uv run cortex-plugin-install-smoke
 uv run cortex-demo --json
 uv run cortex-demo-stress --iterations 12 --json
+uv run cortex-capture-control-server --smoke --json
+uv run cortex-native-cursor-follow --json
 ```
 
 Use `uv run cortex-bench --no-write` for quick local checks. Use
@@ -74,6 +76,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `SHADOW-POINTER-LIVE-RECEIPT-001` | Shadow Pointer live receipts show trust, memory eligibility, raw-ref status, and firewall/evidence policy without raw payloads. | External page observations become memory eligible, retain raw refs, leak raw payloads, or hide policy state. |
 | `SPATIAL-PROPOSAL-SCHEMA-001` | Normalized pointing proposals map to display-only viewport/device pixels. | Mapped coordinates become clicks, tool calls, memory writes, or unbounded screen authority. |
 | `NATIVE-SHADOW-POINTER-LIVE-FEED-001` | Native overlay consumes redacted live receipts as display-only frames. | Native feed starts capture/observers, writes memory, retains raw refs, or gains click/type/export authority. |
+| `NATIVE-CURSOR-FOLLOW-001` | Native Shadow Clicker follows global cursor samples as a display-only overlay. | Cursor follower starts screen capture, starts Accessibility observers, clicks, types, writes memory, stores raw evidence, exports payloads, or stops ignoring mouse events. |
 | `CLICKY-UX-COMPANION-001` | Clicky-inspired `Cursor Companion` keeps live UX cursor-adjacent, compact, and display-only. | UX adaptation executes external repo code, enables capture/actions, hides trust state, or reintroduces dashboard crowding. |
 | `SHADOW-POINTER-NATIVE-001` | SwiftPM native macOS proof exposes a transparent non-activating overlay boundary plus pause, delete-recent, and app-ignore receipts. | Native overlay can become key/main, accepts mouse input by default, starts capture, writes memory, or lacks tested control receipts. |
 | `NATIVE-CAPTURE-PERMISSION-SMOKE-001` | Native macOS permission smoke reports Screen Recording and Accessibility status without prompting or starting capture. | Smoke requests permissions, starts capture or Accessibility observers, writes memory, emits evidence refs, or treats denied permissions as a benchmark failure. |
@@ -106,6 +109,15 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `SYNTHETIC-CAPTURE-LADDER-001` | Synthetic disposable capture page writes temp raw evidence, expires the raw ref, writes audited synthetic memory, retrieves it, and blocks a secret-in-screen fixture before write. | Real screen capture starts, raw refs persist after expiry, durable test memory lacks audit, retrieval/context misses the memory, or fake secrets leak into evidence, memory, audit, context, or artifacts. |
 | `DEMO-READINESS-001` | Safe localhost demo receipt composes the dashboard, Synthetic capture ladder, encrypted index, context pack, and `.env.local` hygiene. | No real screen capture, No durable raw screen storage, No secret echo, No mutation, export, or draft execution, no raw refs, and no external effect. |
 | `DEMO-STRESS-001` | Bounded live stress demo repeats demo readiness, screen injection stress, and dashboard gateway receipts while staying synthetic-only and localhost-only. | No real screen capture, No durable raw screen storage, No secret echo, No mutation, export, or draft execution, no raw refs, no raw payloads, and no external effect. |
+| `REAL-CAPTURE-INTENT-001` | Real capture requires a clicked start control and exact confirmation text. | Capture starts from inferred intent, hidden consent, or a request that also asks for durable memory writes or external effects. |
+| `REAL-CAPTURE-READINESS-001` | Screen Recording, Accessibility, and cursor overlay readiness are reported separately. | Screen capture can start without required permissions, or cursor overlay readiness is blocked by missing screen permissions. |
+| `REAL-CAPTURE-SENSITIVE-APP-FILTER-001` | Sensitive app filters block private apps before capture. | Password, messages, mail, keychain, or other sensitive app content is eligible for capture by default. |
+| `REAL-CAPTURE-SESSION-PLAN-001` | Capture session plan is time-bounded and default-off for raw storage, memory writes, and external effects. | Session planning enables durable raw storage, memory writes, or external effects. |
+| `REAL-CAPTURE-START-RECEIPT-001` | Start receipt audits consented observation while raw storage and memory writes stay off. | Start receipt lacks confirmation/audit metadata or enables raw storage/memory writes. |
+| `REAL-CAPTURE-STOP-RECEIPT-001` | Stop receipt turns off overlay, capture, observers, and memory influence together. | Stopping observation leaves capture, observers, overlay, or memory influence active. |
+| `REAL-CAPTURE-EPHEMERAL-RAW-REF-001` | Real capture raw refs start as ephemeral raw refs with short TTL. | Raw refs are durable by default or can directly produce memory writes. |
+| `REAL-CAPTURE-OBSERVATION-SAMPLER-001` | Observation sampler starts with count-only receipts and prompt-injection screening. | Sampler includes raw pixels, window titles, accessibility values, or unscreened content by default. |
+| `DASHBOARD-CAPTURE-CONTROL-001` | Dashboard shows Capture Control, Turn On Cortex, readiness, and the `cortex-shadow-clicker` command honestly. | Static dashboard claims to directly start native capture, returns raw payloads, executes mutation, or hides missing permission state. |
 | `AUDIT-001` | Memory mutations persist human-visible audits. | Mutation lacks a redacted audit event. |
 | `EXPORT-001` | User memory export is scoped, redacted, and deletion-aware. | Deleted/revoked content appears in export output. |
 | `EXPORT-AUDIT-001` | Memory exports persist redacted audit receipts. | Export audit copies memory content or secret-like text. |

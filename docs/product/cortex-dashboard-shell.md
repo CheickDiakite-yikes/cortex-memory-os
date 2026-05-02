@@ -222,6 +222,21 @@ read-only dashboard gateway receipts while staying synthetic-only and
 localhost-only. It keeps No real screen capture, No durable raw screen storage,
 No secret echo, and No mutation, export, or draft execution.
 
+## Capture Control
+
+`DASHBOARD-CAPTURE-CONTROL-001` adds a compact Capture Control rail for the
+next real-observation milestone. It shows `Turn On Cortex`, native Shadow
+Clicker readiness, Screen Recording and Accessibility readiness, and the
+`cortex-shadow-clicker` command.
+
+The dashboard does not claim that static HTML can launch a native process.
+When served by `uv run cortex-capture-control-server --port 8799`, the same
+button calls localhost-only fixed endpoints and starts only the display-only
+native Shadow Clicker. When opened as static `file://` HTML, the button emits a
+local receipt with the native command and permission state. The native Shadow
+Clicker follows the system cursor without clicks, typing, raw payloads, durable
+memory writes, arbitrary shell commands, or screen storage.
+
 ## Live Desktop Proof
 
 `COMPUTER-DASHBOARD-LIVE-PROOF-001` validates this shell in a real Chrome
@@ -269,6 +284,8 @@ Observation pause previewed locally. Confirmation and audit receipt required.
   `policy_encrypted_index_dashboard_live_v1`;
 - the visible shell includes `Live Receipt Backbone` tied to
   `policy_dashboard_live_backbone_v1`;
+- the visible shell includes `Capture Control` and `Turn On Cortex` tied to
+  `policy_dashboard_capture_control_v1`;
 - dashboard docs, task board, benchmark plan, and benchmark registry name the
   slice;
 - local browser proof confirms the first viewport renders without overlapping

@@ -492,6 +492,32 @@ from cortex_memory_os.native_overlay_stream_smoke import (
     NATIVE_OVERLAY_STREAM_SMOKE_POLICY_REF,
     run_native_overlay_stream_smoke,
 )
+from cortex_memory_os.native_cursor_follow import (
+    NATIVE_CURSOR_FOLLOW_ID,
+    NATIVE_CURSOR_FOLLOW_POLICY_REF,
+    build_fixture_native_cursor_follow_smoke_result,
+)
+from cortex_memory_os.real_capture_control import (
+    DASHBOARD_CAPTURE_CONTROL_ID,
+    DASHBOARD_CAPTURE_CONTROL_POLICY_REF,
+    REAL_CAPTURE_EPHEMERAL_RAW_REF_ID,
+    REAL_CAPTURE_EPHEMERAL_RAW_REF_POLICY_REF,
+    REAL_CAPTURE_INTENT_ID,
+    REAL_CAPTURE_INTENT_POLICY_REF,
+    REAL_CAPTURE_OBSERVATION_SAMPLER_ID,
+    REAL_CAPTURE_OBSERVATION_SAMPLER_POLICY_REF,
+    REAL_CAPTURE_READINESS_ID,
+    REAL_CAPTURE_READINESS_POLICY_REF,
+    REAL_CAPTURE_SENSITIVE_APP_FILTER_ID,
+    REAL_CAPTURE_SENSITIVE_APP_FILTER_POLICY_REF,
+    REAL_CAPTURE_SESSION_PLAN_ID,
+    REAL_CAPTURE_SESSION_PLAN_POLICY_REF,
+    REAL_CAPTURE_START_RECEIPT_ID,
+    REAL_CAPTURE_START_RECEIPT_POLICY_REF,
+    REAL_CAPTURE_STOP_RECEIPT_ID,
+    REAL_CAPTURE_STOP_RECEIPT_POLICY_REF,
+    build_real_capture_control_bundle,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TEST_FIXTURES = REPO_ROOT / "tests" / "fixtures"
@@ -613,6 +639,7 @@ def run_all() -> BenchmarkRunResult:
         case_spatial_proposal_schema_contract,
         case_native_shadow_pointer_live_feed_contract,
         case_native_overlay_stream_smoke_contract,
+        case_native_cursor_follow_contract,
         case_clicky_ux_companion_contract,
         case_shadow_pointer_native_overlay_contract,
         case_native_capture_permission_smoke_contract,
@@ -655,6 +682,15 @@ def run_all() -> BenchmarkRunResult:
         case_synthetic_capture_ladder_contract,
         case_demo_readiness_contract,
         case_demo_stress_contract,
+        case_real_capture_intent_contract,
+        case_real_capture_readiness_contract,
+        case_real_capture_sensitive_app_filter_contract,
+        case_real_capture_session_plan_contract,
+        case_real_capture_start_receipt_contract,
+        case_real_capture_stop_receipt_contract,
+        case_real_capture_ephemeral_raw_ref_contract,
+        case_real_capture_observation_sampler_contract,
+        case_dashboard_capture_control_contract,
         case_skill_promotion_gate,
         case_skill_rollback_gate,
         case_skill_maturity_audit_events,
@@ -10041,6 +10077,51 @@ def case_native_overlay_stream_smoke_contract() -> BenchmarkCaseResult:
     )
 
 
+def case_native_cursor_follow_contract() -> BenchmarkCaseResult:
+    result = build_fixture_native_cursor_follow_smoke_result(
+        checked_at=datetime(2026, 5, 2, 16, 0, tzinfo=UTC)
+    )
+    docs_text = _real_capture_docs_text()
+    missing_terms = _missing_terms(
+        docs_text,
+        [
+            NATIVE_CURSOR_FOLLOW_ID,
+            NATIVE_CURSOR_FOLLOW_POLICY_REF,
+            "cortex-shadow-clicker",
+            "read_global_cursor_position",
+            "display-only",
+        ],
+    )
+    payload = result.model_dump_json()
+    passed = (
+        result.passed
+        and result.display_only
+        and not result.capture_started
+        and not result.accessibility_observer_started
+        and not result.memory_write_allowed
+        and not result.raw_ref_retained
+        and "raw://" not in payload
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="NATIVE-CURSOR-FOLLOW-001/display_only_shadow_clicker",
+        suite=NATIVE_CURSOR_FOLLOW_ID,
+        passed=passed,
+        summary=(
+            "Native Shadow Clicker follows global cursor samples as a display-only "
+            "overlay without capture, clicks, typing, raw refs, or memory writes."
+        ),
+        metrics={
+            "cursor_sample_count": len(result.cursor_samples),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": NATIVE_CURSOR_FOLLOW_POLICY_REF,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
 def case_clicky_ux_companion_contract() -> BenchmarkCaseResult:
     live_receipt = build_live_receipt(
         default_shadow_pointer_snapshot(),
@@ -13168,6 +13249,319 @@ def case_demo_stress_contract() -> BenchmarkCaseResult:
             "missing_doc_terms": missing_doc_terms,
         },
     )
+
+
+def case_real_capture_intent_contract() -> BenchmarkCaseResult:
+    bundle = _real_capture_bundle(permissions_ready=True)
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [REAL_CAPTURE_INTENT_ID, REAL_CAPTURE_INTENT_POLICY_REF, "Turn on Cortex observation"],
+    )
+    intent = bundle.intent
+    passed = (
+        intent.intent_id == REAL_CAPTURE_INTENT_ID
+        and intent.user_clicked_start
+        and intent.confirmation_text == "Turn on Cortex observation"
+        and not intent.durable_memory_writes_requested
+        and not intent.external_effects_requested
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="REAL-CAPTURE-INTENT-001/explicit_button_intent",
+        suite=REAL_CAPTURE_INTENT_ID,
+        passed=passed,
+        summary="Real capture intent requires an explicit button click and exact confirmation text.",
+        metrics={"missing_doc_terms": len(missing_terms)},
+        evidence={"policy_ref": REAL_CAPTURE_INTENT_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_real_capture_readiness_contract() -> BenchmarkCaseResult:
+    blocked = _real_capture_bundle(permissions_ready=False).readiness
+    ready = _real_capture_bundle(permissions_ready=True).readiness
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [REAL_CAPTURE_READINESS_ID, REAL_CAPTURE_READINESS_POLICY_REF, "missing_permissions"],
+    )
+    passed = (
+        blocked.readiness_id == REAL_CAPTURE_READINESS_ID
+        and blocked.can_start_cursor_overlay
+        and not blocked.can_start_screen_capture
+        and set(blocked.missing_permissions) == {"screen_recording", "accessibility"}
+        and ready.can_start_screen_capture
+        and not ready.durable_memory_write_allowed
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="REAL-CAPTURE-READINESS-001/permission_gated_readiness",
+        suite=REAL_CAPTURE_READINESS_ID,
+        passed=passed,
+        summary="Real capture readiness separates cursor overlay readiness from screen-capture permissions.",
+        metrics={
+            "blocked_missing_permission_count": len(blocked.missing_permissions),
+            "ready_can_start_screen_capture": int(ready.can_start_screen_capture),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={"policy_ref": REAL_CAPTURE_READINESS_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_real_capture_sensitive_app_filter_contract() -> BenchmarkCaseResult:
+    filter_result = _real_capture_bundle(permissions_ready=True).sensitive_filter
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [
+            REAL_CAPTURE_SENSITIVE_APP_FILTER_ID,
+            REAL_CAPTURE_SENSITIVE_APP_FILTER_POLICY_REF,
+            "sensitive app",
+        ],
+    )
+    blocked_count = sum(int(not decision.allowed_for_capture) for decision in filter_result.decisions)
+    allowed_count = sum(int(decision.allowed_for_capture) for decision in filter_result.decisions)
+    passed = (
+        filter_result.filter_id == REAL_CAPTURE_SENSITIVE_APP_FILTER_ID
+        and filter_result.passed
+        and blocked_count >= 1
+        and allowed_count >= 1
+        and not filter_result.raw_content_allowed
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="REAL-CAPTURE-SENSITIVE-APP-FILTER-001/default_sensitive_blocks",
+        suite=REAL_CAPTURE_SENSITIVE_APP_FILTER_ID,
+        passed=passed,
+        summary="Sensitive apps are blocked before real capture and do not expose window titles.",
+        metrics={
+            "blocked_app_count": blocked_count,
+            "allowed_app_count": allowed_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": REAL_CAPTURE_SENSITIVE_APP_FILTER_POLICY_REF,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_real_capture_session_plan_contract() -> BenchmarkCaseResult:
+    plan = _real_capture_bundle(permissions_ready=True).session_plan
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [REAL_CAPTURE_SESSION_PLAN_ID, REAL_CAPTURE_SESSION_PLAN_POLICY_REF, "session plan"],
+    )
+    passed = (
+        plan.plan_id == REAL_CAPTURE_SESSION_PLAN_ID
+        and plan.state.value == "ready"
+        and "cortex-shadow-clicker" in plan.cursor_overlay_command
+        and not plan.memory_writes_enabled
+        and not plan.external_effects_enabled
+        and not plan.raw_screen_storage_enabled
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="REAL-CAPTURE-SESSION-PLAN-001/default_off_plan",
+        suite=REAL_CAPTURE_SESSION_PLAN_ID,
+        passed=passed,
+        summary=(
+            "Capture session plans are explicit, time-bounded, and default-off "
+            "for raw storage and memory writes."
+        ),
+        metrics={
+            "max_duration_minutes": plan.max_duration_minutes,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": REAL_CAPTURE_SESSION_PLAN_POLICY_REF,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_real_capture_start_receipt_contract() -> BenchmarkCaseResult:
+    receipt = _real_capture_bundle(permissions_ready=True).start_receipt
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [REAL_CAPTURE_START_RECEIPT_ID, REAL_CAPTURE_START_RECEIPT_POLICY_REF, "start receipt"],
+    )
+    passed = (
+        receipt.receipt_id == REAL_CAPTURE_START_RECEIPT_ID
+        and receipt.observation_active
+        and receipt.cursor_overlay_running
+        and receipt.screen_capture_running
+        and receipt.confirmation_observed
+        and not receipt.raw_screen_storage_enabled
+        and not receipt.memory_write_allowed
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="REAL-CAPTURE-START-RECEIPT-001/audited_start",
+        suite=REAL_CAPTURE_START_RECEIPT_ID,
+        passed=passed,
+        summary=(
+            "Start receipts audit the consented observation session while leaving "
+            "raw storage and memory writes off."
+        ),
+        metrics={
+            "screen_capture_running": int(receipt.screen_capture_running),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={"policy_ref": REAL_CAPTURE_START_RECEIPT_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_real_capture_stop_receipt_contract() -> BenchmarkCaseResult:
+    receipt = _real_capture_bundle(permissions_ready=True).stop_receipt
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [REAL_CAPTURE_STOP_RECEIPT_ID, REAL_CAPTURE_STOP_RECEIPT_POLICY_REF, "stop receipt"],
+    )
+    passed = (
+        receipt.receipt_id == REAL_CAPTURE_STOP_RECEIPT_ID
+        and not receipt.observation_active
+        and not receipt.cursor_overlay_running
+        and not receipt.screen_capture_running
+        and not receipt.accessibility_observer_running
+        and not receipt.raw_screen_storage_enabled
+        and not receipt.memory_write_allowed
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="REAL-CAPTURE-STOP-RECEIPT-001/audited_stop",
+        suite=REAL_CAPTURE_STOP_RECEIPT_ID,
+        passed=passed,
+        summary="Stop receipts shut down overlay, capture, observers, and memory influence together.",
+        metrics={"observation_active": int(receipt.observation_active), "missing_doc_terms": len(missing_terms)},
+        evidence={"policy_ref": REAL_CAPTURE_STOP_RECEIPT_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_real_capture_ephemeral_raw_ref_contract() -> BenchmarkCaseResult:
+    policy = _real_capture_bundle(permissions_ready=True).ephemeral_raw_ref_policy
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [
+            REAL_CAPTURE_EPHEMERAL_RAW_REF_ID,
+            REAL_CAPTURE_EPHEMERAL_RAW_REF_POLICY_REF,
+            "ephemeral raw refs",
+        ],
+    )
+    passed = (
+        policy.policy_id == REAL_CAPTURE_EPHEMERAL_RAW_REF_ID
+        and policy.ttl_seconds <= 600
+        and not policy.durable_storage_allowed
+        and not policy.memory_write_allowed_from_raw
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="REAL-CAPTURE-EPHEMERAL-RAW-REF-001/temp_ttl_policy",
+        suite=REAL_CAPTURE_EPHEMERAL_RAW_REF_ID,
+        passed=passed,
+        summary=(
+            "Real capture raw refs start temporary, auto-expiring, and unable "
+            "to write memory directly."
+        ),
+        metrics={"ttl_seconds": policy.ttl_seconds, "missing_doc_terms": len(missing_terms)},
+        evidence={
+            "policy_ref": REAL_CAPTURE_EPHEMERAL_RAW_REF_POLICY_REF,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_real_capture_observation_sampler_contract() -> BenchmarkCaseResult:
+    sampler = _real_capture_bundle(permissions_ready=True).sampler_plan
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [
+            REAL_CAPTURE_OBSERVATION_SAMPLER_ID,
+            REAL_CAPTURE_OBSERVATION_SAMPLER_POLICY_REF,
+            "count-only receipts",
+        ],
+    )
+    passed = (
+        sampler.sampler_id == REAL_CAPTURE_OBSERVATION_SAMPLER_ID
+        and sampler.output_shape == "count_only_receipts"
+        and not sampler.include_window_titles
+        and not sampler.include_raw_pixels
+        and not sampler.include_accessibility_values
+        and sampler.prompt_injection_screening_required
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="REAL-CAPTURE-OBSERVATION-SAMPLER-001/count_only_sampler",
+        suite=REAL_CAPTURE_OBSERVATION_SAMPLER_ID,
+        passed=passed,
+        summary="Observation sampling starts as count-only receipts with prompt-injection screening.",
+        metrics={
+            "sample_interval_ms": sampler.sample_interval_ms,
+            "max_events_per_minute": sampler.max_events_per_minute,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": REAL_CAPTURE_OBSERVATION_SAMPLER_POLICY_REF,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_dashboard_capture_control_contract() -> BenchmarkCaseResult:
+    panel = _real_capture_bundle(permissions_ready=False).dashboard_panel
+    shell = build_dashboard_shell(now=datetime(2026, 5, 2, 16, 0, tzinfo=UTC))
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [DASHBOARD_CAPTURE_CONTROL_ID, DASHBOARD_CAPTURE_CONTROL_POLICY_REF, "Turn On Cortex"],
+    )
+    payload = panel.model_dump_json()
+    passed = (
+        panel.panel_id == DASHBOARD_CAPTURE_CONTROL_ID
+        and panel.primary_button_label == "Turn On Cortex"
+        and panel.local_only
+        and panel.requires_confirmation
+        and panel.shows_shadow_clicker_status
+        and not panel.starts_from_static_dashboard
+        and not panel.raw_payload_returned
+        and not panel.mutation_enabled
+        and shell.capture_control.dashboard_panel.panel_id == DASHBOARD_CAPTURE_CONTROL_ID
+        and DASHBOARD_CAPTURE_CONTROL_POLICY_REF in shell.policy_refs
+        and "raw://" not in payload
+        and "encrypted_blob://" not in payload
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="DASHBOARD-CAPTURE-CONTROL-001/turn_on_cortex_panel",
+        suite=DASHBOARD_CAPTURE_CONTROL_ID,
+        passed=passed,
+        summary=(
+            "Dashboard exposes a local Turn On Cortex control with honest "
+            "native-command and permission status receipts."
+        ),
+        metrics={"missing_doc_terms": len(missing_terms)},
+        evidence={"policy_ref": DASHBOARD_CAPTURE_CONTROL_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def _real_capture_bundle(*, permissions_ready: bool):
+    return build_real_capture_control_bundle(
+        permission_smoke=build_fixture_permission_smoke_result(
+            screen_recording_preflight=permissions_ready,
+            accessibility_trusted=permissions_ready,
+            checked_at=datetime(2026, 5, 2, 16, 0, tzinfo=UTC),
+        ),
+        native_cursor_follow=build_fixture_native_cursor_follow_smoke_result(
+            checked_at=datetime(2026, 5, 2, 16, 0, tzinfo=UTC)
+        ),
+        now=datetime(2026, 5, 2, 16, 0, tzinfo=UTC),
+    )
+
+
+def _real_capture_docs_text() -> str:
+    paths = [
+        REPO_ROOT / "docs" / "architecture" / "consented-real-capture-control.md",
+        REPO_ROOT / "docs" / "product" / "capture-control-dashboard.md",
+        REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+        REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+    ]
+    return "\n".join(path.read_text(encoding="utf-8") for path in paths if path.exists())
 
 
 def _dashboard_live_gateway_docs_text() -> str:

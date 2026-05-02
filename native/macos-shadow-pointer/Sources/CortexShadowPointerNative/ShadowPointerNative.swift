@@ -13,6 +13,8 @@ import CoreGraphics
 public let shadowPointerNativePolicyRef = "policy_shadow_pointer_native_overlay_v1"
 public let nativeCapturePermissionSmokeBenchmarkID = "NATIVE-CAPTURE-PERMISSION-SMOKE-001"
 public let nativeCapturePermissionSmokePolicyRef = "policy_native_capture_permission_smoke_v1"
+public let nativeCursorFollowBenchmarkID = "NATIVE-CURSOR-FOLLOW-001"
+public let nativeCursorFollowPolicyRef = "policy_native_cursor_follow_v1"
 
 public enum ShadowPointerNativeState: String, Codable, CaseIterable, Sendable {
     case off
@@ -429,6 +431,162 @@ public struct NativeCapturePermissionSmokeResult: Codable, Equatable, Sendable {
             safetyNotes: safetyNotes,
             passed: passed
         )
+    }
+}
+
+public struct NativeCursorFollowConfig: Codable, Equatable, Sendable {
+    public var policyRef: String
+    public var sampleHz: Int
+    public var overlayDiameter: Double
+    public var offsetX: Double
+    public var offsetY: Double
+    public var displayOnly: Bool
+    public var ignoresMouseEvents: Bool
+    public var allowedEffects: [String]
+    public var blockedEffects: [String]
+
+    public init(
+        policyRef: String = nativeCursorFollowPolicyRef,
+        sampleHz: Int = 30,
+        overlayDiameter: Double = 34,
+        offsetX: Double = 14,
+        offsetY: Double = -14,
+        displayOnly: Bool = true,
+        ignoresMouseEvents: Bool = true,
+        allowedEffects: [String] = [
+            "read_global_cursor_position",
+            "render_shadow_clicker_overlay",
+            "move_overlay_window",
+        ],
+        blockedEffects: [String] = [
+            "start_screen_capture",
+            "start_accessibility_observer",
+            "execute_click",
+            "type_text",
+            "read_window_contents",
+            "write_memory",
+            "store_raw_evidence",
+            "export_payload",
+        ]
+    ) {
+        self.policyRef = policyRef
+        self.sampleHz = sampleHz
+        self.overlayDiameter = overlayDiameter
+        self.offsetX = offsetX
+        self.offsetY = offsetY
+        self.displayOnly = displayOnly
+        self.ignoresMouseEvents = ignoresMouseEvents
+        self.allowedEffects = allowedEffects
+        self.blockedEffects = blockedEffects
+    }
+
+    public func validated() throws -> NativeCursorFollowConfig {
+        guard policyRef == nativeCursorFollowPolicyRef else {
+            throw ShadowPointerNativeError.invalidControl("native cursor follow policy mismatch")
+        }
+        guard sampleHz >= 5 && sampleHz <= 60 else {
+            throw ShadowPointerNativeError.invalidControl("native cursor follow sampleHz out of range")
+        }
+        guard overlayDiameter >= 16 && overlayDiameter <= 96 else {
+            throw ShadowPointerNativeError.invalidControl("native cursor follow overlay diameter out of range")
+        }
+        guard displayOnly && ignoresMouseEvents else {
+            throw ShadowPointerNativeError.invalidControl("native cursor follow must be display-only")
+        }
+        let requiredAllowed = Set([
+            "read_global_cursor_position",
+            "render_shadow_clicker_overlay",
+            "move_overlay_window",
+        ])
+        guard requiredAllowed.isSubset(of: Set(allowedEffects)) else {
+            throw ShadowPointerNativeError.invalidControl("native cursor follow missing allowed effects")
+        }
+        let requiredBlocked = Set([
+            "start_screen_capture",
+            "start_accessibility_observer",
+            "execute_click",
+            "type_text",
+            "read_window_contents",
+            "write_memory",
+            "store_raw_evidence",
+            "export_payload",
+        ])
+        guard requiredBlocked.isSubset(of: Set(blockedEffects)) else {
+            throw ShadowPointerNativeError.invalidControl("native cursor follow missing blocked effects")
+        }
+        return self
+    }
+}
+
+public struct NativeCursorSample: Codable, Equatable, Sendable {
+    public var x: Double
+    public var y: Double
+    public var timestamp: Date
+
+    public init(x: Double, y: Double, timestamp: Date) {
+        self.x = x
+        self.y = y
+        self.timestamp = timestamp
+    }
+}
+
+public struct NativeCursorFollowSmokeResult: Codable, Equatable, Sendable {
+    public var benchmarkID: String
+    public var policyRef: String
+    public var checkedAt: Date
+    public var config: NativeCursorFollowConfig
+    public var overlaySpec: NativeOverlayWindowSpec
+    public var cursorSamples: [NativeCursorSample]
+    public var displayOnly: Bool
+    public var captureStarted: Bool
+    public var accessibilityObserverStarted: Bool
+    public var memoryWriteAllowed: Bool
+    public var rawRefRetained: Bool
+    public var externalEffects: [String]
+    public var passed: Bool
+
+    public static func run(
+        samples: [NativeCursorSample] = [
+            NativeCursorSample(x: 120, y: 240, timestamp: Date(timeIntervalSince1970: 0)),
+            NativeCursorSample(x: 180, y: 260, timestamp: Date(timeIntervalSince1970: 0.1)),
+            NativeCursorSample(x: 220, y: 300, timestamp: Date(timeIntervalSince1970: 0.2)),
+        ],
+        checkedAt: Date = Date()
+    ) throws -> NativeCursorFollowSmokeResult {
+        let config = try NativeCursorFollowConfig().validated()
+        let overlaySpec = NativeOverlayWindowSpec.shadowPointerDefault
+        let passed = config.displayOnly
+            && config.ignoresMouseEvents
+            && overlaySpec.ignoresMouseEventsByDefault
+            && !overlaySpec.canBecomeKey
+            && !overlaySpec.canBecomeMain
+            && samples.count >= 2
+        return NativeCursorFollowSmokeResult(
+            benchmarkID: nativeCursorFollowBenchmarkID,
+            policyRef: nativeCursorFollowPolicyRef,
+            checkedAt: checkedAt,
+            config: config,
+            overlaySpec: overlaySpec,
+            cursorSamples: samples,
+            displayOnly: true,
+            captureStarted: false,
+            accessibilityObserverStarted: false,
+            memoryWriteAllowed: false,
+            rawRefRetained: false,
+            externalEffects: [],
+            passed: passed
+        )
+    }
+}
+
+public enum NativeCursorProbe {
+    public static func sampleNow(timestamp: Date = Date()) -> NativeCursorSample {
+        #if canImport(AppKit)
+        let point = NSEvent.mouseLocation
+        return NativeCursorSample(x: point.x, y: point.y, timestamp: timestamp)
+        #else
+        return NativeCursorSample(x: 0, y: 0, timestamp: timestamp)
+        #endif
     }
 }
 

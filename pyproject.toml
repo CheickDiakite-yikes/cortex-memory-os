@@ -34,6 +34,9 @@ cortex-receipt-leak-stress = "cortex_memory_os.receipt_leak_stress:main"
 cortex-plugin-enable-plan = "cortex_memory_os.plugin_enable_plan:main"
 cortex-native-permission-smoke = "cortex_memory_os.native_permission_smoke:main"
 cortex-native-overlay-stream-smoke = "cortex_memory_os.native_overlay_stream_smoke:main"
+cortex-native-cursor-follow = "cortex_memory_os.native_cursor_follow:main"
+cortex-real-capture-control = "cortex_memory_os.real_capture_control:main"
+cortex-capture-control-server = "cortex_memory_os.capture_control_server:main"
 
 [build-system]
 requires = ["setuptools>=69"]

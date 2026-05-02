@@ -20,6 +20,10 @@ let package = Package(
             name: "cortex-permission-smoke",
             targets: ["CortexPermissionSmoke"]
         ),
+        .executable(
+            name: "cortex-shadow-clicker",
+            targets: ["CortexShadowClicker"]
+        ),
     ],
     targets: [
         .target(
@@ -31,6 +35,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "CortexPermissionSmoke",
+            dependencies: ["CortexShadowPointerNative"]
+        ),
+        .executableTarget(
+            name: "CortexShadowClicker",
             dependencies: ["CortexShadowPointerNative"]
         ),
         .testTarget(
