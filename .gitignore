@@ -39,6 +39,7 @@ benchmarks/runs/*
 coverage/
 htmlcov/
 .pytest_cache/
+.playwright-mcp/
 
 # Language and editor noise
 __pycache__/

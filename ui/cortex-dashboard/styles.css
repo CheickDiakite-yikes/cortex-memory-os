@@ -1146,6 +1146,27 @@ button {
   line-height: 1.35;
 }
 
+.live-command-receipt {
+  position: fixed;
+  z-index: 30;
+  right: 18px;
+  bottom: 18px;
+  width: min(560px, calc(100vw - 36px));
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: var(--shadow-soft);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.live-command-receipt[hidden] {
+  display: none;
+}
+
 .empty-state {
   display: grid;
   place-items: center;

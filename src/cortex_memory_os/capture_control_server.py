@@ -73,7 +73,7 @@ class ManagedProcess(Protocol):
 
 PopenFactory = Callable[..., ManagedProcess]
 PermissionRunner = Callable[[], NativePermissionSmokeResult]
-ScreenProbeRunner = Callable[[bool], NativeScreenCaptureProbeResult]
+ScreenProbeRunner = Callable[..., NativeScreenCaptureProbeResult]
 
 
 class CaptureControlBridgeReceipt(StrictModel):
@@ -398,7 +398,7 @@ def build_capture_control_handler(
             if self.path == CAPTURE_CONTROL_SCREEN_PROBE_PATH:
                 payload = self._read_json()
                 allow_real_capture = bool(payload.get("allow_real_capture", False))
-                receipt = screen_probe_runner(allow_real_capture)
+                receipt = screen_probe_runner(allow_real_capture=allow_real_capture)
                 manager.record_bridge_receipt(_bridge_receipt_from_screen_probe(receipt))
                 self._write_json(200, receipt.model_dump(mode="json"))
                 return
@@ -547,7 +547,7 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         manager=manager,
         session_token="test-token",
         permission_runner=lambda: permission_fixture,
-        screen_probe_runner=lambda allow_real_capture: screen_probe_fixture.model_copy(
+        screen_probe_runner=lambda *, allow_real_capture: screen_probe_fixture.model_copy(
             update={"allow_real_capture": allow_real_capture}
         ),
     )
@@ -555,7 +555,7 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         manager,
         session_token="test-token",
         permission_runner=lambda: permission_fixture,
-        screen_probe_runner=lambda allow_real_capture: screen_probe_fixture.model_copy(
+        screen_probe_runner=lambda *, allow_real_capture: screen_probe_fixture.model_copy(
             update={"allow_real_capture": allow_real_capture}
         ),
         remote_probe_status=403,

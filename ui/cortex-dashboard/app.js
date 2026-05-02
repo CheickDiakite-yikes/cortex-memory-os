@@ -90,7 +90,23 @@ function riskClass(risk) {
 }
 
 function writeReceipt(message) {
-  document.querySelector("#interaction-receipt").textContent = message;
+  const receipt = document.querySelector("#interaction-receipt");
+  if (receipt) receipt.textContent = message;
+  const liveReceipt = ensureLiveCommandReceipt();
+  liveReceipt.textContent = message;
+  liveReceipt.hidden = false;
+}
+
+function ensureLiveCommandReceipt() {
+  let liveReceipt = document.querySelector("#live-command-receipt");
+  if (liveReceipt) return liveReceipt;
+  liveReceipt = document.createElement("p");
+  liveReceipt.id = "live-command-receipt";
+  liveReceipt.className = "live-command-receipt";
+  liveReceipt.setAttribute("aria-live", "polite");
+  liveReceipt.hidden = true;
+  document.body.append(liveReceipt);
+  return liveReceipt;
 }
 
 async function callCaptureControl(action, payload = {}) {
