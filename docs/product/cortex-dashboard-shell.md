@@ -26,6 +26,18 @@ Consent-first onboarding benchmark: `CONSENT-FIRST-ONBOARDING-001`
 
 Consent-first onboarding policy: `policy_consent_first_onboarding_v1`
 
+Encrypted index dashboard benchmark: `ENCRYPTED-INDEX-DASHBOARD-LIVE-001`
+
+Encrypted index dashboard policy: `policy_encrypted_index_dashboard_live_v1`
+
+Native live feed benchmark: `NATIVE-SHADOW-POINTER-LIVE-FEED-001`
+
+Native live feed policy: `policy_native_shadow_pointer_live_feed_v1`
+
+Clicky UX companion benchmark: `CLICKY-UX-COMPANION-001`
+
+Clicky UX companion policy: `policy_clicky_ux_companion_v1`
+
 This slice turns the generated dashboard concept into a local, static,
 inspectable dashboard shell over safe view models. The goal is a usable product
 surface for Memory Palace and Skill Forge without introducing live capture,
@@ -56,6 +68,15 @@ refs, or raw evidence refs.
 External public-page observations are shown as `external_untrusted`,
 memory-ineligible, raw-ref-free receipts with derived-only evidence policy.
 
+The Clicky UX refinement keeps the live surface cursor-adjacent and compact
+instead of dashboard-first. Clicky was studied as an untrusted primary
+repository reference; external repo code was not executed. Cortex borrows the
+usable pattern, not the trust boundary: a small `Cursor Companion`, a compact
+receipt panel, display-only pointing, and onboarding by demonstration. The
+dashboard now shows the companion beside `Encrypted Index Receipts` so live
+status and encrypted retrieval health are visible without adding another dense
+queue.
+
 ## Design Source
 
 The generated dashboard concept established the first visual direction:
@@ -70,8 +91,14 @@ The generated dashboard concept established the first visual direction:
   Evidence Vault, Encryption Default, and Ops Quality;
 - a Safe Demo Path rail for the localhost synthetic demo sequence;
 - a Shadow Pointer live receipt rail for compact observation trust state;
+- a Cursor Companion rail inspired by Clicky UX lessons;
+- an Encrypted Index Receipts rail for metadata-only `memory.search_index`
+  health;
 - real tab views for Overview, Memory Palace, Skill Forge, Agent Gateway,
   Audit, and Policies;
+- active tab semantics and Focus Inspector defaults that switch with the
+  selected view, so Memory Palace opens on a memory and Skill Forge opens on a
+  skill rather than making both tabs feel identical;
 - bottom rail for Recent Safe Receipts;
 - restrained local-ops palette with green, blue, amber, and red status
   accents;
@@ -88,6 +115,11 @@ safe view models:
 - `RetrievalReceiptsDashboard`
 - `ShadowPointerLiveReceipt`
 - `ConsentFirstOnboardingPlan`
+- `KeyManagementPlan`
+- `DashboardEncryptedIndexPanel`
+- `NativeShadowPointerLiveFeedReceipt`
+- `DurableSyntheticMemoryReceipt`
+- `ClickyUxCompanionPanel`
 
 The generated `ui/cortex-dashboard/dashboard-data.js` contains synthetic,
 redacted, deterministic view-model data. It must contain no raw private memory,
@@ -118,6 +150,15 @@ The static app in `ui/cortex-dashboard/` must render:
 - a Shadow Pointer live receipt for `SHADOW-POINTER-LIVE-RECEIPT-001`, showing
   trust class, memory eligibility, raw-ref policy, and firewall/evidence
   decision;
+- a `Cursor Companion` for `CLICKY-UX-COMPANION-001`, showing the current
+  display-only state, trust, memory eligibility, and raw-ref status without
+  enabling capture or memory writes;
+- `Encrypted Index Receipts` for `ENCRYPTED-INDEX-DASHBOARD-LIVE-001`, showing
+  write/search/open counts for `memory.search_index` while query text, token
+  text, key material, source refs, and memory content stay redacted;
+- `Live Receipt Backbone` for `DASHBOARD-LIVE-BACKBONE-001`, tying key
+  management, encrypted index receipts, native live feed, and durable synthetic
+  memory receipts together as redacted operational proof;
 - Consent-first Onboarding for `CONSENT-FIRST-ONBOARDING-001`, showing the
   synthetic-only first-run path before real capture;
 - real tab views that hide unrelated panels when the user moves between
@@ -200,6 +241,12 @@ Observation pause previewed locally. Confirmation and audit receipt required.
   `policy_shadow_pointer_live_receipt_v1`;
 - the visible shell includes `Consent-first Onboarding` tied to
   `policy_consent_first_onboarding_v1`;
+- the visible shell includes `Cursor Companion` tied to
+  `policy_clicky_ux_companion_v1`;
+- the visible shell includes `Encrypted Index Receipts` tied to
+  `policy_encrypted_index_dashboard_live_v1`;
+- the visible shell includes `Live Receipt Backbone` tied to
+  `policy_dashboard_live_backbone_v1`;
 - dashboard docs, task board, benchmark plan, and benchmark registry name the
   slice;
 - local browser proof confirms the first viewport renders without overlapping

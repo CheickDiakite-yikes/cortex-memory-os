@@ -1,6 +1,54 @@
 window.CORTEX_DASHBOARD_DATA = {
   "active_project": "cortex-memory-os",
   "audit_logging": true,
+  "clicky_ux_companion": {
+    "allowed_effects": [
+      "render_cursor_companion",
+      "open_compact_receipt_panel"
+    ],
+    "blocked_effects": [
+      "start_screen_capture",
+      "start_microphone_capture",
+      "execute_click",
+      "type_text",
+      "write_memory",
+      "export_payload",
+      "send_to_remote_proxy"
+    ],
+    "compact_chip_labels": [
+      "State",
+      "Trust",
+      "Memory",
+      "Raw refs"
+    ],
+    "content_redacted": true,
+    "display_mode": "cursor_adjacent_receipt",
+    "display_only": true,
+    "learned_from_patterns": [
+      "cursor-adjacent presence",
+      "compact control panel",
+      "visible spatial pointing",
+      "onboarding by demonstration"
+    ],
+    "memory_write_allowed": false,
+    "native_feed_id": "NATIVE-SHADOW-POINTER-LIVE-FEED-001",
+    "next_safe_action": "Open receipt details or pause observation; no memory write happens here.",
+    "panel_id": "CLICKY-UX-COMPANION-001",
+    "policy_refs": [
+      "policy_clicky_ux_companion_v1",
+      "policy_clicky_ux_lessons_v1",
+      "policy_native_shadow_pointer_live_feed_v1"
+    ],
+    "primary_status": "observing; 1 redacted receipt ready",
+    "raw_payload_included": false,
+    "raw_ref_retained": false,
+    "real_screen_capture_started": false,
+    "receipt_count": 1,
+    "source_refs_redacted": true,
+    "summary": "A small cursor-adjacent status surface shows what Cortex is doing without turning the dashboard into the live interaction.",
+    "title": "Cursor Companion",
+    "voice_capture_enabled": false
+  },
   "cloud_sync": false,
   "consent_onboarding": {
     "durable_private_memory_write_enabled": false,
@@ -174,9 +222,161 @@ window.CORTEX_DASHBOARD_DATA = {
     "Demo path shows the safe localhost narrative without adding another dense work queue.",
     "Action controls are declarative UI plans; this shell does not execute mutations.",
     "Shadow Pointer Live Receipt stays compact and policy-first.",
-    "Live Shadow Pointer receipt is compact and sits above deeper review queues."
+    "Live Shadow Pointer receipt is compact and sits above deeper review queues.",
+    "Clicky-inspired UX keeps live presence cursor-adjacent and makes the dashboard a review space.",
+    "Encrypted index receipts show counts and policy state instead of raw memory or query text."
   ],
+  "durable_synthetic_memory_receipt": {
+    "audit_event_id": "audit_durable_synthetic_memory_20260502T035049Z",
+    "audit_human_visible": true,
+    "audit_written": true,
+    "content_redacted": true,
+    "db_plaintext_leak_count": 0,
+    "durable_private_memory_written": false,
+    "durable_synthetic_memory_written": true,
+    "encrypted_store_used": true,
+    "generated_at": "2026-05-02T03:50:49.185825Z",
+    "graph_write_receipt": {
+      "content_redacted": true,
+      "edge_id": "edge_durable_synthetic_receipt_debug",
+      "graph_terms_redacted": true,
+      "graph_token_digest_count": 4,
+      "payload_sha256": "06706bbf0a1b030666623acf3dc6f5615809f3749a082be1915f7681baedbe2d",
+      "policy_refs": [
+        "policy_unified_encrypted_graph_index_v1"
+      ],
+      "related_memory_count": 1,
+      "sealed_byte_count": 311,
+      "source_refs_redacted": true,
+      "stored_at": "2026-05-02T03:50:49.185825Z"
+    },
+    "index_write_receipt": {
+      "allowed_effects": [
+        "write_sealed_memory_payload",
+        "write_redacted_hmac_index_terms"
+      ],
+      "blocked_effects": [
+        "store_plaintext_memory_content",
+        "store_plaintext_source_refs",
+        "store_plaintext_graph_terms"
+      ],
+      "content_redacted": true,
+      "memory_id": "mem_durable_synthetic_receipt_debug",
+      "policy_refs": [
+        "policy_unified_encrypted_graph_index_v1",
+        "policy_memory_encryption_default_v1"
+      ],
+      "source_ref_count": 2,
+      "source_refs_redacted": true,
+      "storage_receipt": {
+        "cipher_name": "synthetic-receipt-aead-test-only",
+        "content_redacted": true,
+        "decision": {
+          "allowed": true,
+          "allowed_effects": [
+            "write_sealed_memory_payload",
+            "store_redacted_index_metadata",
+            "open_payload_after_authorized_read"
+          ],
+          "blocked_effects": [
+            "write_plaintext_memory_payload",
+            "store_raw_source_refs_outside_ciphertext",
+            "export_unencrypted_memory"
+          ],
+          "cipher_allowed_for_runtime": true,
+          "cipher_authenticated": true,
+          "cipher_name": "synthetic-receipt-aead-test-only",
+          "content_redacted": true,
+          "durable_write": true,
+          "influence_level": 1,
+          "memory_id": "mem_durable_synthetic_receipt_debug",
+          "policy_refs": [
+            "policy_memory_encryption_default_v1"
+          ],
+          "reason": "durable_memory_authenticated_encryption_satisfied",
+          "requires_authenticated_encryption": true,
+          "scope": "project_specific",
+          "sensitive_durable": true,
+          "sensitivity": "private_work",
+          "source_refs_redacted": true,
+          "status": "active"
+        },
+        "memory_id": "mem_durable_synthetic_receipt_debug",
+        "payload_sha256": "2e976b722e7ce7c6ebb2c449607d29d903a4cf8b8d55d382e4dfee7e9faece1a",
+        "policy_refs": [
+          "policy_memory_encryption_default_v1"
+        ],
+        "sealed_byte_count": 795,
+        "source_refs_redacted": true,
+        "stored_at": "2026-05-02T03:50:49.185825Z"
+      },
+      "stored_at": "2026-05-02T03:50:49.185825Z",
+      "token_digest_count": 22,
+      "token_text_redacted": true
+    },
+    "local_test_db_used": true,
+    "memory_id": "mem_durable_synthetic_receipt_debug",
+    "policy_ref": "policy_durable_synthetic_memory_receipts_v1",
+    "policy_refs": [
+      "policy_durable_synthetic_memory_receipts_v1",
+      "policy_synthetic_capture_ladder_v1",
+      "policy_memory_encryption_default_v1",
+      "policy_unified_encrypted_graph_index_v1",
+      "policy_key_management_plan_v1"
+    ],
+    "prohibited_leak_count": 0,
+    "query_redacted": true,
+    "raw_payload_included": false,
+    "raw_ref_retained": false,
+    "real_screen_capture_started": false,
+    "receipt_id": "durable_synthetic_receipt_20260502T035049Z",
+    "search_receipt": {
+      "candidate_open_count": 1,
+      "considered_index_rows": 1,
+      "content_redacted": true,
+      "policy_refs": [
+        "policy_unified_encrypted_graph_index_v1"
+      ],
+      "query_digest_count": 6,
+      "query_redacted": true,
+      "result_count": 1,
+      "source_refs_redacted": true,
+      "token_text_redacted": true
+    },
+    "source_refs_redacted": true,
+    "synthetic_only": true,
+    "token_text_redacted": true
+  },
   "encrypted_at_rest": true,
+  "encrypted_index_panel": {
+    "candidate_open_count": 1,
+    "content_redacted": true,
+    "gateway_tools": [
+      "memory.search_index",
+      "memory.get_context_pack"
+    ],
+    "graph_receipt_count": 1,
+    "graph_token_digest_count": 4,
+    "key_material_visible": false,
+    "key_plan_id": "KEY-MANAGEMENT-PLAN-001",
+    "panel_id": "ENCRYPTED-INDEX-DASHBOARD-LIVE-001",
+    "policy_refs": [
+      "policy_encrypted_index_dashboard_live_v1",
+      "policy_unified_encrypted_graph_index_v1",
+      "policy_memory_encryption_default_v1",
+      "policy_key_management_plan_v1"
+    ],
+    "query_redacted": true,
+    "raw_private_data_retained": false,
+    "search_result_count": 1,
+    "source_ref_count": 2,
+    "source_refs_redacted": true,
+    "summary": "Metadata-only encrypted index search is available; query text, token text, source refs, memory content, and key material stay hidden.",
+    "title": "Encrypted Index Receipts",
+    "token_digest_count": 22,
+    "token_text_redacted": true,
+    "write_receipt_count": 1
+  },
   "focus_inspector": {
     "actions": [
       {
@@ -241,7 +441,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.explain",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": false,
       "payload_preview": {
         "memory_id_or_visible_card_anchor": "mem_auth_redirect_root_cause"
@@ -277,7 +477,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.correct",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "corrected_content": "<redacted_user_supplied_value>",
@@ -316,7 +516,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.forget",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "explicit_delete_confirmation": "<required_at_confirmation>",
@@ -355,7 +555,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": true,
       "external_effect": false,
       "gateway_tool": "memory.export",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": false,
       "payload_preview": {
         "explicit_export_confirmation": "<required_at_confirmation>",
@@ -389,7 +589,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.explain",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": false,
       "payload_preview": {
         "memory_id_or_visible_card_anchor": "mem_smallest_safe_change"
@@ -425,7 +625,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.correct",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "corrected_content": "<redacted_user_supplied_value>",
@@ -464,7 +664,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.forget",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "explicit_delete_confirmation": "<required_at_confirmation>",
@@ -503,7 +703,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": true,
       "external_effect": false,
       "gateway_tool": "memory.export",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": false,
       "payload_preview": {
         "explicit_export_confirmation": "<required_at_confirmation>",
@@ -537,7 +737,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.explain",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": false,
       "payload_preview": {
         "memory_id_or_visible_card_anchor": "mem_linear_label_tracking"
@@ -573,7 +773,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.correct",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "corrected_content": "<redacted_user_supplied_value>",
@@ -612,7 +812,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.forget",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "explicit_delete_confirmation": "<required_at_confirmation>",
@@ -651,7 +851,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": true,
       "external_effect": false,
       "gateway_tool": "memory.export",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": false,
       "payload_preview": {
         "explicit_export_confirmation": "<required_at_confirmation>",
@@ -685,7 +885,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.explain",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": false,
       "payload_preview": {
         "memory_id_or_visible_card_anchor": "mem_research_depth_candidate"
@@ -721,7 +921,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.correct",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "corrected_content": "<redacted_user_supplied_value>",
@@ -760,7 +960,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.forget",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "explicit_delete_confirmation": "<required_at_confirmation>",
@@ -799,7 +999,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": true,
       "external_effect": false,
       "gateway_tool": "memory.export",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": false,
       "payload_preview": {
         "explicit_export_confirmation": "<required_at_confirmation>",
@@ -833,7 +1033,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.review_candidate",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": false,
       "payload_preview": {
         "skill_id": "skill_doc_doc_monthly_update_workflow_candidate_v1"
@@ -868,7 +1068,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.execute_draft",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": false,
       "payload_preview": {
         "input_summary": "<redacted_user_supplied_value>",
@@ -907,7 +1107,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.approve_draft_only",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -946,7 +1146,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.edit_candidate",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -986,7 +1186,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.need_more_data",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "reason": "<redacted_user_supplied_value>",
@@ -1025,7 +1225,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.reject_candidate",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1059,7 +1259,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.review_candidate",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": false,
       "payload_preview": {
         "skill_id": "skill_frontend_auth_debugging_flow_v1"
@@ -1094,7 +1294,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.execute_draft",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": false,
       "payload_preview": {
         "input_summary": "<redacted_user_supplied_value>",
@@ -1133,7 +1333,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.approve_draft_only",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1172,7 +1372,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.edit_candidate",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1212,7 +1412,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.need_more_data",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "reason": "<redacted_user_supplied_value>",
@@ -1251,7 +1451,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.reject_candidate",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1285,7 +1485,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.review_candidate",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": false,
       "payload_preview": {
         "skill_id": "skill_research_synthesis_blueprint_v1"
@@ -1320,7 +1520,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.execute_draft",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": false,
       "payload_preview": {
         "input_summary": "<redacted_user_supplied_value>",
@@ -1359,7 +1559,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.approve_draft_only",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1398,7 +1598,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.edit_candidate",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1438,7 +1638,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.need_more_data",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "reason": "<redacted_user_supplied_value>",
@@ -1477,7 +1677,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.reject_candidate",
-      "generated_at": "2026-05-02T03:23:21.247269Z",
+      "generated_at": "2026-05-02T03:50:49.185825Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1501,7 +1701,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "target_ref": "skill_research_synthesis_blueprint_v1"
     }
   ],
-  "generated_at": "2026-05-02T03:23:21.247269Z",
+  "generated_at": "2026-05-02T03:50:49.185825Z",
   "insight_panels": [
     {
       "content_redacted": true,
@@ -1650,6 +1850,249 @@ window.CORTEX_DASHBOARD_DATA = {
       "value": "Passing"
     }
   ],
+  "key_management_plan": {
+    "audit_events": [
+      "key.created",
+      "key.activated",
+      "key.rotated",
+      "key.revoked",
+      "key.deleted",
+      "payload.resealed"
+    ],
+    "default_rotation_days": 90,
+    "deletion_controls": [
+      "delete key ref after retention and user-confirmed forget flow",
+      "retain redacted tombstone audit without decryptable payload"
+    ],
+    "key_boundaries": [
+      {
+        "allowed_effects": [
+          "store_wrapped_key_metadata",
+          "seal_payloads_with_active_key_version",
+          "audit_key_version_use"
+        ],
+        "blocked_effects": [
+          "store_raw_key_material",
+          "commit_key_material",
+          "reuse_key_across_material_classes",
+          "export_unwrapped_key"
+        ],
+        "key_class": "memory_payload",
+        "key_id_ref": "keyref_memory_payload_active",
+        "key_material_included": false,
+        "production_required": true,
+        "purpose": "Seal durable MemoryRecord payload JSON.",
+        "rotation_days": 90,
+        "storage_backend": "macos_keychain_secure_enclave_when_available",
+        "wrapped_by": "macos_keychain_application_password_item"
+      },
+      {
+        "allowed_effects": [
+          "store_wrapped_key_metadata",
+          "seal_payloads_with_active_key_version",
+          "audit_key_version_use"
+        ],
+        "blocked_effects": [
+          "store_raw_key_material",
+          "commit_key_material",
+          "reuse_key_across_material_classes",
+          "export_unwrapped_key"
+        ],
+        "key_class": "graph_edge_payload",
+        "key_id_ref": "keyref_graph_edge_payload_active",
+        "key_material_included": false,
+        "production_required": true,
+        "purpose": "Seal temporal graph edge payload JSON.",
+        "rotation_days": 90,
+        "storage_backend": "macos_keychain_secure_enclave_when_available",
+        "wrapped_by": "macos_keychain_application_password_item"
+      },
+      {
+        "allowed_effects": [
+          "store_wrapped_key_metadata",
+          "seal_payloads_with_active_key_version",
+          "audit_key_version_use"
+        ],
+        "blocked_effects": [
+          "store_raw_key_material",
+          "commit_key_material",
+          "reuse_key_across_material_classes",
+          "export_unwrapped_key"
+        ],
+        "key_class": "hmac_index",
+        "key_id_ref": "keyref_hmac_index_terms_active",
+        "key_material_included": false,
+        "production_required": true,
+        "purpose": "Derive redacted token digests for memory and graph lookup.",
+        "rotation_days": 90,
+        "storage_backend": "macos_keychain_secure_enclave_when_available",
+        "wrapped_by": "macos_keychain_application_password_item"
+      },
+      {
+        "allowed_effects": [
+          "store_wrapped_key_metadata",
+          "seal_payloads_with_active_key_version",
+          "audit_key_version_use"
+        ],
+        "blocked_effects": [
+          "store_raw_key_material",
+          "commit_key_material",
+          "reuse_key_across_material_classes",
+          "export_unwrapped_key"
+        ],
+        "key_class": "evidence_blob",
+        "key_id_ref": "keyref_evidence_blob_active",
+        "key_material_included": false,
+        "production_required": true,
+        "purpose": "Seal short-retention raw evidence blobs before expiry.",
+        "rotation_days": 90,
+        "storage_backend": "macos_keychain_secure_enclave_when_available",
+        "wrapped_by": "macos_keychain_application_password_item"
+      }
+    ],
+    "lifecycle_steps": [
+      {
+        "allowed_effects": [
+          "create_key_ref",
+          "write_key_audit"
+        ],
+        "blocked_effects": [
+          "return_unwrapped_key_material",
+          "write_key_to_env_file"
+        ],
+        "label": "Generate wrapped key version",
+        "proof": "New key material is generated inside the native key boundary and only a key ref is returned.",
+        "required_for": [
+          "memory_payload",
+          "graph_edge_payload",
+          "hmac_index",
+          "evidence_blob"
+        ],
+        "step_id": "generate_wrapped_key"
+      },
+      {
+        "allowed_effects": [
+          "mark_active_key_ref",
+          "seal_new_payloads"
+        ],
+        "blocked_effects": [
+          "rewrite_without_audit"
+        ],
+        "label": "Activate key version",
+        "proof": "New writes use the active key ref while old versions remain readable until rotation closes.",
+        "required_for": [
+          "memory_payload",
+          "graph_edge_payload",
+          "hmac_index",
+          "evidence_blob"
+        ],
+        "step_id": "activate_key_version"
+      },
+      {
+        "allowed_effects": [
+          "reseal_payloads",
+          "write_rotation_audit"
+        ],
+        "blocked_effects": [
+          "reuse_old_index_key",
+          "drop_unmigrated_payloads"
+        ],
+        "label": "Rotate key version",
+        "proof": "Rotation creates a new key ref, reseals eligible payloads, and records old/new refs.",
+        "required_for": [
+          "memory_payload",
+          "graph_edge_payload",
+          "hmac_index",
+          "evidence_blob"
+        ],
+        "step_id": "rotate_key_version"
+      },
+      {
+        "allowed_effects": [
+          "block_new_writes",
+          "write_revocation_audit"
+        ],
+        "blocked_effects": [
+          "silent_reactivation"
+        ],
+        "label": "Revoke key version",
+        "proof": "Revoked keys stop new writes and require explicit recovery or delete flow.",
+        "required_for": [
+          "memory_payload",
+          "graph_edge_payload",
+          "hmac_index",
+          "evidence_blob"
+        ],
+        "step_id": "revoke_key_version"
+      },
+      {
+        "allowed_effects": [
+          "destroy_wrapped_key",
+          "write_delete_audit"
+        ],
+        "blocked_effects": [
+          "retain_unwrapped_key_backup",
+          "skip_user_visible_receipt"
+        ],
+        "label": "Delete key version",
+        "proof": "Deleting a key version makes associated unrecovered payloads cryptographically unreadable.",
+        "required_for": [
+          "memory_payload",
+          "graph_edge_payload",
+          "hmac_index",
+          "evidence_blob"
+        ],
+        "step_id": "delete_key_version"
+      }
+    ],
+    "local_dev_uses_test_keys": true,
+    "plan_id": "KEY-MANAGEMENT-PLAN-001",
+    "policy_refs": [
+      "policy_key_management_plan_v1",
+      "policy_memory_encryption_default_v1",
+      "policy_unified_encrypted_graph_index_v1",
+      "policy_evidence_vault_encryption_v1"
+    ],
+    "production_allows_noop_cipher": false,
+    "raw_key_material_included": false,
+    "recovery_controls": [
+      "recovery requires user-visible local backup policy",
+      "payload recovery never exports unwrapped key material"
+    ],
+    "runtime_boundary": "local_engine_with_native_keychain"
+  },
+  "live_backbone_panel": {
+    "blocked_effects": [
+      "real_screen_capture",
+      "durable_private_memory_write",
+      "raw_ref_retention",
+      "external_effect"
+    ],
+    "content_redacted": true,
+    "durable_receipt_id": "durable_synthetic_receipt_20260502T035049Z",
+    "encrypted_index_panel_id": "ENCRYPTED-INDEX-DASHBOARD-LIVE-001",
+    "key_material_visible": false,
+    "key_plan_id": "KEY-MANAGEMENT-PLAN-001",
+    "native_feed_id": "NATIVE-SHADOW-POINTER-LIVE-FEED-001",
+    "panel_id": "DASHBOARD-LIVE-BACKBONE-001",
+    "policy_refs": [
+      "policy_dashboard_live_backbone_v1",
+      "policy_key_management_plan_v1",
+      "policy_encrypted_index_dashboard_live_v1",
+      "policy_native_shadow_pointer_live_feed_v1",
+      "policy_durable_synthetic_memory_receipts_v1"
+    ],
+    "raw_private_data_retained": false,
+    "ready_components": [
+      "key_management_plan",
+      "encrypted_index_panel",
+      "native_live_feed",
+      "durable_synthetic_receipt"
+    ],
+    "source_refs_redacted": true,
+    "summary": "Key lifecycle, encrypted index receipts, native overlay feed, and synthetic durable writes are wired as redacted receipts.",
+    "title": "Live Receipt Backbone"
+  },
   "local_mode": true,
   "memory_palace": {
     "audit_summary": {
@@ -1960,7 +2403,7 @@ window.CORTEX_DASHBOARD_DATA = {
       }
     ],
     "confirmation_required_count": 8,
-    "dashboard_id": "memory_palace_dashboard_20260502T032321Z",
+    "dashboard_id": "memory_palace_dashboard_20260502T035049Z",
     "export_preview": {
       "data_egress": true,
       "exportable_count": 3,
@@ -1982,7 +2425,7 @@ window.CORTEX_DASHBOARD_DATA = {
       ],
       "selection_mode": "explicit_ids"
     },
-    "generated_at": "2026-05-02T03:23:21.247269Z",
+    "generated_at": "2026-05-02T03:50:49.185825Z",
     "policy_refs": [
       "policy_memory_palace_dashboard_v1",
       "policy_memory_export_deletion_aware_v1",
@@ -1999,6 +2442,40 @@ window.CORTEX_DASHBOARD_DATA = {
       "active": 2,
       "candidate": 2
     }
+  },
+  "native_live_feed": {
+    "accessibility_observer_started": false,
+    "allowed_effects": [
+      "render_native_overlay_frame",
+      "render_redacted_receipt_summary"
+    ],
+    "blocked_effects": [
+      "start_screen_capture",
+      "start_accessibility_observer",
+      "write_memory",
+      "retain_raw_ref",
+      "execute_click",
+      "type_text",
+      "export_payload"
+    ],
+    "capture_started": false,
+    "display_only": true,
+    "external_untrusted_count": 1,
+    "feed_id": "NATIVE-SHADOW-POINTER-LIVE-FEED-001",
+    "generated_at": "2026-05-02T03:50:49.185825Z",
+    "latest_observation_mode": "session",
+    "latest_state": "observing",
+    "memory_eligible_count": 0,
+    "memory_write_allowed": false,
+    "native_surface": "macos_shadow_pointer_overlay",
+    "policy_refs": [
+      "policy_native_shadow_pointer_live_feed_v1",
+      "policy_shadow_pointer_live_receipt_v1",
+      "policy_shadow_pointer_state_machine_v1"
+    ],
+    "raw_payload_included": false,
+    "raw_ref_retained": false,
+    "receipt_count": 1
   },
   "nav_items": [
     {
@@ -2050,7 +2527,14 @@ window.CORTEX_DASHBOARD_DATA = {
     "policy_memory_encryption_default_v1",
     "policy_shadow_pointer_state_machine_v1",
     "policy_shadow_pointer_live_receipt_v1",
-    "policy_consent_first_onboarding_v1"
+    "policy_consent_first_onboarding_v1",
+    "policy_key_management_plan_v1",
+    "policy_encrypted_index_dashboard_live_v1",
+    "policy_native_shadow_pointer_live_feed_v1",
+    "policy_durable_synthetic_memory_receipts_v1",
+    "policy_dashboard_live_backbone_v1",
+    "policy_clicky_ux_lessons_v1",
+    "policy_clicky_ux_companion_v1"
   ],
   "retrieval_debug": {
     "cards": [
@@ -2104,7 +2588,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "evidence_only": 1,
       "included": 1
     },
-    "generated_at": "2026-05-02T03:23:21.247269Z",
+    "generated_at": "2026-05-02T03:50:49.185825Z",
     "hostile_text_included": false,
     "policy_refs": [
       "policy_retrieval_receipts_dashboard_v1",
@@ -2126,7 +2610,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_memory_created",
       "state": "healthy",
       "target_ref": "mem_smallest_safe_change",
-      "timestamp": "2026-05-02T03:23:21.247269Z"
+      "timestamp": "2026-05-02T03:50:49.185825Z"
     },
     {
       "actor": "system",
@@ -2135,7 +2619,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_memory_export_preview",
       "state": "neutral",
       "target_ref": "export_preview_project_scope",
-      "timestamp": "2026-05-02T03:23:21.247269Z"
+      "timestamp": "2026-05-02T03:50:49.185825Z"
     },
     {
       "actor": "system",
@@ -2144,7 +2628,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_skill_candidate_created",
       "state": "healthy",
       "target_ref": "skill_frontend_auth_debugging_flow_v1",
-      "timestamp": "2026-05-02T03:23:21.247269Z"
+      "timestamp": "2026-05-02T03:50:49.185825Z"
     },
     {
       "actor": "user",
@@ -2153,7 +2637,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_observation_paused",
       "state": "warning",
       "target_ref": "session_20260430",
-      "timestamp": "2026-05-02T03:23:21.247269Z"
+      "timestamp": "2026-05-02T03:50:49.185825Z"
     }
   ],
   "safety_notes": [
@@ -2162,7 +2646,9 @@ window.CORTEX_DASHBOARD_DATA = {
     "Action buttons resolve to gateway receipts before any tool call is allowed.",
     "Skill metric cards do not include procedure text, task content, or autonomy-changing controls.",
     "Retrieval receipt cards do not include memory content, source refs, or hostile text.",
-    "Shadow Pointer receipts do not include raw page payloads or raw refs."
+    "Shadow Pointer receipts do not include raw page payloads or raw refs.",
+    "Clicky UX lessons were treated as untrusted external evidence and no repo code was executed.",
+    "Encrypted index dashboard panels never expose key material, token text, queries, or source refs."
   ],
   "shadow_pointer_live_receipt": {
     "action_required": false,
@@ -2731,8 +3217,8 @@ window.CORTEX_DASHBOARD_DATA = {
       }
     ],
     "external_effect_action_count": 0,
-    "generated_at": "2026-05-02T03:23:21.247269Z",
-    "list_id": "skill_forge_candidate_list_20260502T032321Z",
+    "generated_at": "2026-05-02T03:50:49.185825Z",
+    "list_id": "skill_forge_candidate_list_20260502T035049Z",
     "policy_refs": [
       "policy_skill_forge_candidate_list_v1"
     ],
@@ -2854,7 +3340,7 @@ window.CORTEX_DASHBOARD_DATA = {
     ],
     "content_redacted": true,
     "dashboard_id": "SKILL-METRICS-DASHBOARD-SURFACE-001",
-    "generated_at": "2026-05-02T03:23:21.247269Z",
+    "generated_at": "2026-05-02T03:50:49.185825Z",
     "policy_refs": [
       "policy_skill_metrics_dashboard_surface_v1",
       "policy_skill_success_metrics_v1"

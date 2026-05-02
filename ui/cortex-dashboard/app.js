@@ -123,10 +123,65 @@ function applyActiveView() {
   }
 }
 
+function focusFromMemory(card) {
+  return {
+    title: "Focus Inspector",
+    subject_type: "memory",
+    target_ref: card.memory_id,
+    summary: `${formatToken(card.status)} memory · ${formatToken(card.scope)} scope · sources redacted to count ${card.source_count}.`,
+    state: card.recall_eligible ? "healthy" : "warning",
+    metrics: [
+      { label: "Confidence", value: Number(card.confidence).toFixed(2), state: "healthy" },
+      { label: "Scope", value: formatToken(card.scope), state: "neutral" },
+      { label: "Recall", value: card.recall_eligible ? "allowed" : "blocked", state: card.recall_eligible ? "healthy" : "warning" },
+    ],
+    actions: (card.action_plans || []).slice(0, 3).map((plan) => ({
+      label: plan.gateway_tool.split(".").pop(),
+      gateway_tool: plan.gateway_tool,
+      requires_confirmation: plan.requires_confirmation,
+      allowed_gateway_call: plan.gateway_tool === "memory.explain",
+    })),
+  };
+}
+
+function focusFromSkill(card) {
+  return {
+    title: "Focus Inspector",
+    subject_type: "skill",
+    target_ref: card.skill_id,
+    summary: `${card.name} · ${formatToken(card.risk_level)} risk · procedure remains redacted until explicit review.`,
+    state: card.risk_level === "high" ? "warning" : "healthy",
+    metrics: [
+      { label: "Maturity", value: `Level ${card.maturity_level}`, state: "neutral" },
+      { label: "Evidence", value: `${card.learned_from_count} refs`, state: "healthy" },
+      { label: "Mode", value: formatToken(card.execution_mode), state: "healthy" },
+    ],
+    actions: (card.action_plans || []).slice(0, 3).map((plan) => ({
+      label: plan.gateway_tool.split(".").pop(),
+      gateway_tool: plan.gateway_tool,
+      requires_confirmation: plan.requires_confirmation,
+      allowed_gateway_call: plan.gateway_tool === "skill.review_candidate",
+    })),
+  };
+}
+
+function ensureFocusForActiveView() {
+  if (activeView === "memory_palace" && selectedFocus?.subject_type !== "memory") {
+    const card = filteredMemories()[0] || data.memory_palace.cards[0];
+    if (card) selectedFocus = focusFromMemory(card);
+  }
+  if (activeView === "skill_forge" && selectedFocus?.subject_type !== "skill") {
+    const card = filteredSkills()[0] || data.skill_forge.cards[0];
+    if (card) selectedFocus = focusFromSkill(card);
+  }
+}
+
 function setActiveView(view) {
   activeView = viewCopy[view] ? view : "overview";
+  ensureFocusForActiveView();
   renderNav();
   applyActiveView();
+  renderFocusInspector();
   if (window.location.hash !== `#${activeView}`) {
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${activeView}`);
   }
@@ -138,7 +193,7 @@ function renderNav() {
   nav.innerHTML = data.nav_items
     .map(
       (item) => `
-        <button class="nav-item ${item.item_id === activeView ? "active" : ""}" type="button" data-nav="${escapeHtml(item.item_id)}" title="${escapeHtml(item.label)}">
+        <button class="nav-item ${item.item_id === activeView ? "active" : ""}" type="button" data-nav="${escapeHtml(item.item_id)}" title="${escapeHtml(item.label)}" aria-pressed="${item.item_id === activeView ? "true" : "false"}">
           ${svgIcon(item.item_id)}
           <span class="label">${escapeHtml(item.label)}</span>
           ${Number.isInteger(item.count) ? `<span class="nav-count">${item.count}</span>` : ""}
@@ -252,6 +307,8 @@ function renderShadowPointerLiveReceipt() {
   const target = document.querySelector("#shadow-live-receipt");
   const receipt = data.shadow_pointer_live_receipt;
   const onboarding = data.consent_onboarding;
+  const companion = data.clicky_ux_companion;
+  const nativeFeed = data.native_live_feed;
   if (!target || !receipt) return;
   const fields = receipt.compact_fields || {};
   const onboardingSteps = onboarding?.steps || [];
@@ -259,19 +316,21 @@ function renderShadowPointerLiveReceipt() {
     <div class="shadow-live-copy">
       <span class="shadow-live-icon">${svgIcon("pointer")}</span>
       <span>
-        <strong>Shadow Pointer Live Receipt</strong>
-        <span>${escapeHtml(receipt.primary_line)}</span>
+        <strong>${escapeHtml(companion?.title || "Cursor Companion")}</strong>
+        <span>${escapeHtml(companion?.primary_status || receipt.primary_line)}</span>
       </span>
     </div>
+    <p class="companion-note">${escapeHtml(companion?.next_safe_action || "Receipt is display-only.")}</p>
     <div class="shadow-live-grid">
+      <div><span>State</span><strong>${formatToken(nativeFeed?.latest_state || receipt.state)}</strong></div>
       <div><span>Trust</span><strong>${formatToken(fields.trust)}</strong></div>
       <div><span>Memory</span><strong>${formatToken(fields.memory)}</strong></div>
       <div><span>Raw refs</span><strong>${formatToken(fields.raw_refs)}</strong></div>
-      <div><span>Policy</span><strong>${escapeHtml(fields.policy)}</strong></div>
     </div>
     <div class="shadow-live-actions">
       <button class="text-command" type="button" id="shadow-receipt-details">Receipt</button>
       <button class="text-command" type="button" id="consent-onboarding">Consent-first Onboarding</button>
+      <button class="text-command" type="button" id="clicky-ux-lessons">Clicky UX Lessons</button>
     </div>
   `;
   document.querySelector("#shadow-receipt-details").addEventListener("click", () => {
@@ -283,6 +342,41 @@ function renderShadowPointerLiveReceipt() {
     writeReceipt(
       `Consent-first Onboarding has ${onboardingSteps.length} synthetic steps. Real capture and private durable writes stay off.`,
     );
+  });
+  document.querySelector("#clicky-ux-lessons").addEventListener("click", () => {
+    writeReceipt("Clicky UX Lessons applied: cursor-adjacent presence, compact receipt panel, display-only pointing. External repo code was not executed.");
+  });
+}
+
+function renderEncryptedIndexPanel() {
+  const target = document.querySelector("#encrypted-index-panel");
+  const panel = data.encrypted_index_panel;
+  const backbone = data.live_backbone_panel;
+  if (!target || !panel) return;
+  target.innerHTML = `
+    <div class="encrypted-index-copy">
+      <span class="encrypted-index-icon">${svgIcon("shield")}</span>
+      <span>
+        <strong>${escapeHtml(panel.title)}</strong>
+        <span>${escapeHtml(backbone?.summary || panel.summary)}</span>
+      </span>
+    </div>
+    <div class="encrypted-index-grid">
+      <div><span>Writes</span><strong>${panel.write_receipt_count}</strong></div>
+      <div><span>Search</span><strong>${panel.search_result_count}</strong></div>
+      <div><span>Opened</span><strong>${panel.candidate_open_count}</strong></div>
+      <div><span>Refs</span><strong>${panel.source_ref_count}</strong></div>
+    </div>
+    <div class="shadow-live-actions">
+      <button class="text-command" type="button" id="encrypted-index-search">memory.search_index</button>
+      <button class="text-command" type="button" id="live-backbone-receipt">Live Receipt Backbone</button>
+    </div>
+  `;
+  document.querySelector("#encrypted-index-search").addEventListener("click", () => {
+    writeReceipt("memory.search_index selected. Query text, token text, content, source refs, and key material stay redacted.");
+  });
+  document.querySelector("#live-backbone-receipt").addEventListener("click", () => {
+    writeReceipt("Live Receipt Backbone is ready: key plan, encrypted index, native feed, and durable synthetic receipt are wired.");
   });
 }
 
@@ -327,46 +421,12 @@ function renderFocusInspector() {
 }
 
 function setMemoryFocus(card) {
-  selectedFocus = {
-    title: "Focus Inspector",
-    subject_type: "memory",
-    target_ref: card.memory_id,
-    summary: `${formatToken(card.status)} memory · ${formatToken(card.scope)} scope · sources redacted to count ${card.source_count}.`,
-    state: card.recall_eligible ? "healthy" : "warning",
-    metrics: [
-      { label: "Confidence", value: Number(card.confidence).toFixed(2), state: "healthy" },
-      { label: "Scope", value: formatToken(card.scope), state: "neutral" },
-      { label: "Recall", value: card.recall_eligible ? "allowed" : "blocked", state: card.recall_eligible ? "healthy" : "warning" },
-    ],
-    actions: (card.action_plans || []).slice(0, 3).map((plan) => ({
-      label: plan.gateway_tool.split(".").pop(),
-      gateway_tool: plan.gateway_tool,
-      requires_confirmation: plan.requires_confirmation,
-      allowed_gateway_call: plan.gateway_tool === "memory.explain",
-    })),
-  };
+  selectedFocus = focusFromMemory(card);
   renderFocusInspector();
 }
 
 function setSkillFocus(card) {
-  selectedFocus = {
-    title: "Focus Inspector",
-    subject_type: "skill",
-    target_ref: card.skill_id,
-    summary: `${card.name} · ${formatToken(card.risk_level)} risk · procedure remains redacted until explicit review.`,
-    state: card.risk_level === "high" ? "warning" : "healthy",
-    metrics: [
-      { label: "Maturity", value: `Level ${card.maturity_level}`, state: "neutral" },
-      { label: "Evidence", value: `${card.learned_from_count} refs`, state: "healthy" },
-      { label: "Mode", value: formatToken(card.execution_mode), state: "healthy" },
-    ],
-    actions: (card.action_plans || []).slice(0, 3).map((plan) => ({
-      label: plan.gateway_tool.split(".").pop(),
-      gateway_tool: plan.gateway_tool,
-      requires_confirmation: plan.requires_confirmation,
-      allowed_gateway_call: plan.gateway_tool === "skill.review_candidate",
-    })),
-  };
+  selectedFocus = focusFromSkill(card);
   renderFocusInspector();
 }
 
@@ -686,10 +746,12 @@ if (!data) {
   renderNav();
   renderStatusStrip();
   renderShadowPointerLiveReceipt();
+  renderEncryptedIndexPanel();
   renderDemoPath();
   renderInsights();
-  renderFocusInspector();
   renderReceipts();
   renderDashboard();
+  ensureFocusForActiveView();
+  renderFocusInspector();
   applyActiveView();
 }

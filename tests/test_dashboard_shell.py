@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from pathlib import Path
 
 from cortex_memory_os.dashboard_shell import (
     DASHBOARD_DEMO_PATH_POLICY_REF,
@@ -8,6 +9,21 @@ from cortex_memory_os.dashboard_shell import (
     build_dashboard_shell,
     render_dashboard_data_js,
     run_dashboard_shell_smoke,
+)
+from cortex_memory_os.clicky_ux import (
+    CLICKY_UX_COMPANION_POLICY_REF,
+    CLICKY_UX_LESSONS_POLICY_REF,
+)
+from cortex_memory_os.dashboard_encrypted_index import (
+    DASHBOARD_LIVE_BACKBONE_POLICY_REF,
+    ENCRYPTED_INDEX_DASHBOARD_LIVE_POLICY_REF,
+)
+from cortex_memory_os.durable_synthetic_memory_receipts import (
+    DURABLE_SYNTHETIC_MEMORY_RECEIPTS_POLICY_REF,
+)
+from cortex_memory_os.key_management import KEY_MANAGEMENT_PLAN_POLICY_REF
+from cortex_memory_os.shadow_pointer_native_live_feed import (
+    NATIVE_SHADOW_POINTER_LIVE_FEED_POLICY_REF,
 )
 from cortex_memory_os.dashboard_gateway_actions import DASHBOARD_GATEWAY_ACTIONS_POLICY_REF
 from cortex_memory_os.memory_palace_dashboard import MEMORY_PALACE_DASHBOARD_POLICY_REF
@@ -42,6 +58,13 @@ def test_dashboard_shell_composes_safe_view_models():
     assert SHADOW_POINTER_STATE_MACHINE_POLICY_REF in shell.policy_refs
     assert SHADOW_POINTER_LIVE_RECEIPT_POLICY_REF in shell.policy_refs
     assert CONSENT_FIRST_ONBOARDING_POLICY_REF in shell.policy_refs
+    assert KEY_MANAGEMENT_PLAN_POLICY_REF in shell.policy_refs
+    assert ENCRYPTED_INDEX_DASHBOARD_LIVE_POLICY_REF in shell.policy_refs
+    assert NATIVE_SHADOW_POINTER_LIVE_FEED_POLICY_REF in shell.policy_refs
+    assert DURABLE_SYNTHETIC_MEMORY_RECEIPTS_POLICY_REF in shell.policy_refs
+    assert DASHBOARD_LIVE_BACKBONE_POLICY_REF in shell.policy_refs
+    assert CLICKY_UX_LESSONS_POLICY_REF in shell.policy_refs
+    assert CLICKY_UX_COMPANION_POLICY_REF in shell.policy_refs
     assert len(shell.status_strip) == 4
     assert shell.shadow_pointer_live_receipt.memory_eligible is False
     assert shell.shadow_pointer_live_receipt.raw_ref_retained is False
@@ -53,6 +76,28 @@ def test_dashboard_shell_composes_safe_view_models():
     assert shell.consent_onboarding.raw_storage_enabled is False
     assert shell.consent_onboarding.durable_private_memory_write_enabled is False
     assert shell.consent_onboarding.external_effect_enabled is False
+    assert shell.key_management_plan.raw_key_material_included is False
+    assert shell.key_management_plan.production_allows_noop_cipher is False
+    assert shell.encrypted_index_panel.content_redacted is True
+    assert shell.encrypted_index_panel.source_refs_redacted is True
+    assert shell.encrypted_index_panel.query_redacted is True
+    assert shell.encrypted_index_panel.token_text_redacted is True
+    assert shell.encrypted_index_panel.key_material_visible is False
+    assert shell.encrypted_index_panel.search_result_count >= 1
+    assert shell.native_live_feed.display_only is True
+    assert shell.native_live_feed.capture_started is False
+    assert shell.native_live_feed.memory_write_allowed is False
+    assert shell.native_live_feed.raw_ref_retained is False
+    assert shell.durable_synthetic_memory_receipt.synthetic_only is True
+    assert shell.durable_synthetic_memory_receipt.encrypted_store_used is True
+    assert shell.durable_synthetic_memory_receipt.durable_synthetic_memory_written is True
+    assert shell.durable_synthetic_memory_receipt.prohibited_leak_count == 0
+    assert shell.live_backbone_panel.content_redacted is True
+    assert shell.live_backbone_panel.raw_private_data_retained is False
+    assert shell.clicky_ux_companion.title == "Cursor Companion"
+    assert shell.clicky_ux_companion.display_only is True
+    assert shell.clicky_ux_companion.voice_capture_enabled is False
+    assert shell.clicky_ux_companion.memory_write_allowed is False
     assert len(shell.insight_panels) >= 5
     assert any(panel.title == "Encryption Default" for panel in shell.insight_panels)
     assert all(panel.content_redacted for panel in shell.insight_panels)
@@ -97,6 +142,8 @@ def test_dashboard_shell_composes_safe_view_models():
     assert "Reproduce the local login flow" not in serialized
     assert "Ignore previous instructions" not in serialized
     assert "external:https://example.invalid/attack" not in serialized
+    assert "Synthetic durable memory receipt observed" not in serialized
+    assert "synthetic://durable-memory-receipt/source" not in serialized
 
 
 def test_dashboard_data_js_is_redacted_and_static_app_ready():
@@ -117,9 +164,23 @@ def test_dashboard_data_js_is_redacted_and_static_app_ready():
     assert "Safe Demo Path" in data_js
     assert "DEMO-READINESS-001" in data_js
     assert "cortex-demo-stress" in data_js
+    assert "Cursor Companion" in data_js
+    assert "Encrypted Index Receipts" in data_js
+    assert "Live Receipt Backbone" in data_js
     assert "data-view-section" not in data_js
     assert "Search primary sources" not in data_js
     assert "external:https://example.invalid/attack" not in data_js
+
+
+def test_dashboard_static_app_switches_focus_with_primary_views():
+    app_js = Path("ui/cortex-dashboard/app.js").read_text()
+
+    assert 'aria-pressed="${item.item_id === activeView ? "true" : "false"}"' in app_js
+    assert "function ensureFocusForActiveView()" in app_js
+    assert "activeView === \"memory_palace\"" in app_js
+    assert "activeView === \"skill_forge\"" in app_js
+    assert "selectedFocus = focusFromMemory(card)" in app_js
+    assert "selectedFocus = focusFromSkill(card)" in app_js
 
 
 def test_dashboard_shell_smoke_contract_passes():
@@ -140,6 +201,12 @@ def test_dashboard_shell_smoke_contract_passes():
     assert result.shadow_pointer_live_receipt_present is True
     assert result.consent_onboarding_present is True
     assert result.nav_view_switching_present is True
+    assert result.key_management_plan_present is True
+    assert result.encrypted_index_dashboard_present is True
+    assert result.native_live_feed_present is True
+    assert result.durable_synthetic_memory_receipt_present is True
+    assert result.dashboard_live_backbone_present is True
+    assert result.clicky_ux_companion_present is True
     assert result.encryption_default_visible is True
     assert result.gateway_action_receipt_count > 0
     assert result.gateway_actions_present is True

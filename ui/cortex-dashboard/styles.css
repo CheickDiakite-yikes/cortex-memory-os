@@ -323,16 +323,20 @@ button {
   min-width: 0;
 }
 
-.shadow-live-rail {
+.live-backbone-rail {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+  gap: 12px;
   min-width: 0;
 }
 
-.shadow-live-inner {
+.shadow-live-inner,
+.encrypted-index-inner {
   display: grid;
-  grid-template-columns: minmax(220px, 0.9fr) minmax(360px, 1.5fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
-  align-items: center;
-  min-height: 72px;
+  align-content: center;
+  min-height: 126px;
   padding: 10px 12px;
   border: 1px solid #cfe0ee;
   border-radius: 8px;
@@ -340,7 +344,13 @@ button {
   box-shadow: var(--shadow);
 }
 
-.shadow-live-copy {
+.encrypted-index-inner {
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+.shadow-live-copy,
+.encrypted-index-copy {
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr);
   gap: 9px;
@@ -348,7 +358,8 @@ button {
   min-width: 0;
 }
 
-.shadow-live-icon {
+.shadow-live-icon,
+.encrypted-index-icon {
   display: grid;
   place-items: center;
   width: 30px;
@@ -358,37 +369,56 @@ button {
   color: var(--blue);
 }
 
-.shadow-live-icon svg {
+.encrypted-index-icon {
+  background: #eef8f2;
+  color: var(--green);
+}
+
+.shadow-live-icon svg,
+.encrypted-index-icon svg {
   width: 18px;
   height: 18px;
   stroke-width: 2.2;
 }
 
 .shadow-live-copy strong,
-.shadow-live-copy span span {
+.shadow-live-copy span span,
+.encrypted-index-copy strong,
+.encrypted-index-copy span span {
   display: block;
   min-width: 0;
 }
 
-.shadow-live-copy strong {
+.shadow-live-copy strong,
+.encrypted-index-copy strong {
   font-size: 14px;
   line-height: 1.2;
 }
 
-.shadow-live-copy span span {
+.shadow-live-copy span span,
+.encrypted-index-copy span span {
   margin-top: 3px;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.3;
 }
 
-.shadow-live-grid {
+.companion-note {
+  margin: 0;
+  color: #435363;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.shadow-live-grid,
+.encrypted-index-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 7px;
 }
 
-.shadow-live-grid div {
+.shadow-live-grid div,
+.encrypted-index-grid div {
   display: grid;
   gap: 3px;
   min-height: 46px;
@@ -398,14 +428,16 @@ button {
   background: var(--surface);
 }
 
-.shadow-live-grid span {
+.shadow-live-grid span,
+.encrypted-index-grid span {
   color: var(--muted);
   font-size: 10px;
   font-weight: 850;
   text-transform: uppercase;
 }
 
-.shadow-live-grid strong {
+.shadow-live-grid strong,
+.encrypted-index-grid strong {
   overflow: hidden;
   font-size: 12px;
   line-height: 1.2;
@@ -1103,8 +1135,10 @@ button {
   .workspace-grid,
   .insight-list,
   .focus-inspector-inner,
+  .live-backbone-rail,
   .shadow-live-inner,
   .shadow-live-grid,
+  .encrypted-index-grid,
   .demo-path-inner,
   .demo-step-list {
     grid-template-columns: 1fr;

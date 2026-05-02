@@ -211,6 +211,43 @@ from cortex_memory_os.encrypted_graph_index import (
     UNIFIED_ENCRYPTED_GRAPH_INDEX_POLICY_REF,
     UnifiedEncryptedGraphIndex,
 )
+from cortex_memory_os.key_management import (
+    KEY_MANAGEMENT_PLAN_ID,
+    KEY_MANAGEMENT_PLAN_POLICY_REF,
+    run_key_management_plan_smoke,
+)
+from cortex_memory_os.durable_synthetic_memory_receipts import (
+    DURABLE_SYNTHETIC_MEMORY_RECEIPTS_ID,
+    DURABLE_SYNTHETIC_MEMORY_RECEIPTS_POLICY_REF,
+    run_durable_synthetic_memory_receipts,
+)
+from cortex_memory_os.dashboard_encrypted_index import (
+    DASHBOARD_LIVE_BACKBONE_ID,
+    DASHBOARD_LIVE_BACKBONE_POLICY_REF,
+    ENCRYPTED_INDEX_DASHBOARD_LIVE_ID,
+    ENCRYPTED_INDEX_DASHBOARD_LIVE_POLICY_REF,
+    build_dashboard_operational_backbone,
+    panel_payload_is_redacted,
+)
+from cortex_memory_os.shadow_pointer_native_live_feed import (
+    NATIVE_SHADOW_POINTER_LIVE_FEED_ID,
+    NATIVE_SHADOW_POINTER_LIVE_FEED_POLICY_REF,
+    build_native_shadow_pointer_live_feed,
+)
+from cortex_memory_os.clicky_ux import (
+    CLICKY_UX_COMPANION_ID,
+    CLICKY_UX_COMPANION_POLICY_REF,
+    CLICKY_UX_LESSONS_ID,
+    CLICKY_UX_LESSONS_POLICY_REF,
+    build_clicky_ux_companion_panel,
+    clicky_ux_payload_is_safe,
+    default_clicky_ux_lessons,
+)
+from cortex_memory_os.receipt_leak_stress import (
+    RECEIPT_LEAK_STRESS_ID,
+    RECEIPT_LEAK_STRESS_POLICY_REF,
+    run_receipt_leak_stress,
+)
 from cortex_memory_os.evidence_eligibility import (
     EVIDENCE_ELIGIBILITY_HANDOFF_POLICY_REF,
     EvidenceWriteMode,
@@ -486,6 +523,10 @@ def run_all() -> BenchmarkRunResult:
         case_vault_encryption_boundary,
         case_memory_encryption_default_contract,
         case_unified_encrypted_graph_index_contract,
+        case_key_management_plan_contract,
+        case_durable_synthetic_memory_receipts_contract,
+        case_encrypted_index_dashboard_live_contract,
+        case_receipt_leak_stress_contract,
         case_gateway_context_pack,
         case_context_pack_scored_retrieval,
         case_source_router_context_pack_contract,
@@ -543,6 +584,8 @@ def run_all() -> BenchmarkRunResult:
         case_shadow_pointer_state_machine_contract,
         case_shadow_pointer_live_receipt_contract,
         case_spatial_proposal_schema_contract,
+        case_native_shadow_pointer_live_feed_contract,
+        case_clicky_ux_companion_contract,
         case_shadow_pointer_native_overlay_contract,
         case_native_capture_permission_smoke_contract,
         case_shadow_pointer_permission_onboarding_contract,
@@ -9683,6 +9726,166 @@ def case_spatial_proposal_schema_contract() -> BenchmarkCaseResult:
     )
 
 
+def case_native_shadow_pointer_live_feed_contract() -> BenchmarkCaseResult:
+    live_receipt = build_live_receipt(
+        default_shadow_pointer_snapshot(),
+        observation_mode=ShadowPointerObservationMode.SESSION,
+        source_trust=SourceTrust.EXTERNAL_UNTRUSTED,
+        firewall_decision="ephemeral_only",
+        evidence_write_mode="derived_only",
+        memory_eligible=False,
+        raw_ref_retained=False,
+        latest_action="Real page observation",
+    )
+    feed = build_native_shadow_pointer_live_feed(
+        [live_receipt],
+        now=datetime(2026, 5, 2, 12, 0, tzinfo=UTC),
+    )
+    payload = feed.model_dump_json()
+    docs_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "docs" / "architecture" / "native-shadow-pointer-live-feed.md",
+            REPO_ROOT / "docs" / "product" / "product-traceability-report.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+            REPO_ROOT / "docs" / "ops" / "task-board.md",
+        ]
+        if path.exists()
+    )
+    missing_terms = _missing_terms(
+        docs_text,
+        [
+            NATIVE_SHADOW_POINTER_LIVE_FEED_ID,
+            NATIVE_SHADOW_POINTER_LIVE_FEED_POLICY_REF,
+            "render_native_overlay_frame",
+            "display-only",
+            "start_screen_capture",
+            "write_memory",
+        ],
+    )
+    passed = (
+        feed.display_only
+        and not feed.capture_started
+        and not feed.accessibility_observer_started
+        and not feed.memory_write_allowed
+        and not feed.raw_ref_retained
+        and not feed.raw_payload_included
+        and feed.external_untrusted_count == 1
+        and feed.memory_eligible_count == 0
+        and "raw://" not in payload
+        and "encrypted_blob://" not in payload
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="NATIVE-SHADOW-POINTER-LIVE-FEED-001/display_only_receipt_stream",
+        suite=NATIVE_SHADOW_POINTER_LIVE_FEED_ID,
+        passed=passed,
+        summary=(
+            "Native Shadow Pointer live feed can render redacted observation receipts "
+            "without starting capture, observers, memory writes, or input actions."
+        ),
+        metrics={
+            "receipt_count": feed.receipt_count,
+            "external_untrusted_count": feed.external_untrusted_count,
+            "memory_eligible_count": feed.memory_eligible_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": NATIVE_SHADOW_POINTER_LIVE_FEED_POLICY_REF,
+            "blocked_effects": feed.blocked_effects,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_clicky_ux_companion_contract() -> BenchmarkCaseResult:
+    live_receipt = build_live_receipt(
+        default_shadow_pointer_snapshot(),
+        observation_mode=ShadowPointerObservationMode.SESSION,
+        source_trust=SourceTrust.EXTERNAL_UNTRUSTED,
+        firewall_decision="ephemeral_only",
+        evidence_write_mode="derived_only",
+        memory_eligible=False,
+        raw_ref_retained=False,
+        latest_action="Clicky-inspired UX pass",
+    )
+    feed = build_native_shadow_pointer_live_feed([live_receipt])
+    companion = build_clicky_ux_companion_panel(feed)
+    lessons = default_clicky_ux_lessons()
+    payload = companion.model_dump_json()
+    docs_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "docs" / "research" / "clicky-ui-ux-analysis-2026-05-02.md",
+            REPO_ROOT / "docs" / "product" / "clicky-ux-dashboard-companion.md",
+            REPO_ROOT / "docs" / "product" / "cortex-dashboard-shell.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+            REPO_ROOT / "docs" / "ops" / "task-board.md",
+        ]
+        if path.exists()
+    )
+    ui_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "ui" / "cortex-dashboard" / "index.html",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "app.js",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "styles.css",
+        ]
+        if path.exists()
+    )
+    missing_terms = _missing_terms(
+        docs_text + "\n" + ui_text,
+        [
+            CLICKY_UX_LESSONS_ID,
+            CLICKY_UX_LESSONS_POLICY_REF,
+            CLICKY_UX_COMPANION_ID,
+            CLICKY_UX_COMPANION_POLICY_REF,
+            "Cursor Companion",
+            "Clicky UX Lessons",
+            "cursor-adjacent",
+            "compact receipt panel",
+            "external repo code was not executed",
+        ],
+    )
+    passed = (
+        all(lesson.external_source_untrusted for lesson in lessons)
+        and all(not lesson.repo_code_executed for lesson in lessons)
+        and all(not lesson.setup_commands_executed for lesson in lessons)
+        and companion.display_only
+        and companion.content_redacted
+        and companion.source_refs_redacted
+        and not companion.raw_payload_included
+        and not companion.voice_capture_enabled
+        and not companion.real_screen_capture_started
+        and not companion.memory_write_allowed
+        and clicky_ux_payload_is_safe(lessons, companion)
+        and "raw://" not in payload
+        and "encrypted_blob://" not in payload
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="CLICKY-UX-COMPANION-001/cursor_adjacent_receipt_panel",
+        suite=CLICKY_UX_COMPANION_ID,
+        passed=passed,
+        summary=(
+            "Clicky-inspired UX is adapted as a cursor-adjacent, compact, "
+            "display-only Cortex receipt panel without borrowing unsafe capture or action flows."
+        ),
+        metrics={
+            "lesson_count": len(lessons),
+            "chip_count": len(companion.compact_chip_labels),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "lesson_policy_ref": CLICKY_UX_LESSONS_POLICY_REF,
+            "companion_policy_ref": CLICKY_UX_COMPANION_POLICY_REF,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
 def case_consent_first_onboarding_contract() -> BenchmarkCaseResult:
     plan = default_consent_first_onboarding_plan()
     serialized = plan.model_dump_json()
@@ -14173,6 +14376,229 @@ def case_unified_encrypted_graph_index_contract() -> BenchmarkCaseResult:
             "write_token_digest_count": write_receipt.token_digest_count,
             "graph_token_digest_count": graph_receipt.graph_token_digest_count,
             "context_policy_refs": context_pack.context_policy_refs,
+        },
+    )
+
+
+def case_key_management_plan_contract() -> BenchmarkCaseResult:
+    result = run_key_management_plan_smoke()
+    docs_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "docs" / "security" / "key-management-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+            REPO_ROOT / "docs" / "ops" / "task-board.md",
+            REPO_ROOT / "docs" / "product" / "product-traceability-report.md",
+        ]
+        if path.exists()
+    )
+    required_terms = [
+        KEY_MANAGEMENT_PLAN_ID,
+        KEY_MANAGEMENT_PLAN_POLICY_REF,
+        "memory_payload",
+        "graph_edge_payload",
+        "hmac_index",
+        "evidence_blob",
+        "rotate_key_version",
+        "delete_key_version",
+    ]
+    missing_terms = _missing_terms(docs_text, required_terms)
+    passed = result.passed and not missing_terms
+    return BenchmarkCaseResult(
+        case_id="KEY-MANAGEMENT-PLAN-001/production_key_lifecycle",
+        suite=KEY_MANAGEMENT_PLAN_ID,
+        passed=passed,
+        summary=(
+            "Production key lifecycle covers memory payload, graph edge, HMAC "
+            "index, and evidence blob keys without exposing key material."
+        ),
+        metrics={
+            "key_class_count": result.key_class_count,
+            "lifecycle_step_count": result.lifecycle_step_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": KEY_MANAGEMENT_PLAN_POLICY_REF,
+            "missing_doc_terms": missing_terms,
+            "missing_controls": result.missing_controls,
+        },
+    )
+
+
+def case_durable_synthetic_memory_receipts_contract() -> BenchmarkCaseResult:
+    receipt = run_durable_synthetic_memory_receipts(
+        now=datetime(2026, 5, 2, 12, 0, tzinfo=UTC)
+    )
+    docs_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "docs" / "architecture" / "durable-synthetic-memory-receipts.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+            REPO_ROOT / "docs" / "ops" / "task-board.md",
+            REPO_ROOT / "docs" / "product" / "product-traceability-report.md",
+        ]
+        if path.exists()
+    )
+    payload = receipt.model_dump_json()
+    missing_terms = _missing_terms(
+        docs_text,
+        [
+            DURABLE_SYNTHETIC_MEMORY_RECEIPTS_ID,
+            DURABLE_SYNTHETIC_MEMORY_RECEIPTS_POLICY_REF,
+            "encrypted_store_used",
+            "durable_synthetic_memory_written",
+            "durable_private_memory_written: false",
+        ],
+    )
+    passed = (
+        receipt.synthetic_only
+        and receipt.encrypted_store_used
+        and receipt.durable_synthetic_memory_written
+        and not receipt.durable_private_memory_written
+        and not receipt.raw_ref_retained
+        and receipt.db_plaintext_leak_count == 0
+        and receipt.prohibited_leak_count == 0
+        and "Synthetic durable memory receipt observed" not in payload
+        and "synthetic://durable-memory-receipt/source" not in payload
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="DURABLE-SYNTHETIC-MEMORY-RECEIPTS-001/encrypted_synthetic_write",
+        suite=DURABLE_SYNTHETIC_MEMORY_RECEIPTS_ID,
+        passed=passed,
+        summary=(
+            "Synthetic memory writes now pass through encrypted durable storage "
+            "and redacted index receipts before private real capture is allowed."
+        ),
+        metrics={
+            "search_result_count": receipt.search_receipt.result_count,
+            "candidate_open_count": receipt.search_receipt.candidate_open_count,
+            "prohibited_leak_count": receipt.prohibited_leak_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": DURABLE_SYNTHETIC_MEMORY_RECEIPTS_POLICY_REF,
+            "memory_id": receipt.memory_id,
+            "audit_event_id": receipt.audit_event_id,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_encrypted_index_dashboard_live_contract() -> BenchmarkCaseResult:
+    backbone = build_dashboard_operational_backbone(
+        now=datetime(2026, 5, 2, 12, 0, tzinfo=UTC)
+    )
+    docs_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "docs" / "product" / "encrypted-index-dashboard-live.md",
+            REPO_ROOT / "docs" / "product" / "cortex-dashboard-shell.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+            REPO_ROOT / "docs" / "ops" / "task-board.md",
+        ]
+        if path.exists()
+    )
+    ui_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "ui" / "cortex-dashboard" / "index.html",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "app.js",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "styles.css",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "dashboard-data.js",
+        ]
+        if path.exists()
+    )
+    panel = backbone.encrypted_index_panel
+    missing_terms = _missing_terms(
+        docs_text + "\n" + ui_text,
+        [
+            ENCRYPTED_INDEX_DASHBOARD_LIVE_ID,
+            ENCRYPTED_INDEX_DASHBOARD_LIVE_POLICY_REF,
+            DASHBOARD_LIVE_BACKBONE_ID,
+            DASHBOARD_LIVE_BACKBONE_POLICY_REF,
+            "Encrypted Index Receipts",
+            "memory.search_index",
+            "Live Receipt Backbone",
+        ],
+    )
+    passed = (
+        panel.content_redacted
+        and panel.source_refs_redacted
+        and panel.query_redacted
+        and panel.token_text_redacted
+        and not panel.key_material_visible
+        and panel.search_result_count >= 1
+        and backbone.live_backbone_panel.content_redacted
+        and not backbone.live_backbone_panel.raw_private_data_retained
+        and panel_payload_is_redacted(backbone)
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="ENCRYPTED-INDEX-DASHBOARD-LIVE-001/metadata_only_dashboard_panel",
+        suite=ENCRYPTED_INDEX_DASHBOARD_LIVE_ID,
+        passed=passed,
+        summary=(
+            "Dashboard exposes encrypted-index search health as metadata-only "
+            "receipts with key, query, token, content, and source refs hidden."
+        ),
+        metrics={
+            "write_receipt_count": panel.write_receipt_count,
+            "search_result_count": panel.search_result_count,
+            "candidate_open_count": panel.candidate_open_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": ENCRYPTED_INDEX_DASHBOARD_LIVE_POLICY_REF,
+            "backbone_policy_ref": DASHBOARD_LIVE_BACKBONE_POLICY_REF,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_receipt_leak_stress_contract() -> BenchmarkCaseResult:
+    result = run_receipt_leak_stress(now=datetime(2026, 5, 2, 12, 0, tzinfo=UTC))
+    docs_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "docs" / "architecture" / "receipt-leak-stress.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+            REPO_ROOT / "docs" / "ops" / "task-board.md",
+        ]
+        if path.exists()
+    )
+    missing_terms = _missing_terms(
+        docs_text,
+        [
+            RECEIPT_LEAK_STRESS_ID,
+            RECEIPT_LEAK_STRESS_POLICY_REF,
+            KEY_MANAGEMENT_PLAN_ID,
+            DURABLE_SYNTHETIC_MEMORY_RECEIPTS_ID,
+            NATIVE_SHADOW_POINTER_LIVE_FEED_ID,
+            "prohibited_marker_count",
+        ],
+    )
+    passed = result.passed and not missing_terms
+    return BenchmarkCaseResult(
+        case_id="RECEIPT-LEAK-STRESS-001/operational_backbone_payloads",
+        suite=RECEIPT_LEAK_STRESS_ID,
+        passed=passed,
+        summary=(
+            "Operational dashboard backbone receipts stay redacted across key, "
+            "index, native feed, and durable synthetic write payloads."
+        ),
+        metrics={
+            "checked_payload_count": result.checked_payload_count,
+            "prohibited_marker_count": result.prohibited_marker_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": RECEIPT_LEAK_STRESS_POLICY_REF,
+            "missing_doc_terms": missing_terms,
         },
     )
 
