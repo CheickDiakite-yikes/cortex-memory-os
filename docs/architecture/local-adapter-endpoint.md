@@ -10,6 +10,7 @@ The endpoint is intentionally narrow:
 - binds to `127.0.0.1` by default;
 - rejects non-local client hosts with `client_host_not_allowed`;
 - accepts only `POST /adapter/browser` and `POST /adapter/terminal`;
+- exposes `GET /results` for aggregate live-proof receipts;
 - limits request bodies to `MAX_ADAPTER_PAYLOAD_BYTES`;
 - suppresses default HTTP request logging so payload text is not copied into
   local logs;
@@ -27,6 +28,13 @@ Safety rules:
 - `dom_ref` and `raw_ref` are forbidden for live browser ingest;
 - prompt-injection text is quarantined before evidence storage;
 - browser content cannot become memory eligible through this endpoint.
+- visible Shadow Clicker fields from the extension are accepted as proof
+  metadata and stripped before adapter validation.
+
+`GET /results` returns aggregate counts only: accepted/rejected events,
+browser/terminal counts, memory-eligible count, raw-ref count, prompt-risk
+count, and latest browser firewall/evidence modes. It does not return visible
+page text, URLs, titles, raw payloads, raw refs, or DOM refs.
 
 ## Terminal Path
 

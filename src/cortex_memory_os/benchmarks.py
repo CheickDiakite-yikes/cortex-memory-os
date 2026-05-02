@@ -105,8 +105,12 @@ from cortex_memory_os.live_adapters import (
     run_live_adapter_smoke,
 )
 from cortex_memory_os.adapter_endpoint import (
+    ADAPTER_BROWSER_PATH,
     LOCAL_ADAPTER_ENDPOINT_POLICY_REF,
+    _browser_payload,
+    _post_json,
     run_local_adapter_endpoint_smoke,
+    start_local_adapter_endpoint,
 )
 from cortex_memory_os.manual_adapter_proof import (
     MANUAL_ADAPTER_PROOF_POLICY_REF,
@@ -559,6 +563,7 @@ def run_all() -> BenchmarkRunResult:
         case_live_run_computer_safe_task_contract,
         case_live_clicker_demo_contract,
         case_live_clicker_hardening_contract,
+        case_live_clicker_allowlisted_origin_contract,
         case_synthetic_capture_ladder_contract,
         case_demo_readiness_contract,
         case_demo_stress_contract,
@@ -11988,6 +11993,117 @@ def case_live_clicker_hardening_contract() -> BenchmarkCaseResult:
             "content_type_enforced": result.content_type_enforced,
             "observation_cap_enforced": result.observation_cap_enforced,
             "security_headers_present": result.security_headers_present,
+            "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_live_clicker_allowlisted_origin_contract() -> BenchmarkCaseResult:
+    benchmark_id = "LIVE-CLICKER-ALLOWLISTED-ORIGIN-001"
+    endpoint = start_local_adapter_endpoint(port=0)
+    try:
+        _post_json(
+            f"{endpoint.base_url}{ADAPTER_BROWSER_PATH}",
+            {
+                **_browser_payload(
+                    event_id="allowlisted_google_news_smoke",
+                    visible_text="Google News visible public headlines.",
+                ),
+                "url": "https://news.google.com/topstories",
+                "window_title": "Google News",
+                "tab_title": "Google News",
+                "action": "click",
+                "target_label": "Top stories",
+                "pointer_x": 420,
+                "pointer_y": 260,
+                "shadow_pointer_visible": True,
+            },
+        )
+        results = endpoint.server.results()
+    finally:
+        endpoint.stop()
+
+    extension_text = (
+        (REPO_ROOT / "adapters" / "browser-extension" / "content-script.js").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (REPO_ROOT / "adapters" / "browser-extension" / "service-worker.js").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (REPO_ROOT / "adapters" / "browser-extension" / "manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    docs_text = (
+        (REPO_ROOT / "docs" / "architecture" / "live-browser-terminal-adapters.md").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (REPO_ROOT / "docs" / "architecture" / "local-adapter-endpoint.md").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(encoding="utf-8")
+        + "\n"
+        + (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (REPO_ROOT / "docs" / "ops" / "task-board.md").read_text(encoding="utf-8")
+    )
+    required_extension_terms = [
+        "Cortex Shadow Clicker",
+        "pointermove",
+        "shadow_pointer_visible",
+        "eligible_for_memory",
+        "raw_ref_retained",
+        "activeTab",
+        "http://127.0.0.1/*",
+    ]
+    required_doc_terms = [
+        benchmark_id,
+        "Google News",
+        "external_untrusted",
+        "external evidence",
+        "GET /results",
+    ]
+    missing_extension_terms = _missing_terms(extension_text, required_extension_terms)
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        results.accepted_count == 1
+        and results.browser_ingest_count == 1
+        and results.external_browser_evidence_only
+        and results.memory_eligible_count == 0
+        and results.raw_ref_retained_count == 0
+        and results.raw_payloads_included is False
+        and not missing_extension_terms
+        and not missing_doc_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="LIVE-CLICKER-ALLOWLISTED-ORIGIN-001/real_page_extension_boundary",
+        suite=benchmark_id,
+        passed=passed,
+        summary=(
+            "Browser extension Shadow Clicker can mark a real public page as "
+            "external evidence while the endpoint keeps it out of memory and raw refs."
+        ),
+        metrics={
+            "accepted_count": results.accepted_count,
+            "browser_ingest_count": results.browser_ingest_count,
+            "memory_eligible_count": results.memory_eligible_count,
+            "raw_ref_retained_count": results.raw_ref_retained_count,
+            "missing_extension_terms": len(missing_extension_terms),
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": LOCAL_ADAPTER_ENDPOINT_POLICY_REF,
+            "live_adapter_policy_ref": LIVE_ADAPTER_POLICY_REF,
+            "external_browser_evidence_only": results.external_browser_evidence_only,
+            "latest_browser_firewall_decision": results.latest_browser_firewall_decision,
+            "latest_browser_evidence_write_mode": results.latest_browser_evidence_write_mode,
+            "missing_extension_terms": missing_extension_terms,
             "missing_doc_terms": missing_doc_terms,
         },
     )

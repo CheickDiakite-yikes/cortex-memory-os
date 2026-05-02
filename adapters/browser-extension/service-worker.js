@@ -14,7 +14,7 @@ function isHttpTab(tab) {
 
 async function cortexSettings() {
   const settings = await chrome.storage.local.get({
-    cortexEnabled: false,
+    cortexEnabled: true,
     cortexEndpoint: DEFAULT_CORTEX_ENDPOINT,
   });
   return {
@@ -56,12 +56,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       raw_ref: null,
     };
 
-    await fetch(settings.endpoint, {
+    const response = await fetch(settings.endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    sendResponse({ ok: true });
+    const result = await response.json();
+    sendResponse({
+      ok: response.ok && result.accepted === true,
+      endpoint_status: response.status,
+      result,
+    });
   })().catch((error) => {
     sendResponse({ ok: false, reason: String(error && error.message ? error.message : error) });
   });

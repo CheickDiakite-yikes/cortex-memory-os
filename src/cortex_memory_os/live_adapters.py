@@ -99,7 +99,7 @@ def run_live_adapter_smoke(
         _repo_relative(service_worker_path): [
             LIVE_ADAPTER_POLICY_REF,
             "endpointAllowed",
-            "cortexEnabled: false",
+            "cortexEnabled: true",
             "chrome.action.onClicked",
             "content-script.js",
             "source_trust: \"external_untrusted\"",
@@ -109,6 +109,9 @@ def run_live_adapter_smoke(
         _repo_relative(content_script_path): [
             LIVE_ADAPTER_POLICY_REF,
             "MAX_VISIBLE_TEXT_CHARS",
+            "Cortex Shadow Clicker",
+            "pointermove",
+            "shadow_pointer_visible",
             "visible_text",
             "dom_ref: null",
             "source_trust: \"external_untrusted\"",

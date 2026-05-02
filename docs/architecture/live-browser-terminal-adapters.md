@@ -12,13 +12,22 @@ The browser scaffold lives in `adapters/browser-extension` and uses Manifest V3.
 It is intentionally click-gated:
 
 - the browser action injects `content-script.js` only after a user click;
-- `cortexEnabled` defaults to `false`;
+- `cortexEnabled` defaults to `true` because the browser action click is the
+  explicit activation boundary;
 - only `http://127.0.0.1/*` and `http://localhost/*` host permissions are
   present;
 - the service worker refuses non-local endpoints;
 - the content script sends visible text only, not raw DOM HTML;
 - payloads are marked `external_untrusted` and `third_party_content`;
 - `dom_ref` and `raw_ref` are `null` so web content cannot become raw memory.
+- the content script renders a visible **Cortex Shadow Clicker** overlay on the
+  active page, follows pointer movement, and updates local firewall/evidence
+  status from the endpoint response.
+
+This is the first real-page path. It can run on a page such as Google News after
+the user deliberately loads the unpacked extension and clicks the Cortex action.
+The page is still not trusted. Visible text is handled as external evidence,
+not instructions, skills, or durable memory.
 
 ## Terminal Shell Hook Scaffold
 
@@ -55,6 +64,7 @@ Acceptance requires:
 
 - browser DOM remains external, third-party, raw-ref-free, and not memory
   eligible;
+- browser Shadow Clicker metadata is display/proof metadata only;
 - browser prompt-injection text is quarantined before evidence storage;
 - terminal secret text is masked and raw refs are dropped;
 - terminal events require explicit opt-in and local endpoints;

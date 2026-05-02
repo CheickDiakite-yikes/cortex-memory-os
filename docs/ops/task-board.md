@@ -6,7 +6,7 @@ Last updated: 2026-05-02
 
 | ID | Task | Owner | Proof / Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| _None_ |  |  |  |  |
+| LIVE-CLICKER-ALLOWLISTED-ORIGIN-001 | Prove allowlisted browser-extension origin using the same live observation receipt shape | Codex | Implementation ready; `uv run pytest` -> 384 passed; focused adapter/endpoint/benchmark tests -> 15 passed; `uv run cortex-live-adapter-smoke --json` -> passed; `uv run cortex-adapter-endpoint --smoke --json` -> passed; `uv run cortex-bench` -> 161/161 passed, `benchmarks/runs/bench_20260502T020640Z.json`; `uv run cortex-ops-quality --format json` -> 161/161 aggregate-only and `raw_case_payloads_included: false`; `uv run cortex-mcp --smoke`; `uvx ruff check`; `python3 -m compileall src`; `git diff --check`; `.env.local` ignored and untracked | Browser extension now draws a visible Shadow Clicker on an explicitly activated real tab and posts to local `/adapter/browser`; endpoint `/results` stays aggregate-only and shows browser evidence memory-ineligible/raw-ref-free. Live Google News run still requires user confirmation before loading the unpacked Chrome extension. |
 
 ## Next
 
@@ -14,7 +14,6 @@ Last updated: 2026-05-02
 | --- | --- | --- | --- | --- |
 | KEY-MANAGEMENT-PLAN-001 | Specify production key lifecycle for memory payloads, graph edges, and HMAC index keys | Codex | Pending | Current prototype requires caller-provided authenticated cipher and index key; production needs OS-backed key lifecycle and rotation. |
 | ENCRYPTED-INDEX-DASHBOARD-LIVE-001 | Feed encrypted-index metadata receipts into dashboard context/debug panels | Codex | Pending | `memory.search_index` exists as read-only gateway surface; next UI step is visible metadata-only index search health. |
-| LIVE-CLICKER-ALLOWLISTED-ORIGIN-001 | Prove allowlisted browser-extension origin using the same live observation receipt shape | Codex | Pending | Move beyond localhost page-local demo without arbitrary browsing: explicit allowlist, user-visible active state, and external content still Class D/E. |
 | NATIVE-SHADOW-POINTER-LIVE-FEED-001 | Feed live observation receipts into the native Shadow Pointer overlay | Codex | Pending | Bridge the live receipt stream into the native display-only overlay before any real capture starts. |
 | DURABLE-SYNTHETIC-MEMORY-RECEIPTS-001 | Promote synthetic live memory writes through encrypted durable store receipts | Codex | Pending | Combine the synthetic capture ladder with encrypted memory storage before using private real activity. |
 

@@ -78,6 +78,23 @@ class LocalAdapterEndpointSmokeResult(BaseModel):
     oversized_payload_status_code: int
 
 
+class LocalAdapterEndpointResults(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    policy_ref: str = LOCAL_ADAPTER_ENDPOINT_POLICY_REF
+    accepted_count: int = Field(ge=0)
+    rejected_count: int = Field(ge=0)
+    browser_ingest_count: int = Field(ge=0)
+    terminal_ingest_count: int = Field(ge=0)
+    memory_eligible_count: int = Field(ge=0)
+    raw_ref_retained_count: int = Field(ge=0)
+    prompt_injection_risk_count: int = Field(ge=0)
+    external_browser_evidence_only: bool
+    latest_browser_firewall_decision: str | None = None
+    latest_browser_evidence_write_mode: str | None = None
+    raw_payloads_included: bool = False
+
+
 def client_host_allowed(host: str) -> bool:
     return host in {"127.0.0.1", "::1", "localhost"}
 
@@ -120,10 +137,15 @@ def _ingest_browser_payload(payload: Mapping[str, Any]) -> AdapterEndpointIngest
     event_payload = _strip_endpoint_fields(
         payload,
         {
+            "action",
             "adapter_policy_ref",
             "event_type",
+            "pointer_x",
+            "pointer_y",
             "raw_ref",
+            "shadow_pointer_visible",
             "source_trust",
+            "target_label",
             "third_party_content",
         },
     )
@@ -286,6 +308,12 @@ class LocalAdapterEndpointHandler(BaseHTTPRequestHandler):
                 status_code=200,
             )
             return
+        if self.path == "/results":
+            if isinstance(self.server, LocalAdapterEndpointServer):
+                self._write_json(self.server.results(), status_code=200)
+                return
+            self._write_json(_reject(500, "server_state_missing", "endpoint state unavailable"))
+            return
         self._write_json(
             _reject(404, "unknown_adapter_path", "adapter endpoint path is not registered")
         )
@@ -328,6 +356,41 @@ class LocalAdapterEndpointServer(ThreadingHTTPServer):
     def ingest_results(self) -> list[AdapterEndpointIngestResult]:
         with self._ingest_lock:
             return list(self._ingest_results)
+
+    def results(self) -> LocalAdapterEndpointResults:
+        ingest_results = self.ingest_results()
+        accepted = [result for result in ingest_results if result.accepted]
+        browser = [
+            result for result in accepted if result.adapter_source == AdapterSource.BROWSER
+        ]
+        terminal = [
+            result for result in accepted if result.adapter_source == AdapterSource.TERMINAL
+        ]
+        latest_browser = browser[-1] if browser else None
+        memory_eligible_count = sum(1 for result in accepted if result.eligible_for_memory)
+        raw_ref_retained_count = sum(1 for result in accepted if result.raw_ref_retained)
+        return LocalAdapterEndpointResults(
+            accepted_count=len(accepted),
+            rejected_count=len(ingest_results) - len(accepted),
+            browser_ingest_count=len(browser),
+            terminal_ingest_count=len(terminal),
+            memory_eligible_count=memory_eligible_count,
+            raw_ref_retained_count=raw_ref_retained_count,
+            prompt_injection_risk_count=sum(
+                1 for result in accepted if result.prompt_injection_risk
+            ),
+            external_browser_evidence_only=(
+                bool(browser)
+                and all(result.eligible_for_memory is False for result in browser)
+                and raw_ref_retained_count == 0
+            ),
+            latest_browser_firewall_decision=(
+                latest_browser.firewall_decision if latest_browser else None
+            ),
+            latest_browser_evidence_write_mode=(
+                latest_browser.evidence_write_mode if latest_browser else None
+            ),
+        )
 
 
 @dataclass

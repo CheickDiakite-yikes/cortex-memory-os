@@ -37,10 +37,22 @@ def test_browser_manifest_is_click_gated_and_localhost_only():
     assert manifest["permissions"] == ["activeTab", "scripting", "storage"]
     assert manifest["host_permissions"] == ["http://127.0.0.1/*", "http://localhost/*"]
     assert "chrome.action.onClicked" in service_worker
-    assert "cortexEnabled: false" in service_worker
+    assert "cortexEnabled: true" in service_worker
     assert "endpointAllowed" in service_worker
     assert "source_trust: \"external_untrusted\"" in service_worker
     assert "raw_ref: null" in service_worker
+
+
+def test_browser_content_script_draws_visible_shadow_clicker():
+    content_script = (DEFAULT_BROWSER_EXTENSION_ROOT / "content-script.js").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Cortex Shadow Clicker" in content_script
+    assert "pointermove" in content_script
+    assert "shadow_pointer_visible" in content_script
+    assert "eligible_for_memory" in content_script
+    assert "raw_ref_retained" in content_script
 
 
 def test_terminal_hook_is_opt_in_local_only_and_redacting():
