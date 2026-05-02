@@ -34,6 +34,8 @@ def test_screen_capture_probe_fixture_is_read_only_without_allow_flag() -> None:
     assert not result.allow_real_capture
     assert not result.capture_attempted
     assert not result.frame_captured
+    assert result.skip_reason == "allow_real_capture_false"
+    assert result.next_user_actions
     assert not result.raw_pixels_returned
     assert not result.raw_ref_retained
     assert not result.memory_write_allowed
@@ -50,6 +52,7 @@ def test_screen_capture_probe_fixture_can_capture_metadata_only_with_allow_flag(
     assert result.allow_real_capture
     assert result.capture_attempted
     assert result.frame_captured
+    assert result.skip_reason is None
     assert result.frame_width == 1440
     assert result.frame_height == 900
     assert not result.raw_pixels_returned
@@ -67,6 +70,20 @@ def test_screen_capture_probe_parser_rejects_raw_pixels() -> None:
 
     with pytest.raises(ValueError, match="cannot return pixels"):
         parse_native_screen_capture_probe_output(json.dumps(payload))
+
+
+def test_screen_capture_probe_fixture_explains_permission_skip() -> None:
+    result = build_fixture_native_screen_capture_probe_result(
+        allow_real_capture=True,
+        screen_recording_preflight=False,
+    )
+
+    assert result.passed
+    assert result.allow_real_capture
+    assert not result.capture_attempted
+    assert not result.frame_captured
+    assert result.skip_reason == "screen_recording_preflight_false"
+    assert "Screen Recording" in result.next_user_actions[0]
 
 
 def test_run_screen_capture_probe_uses_swiftpm_command_with_fake_runner() -> None:

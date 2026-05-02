@@ -105,11 +105,12 @@ async function callCaptureControl(action, payload = {}) {
     start: "startPath",
     stop: "stopPath",
     permissions: "permissionsPath",
+    preflight: "preflightPath",
     screenProbe: "screenProbePath",
     receipts: "receiptsPath",
   };
   const path = captureControlConfig[configKeys[action]] || `/api/capture/${action}`;
-  const readOnly = action === "status" || action === "permissions" || action === "receipts";
+  const readOnly = action === "status" || action === "permissions" || action === "preflight" || action === "receipts";
   const response = await fetch(path, {
     method: readOnly ? "GET" : "POST",
     headers: {
@@ -127,6 +128,16 @@ async function callCaptureControl(action, payload = {}) {
 
 function describeCaptureBridgeFallback(panel) {
   return `Local bridge unavailable. Run uv run cortex-capture-control-server --port 8799, then open http://127.0.0.1:8799/index.html. CLI fallback: ${panel.native_cursor_command}.`;
+}
+
+function formatCaptureSkipReason(reason) {
+  if (reason === "screen_recording_preflight_false") {
+    return "Screen Recording permission is missing";
+  }
+  if (reason === "allow_real_capture_false") {
+    return "explicit probe approval was not supplied";
+  }
+  return formatToken(reason || "none");
 }
 
 function initialView() {
@@ -376,6 +387,9 @@ function renderCaptureControl() {
       <button class="text-command" type="button" id="capture-permissions">
         Check Permissions
       </button>
+      <button class="text-command" type="button" id="capture-preflight">
+        Preflight
+      </button>
       <button class="text-command" type="button" id="capture-screen-probe">
         Screen Probe
       </button>
@@ -413,14 +427,32 @@ function renderCaptureControl() {
       writeReceipt(describeCaptureBridgeFallback(panel));
     }
   });
+  document.querySelector("#capture-preflight").addEventListener("click", async () => {
+    try {
+      const receipt = await callCaptureControl("preflight");
+      const missing = receipt.missing_permissions.length
+        ? receipt.missing_permissions.map(formatToken).join(", ")
+        : "none";
+      const action = receipt.next_user_actions[0] || "No action needed.";
+      writeReceipt(
+        `Preflight: missing=${missing}; screen probe=${receipt.safe_to_attempt_metadata_probe ? "ready" : "blocked"}; real session=${receipt.safe_to_start_real_capture_session ? "ready" : "blocked"}. ${action}`,
+      );
+    } catch (_error) {
+      writeReceipt(describeCaptureBridgeFallback(panel));
+    }
+  });
   document.querySelector("#capture-screen-probe").addEventListener("click", async () => {
     try {
       const receipt = await callCaptureControl("screenProbe", { allow_real_capture: true });
       const dimensions = receipt.frame_captured
         ? `${receipt.frame_width}x${receipt.frame_height}`
         : "not captured";
+      const skip = receipt.skip_reason
+        ? `; skipped=${formatCaptureSkipReason(receipt.skip_reason)}`
+        : "";
+      const action = receipt.next_user_actions?.[0] ? ` ${receipt.next_user_actions[0]}` : "";
       writeReceipt(
-        `Screen Probe: attempted=${receipt.capture_attempted}; frame=${dimensions}; raw pixels=${receipt.raw_pixels_returned}; raw refs=${receipt.raw_ref_retained}; memory writes=${receipt.memory_write_allowed}.`,
+        `Screen Probe: attempted=${receipt.capture_attempted}; frame=${dimensions}${skip}; raw pixels=${receipt.raw_pixels_returned}; raw refs=${receipt.raw_ref_retained}; memory writes=${receipt.memory_write_allowed}.${action}`,
       );
     } catch (_error) {
       writeReceipt(describeCaptureBridgeFallback(panel));
@@ -430,7 +462,7 @@ function renderCaptureControl() {
     try {
       const receipt = await callCaptureControl("receipts");
       writeReceipt(
-        `Receipts: ${receipt.receipt_count} local events; starts=${receipt.start_count}; stops=${receipt.stop_count}; screen probes=${receipt.screen_probe_count}; raw refs=${receipt.raw_ref_retained}; memory writes=${receipt.memory_write_allowed}.`,
+        `Receipts: ${receipt.receipt_count} local events; starts=${receipt.start_count}; stops=${receipt.stop_count}; preflights=${receipt.preflight_count}; screen probes=${receipt.screen_probe_count}; skipped=${receipt.skipped_screen_probe_count}; exits=${receipt.watchdog_exit_count}; raw refs=${receipt.raw_ref_retained}; memory writes=${receipt.memory_write_allowed}.`,
       );
     } catch (_error) {
       writeReceipt(describeCaptureBridgeFallback(panel));
@@ -464,7 +496,7 @@ async function refreshCaptureRuntimeStatus(panel) {
 function updateCaptureRuntime(receipt) {
   const status = document.querySelector("#capture-runtime-status");
   const pid = document.querySelector("#capture-runtime-pid");
-  if (status) status.textContent = receipt.running ? "running" : "ready";
+  if (status) status.textContent = receipt.running ? "running" : receipt.state === "exited" ? "exited" : "ready";
   if (pid) pid.textContent = receipt.pid ? String(receipt.pid) : "none";
 }
 

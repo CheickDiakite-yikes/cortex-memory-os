@@ -31,6 +31,26 @@ def test_capture_control_manager_launches_fixed_shadow_clicker_command() -> None
     assert not stop.running
 
 
+def test_capture_control_manager_watchdog_reports_exited_overlay() -> None:
+    class ExitedPopen(FakePopen):
+        def poll(self) -> int | None:
+            return 17
+
+    manager = CaptureControlProcessManager(popen_factory=ExitedPopen)
+
+    start = manager.start(duration_seconds=2)
+    exited = manager.status()
+    summary = manager.receipt_summary()
+
+    assert start.running
+    assert exited.action == "watchdog"
+    assert exited.state == "exited"
+    assert exited.exit_code == 17
+    assert not exited.running
+    assert exited.next_user_actions
+    assert summary.watchdog_exit_count == 1
+
+
 def test_capture_control_server_smoke_serves_dashboard_and_blocks_remote_probe() -> None:
     smoke = run_capture_control_server_smoke()
 
@@ -44,6 +64,7 @@ def test_capture_control_server_smoke_serves_dashboard_and_blocks_remote_probe()
     assert smoke.start_status_code == 200
     assert smoke.stop_status_code == 200
     assert smoke.permission_status_code == 200
+    assert smoke.preflight_status_code == 200
     assert smoke.screen_probe_status_code == 200
     assert smoke.receipts_status_code == 200
     assert smoke.served_dashboard
@@ -52,11 +73,14 @@ def test_capture_control_server_smoke_serves_dashboard_and_blocks_remote_probe()
     assert smoke.start_receipt.localhost_only
     assert "cortex-shadow-clicker" in smoke.start_receipt.command
     assert smoke.permission_receipt.passed
+    assert smoke.preflight_receipt.passed
+    assert smoke.preflight_receipt.safe_to_start_real_capture_session
     assert smoke.screen_probe_receipt.passed
     assert smoke.screen_probe_receipt.capture_attempted
     assert not smoke.screen_probe_receipt.raw_pixels_returned
     assert not smoke.screen_probe_receipt.raw_ref_retained
-    assert smoke.receipt_summary.receipt_count >= 4
+    assert smoke.receipt_summary.receipt_count >= 5
+    assert smoke.receipt_summary.preflight_count == 1
     assert smoke.receipt_summary.screen_probe_count == 1
     assert not smoke.receipt_summary.raw_ref_retained
     assert not smoke.receipt_summary.memory_write_allowed

@@ -7,7 +7,7 @@ def test_synthetic_benchmarks_pass():
     result = run_all()
 
     assert result.passed
-    assert len(result.case_results) == 197
+    assert len(result.case_results) == 207
     assert {case.suite for case in result.case_results} >= {
         "MEM-RECALL-001",
         "RETRIEVAL-SCORE-001",
@@ -146,12 +146,22 @@ def test_synthetic_benchmarks_pass():
         "CAPTURE-CONTROL-ORIGIN-CSRF-001",
         "CAPTURE-CONTROL-LIFECYCLE-001",
         "CAPTURE-CONTROL-PERMISSION-BRIDGE-001",
+        "CAPTURE-PERMISSION-GUIDE-001",
+        "CAPTURE-PREFLIGHT-DIAGNOSTICS-001",
+        "CAPTURE-CONTROL-PREFLIGHT-BRIDGE-001",
         "NATIVE-SCREEN-CAPTURE-PROBE-001",
         "CAPTURE-CONTROL-SCREEN-PROBE-BRIDGE-001",
         "DASHBOARD-SCREEN-PROBE-001",
+        "SCREEN-PROBE-RESULT-UX-001",
+        "SCREEN-PROBE-SKIP-RECEIPT-001",
+        "SCREEN-PROBE-LIVE-CONTRACT-001",
+        "CAPTURE-CONTROL-REAL-PROBE-SMOKE-001",
         "CAPTURE-CONTROL-RECEIPT-AUDIT-001",
+        "CAPTURE-SESSION-WATCHDOG-001",
+        "REAL-CAPTURE-PERMISSION-ONBOARDING-UI-001",
         "RAW-REF-SCAVENGER-001",
         "REAL-CAPTURE-NEXT-GATE-001",
+        "SCREEN-METADATA-STREAM-PLAN-001",
         "EXPORT-001",
         "EXPORT-AUDIT-001",
         "SKILL-FORGE-002",

@@ -504,8 +504,35 @@ from cortex_memory_os.native_screen_capture_probe import (
     build_fixture_native_screen_capture_probe_result,
 )
 from cortex_memory_os.capture_control_server import (
+    CAPTURE_CONTROL_PREFLIGHT_BRIDGE_ID,
     CAPTURE_CONTROL_SERVER_POLICY_REF,
+    CAPTURE_SESSION_WATCHDOG_ID,
+    CaptureControlProcessManager,
+    FakePopen,
     run_capture_control_server_smoke,
+)
+from cortex_memory_os.capture_preflight_diagnostics import (
+    CAPTURE_CONTROL_REAL_PROBE_SMOKE_ID,
+    CAPTURE_CONTROL_REAL_PROBE_SMOKE_POLICY_REF,
+    CAPTURE_PERMISSION_GUIDE_ID,
+    CAPTURE_PERMISSION_GUIDE_POLICY_REF,
+    CAPTURE_PREFLIGHT_DIAGNOSTICS_ID,
+    CAPTURE_PREFLIGHT_DIAGNOSTICS_POLICY_REF,
+    REAL_CAPTURE_PERMISSION_ONBOARDING_UI_ID,
+    REAL_CAPTURE_PERMISSION_ONBOARDING_UI_POLICY_REF,
+    SCREEN_METADATA_STREAM_PLAN_ID,
+    SCREEN_METADATA_STREAM_PLAN_POLICY_REF,
+    SCREEN_PROBE_LIVE_CONTRACT_ID,
+    SCREEN_PROBE_LIVE_CONTRACT_POLICY_REF,
+    SCREEN_PROBE_RESULT_UX_ID,
+    SCREEN_PROBE_RESULT_UX_POLICY_REF,
+    SCREEN_PROBE_SKIP_RECEIPT_ID,
+    SCREEN_PROBE_SKIP_RECEIPT_POLICY_REF,
+    build_capture_permission_guide,
+    build_capture_preflight_diagnostics,
+    build_screen_metadata_stream_plan,
+    build_screen_probe_skip_receipt,
+    build_screen_probe_ux_receipt,
 )
 from cortex_memory_os.real_capture_control import (
     DASHBOARD_CAPTURE_CONTROL_ID,
@@ -713,12 +740,22 @@ def run_all() -> BenchmarkRunResult:
         case_capture_control_origin_csrf_contract,
         case_capture_control_lifecycle_contract,
         case_capture_permission_bridge_contract,
+        case_capture_permission_guide_contract,
+        case_capture_preflight_diagnostics_contract,
+        case_capture_control_preflight_bridge_contract,
         case_native_screen_capture_probe_contract,
         case_capture_control_screen_probe_bridge_contract,
         case_dashboard_screen_probe_contract,
+        case_screen_probe_result_ux_contract,
+        case_screen_probe_skip_receipt_contract,
+        case_screen_probe_live_contract,
+        case_capture_control_real_probe_smoke_contract,
         case_capture_control_receipt_audit_contract,
+        case_capture_session_watchdog_contract,
+        case_real_capture_permission_onboarding_ui_contract,
         case_raw_ref_scavenger_contract,
         case_real_capture_next_gate_contract,
+        case_screen_metadata_stream_plan_contract,
         case_skill_promotion_gate,
         case_skill_rollback_gate,
         case_skill_maturity_audit_events,
@@ -13679,6 +13716,110 @@ def case_capture_permission_bridge_contract() -> BenchmarkCaseResult:
     )
 
 
+def case_capture_permission_guide_contract() -> BenchmarkCaseResult:
+    guide = build_capture_permission_guide(host_process_label="Codex")
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [CAPTURE_PERMISSION_GUIDE_ID, CAPTURE_PERMISSION_GUIDE_POLICY_REF, "Screen Recording"],
+    )
+    passed = (
+        guide.guide_id == CAPTURE_PERMISSION_GUIDE_ID
+        and "Screen Recording" in " ".join(guide.screen_recording_steps)
+        and "Accessibility" in " ".join(guide.accessibility_steps)
+        and guide.restart_required
+        and not guide.prompt_requested
+        and not guide.capture_started
+        and not guide.memory_write_allowed
+        and not guide.raw_ref_retained
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="CAPTURE-PERMISSION-GUIDE-001/prompt_free_user_steps",
+        suite=CAPTURE_PERMISSION_GUIDE_ID,
+        passed=passed,
+        summary="Capture permission guide gives user steps without prompting or starting capture.",
+        metrics={"screen_steps": len(guide.screen_recording_steps), "missing_doc_terms": len(missing_terms)},
+        evidence={"policy_ref": CAPTURE_PERMISSION_GUIDE_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_capture_preflight_diagnostics_contract() -> BenchmarkCaseResult:
+    diagnostics = build_capture_preflight_diagnostics(
+        build_fixture_permission_smoke_result(
+            screen_recording_preflight=False,
+            accessibility_trusted=False,
+            checked_at=datetime(2026, 5, 2, 20, 0, tzinfo=UTC),
+        ),
+        host_pid=123,
+        executable_path="/Applications/Codex.app/Contents/MacOS/Codex",
+        checked_at=datetime(2026, 5, 2, 20, 0, tzinfo=UTC),
+    )
+    smoke = run_capture_control_server_smoke()
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [CAPTURE_PREFLIGHT_DIAGNOSTICS_ID, CAPTURE_PREFLIGHT_DIAGNOSTICS_POLICY_REF, "preflight"],
+    )
+    passed = (
+        diagnostics.diagnostic_id == CAPTURE_PREFLIGHT_DIAGNOSTICS_ID
+        and diagnostics.missing_permissions == ["screen_recording", "accessibility"]
+        and diagnostics.safe_to_start_shadow_clicker
+        and not diagnostics.safe_to_attempt_metadata_probe
+        and not diagnostics.safe_to_start_real_capture_session
+        and not diagnostics.prompt_requested
+        and not diagnostics.capture_started
+        and not diagnostics.memory_write_allowed
+        and smoke.preflight_status_code == 200
+        and smoke.receipt_summary.preflight_count == 1
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="CAPTURE-PREFLIGHT-DIAGNOSTICS-001/permission_blockers",
+        suite=CAPTURE_PREFLIGHT_DIAGNOSTICS_ID,
+        passed=passed,
+        summary="Capture preflight reports host process and permission blockers without capture.",
+        metrics={
+            "missing_permission_count": len(diagnostics.missing_permissions),
+            "preflight_count": smoke.receipt_summary.preflight_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": CAPTURE_PREFLIGHT_DIAGNOSTICS_POLICY_REF,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_capture_control_preflight_bridge_contract() -> BenchmarkCaseResult:
+    smoke = run_capture_control_server_smoke()
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [CAPTURE_CONTROL_PREFLIGHT_BRIDGE_ID, "GET /api/capture/preflight", "tokenized"],
+    )
+    passed = (
+        smoke.passed
+        and smoke.preflight_status_code == 200
+        and smoke.preflight_receipt.diagnostic_id == CAPTURE_PREFLIGHT_DIAGNOSTICS_ID
+        and smoke.receipt_summary.preflight_count == 1
+        and smoke.token_required
+        and not smoke.preflight_receipt.capture_started
+        and not smoke.preflight_receipt.raw_payloads_included
+        and not smoke.preflight_receipt.memory_write_allowed
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="CAPTURE-CONTROL-PREFLIGHT-BRIDGE-001/tokenized_preflight_endpoint",
+        suite=CAPTURE_CONTROL_PREFLIGHT_BRIDGE_ID,
+        passed=passed,
+        summary="Capture control exposes tokenized preflight diagnostics over localhost.",
+        metrics={
+            "preflight_status_code": smoke.preflight_status_code,
+            "preflight_count": smoke.receipt_summary.preflight_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={"policy_ref": CAPTURE_CONTROL_SERVER_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
 def case_native_screen_capture_probe_contract() -> BenchmarkCaseResult:
     skipped = build_fixture_native_screen_capture_probe_result(
         allow_real_capture=False,
@@ -13774,6 +13915,145 @@ def case_dashboard_screen_probe_contract() -> BenchmarkCaseResult:
     )
 
 
+def case_screen_probe_result_ux_contract() -> BenchmarkCaseResult:
+    blocked_probe = build_fixture_native_screen_capture_probe_result(
+        allow_real_capture=True,
+        screen_recording_preflight=False,
+        checked_at=datetime(2026, 5, 2, 20, 0, tzinfo=UTC),
+    )
+    ux = build_screen_probe_ux_receipt(blocked_probe)
+    app_js = (REPO_ROOT / "ui" / "cortex-dashboard" / "app.js").read_text(encoding="utf-8")
+    missing_terms = _missing_terms(
+        _real_capture_docs_text() + app_js,
+        [SCREEN_PROBE_RESULT_UX_ID, SCREEN_PROBE_RESULT_UX_POLICY_REF, "skipped"],
+    )
+    passed = (
+        ux.ux_id == SCREEN_PROBE_RESULT_UX_ID
+        and ux.blocked_by_permission
+        and ux.severity == "blocked"
+        and "Screen Recording" in ux.message
+        and "skip_reason" in app_js
+        and not ux.raw_pixels_returned
+        and not ux.raw_ref_retained
+        and not ux.memory_write_allowed
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="SCREEN-PROBE-RESULT-UX-001/clear_blocked_message",
+        suite=SCREEN_PROBE_RESULT_UX_ID,
+        passed=passed,
+        summary="Screen probe UX explains skipped permission states without raw payloads.",
+        metrics={"blocked_by_permission": int(ux.blocked_by_permission), "missing_doc_terms": len(missing_terms)},
+        evidence={"policy_ref": SCREEN_PROBE_RESULT_UX_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_screen_probe_skip_receipt_contract() -> BenchmarkCaseResult:
+    blocked_probe = build_fixture_native_screen_capture_probe_result(
+        allow_real_capture=True,
+        screen_recording_preflight=False,
+        checked_at=datetime(2026, 5, 2, 20, 0, tzinfo=UTC),
+    )
+    skip = build_screen_probe_skip_receipt(blocked_probe)
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [SCREEN_PROBE_SKIP_RECEIPT_ID, SCREEN_PROBE_SKIP_RECEIPT_POLICY_REF, "skip receipt"],
+    )
+    passed = (
+        skip is not None
+        and skip.skip_id == SCREEN_PROBE_SKIP_RECEIPT_ID
+        and skip.reason == "screen_recording_preflight_false"
+        and not skip.capture_attempted
+        and not skip.frame_captured
+        and not skip.raw_pixels_returned
+        and not skip.raw_ref_retained
+        and not skip.memory_write_allowed
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="SCREEN-PROBE-SKIP-RECEIPT-001/no_permission_no_frame",
+        suite=SCREEN_PROBE_SKIP_RECEIPT_ID,
+        passed=passed,
+        summary="Skipped screen probe receipts name the blocker and prove no frame was captured.",
+        metrics={"next_action_count": len(skip.next_user_actions) if skip else 0, "missing_doc_terms": len(missing_terms)},
+        evidence={"policy_ref": SCREEN_PROBE_SKIP_RECEIPT_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_screen_probe_live_contract() -> BenchmarkCaseResult:
+    live_like = build_fixture_native_screen_capture_probe_result(
+        allow_real_capture=True,
+        screen_recording_preflight=False,
+        checked_at=datetime(2026, 5, 2, 20, 0, tzinfo=UTC),
+    )
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [SCREEN_PROBE_LIVE_CONTRACT_ID, SCREEN_PROBE_LIVE_CONTRACT_POLICY_REF, "no prompt"],
+    )
+    passed = (
+        live_like.passed
+        and live_like.allow_real_capture
+        and live_like.skip_reason == "screen_recording_preflight_false"
+        and not live_like.prompt_requested
+        and not live_like.capture_attempted
+        and not live_like.frame_captured
+        and not live_like.raw_pixels_returned
+        and not live_like.raw_ref_retained
+        and not live_like.memory_write_allowed
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="SCREEN-PROBE-LIVE-CONTRACT-001/preflight_false_safe_skip",
+        suite=SCREEN_PROBE_LIVE_CONTRACT_ID,
+        passed=passed,
+        summary="Live screen probe contract skips safely when Screen Recording preflight is false.",
+        metrics={
+            "capture_attempted": int(live_like.capture_attempted),
+            "frame_captured": int(live_like.frame_captured),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={"policy_ref": SCREEN_PROBE_LIVE_CONTRACT_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_capture_control_real_probe_smoke_contract() -> BenchmarkCaseResult:
+    smoke = run_capture_control_server_smoke()
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [
+            CAPTURE_CONTROL_REAL_PROBE_SMOKE_ID,
+            CAPTURE_CONTROL_REAL_PROBE_SMOKE_POLICY_REF,
+            "tokenized bridge",
+        ],
+    )
+    receipt = smoke.screen_probe_receipt
+    passed = (
+        smoke.passed
+        and smoke.screen_probe_status_code == 200
+        and receipt.allow_real_capture
+        and receipt.frame_captured
+        and not receipt.raw_pixels_returned
+        and not receipt.raw_ref_retained
+        and not receipt.memory_write_allowed
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="CAPTURE-CONTROL-REAL-PROBE-SMOKE-001/tokenized_metadata_probe",
+        suite=CAPTURE_CONTROL_REAL_PROBE_SMOKE_ID,
+        passed=passed,
+        summary="Capture bridge smoke exercises the real-probe path as tokenized metadata only.",
+        metrics={
+            "screen_probe_status_code": smoke.screen_probe_status_code,
+            "raw_ref_retained": int(receipt.raw_ref_retained),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": CAPTURE_CONTROL_REAL_PROBE_SMOKE_POLICY_REF,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
 def case_capture_control_receipt_audit_contract() -> BenchmarkCaseResult:
     smoke = run_capture_control_server_smoke()
     summary = smoke.receipt_summary
@@ -13803,6 +14083,74 @@ def case_capture_control_receipt_audit_contract() -> BenchmarkCaseResult:
             "missing_doc_terms": len(missing_terms),
         },
         evidence={"policy_ref": CAPTURE_CONTROL_SERVER_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_capture_session_watchdog_contract() -> BenchmarkCaseResult:
+    class ExitedFakePopen(FakePopen):
+        def poll(self) -> int | None:
+            return 42
+
+    manager = CaptureControlProcessManager(popen_factory=ExitedFakePopen)
+    manager.start(duration_seconds=2)
+    exited = manager.status()
+    summary = manager.receipt_summary()
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [CAPTURE_SESSION_WATCHDOG_ID, "watchdog", "exited"],
+    )
+    passed = (
+        exited.action == "watchdog"
+        and exited.state == "exited"
+        and exited.exit_code == 42
+        and not exited.running
+        and summary.watchdog_exit_count == 1
+        and not exited.capture_started
+        and not exited.memory_write_allowed
+        and not exited.raw_ref_retained
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="CAPTURE-SESSION-WATCHDOG-001/exited_overlay_receipt",
+        suite=CAPTURE_SESSION_WATCHDOG_ID,
+        passed=passed,
+        summary="Capture session watchdog turns exited overlay processes into explicit receipts.",
+        metrics={
+            "watchdog_exit_count": summary.watchdog_exit_count,
+            "exit_code": exited.exit_code or 0,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={"policy_ref": CAPTURE_CONTROL_SERVER_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_real_capture_permission_onboarding_ui_contract() -> BenchmarkCaseResult:
+    app_js = (REPO_ROOT / "ui" / "cortex-dashboard" / "app.js").read_text(encoding="utf-8")
+    missing_terms = _missing_terms(
+        _real_capture_docs_text() + app_js,
+        [
+            REAL_CAPTURE_PERMISSION_ONBOARDING_UI_ID,
+            REAL_CAPTURE_PERMISSION_ONBOARDING_UI_POLICY_REF,
+            "Preflight",
+        ],
+    )
+    passed = (
+        "capture-preflight" in app_js
+        and "safe_to_attempt_metadata_probe" in app_js
+        and "safe_to_start_real_capture_session" in app_js
+        and "screen_recording_preflight_false" in app_js
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="REAL-CAPTURE-PERMISSION-ONBOARDING-UI-001/preflight_button",
+        suite=REAL_CAPTURE_PERMISSION_ONBOARDING_UI_ID,
+        passed=passed,
+        summary="Dashboard permission onboarding shows preflight blockers before real capture.",
+        metrics={"missing_doc_terms": len(missing_terms)},
+        evidence={
+            "policy_ref": REAL_CAPTURE_PERMISSION_ONBOARDING_UI_POLICY_REF,
+            "missing_doc_terms": missing_terms,
+        },
     )
 
 
@@ -13879,6 +14227,39 @@ def case_real_capture_next_gate_contract() -> BenchmarkCaseResult:
             "missing_doc_terms": len(missing_terms),
         },
         evidence={"policy_ref": REAL_CAPTURE_NEXT_GATE_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_screen_metadata_stream_plan_contract() -> BenchmarkCaseResult:
+    plan = build_screen_metadata_stream_plan()
+    missing_terms = _missing_terms(
+        _real_capture_docs_text(),
+        [SCREEN_METADATA_STREAM_PLAN_ID, SCREEN_METADATA_STREAM_PLAN_POLICY_REF, "metadata_count_receipts"],
+    )
+    passed = (
+        plan.plan_id == SCREEN_METADATA_STREAM_PLAN_ID
+        and plan.token_required
+        and plan.screen_recording_preflight_required
+        and plan.output_shape == "metadata_count_receipts"
+        and not plan.continuous_capture_allowed
+        and not plan.raw_pixels_returned
+        and not plan.raw_ref_retained
+        and not plan.memory_write_allowed
+        and "continuous_capture" in plan.blocked_effects
+        and "memory_write" in plan.blocked_effects
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="SCREEN-METADATA-STREAM-PLAN-001/count_only_stream_plan",
+        suite=SCREEN_METADATA_STREAM_PLAN_ID,
+        passed=passed,
+        summary="Future screen metadata streaming remains tokenized, preflight-gated, and count-only.",
+        metrics={
+            "sample_interval_ms": plan.sample_interval_ms,
+            "blocked_effect_count": len(plan.blocked_effects),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={"policy_ref": SCREEN_METADATA_STREAM_PLAN_POLICY_REF, "missing_doc_terms": missing_terms},
     )
 
 

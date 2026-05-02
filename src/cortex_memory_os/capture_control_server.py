@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import secrets
 import subprocess
+import sys
 import threading
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -35,6 +37,11 @@ from cortex_memory_os.native_screen_capture_probe import (
     build_fixture_native_screen_capture_probe_result,
     run_native_screen_capture_probe,
 )
+from cortex_memory_os.capture_preflight_diagnostics import (
+    CAPTURE_PREFLIGHT_DIAGNOSTICS_ID,
+    CapturePreflightDiagnostics,
+    build_capture_preflight_diagnostics,
+)
 from cortex_memory_os.real_capture_control import (
     DASHBOARD_CAPTURE_CONTROL_ID,
 )
@@ -47,9 +54,12 @@ CAPTURE_CONTROL_STATUS_PATH = "/api/capture/status"
 CAPTURE_CONTROL_START_PATH = "/api/capture/start"
 CAPTURE_CONTROL_STOP_PATH = "/api/capture/stop"
 CAPTURE_CONTROL_PERMISSIONS_PATH = "/api/capture/permissions"
+CAPTURE_CONTROL_PREFLIGHT_PATH = "/api/capture/preflight"
 CAPTURE_CONTROL_SCREEN_PROBE_PATH = "/api/capture/screen-probe"
 CAPTURE_CONTROL_RECEIPTS_PATH = "/api/capture/receipts"
 CAPTURE_CONTROL_CONFIG_PATH = "/capture-control-config.js"
+CAPTURE_CONTROL_PREFLIGHT_BRIDGE_ID = "CAPTURE-CONTROL-PREFLIGHT-BRIDGE-001"
+CAPTURE_SESSION_WATCHDOG_ID = "CAPTURE-SESSION-WATCHDOG-001"
 UI_ROOT = REPO_ROOT / "ui" / "cortex-dashboard"
 
 
@@ -79,6 +89,7 @@ class CaptureControlBridgeReceipt(StrictModel):
     duration_seconds: float | None = None
     started_at: datetime | None = None
     stopped_at: datetime | None = None
+    exit_code: int | None = None
     localhost_only: bool = True
     fixed_command_only: bool = True
     capture_started: bool = False
@@ -86,6 +97,10 @@ class CaptureControlBridgeReceipt(StrictModel):
     memory_write_allowed: bool = False
     raw_ref_retained: bool = False
     raw_screen_storage_enabled: bool = False
+    screen_recording_preflight: bool | None = None
+    accessibility_trusted: bool | None = None
+    skip_reason: str | None = None
+    next_user_actions: list[str] = Field(default_factory=list)
     error_code: str | None = None
 
 
@@ -96,7 +111,10 @@ class CaptureControlReceiptSummary(StrictModel):
     start_count: int = Field(ge=0)
     stop_count: int = Field(ge=0)
     permission_check_count: int = Field(ge=0)
+    preflight_count: int = Field(ge=0)
     screen_probe_count: int = Field(ge=0)
+    skipped_screen_probe_count: int = Field(ge=0)
+    watchdog_exit_count: int = Field(ge=0)
     blocked_count: int = Field(ge=0)
     raw_payloads_included: bool = False
     raw_pixels_returned: bool = False
@@ -119,6 +137,8 @@ class CaptureControlServerSmokeResult(StrictModel):
     receipt_summary: CaptureControlReceiptSummary
     permission_status_code: int
     permission_receipt: NativePermissionSmokeResult
+    preflight_status_code: int
+    preflight_receipt: CapturePreflightDiagnostics
     screen_probe_status_code: int
     screen_probe_receipt: NativeScreenCaptureProbeResult
     config_status_code: int
@@ -147,6 +167,9 @@ class CaptureControlProcessManager:
         self._receipts: list[CaptureControlBridgeReceipt] = []
 
     def status(self) -> CaptureControlBridgeReceipt:
+        exited = self._consume_exited_process()
+        if exited is not None:
+            return exited
         running = self._is_running()
         receipt = CaptureControlBridgeReceipt(
             action="status",
@@ -162,6 +185,7 @@ class CaptureControlProcessManager:
         return receipt
 
     def start(self, *, duration_seconds: float = 30) -> CaptureControlBridgeReceipt:
+        self._consume_exited_process()
         if self._is_running():
             receipt = self.status()
             receipt.action = "start"
@@ -224,7 +248,13 @@ class CaptureControlProcessManager:
             start_count=sum(int(receipt.action == "start") for receipt in receipts),
             stop_count=sum(int(receipt.action == "stop") for receipt in receipts),
             permission_check_count=sum(int(receipt.action == "permissions") for receipt in receipts),
+            preflight_count=sum(int(receipt.action == "preflight") for receipt in receipts),
             screen_probe_count=sum(int(receipt.action == "screen_probe") for receipt in receipts),
+            skipped_screen_probe_count=sum(
+                int(receipt.action == "screen_probe" and receipt.skip_reason is not None)
+                for receipt in receipts
+            ),
+            watchdog_exit_count=sum(int(receipt.action == "watchdog") for receipt in receipts),
             blocked_count=sum(int(receipt.state == "blocked") for receipt in receipts),
             raw_payloads_included=False,
             raw_pixels_returned=False,
@@ -234,6 +264,34 @@ class CaptureControlProcessManager:
 
     def _is_running(self) -> bool:
         return self._process is not None and self._process.poll() is None
+
+    def _consume_exited_process(self) -> CaptureControlBridgeReceipt | None:
+        if self._process is None:
+            return None
+        exit_code = self._process.poll()
+        if exit_code is None:
+            return None
+        pid = self._process.pid
+        command = list(self._command)
+        stopped_at = self.now()
+        self._process = None
+        self._command = []
+        self._duration_seconds = None
+        self._stopped_at = stopped_at
+        receipt = CaptureControlBridgeReceipt(
+            action="watchdog",
+            state="exited",
+            running=False,
+            pid=pid,
+            command=command,
+            exit_code=exit_code,
+            stopped_at=stopped_at,
+            next_user_actions=[
+                "Restart Shadow Clicker from the dashboard if observation should continue."
+            ],
+        )
+        self._record(receipt)
+        return receipt
 
     def _record(self, receipt: CaptureControlBridgeReceipt) -> None:
         self._receipts.append(receipt)
@@ -285,6 +343,7 @@ def build_capture_control_handler(
                         "startPath": CAPTURE_CONTROL_START_PATH,
                         "stopPath": CAPTURE_CONTROL_STOP_PATH,
                         "permissionsPath": CAPTURE_CONTROL_PERMISSIONS_PATH,
+                        "preflightPath": CAPTURE_CONTROL_PREFLIGHT_PATH,
                         "screenProbePath": CAPTURE_CONTROL_SCREEN_PROBE_PATH,
                         "receiptsPath": CAPTURE_CONTROL_RECEIPTS_PATH,
                     },
@@ -302,6 +361,18 @@ def build_capture_control_handler(
                 manager.record_bridge_receipt(
                     _bridge_receipt_from_permission_result(receipt)
                 )
+                self._write_json(200, receipt.model_dump(mode="json"))
+                return
+            if self.path == CAPTURE_CONTROL_PREFLIGHT_PATH:
+                if not self._authorized():
+                    return
+                permission = permission_runner()
+                receipt = build_capture_preflight_diagnostics(
+                    permission,
+                    host_pid=os.getpid(),
+                    executable_path=sys.executable,
+                )
+                manager.record_bridge_receipt(_bridge_receipt_from_preflight(receipt))
                 self._write_json(200, receipt.model_dump(mode="json"))
                 return
             if self.path == CAPTURE_CONTROL_RECEIPTS_PATH:
@@ -511,6 +582,10 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
             endpoint.base_url + CAPTURE_CONTROL_PERMISSIONS_PATH,
             headers=headers,
         )
+        preflight_code, preflight_payload = _request_json(
+            endpoint.base_url + CAPTURE_CONTROL_PREFLIGHT_PATH,
+            headers=headers,
+        )
         start_code, start_payload = _request_json(
             endpoint.base_url + CAPTURE_CONTROL_START_PATH,
             method="POST",
@@ -549,6 +624,7 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
     start_receipt = CaptureControlBridgeReceipt.model_validate(start_payload)
     stop_receipt = CaptureControlBridgeReceipt.model_validate(stop_payload)
     permission_receipt = NativePermissionSmokeResult.model_validate(permission_payload)
+    preflight_receipt = CapturePreflightDiagnostics.model_validate(preflight_payload)
     screen_probe_receipt = NativeScreenCaptureProbeResult.model_validate(screen_probe_payload)
     receipt_summary = CaptureControlReceiptSummary.model_validate(receipts_payload)
     passed = (
@@ -568,13 +644,16 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         and start_receipt.running
         and "cortex-shadow-clicker" in start_receipt.command
         and permission_receipt.passed
+        and preflight_receipt.passed
+        and preflight_receipt.diagnostic_id == CAPTURE_PREFLIGHT_DIAGNOSTICS_ID
         and screen_probe_receipt.passed
         and not start_receipt.capture_started
         and not start_receipt.memory_write_allowed
         and not start_receipt.raw_ref_retained
         and stop_receipt.action == "stop"
         and stop_receipt.state == "stopped"
-        and receipt_summary.receipt_count >= 4
+        and receipt_summary.receipt_count >= 5
+        and receipt_summary.preflight_count == 1
         and not receipt_summary.raw_pixels_returned
         and not receipt_summary.raw_ref_retained
         and not receipt_summary.memory_write_allowed
@@ -593,6 +672,8 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         receipt_summary=receipt_summary,
         permission_status_code=permission_code,
         permission_receipt=permission_receipt,
+        preflight_status_code=preflight_code,
+        preflight_receipt=preflight_receipt,
         screen_probe_status_code=screen_probe_code,
         screen_probe_receipt=screen_probe_receipt,
         config_status_code=config_code,
@@ -636,6 +717,26 @@ def _bridge_receipt_from_permission_result(
         accessibility_observer_started=receipt.accessibility_observer_started,
         memory_write_allowed=receipt.memory_write_allowed,
         raw_ref_retained=False,
+        screen_recording_preflight=receipt.screen_recording_preflight,
+        accessibility_trusted=receipt.accessibility_trusted,
+    )
+
+
+def _bridge_receipt_from_preflight(
+    receipt: CapturePreflightDiagnostics,
+) -> CaptureControlBridgeReceipt:
+    return CaptureControlBridgeReceipt(
+        action="preflight",
+        state="ready" if receipt.safe_to_start_real_capture_session else "blocked",
+        running=False,
+        capture_started=receipt.capture_started,
+        accessibility_observer_started=receipt.accessibility_observer_started,
+        memory_write_allowed=receipt.memory_write_allowed,
+        raw_ref_retained=receipt.raw_ref_retained,
+        raw_screen_storage_enabled=False,
+        screen_recording_preflight=receipt.screen_recording_preflight,
+        accessibility_trusted=receipt.accessibility_trusted,
+        next_user_actions=receipt.next_user_actions,
     )
 
 
@@ -651,6 +752,9 @@ def _bridge_receipt_from_screen_probe(
         memory_write_allowed=receipt.memory_write_allowed,
         raw_ref_retained=receipt.raw_ref_retained,
         raw_screen_storage_enabled=False,
+        screen_recording_preflight=receipt.screen_recording_preflight,
+        skip_reason=receipt.skip_reason,
+        next_user_actions=receipt.next_user_actions,
     )
 
 

@@ -41,10 +41,12 @@ class NativeScreenCaptureProbeResult(StrictModel):
     frame_captured: bool
     frame_width: int | None = Field(default=None, ge=1)
     frame_height: int | None = Field(default=None, ge=1)
+    skip_reason: str | None = None
     raw_pixels_returned: bool
     raw_ref_retained: bool
     memory_write_allowed: bool
     evidence_refs: list[str] = Field(default_factory=list)
+    next_user_actions: list[str] = Field(default_factory=list)
     allowed_effects: list[str] = Field(default_factory=list)
     blocked_effects: list[str] = Field(default_factory=list)
     safety_notes: list[str] = Field(default_factory=list)
@@ -81,6 +83,15 @@ class NativeScreenCaptureProbeResult(StrictModel):
             raise ValueError("capture attempt must capture metadata or fail closed")
         if self.frame_captured and (self.frame_width is None or self.frame_height is None):
             raise ValueError("captured frame must include dimensions only")
+        if self.frame_captured and self.skip_reason:
+            raise ValueError("captured frame cannot also carry a skip reason")
+        if not self.frame_captured:
+            if not self.skip_reason:
+                raise ValueError("skipped screen probe requires a skip reason")
+            if not self.next_user_actions:
+                raise ValueError("skipped screen probe requires next user actions")
+        if self.skip_reason == "screen_recording_preflight_false" and self.screen_recording_preflight:
+            raise ValueError("screen recording skip reason conflicts with preflight state")
         return self
 
 
@@ -143,6 +154,23 @@ def build_fixture_native_screen_capture_probe_result(
         else capture_attempted
     )
     captured = attempted if frame_captured is None else frame_captured
+    skip_reason = None
+    next_user_actions = []
+    if not captured:
+        if not allow_real_capture:
+            skip_reason = "allow_real_capture_false"
+            next_user_actions = [
+                "Use the dashboard Screen Probe button or pass --allow-real-capture explicitly."
+            ]
+        elif not screen_recording_preflight:
+            skip_reason = "screen_recording_preflight_false"
+            next_user_actions = [
+                "Enable Screen Recording for the hosting app.",
+                "Restart the hosting app and run Check Permissions again.",
+            ]
+        else:
+            skip_reason = "frame_metadata_unavailable"
+            next_user_actions = ["Run Check Permissions, then retry Screen Probe."]
     return NativeScreenCaptureProbeResult(
         benchmark_id=NATIVE_SCREEN_CAPTURE_PROBE_ID,
         policy_ref=NATIVE_SCREEN_CAPTURE_PROBE_POLICY_REF,
@@ -154,10 +182,12 @@ def build_fixture_native_screen_capture_probe_result(
         frame_captured=captured,
         frame_width=1440 if captured else None,
         frame_height=900 if captured else None,
+        skip_reason=skip_reason,
         raw_pixels_returned=False,
         raw_ref_retained=False,
         memory_write_allowed=False,
         evidence_refs=[],
+        next_user_actions=next_user_actions,
         allowed_effects=(
             ["read_permission_status", "capture_one_frame_in_memory"]
             if allow_real_capture

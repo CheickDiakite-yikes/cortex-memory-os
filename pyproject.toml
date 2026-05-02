@@ -39,6 +39,7 @@ cortex-real-capture-control = "cortex_memory_os.real_capture_control:main"
 cortex-capture-control-server = "cortex_memory_os.capture_control_server:main"
 cortex-native-screen-capture-probe = "cortex_memory_os.native_screen_capture_probe:main"
 cortex-real-capture-hardening = "cortex_memory_os.real_capture_hardening:main"
+cortex-capture-preflight = "cortex_memory_os.capture_preflight_diagnostics:main"
 
 [build-system]
 requires = ["setuptools>=69"]

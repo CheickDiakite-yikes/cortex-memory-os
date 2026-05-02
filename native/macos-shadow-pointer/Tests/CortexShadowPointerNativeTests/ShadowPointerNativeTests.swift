@@ -168,6 +168,8 @@ final class ShadowPointerNativeTests: XCTestCase {
         XCTAssertEqual(result.benchmarkID, nativeScreenCaptureProbeBenchmarkID)
         XCTAssertFalse(result.captureAttempted)
         XCTAssertFalse(result.frameCaptured)
+        XCTAssertEqual(result.skipReason, "allow_real_capture_false")
+        XCTAssertFalse(result.nextUserActions.isEmpty)
         XCTAssertFalse(result.rawPixelsReturned)
         XCTAssertFalse(result.rawRefRetained)
         XCTAssertFalse(result.memoryWriteAllowed)
@@ -190,6 +192,7 @@ final class ShadowPointerNativeTests: XCTestCase {
         XCTAssertTrue(result.passed)
         XCTAssertTrue(result.captureAttempted)
         XCTAssertTrue(result.frameCaptured)
+        XCTAssertNil(result.skipReason)
         XCTAssertEqual(result.frameWidth, 1440)
         XCTAssertEqual(result.frameHeight, 900)
         XCTAssertFalse(result.rawPixelsReturned)
@@ -197,5 +200,27 @@ final class ShadowPointerNativeTests: XCTestCase {
         XCTAssertFalse(result.memoryWriteAllowed)
         XCTAssertTrue(result.blockedEffects.contains("return_raw_pixels"))
         XCTAssertTrue(result.blockedEffects.contains("store_raw_evidence"))
+    }
+
+    func testScreenCaptureProbeExplainsScreenRecordingPreflightSkip() {
+        let result = NativeScreenCaptureProbeResult.run(
+            allowRealCapture: true,
+            probe: NativeCapturePermissionProbe(
+                screenRecordingPreflight: false,
+                accessibilityTrusted: false,
+                promptRequested: false
+            ),
+            checkedAt: Date(timeIntervalSince1970: 0),
+            frameProvider: { NativeScreenFrameMetadata(width: 1440, height: 900) }
+        )
+
+        XCTAssertTrue(result.passed)
+        XCTAssertFalse(result.captureAttempted)
+        XCTAssertFalse(result.frameCaptured)
+        XCTAssertEqual(result.skipReason, "screen_recording_preflight_false")
+        XCTAssertTrue(result.nextUserActions.first?.contains("Screen Recording") ?? false)
+        XCTAssertFalse(result.rawPixelsReturned)
+        XCTAssertFalse(result.rawRefRetained)
+        XCTAssertFalse(result.memoryWriteAllowed)
     }
 }

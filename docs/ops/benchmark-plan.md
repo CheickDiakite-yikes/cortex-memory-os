@@ -124,12 +124,22 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `CAPTURE-CONTROL-ORIGIN-CSRF-001` | Capture control rejects remote clients and bad browser `Origin` headers. | Non-local clients or hostile origins can drive the bridge. |
 | `CAPTURE-CONTROL-LIFECYCLE-001` | Capture control exposes explicit start, status, stop, and receipt lifecycle state. | Lifecycle state is hidden, stale, or accepts arbitrary commands. |
 | `CAPTURE-CONTROL-PERMISSION-BRIDGE-001` | Local bridge exposes prompt-free Screen Recording and Accessibility readiness. | Permission checks prompt, capture, observe Accessibility, write memory, or store evidence. |
+| `CAPTURE-PERMISSION-GUIDE-001` | Permission guide names Screen Recording and Accessibility setup steps for the hosting app. | Guide prompts, starts capture, writes memory, or retains raw refs. |
+| `CAPTURE-PREFLIGHT-DIAGNOSTICS-001` | Preflight diagnostics report host process and permission blockers without capture. | Preflight prompts, captures, starts observers, leaks raw payloads, or says metadata probe is safe without Screen Recording. |
+| `CAPTURE-CONTROL-PREFLIGHT-BRIDGE-001` | Local bridge exposes tokenized `GET /api/capture/preflight` diagnostics. | Preflight endpoint bypasses token/origin controls, starts capture, or returns raw payloads. |
 | `NATIVE-SCREEN-CAPTURE-PROBE-001` | Native probe can capture at most one in-memory frame and return metadata only. | Probe runs without explicit allow flag, returns raw pixels, stores raw refs, or writes memory. |
 | `CAPTURE-CONTROL-SCREEN-PROBE-BRIDGE-001` | Tokenized `screen-probe` endpoint returns metadata-only real-capture probe receipts. | Bridge returns raw pixels/raw refs or lets screen probing bypass token/origin checks. |
 | `DASHBOARD-SCREEN-PROBE-001` | Dashboard exposes `Screen Probe` and token config wiring. | UI hides the probe result, bypasses token config, or implies broad continuous capture. |
+| `SCREEN-PROBE-RESULT-UX-001` | Screen probe result UX explains skipped and blocked states clearly. | UI hides `skip_reason`, implies capture succeeded, or leaks raw data. |
+| `SCREEN-PROBE-SKIP-RECEIPT-001` | Skipped screen probes produce explicit skip receipts with no captured frame. | Skip receipt captures a frame, stores refs, or omits next user actions. |
+| `SCREEN-PROBE-LIVE-CONTRACT-001` | Live probe skips safely with no prompt when Screen Recording preflight is false. | Probe prompts, captures, stores raw refs, or writes memory when permission is missing. |
+| `CAPTURE-CONTROL-REAL-PROBE-SMOKE-001` | Tokenized bridge smoke exercises metadata-only screen probe behavior. | Real probe bridge bypasses token/origin controls or returns raw pixels/raw refs. |
 | `CAPTURE-CONTROL-RECEIPT-AUDIT-001` | Capture control exposes count-only, raw-payload-free receipt summary. | Receipt audit leaks payloads, pixels, raw refs, or memory content. |
+| `CAPTURE-SESSION-WATCHDOG-001` | Exited Shadow Clicker processes become explicit watchdog receipts. | Stale exited overlay processes remain reported as running. |
+| `REAL-CAPTURE-PERMISSION-ONBOARDING-UI-001` | Dashboard shows `Preflight` permission onboarding before broader capture claims. | UI hides blockers or marks real capture ready when permissions are missing. |
 | `RAW-REF-SCAVENGER-001` | Raw ref scavenger deletes expired temp refs without reading payloads. | Expired temp refs persist, or cleanup reads payloads/enables memory writes. |
 | `REAL-CAPTURE-NEXT-GATE-001` | Next ScreenCaptureKit gate is tokenized, permission-gated, metadata-only, and still blocks continuous capture. | Continuous capture, raw pixel return, sensitive app capture, or durable memory writes become default. |
+| `SCREEN-METADATA-STREAM-PLAN-001` | Future ScreenCaptureKit stream starts as metadata_count_receipts. | Continuous capture, raw pixel return, raw refs, or memory writes become enabled. |
 | `AUDIT-001` | Memory mutations persist human-visible audits. | Mutation lacks a redacted audit event. |
 | `EXPORT-001` | User memory export is scoped, redacted, and deletion-aware. | Deleted/revoked content appears in export output. |
 | `EXPORT-AUDIT-001` | Memory exports persist redacted audit receipts. | Export audit copies memory content or secret-like text. |

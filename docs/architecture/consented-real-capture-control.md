@@ -42,6 +42,22 @@ The next ten slices harden the bridge and add the first metadata-only real scree
 | `RAW-REF-SCAVENGER-001` | `policy_raw_ref_scavenger_v1` | Deletes expired temp raw refs without reading payloads. | No durable storage or memory writes are enabled. |
 | `REAL-CAPTURE-NEXT-GATE-001` | `policy_real_capture_next_gate_v1` | Defines the next ScreenCaptureKit gate. | Continuous capture, raw pixel return, and durable memory writes stay blocked. |
 
+The current follow-on hardening slice adds another ten contracts before broad capture:
+
+| ID | Policy | Purpose | Boundary |
+| --- | --- | --- | --- |
+| `CAPTURE-PERMISSION-GUIDE-001` | `policy_capture_permission_guide_v1` | Gives explicit Screen Recording and Accessibility setup steps for the hosting app. | The guide does not prompt, capture, write memory, or retain raw refs. |
+| `CAPTURE-PREFLIGHT-DIAGNOSTICS-001` | `policy_capture_preflight_diagnostics_v1` | Reports host process, missing permissions, and safe next actions. | Prompt-free and read-only; it can block screen probing when Screen Recording preflight is false. |
+| `CAPTURE-CONTROL-PREFLIGHT-BRIDGE-001` | `policy_capture_control_local_bridge_v1` | Exposes tokenized `GET /api/capture/preflight` diagnostics. | The endpoint is tokenized and cannot start capture or return raw payloads. |
+| `SCREEN-PROBE-RESULT-UX-001` | `policy_screen_probe_result_ux_v1` | Turns screen-probe receipts into clear user-facing messages. | No pixels, raw refs, evidence refs, or memory writes are surfaced. |
+| `SCREEN-PROBE-SKIP-RECEIPT-001` | `policy_screen_probe_skip_receipt_v1` | Records skipped probes such as `screen_recording_preflight_false`. | A skip receipt proves no frame was captured. |
+| `SCREEN-PROBE-LIVE-CONTRACT-001` | `policy_screen_probe_live_contract_v1` | Defines the live no prompt behavior when Screen Recording is missing. | The probe must skip safely instead of requesting permission or capturing. |
+| `CAPTURE-CONTROL-REAL-PROBE-SMOKE-001` | `policy_capture_control_real_probe_smoke_v1` | Exercises the tokenized bridge path for the metadata probe. | The tokenized bridge returns metadata only and blocks raw refs/memory writes. |
+| `CAPTURE-SESSION-WATCHDOG-001` | `policy_capture_control_local_bridge_v1` | Converts exited Shadow Clicker processes into explicit watchdog receipts. | Stale overlay state cannot be reported as running. |
+| `REAL-CAPTURE-PERMISSION-ONBOARDING-UI-001` | `policy_real_capture_permission_onboarding_ui_v1` | Adds a dashboard `Preflight` path that explains permission blockers before capture. | UI cannot imply real capture is ready while preflight is blocked. |
+| `SCREEN-METADATA-STREAM-PLAN-001` | `policy_screen_metadata_stream_plan_v1` | Defines the future ScreenCaptureKit metadata_count_receipts stream. | Continuous capture, raw pixel return, raw ref retention, and memory_write stay blocked. |
+| `CAPTURE-CONTROL-RECEIPT-AUDIT-001` | `policy_capture_control_local_bridge_v1` | Extends receipt summaries with preflight, skipped probe, and watchdog counts. | The summary remains count-only and raw-payload-free. |
+
 ## Native Shadow Clicker
 
 `cortex-shadow-clicker` is a SwiftPM executable in `native/macos-shadow-pointer`.
@@ -67,6 +83,11 @@ uv run cortex-capture-control-server --port 8799
 ```
 
 Open `http://127.0.0.1:8799/index.html`, then click `Turn On Cortex`. The bridge accepts only localhost requests and only launches the fixed `cortex-shadow-clicker` command; it does not run arbitrary shell text, start screen capture, write memory, or retain raw refs.
+
+Use `Preflight` before `Screen Probe`. `CAPTURE-PREFLIGHT-DIAGNOSTICS-001`
+reports the host process and whether `screen_recording_preflight` and
+Accessibility are ready. If Screen Recording is false, `SCREEN-PROBE-SKIP-RECEIPT-001`
+records `screen_recording_preflight_false` and no frame is captured.
 
 ## Native Screen Probe
 

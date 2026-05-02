@@ -541,10 +541,12 @@ public struct NativeScreenCaptureProbeResult: Codable, Equatable, Sendable {
     public var frameCaptured: Bool
     public var frameWidth: Int?
     public var frameHeight: Int?
+    public var skipReason: String?
     public var rawPixelsReturned: Bool
     public var rawRefRetained: Bool
     public var memoryWriteAllowed: Bool
     public var evidenceRefs: [String]
+    public var nextUserActions: [String]
     public var allowedEffects: [String]
     public var blockedEffects: [String]
     public var safetyNotes: [String]
@@ -559,6 +561,26 @@ public struct NativeScreenCaptureProbeResult: Codable, Equatable, Sendable {
         let captureAttempted = allowRealCapture && probe.screenRecordingPreflight
         let frame = captureAttempted ? frameProvider() : nil
         let frameCaptured = frame != nil
+        let skipReason: String?
+        let nextUserActions: [String]
+        if frameCaptured {
+            skipReason = nil
+            nextUserActions = []
+        } else if !allowRealCapture {
+            skipReason = "allow_real_capture_false"
+            nextUserActions = [
+                "Use the dashboard Screen Probe button or pass --allow-real-capture explicitly."
+            ]
+        } else if !probe.screenRecordingPreflight {
+            skipReason = "screen_recording_preflight_false"
+            nextUserActions = [
+                "Enable Screen Recording for the hosting app.",
+                "Restart the hosting app and run Check Permissions again.",
+            ]
+        } else {
+            skipReason = "frame_metadata_unavailable"
+            nextUserActions = ["Run Check Permissions, then retry Screen Probe."]
+        }
         let allowedEffects = allowRealCapture
             ? ["read_permission_status", "capture_one_frame_in_memory"]
             : ["read_permission_status"]
@@ -594,10 +616,12 @@ public struct NativeScreenCaptureProbeResult: Codable, Equatable, Sendable {
             frameCaptured: frameCaptured,
             frameWidth: frame?.width,
             frameHeight: frame?.height,
+            skipReason: skipReason,
             rawPixelsReturned: false,
             rawRefRetained: false,
             memoryWriteAllowed: false,
             evidenceRefs: [],
+            nextUserActions: nextUserActions,
             allowedEffects: allowedEffects,
             blockedEffects: blockedEffects,
             safetyNotes: safetyNotes,
