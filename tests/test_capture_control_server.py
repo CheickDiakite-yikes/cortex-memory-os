@@ -57,6 +57,7 @@ def test_capture_control_server_smoke_serves_dashboard_and_blocks_remote_probe()
     assert smoke.passed
     assert smoke.policy_ref == CAPTURE_CONTROL_SERVER_POLICY_REF
     assert smoke.config_status_code == 200
+    assert smoke.config_query_status_code == 200
     assert smoke.token_required
     assert smoke.missing_token_rejected_status_code == 403
     assert smoke.bad_origin_rejected_status_code == 403

@@ -1,5 +1,5 @@
 const data = window.CORTEX_DASHBOARD_DATA;
-const captureControlConfig = window.CORTEX_CAPTURE_CONTROL || null;
+let captureControlConfig = window.CORTEX_CAPTURE_CONTROL || null;
 
 const icons = {
   overview: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10.5V21h14V10.5"/><path d="M9 21v-6h6v6"/>',
@@ -110,6 +110,29 @@ function ensureLiveCommandReceipt() {
 }
 
 async function callCaptureControl(action, payload = {}) {
+  return callCaptureControlWithConfig(action, payload, { refreshed: false });
+}
+
+async function refreshCaptureControlConfig() {
+  const response = await fetch(`./capture-control-config.js?ts=${Date.now()}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error("capture control config refresh failed");
+  }
+  const scriptText = await response.text();
+  const match = scriptText.match(
+    /^window\.CORTEX_CAPTURE_CONTROL = (\{[\s\S]*\});\s*$/,
+  );
+  if (!match) {
+    throw new Error("capture control config response was not recognized");
+  }
+  captureControlConfig = JSON.parse(match[1]);
+  window.CORTEX_CAPTURE_CONTROL = captureControlConfig;
+  return captureControlConfig;
+}
+
+async function callCaptureControlWithConfig(action, payload = {}, options = {}) {
   if (window.location.protocol === "file:") {
     throw new Error("capture control bridge is not available from file://");
   }
@@ -137,6 +160,14 @@ async function callCaptureControl(action, payload = {}) {
   });
   const receipt = await response.json();
   if (!response.ok) {
+    if (
+      !options.refreshed &&
+      receipt.error_code === "missing_or_invalid_capture_token"
+    ) {
+      writeReceipt("Capture bridge token refreshed. Retrying local command once.");
+      await refreshCaptureControlConfig();
+      return callCaptureControlWithConfig(action, payload, { refreshed: true });
+    }
     throw new Error(receipt.error_code || `capture control ${action} failed`);
   }
   return receipt;

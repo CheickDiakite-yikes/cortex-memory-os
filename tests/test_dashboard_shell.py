@@ -204,6 +204,17 @@ def test_dashboard_static_app_switches_focus_with_primary_views():
     assert "selectedFocus = focusFromSkill(card)" in app_js
 
 
+def test_dashboard_static_app_refreshes_stale_capture_token():
+    app_js = Path("ui/cortex-dashboard/app.js").read_text()
+
+    assert "let captureControlConfig = window.CORTEX_CAPTURE_CONTROL || null;" in app_js
+    assert "async function refreshCaptureControlConfig()" in app_js
+    assert "capture-control-config.js?ts=" in app_js
+    assert "missing_or_invalid_capture_token" in app_js
+    assert "Capture bridge token refreshed. Retrying local command once." in app_js
+    assert "callCaptureControlWithConfig(action, payload, { refreshed: true })" in app_js
+
+
 def test_dashboard_shell_smoke_contract_passes():
     result = run_dashboard_shell_smoke()
 

@@ -142,6 +142,7 @@ class CaptureControlServerSmokeResult(StrictModel):
     screen_probe_status_code: int
     screen_probe_receipt: NativeScreenCaptureProbeResult
     config_status_code: int
+    config_query_status_code: int
     token_required: bool
     missing_token_rejected_status_code: int
     bad_origin_rejected_status_code: int
@@ -334,7 +335,8 @@ def build_capture_control_handler(
         def do_GET(self) -> None:
             if not self._client_allowed():
                 return
-            if self.path == CAPTURE_CONTROL_CONFIG_PATH:
+            route = self.path.split("?", 1)[0]
+            if route == CAPTURE_CONTROL_CONFIG_PATH:
                 self._write_javascript(
                     200,
                     {
@@ -349,12 +351,12 @@ def build_capture_control_handler(
                     },
                 )
                 return
-            if self.path == CAPTURE_CONTROL_STATUS_PATH:
+            if route == CAPTURE_CONTROL_STATUS_PATH:
                 if not self._authorized():
                     return
                 self._write_json(200, manager.status().model_dump(mode="json"))
                 return
-            if self.path == CAPTURE_CONTROL_PERMISSIONS_PATH:
+            if route == CAPTURE_CONTROL_PERMISSIONS_PATH:
                 if not self._authorized():
                     return
                 receipt = permission_runner()
@@ -363,7 +365,7 @@ def build_capture_control_handler(
                 )
                 self._write_json(200, receipt.model_dump(mode="json"))
                 return
-            if self.path == CAPTURE_CONTROL_PREFLIGHT_PATH:
+            if route == CAPTURE_CONTROL_PREFLIGHT_PATH:
                 if not self._authorized():
                     return
                 permission = permission_runner()
@@ -375,7 +377,7 @@ def build_capture_control_handler(
                 manager.record_bridge_receipt(_bridge_receipt_from_preflight(receipt))
                 self._write_json(200, receipt.model_dump(mode="json"))
                 return
-            if self.path == CAPTURE_CONTROL_RECEIPTS_PATH:
+            if route == CAPTURE_CONTROL_RECEIPTS_PATH:
                 if not self._authorized():
                     return
                 self._write_json(200, manager.receipt_summary().model_dump(mode="json"))
@@ -563,6 +565,9 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
     headers = {"X-Cortex-Capture-Token": endpoint.session_token}
     try:
         config_code, config_body = _request_text(endpoint.base_url + CAPTURE_CONTROL_CONFIG_PATH)
+        config_query_code, config_query_body = _request_text(
+            endpoint.base_url + CAPTURE_CONTROL_CONFIG_PATH + "?ts=stale-token-retry"
+        )
         missing_token_code, _missing_token_payload = _request_json(
             endpoint.base_url + CAPTURE_CONTROL_STATUS_PATH
         )
@@ -630,6 +635,8 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
     passed = (
         config_code == 200
         and "test-token" in config_body
+        and config_query_code == 200
+        and "test-token" in config_query_body
         and missing_token_code == 403
         and bad_origin_code == 403
         and status_code == 200
@@ -677,6 +684,7 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         screen_probe_status_code=screen_probe_code,
         screen_probe_receipt=screen_probe_receipt,
         config_status_code=config_code,
+        config_query_status_code=config_query_code,
         token_required=True,
         missing_token_rejected_status_code=missing_token_code,
         bad_origin_rejected_status_code=bad_origin_code,
