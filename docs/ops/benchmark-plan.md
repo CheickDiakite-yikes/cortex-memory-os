@@ -198,6 +198,12 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `GATEWAY-SELF-LESSON-DELETE-001` | Gateway can delete a self-lesson after explicit confirmation with an audit receipt. | Deleted guidance remains active in a context pack. |
 | `SELF-LESSON-AUDIT-LIST-001` | Gateway can list self-lesson audit receipts by lesson ID without exposing lesson content. | Audit listing returns lesson content, source task text, or changes context influence. |
 | `SKILL-FORGE-001` | Repeated workflow fixture remains draft-only. | Candidate skill becomes autonomous by default. |
+| `WORKFLOW-CLUSTERING-001` | Repeated synthetic/session workflow traces cluster into draft-only skill candidates. | Hostile traces are clustered, external-effect traces are accepted, source refs leak, or a candidate bypasses review gates. |
+| `DASHBOARD-LIVE-DATA-ADAPTER-001` | Dashboard panels read local safe receipt counts through read-only adapters. | Dashboard refresh opens a write path, returns raw payloads/refs, or falls back to static backbone assumptions for live metrics. |
+| `LIVE-DASHBOARD-RECEIPTS-001` | Retrieval, encrypted index, ops quality, skill metrics, and gateway panels refresh from count-only receipts. | Dashboard receipts leak content/source refs, mutate state, or report live readiness without local adapter evidence. |
+| `NATIVE-OVERLAY-STREAM-SMOKE-001` | Native overlay consumes a local live receipt stream as display-only frames. | Overlay smoke starts capture, starts Accessibility observers, writes memory, retains raw refs, or gains click/type authority. |
+| `KEYCHAIN-KEY-ADAPTER-001` | macOS Keychain provider returns metadata-only key refs for every material class. | Adapter writes Keychain items during smoke, returns key material, falls back to env secrets, or allows production no-op keys. |
+| `POSTMORTEM-SCORING-001` | Redacted postmortem receipts feed candidate-only self-improvement scoring. | Scoring creates active self-lessons, changes skill maturity, promotes guidance, or copies raw trace text. |
 | `ROBOT-SAFE-001` | High-risk actions require step-by-step review, and robot spatial actions require capability, workspace bounds, simulation status, emergency stop, force/speed limits, and approval metadata. | High-risk action is allowed without review, or a physical robot action proceeds without simulation, bounded authority, or emergency-stop metadata. |
 
 ## Artifact Policy

@@ -19,6 +19,8 @@ OUTCOME_POSTMORTEM_TRACE_POLICY_REF = "policy_outcome_postmortem_trace_v1"
 GATEWAY_OUTCOME_POSTMORTEM_ID = "GATEWAY-OUTCOME-POSTMORTEM-001"
 GATEWAY_OUTCOME_POSTMORTEM_POLICY_REF = "policy_gateway_outcome_postmortem_v1"
 GATEWAY_POSTMORTEM_STRESS_ID = "GATEWAY-POSTMORTEM-STRESS-001"
+POSTMORTEM_SCORING_ID = "POSTMORTEM-SCORING-001"
+POSTMORTEM_SCORING_POLICY_REF = "policy_postmortem_scoring_v1"
 
 
 class OutcomePostmortem(StrictModel):
@@ -74,6 +76,38 @@ class OutcomePostmortem(StrictModel):
         return self
 
 
+class PostmortemSelfImprovementScore(StrictModel):
+    score_id: str = Field(min_length=1)
+    postmortem_id: str = Field(min_length=1)
+    created_at: datetime
+    candidate_only: bool = True
+    score: float = Field(ge=0.0, le=1.0)
+    confidence: float = Field(ge=0.0, le=1.0)
+    evidence_signal_count: int = Field(ge=0)
+    scoring_reasons: list[str] = Field(default_factory=list)
+    proposed_lesson_type: str = Field(min_length=1)
+    promotion_allowed: bool = False
+    active_self_lesson_created: bool = False
+    skill_maturity_changed: bool = False
+    content_redacted: bool = True
+    raw_trace_text_included: bool = False
+    policy_refs: list[str] = Field(default_factory=lambda: [POSTMORTEM_SCORING_POLICY_REF])
+
+    @model_validator(mode="after")
+    def keep_scoring_candidate_only(self) -> "PostmortemSelfImprovementScore":
+        if POSTMORTEM_SCORING_POLICY_REF not in self.policy_refs:
+            raise ValueError("postmortem scoring requires policy ref")
+        if not self.candidate_only:
+            raise ValueError("postmortem scoring must remain candidate-only")
+        if self.promotion_allowed or self.active_self_lesson_created:
+            raise ValueError("postmortem scoring cannot promote active self-lessons")
+        if self.skill_maturity_changed:
+            raise ValueError("postmortem scoring cannot change skill maturity")
+        if not self.content_redacted or self.raw_trace_text_included:
+            raise ValueError("postmortem scoring cannot include raw trace text")
+        return self
+
+
 def compile_outcome_postmortem_from_trace(
     trace: AgentRuntimeTrace,
     outcome: OutcomeRecord,
@@ -120,6 +154,55 @@ def compile_outcome_postmortem_from_trace(
     )
 
 
+def score_postmortem_for_self_improvement(
+    postmortem: OutcomePostmortem,
+    *,
+    created_at: datetime | None = None,
+) -> PostmortemSelfImprovementScore:
+    """Score a redacted postmortem into a reviewed self-improvement candidate."""
+
+    reasons: list[str] = []
+    score = 0.0
+    if postmortem.outcome_status != OutcomeStatus.SUCCESS:
+        score += 0.25
+        reasons.append("non_success_outcome")
+    if postmortem.retry_count:
+        score += min(0.25, 0.08 * postmortem.retry_count)
+        reasons.append("retry_observed")
+    if postmortem.follow_up_task_ids:
+        score += min(0.2, 0.05 * len(postmortem.follow_up_task_ids))
+        reasons.append("follow_up_present")
+    if postmortem.highest_risk in {ActionRisk.HIGH, ActionRisk.CRITICAL}:
+        score += 0.15
+        reasons.append("risk_review_needed")
+    if postmortem.external_effect_count:
+        score += 0.1
+        reasons.append("external_effect_review_needed")
+    if postmortem.approval_count:
+        score += 0.05
+        reasons.append("approval_path_observed")
+    if postmortem.evidence_ref_count:
+        score += 0.05
+        reasons.append("evidence_refs_present")
+    bounded_score = min(score, 1.0)
+    return PostmortemSelfImprovementScore(
+        score_id=f"score_{postmortem.postmortem_id}",
+        postmortem_id=postmortem.postmortem_id,
+        created_at=created_at or datetime.now(UTC),
+        score=bounded_score,
+        confidence=min(0.95, 0.45 + 0.08 * len(reasons)),
+        evidence_signal_count=len(reasons),
+        scoring_reasons=reasons or ["low_signal_success"],
+        proposed_lesson_type=(
+            "candidate_failure_prevention"
+            if postmortem.outcome_status != OutcomeStatus.SUCCESS
+            else "candidate_method_refinement"
+        ),
+        promotion_allowed=False,
+        active_self_lesson_created=False,
+        skill_maturity_changed=False,
+        policy_refs=[POSTMORTEM_SCORING_POLICY_REF, OUTCOME_POSTMORTEM_TRACE_POLICY_REF],
+    )
 def _safe_findings(summary: RuntimeTraceSummary) -> list[str]:
     findings = [f"outcome_{summary.outcome_status.value}"]
     if summary.retry_count:

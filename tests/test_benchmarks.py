@@ -7,7 +7,7 @@ def test_synthetic_benchmarks_pass():
     result = run_all()
 
     assert result.passed
-    assert len(result.case_results) == 171
+    assert len(result.case_results) == 177
     assert {case.suite for case in result.case_results} >= {
         "MEM-RECALL-001",
         "RETRIEVAL-SCORE-001",
@@ -34,8 +34,11 @@ def test_synthetic_benchmarks_pass():
         "MEMORY-ENCRYPTION-DEFAULT-001",
         "UNIFIED-ENCRYPTED-GRAPH-INDEX-001",
         "KEY-MANAGEMENT-PLAN-001",
+        "KEYCHAIN-KEY-ADAPTER-001",
         "DURABLE-SYNTHETIC-MEMORY-RECEIPTS-001",
         "ENCRYPTED-INDEX-DASHBOARD-LIVE-001",
+        "DASHBOARD-LIVE-DATA-ADAPTER-001",
+        "LIVE-DASHBOARD-RECEIPTS-001",
         "RECEIPT-LEAK-STRESS-001",
         "GATEWAY-CTX-001",
         "CONTEXT-PACK-001",
@@ -95,6 +98,7 @@ def test_synthetic_benchmarks_pass():
         "SHADOW-POINTER-LIVE-RECEIPT-001",
         "SPATIAL-PROPOSAL-SCHEMA-001",
         "NATIVE-SHADOW-POINTER-LIVE-FEED-001",
+        "NATIVE-OVERLAY-STREAM-SMOKE-001",
         "CLICKY-UX-COMPANION-001",
         "SHADOW-POINTER-NATIVE-001",
         "NATIVE-CAPTURE-PERMISSION-SMOKE-001",
@@ -155,6 +159,7 @@ def test_synthetic_benchmarks_pass():
         "RUNTIME-TRACE-001",
         "GATEWAY-TRACE-PERSISTENCE-001",
         "OUTCOME-POSTMORTEM-TRACE-001",
+        "POSTMORTEM-SCORING-001",
         "GATEWAY-OUTCOME-POSTMORTEM-001",
         "GATEWAY-POSTMORTEM-STRESS-001",
         "PERCEPTION-EVENT-ENVELOPE-001",
@@ -176,6 +181,7 @@ def test_synthetic_benchmarks_pass():
         "GATEWAY-SELF-LESSON-CORRECT-001",
         "GATEWAY-SELF-LESSON-DELETE-001",
         "SELF-LESSON-AUDIT-LIST-001",
+        "WORKFLOW-CLUSTERING-001",
         "ROBOT-SAFE-001",
         "BENCH-PLAN-001",
     }

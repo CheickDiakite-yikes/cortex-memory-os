@@ -45,3 +45,21 @@ Required audit events:
   across material classes.
 - Deleting a key version must leave a redacted tombstone audit without a
   decryptable payload.
+
+## macOS Keychain Adapter
+
+`KEYCHAIN-KEY-ADAPTER-001` adds the first macOS Keychain provider contract.
+The smoke is read-only: it detects the native backend, returns metadata-only
+key refs for each key class, and does not create Keychain items.
+
+Required safety behavior:
+
+- no raw key material is returned;
+- no `.env` secret fallback is allowed;
+- no production no-op cipher is allowed;
+- key refs remain separated across `memory_payload`, `graph_edge_payload`,
+  `hmac_index`, and `evidence_blob`;
+- blocked effects include `create_keychain_item`, `read_keychain_secret`,
+  `export_unwrapped_key`, and `fallback_to_env_secret`.
+
+Policy: `policy_keychain_key_adapter_v1`.

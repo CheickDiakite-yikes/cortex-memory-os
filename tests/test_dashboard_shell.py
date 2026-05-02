@@ -18,6 +18,10 @@ from cortex_memory_os.dashboard_encrypted_index import (
     DASHBOARD_LIVE_BACKBONE_POLICY_REF,
     ENCRYPTED_INDEX_DASHBOARD_LIVE_POLICY_REF,
 )
+from cortex_memory_os.dashboard_live_data_adapter import (
+    DASHBOARD_LIVE_DATA_ADAPTER_POLICY_REF,
+    LIVE_DASHBOARD_RECEIPTS_POLICY_REF,
+)
 from cortex_memory_os.durable_synthetic_memory_receipts import (
     DURABLE_SYNTHETIC_MEMORY_RECEIPTS_POLICY_REF,
 )
@@ -65,6 +69,8 @@ def test_dashboard_shell_composes_safe_view_models():
     assert DASHBOARD_LIVE_BACKBONE_POLICY_REF in shell.policy_refs
     assert CLICKY_UX_LESSONS_POLICY_REF in shell.policy_refs
     assert CLICKY_UX_COMPANION_POLICY_REF in shell.policy_refs
+    assert DASHBOARD_LIVE_DATA_ADAPTER_POLICY_REF in shell.policy_refs
+    assert LIVE_DASHBOARD_RECEIPTS_POLICY_REF in shell.policy_refs
     assert len(shell.status_strip) == 4
     assert shell.shadow_pointer_live_receipt.memory_eligible is False
     assert shell.shadow_pointer_live_receipt.raw_ref_retained is False
@@ -98,6 +104,19 @@ def test_dashboard_shell_composes_safe_view_models():
     assert shell.clicky_ux_companion.display_only is True
     assert shell.clicky_ux_companion.voice_capture_enabled is False
     assert shell.clicky_ux_companion.memory_write_allowed is False
+    assert shell.dashboard_live_data_adapter.read_only is True
+    assert shell.dashboard_live_data_adapter.local_only is True
+    assert shell.dashboard_live_data_adapter.gateway_executed_count > 0
+    assert shell.dashboard_live_data_adapter.gateway_blocked_count > 0
+    assert shell.dashboard_live_data_adapter.retrieval_receipt_count > 0
+    assert shell.dashboard_live_data_adapter.skill_metric_run_count > 0
+    assert shell.dashboard_live_data_adapter.write_path_enabled is False
+    assert shell.dashboard_live_data_adapter.raw_payload_returned is False
+    assert shell.live_dashboard_receipts.title == "Live Safe Receipts"
+    assert shell.live_dashboard_receipts.refresh_mode == "read_only_receipts"
+    assert shell.live_dashboard_receipts.gateway_executed_count > 0
+    assert shell.live_dashboard_receipts.mutation_enabled is False
+    assert shell.live_dashboard_receipts.raw_payload_returned is False
     assert len(shell.insight_panels) >= 5
     assert any(panel.title == "Encryption Default" for panel in shell.insight_panels)
     assert all(panel.content_redacted for panel in shell.insight_panels)
@@ -167,6 +186,8 @@ def test_dashboard_data_js_is_redacted_and_static_app_ready():
     assert "Cursor Companion" in data_js
     assert "Encrypted Index Receipts" in data_js
     assert "Live Receipt Backbone" in data_js
+    assert "Live Safe Receipts" in data_js
+    assert "DASHBOARD-LIVE-DATA-ADAPTER-001" in data_js
     assert "data-view-section" not in data_js
     assert "Search primary sources" not in data_js
     assert "external:https://example.invalid/attack" not in data_js
@@ -207,6 +228,8 @@ def test_dashboard_shell_smoke_contract_passes():
     assert result.durable_synthetic_memory_receipt_present is True
     assert result.dashboard_live_backbone_present is True
     assert result.clicky_ux_companion_present is True
+    assert result.dashboard_live_data_adapter_present is True
+    assert result.live_dashboard_receipts_present is True
     assert result.encryption_default_visible is True
     assert result.gateway_action_receipt_count > 0
     assert result.gateway_actions_present is True

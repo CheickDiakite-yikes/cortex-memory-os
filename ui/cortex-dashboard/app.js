@@ -380,6 +380,45 @@ function renderEncryptedIndexPanel() {
   });
 }
 
+function renderLiveDashboardReceipts() {
+  const target = document.querySelector("#live-dashboard-receipts");
+  const panel = data.live_dashboard_receipts;
+  const adapter = data.dashboard_live_data_adapter;
+  if (!target || !panel || !adapter) return;
+  target.innerHTML = `
+    <div class="live-receipts-copy">
+      <span class="live-receipts-icon">${svgIcon("route")}</span>
+      <span>
+        <strong>${escapeHtml(panel.title)}</strong>
+        <span>${escapeHtml(panel.summary)}</span>
+      </span>
+    </div>
+    <div class="live-receipts-grid">
+      <div><span>Gateway</span><strong>${panel.gateway_executed_count}/${panel.gateway_blocked_count}</strong></div>
+      <div><span>Retrieval</span><strong>${panel.retrieval_receipt_count}</strong></div>
+      <div><span>Index</span><strong>${panel.encrypted_index_search_result_count}</strong></div>
+      <div><span>Ops</span><strong>${panel.ops_passed_cases}</strong></div>
+      <div><span>Skills</span><strong>${panel.skill_metric_run_count}</strong></div>
+    </div>
+    <div class="shadow-live-actions">
+      <button class="text-command" type="button" id="live-data-adapter-receipt">
+        DASHBOARD-LIVE-DATA-ADAPTER-001
+      </button>
+      <button class="text-command" type="button" id="live-dashboard-refresh">
+        LIVE-DASHBOARD-RECEIPTS-001
+      </button>
+    </div>
+  `;
+  document.querySelector("#live-data-adapter-receipt").addEventListener("click", () => {
+    writeReceipt(
+      `Read-only adapter: ${adapter.adapter_sources.length} local sources, ${adapter.gateway_executed_count} gateway calls, raw payloads ${adapter.raw_payload_returned ? "present" : "absent"}.`,
+    );
+  });
+  document.querySelector("#live-dashboard-refresh").addEventListener("click", () => {
+    writeReceipt("Live dashboard receipts refreshed from local safe receipt counts. No write path or raw payload returned.");
+  });
+}
+
 function renderFocusInspector() {
   const inspector = document.querySelector("#focus-inspector");
   if (!inspector || !selectedFocus) return;
@@ -747,6 +786,7 @@ if (!data) {
   renderStatusStrip();
   renderShadowPointerLiveReceipt();
   renderEncryptedIndexPanel();
+  renderLiveDashboardReceipts();
   renderDemoPath();
   renderInsights();
   renderReceipts();

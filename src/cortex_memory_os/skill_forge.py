@@ -21,6 +21,8 @@ from cortex_memory_os.contracts import (
 
 MIN_SCENES_FOR_SKILL = 3
 DOCUMENT_SKILL_DERIVATION_POLICY_REF = "policy_document_skill_derivation_v1"
+WORKFLOW_CLUSTERING_ID = "WORKFLOW-CLUSTERING-001"
+WORKFLOW_CLUSTERING_POLICY_REF = "policy_workflow_clustering_v1"
 
 
 class DocumentSkillDerivationRequest(BaseModel):
@@ -89,6 +91,104 @@ class DocumentSkillDerivationResult(BaseModel):
         return self
 
 
+class WorkflowTrace(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    trace_id: str = Field(min_length=1)
+    workflow_label: str = Field(min_length=1, max_length=120)
+    source_trust: SourceTrust = SourceTrust.LOCAL_OBSERVED
+    apps: list[str] = Field(min_length=1, max_length=8)
+    action_kinds: list[str] = Field(min_length=2, max_length=16)
+    outcome: str = Field(min_length=1, max_length=80)
+    evidence_refs: list[str] = Field(min_length=1, max_length=12)
+    external_effect_count: int = Field(default=0, ge=0)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @field_validator("workflow_label")
+    @classmethod
+    def reject_instruction_like_workflow_label(cls, value: str) -> str:
+        _raise_for_instruction_like_text(value)
+        return value
+
+    @field_validator("action_kinds")
+    @classmethod
+    def reject_instruction_like_actions(cls, values: list[str]) -> list[str]:
+        for value in values:
+            _raise_for_instruction_like_text(value)
+        return values
+
+    @model_validator(mode="after")
+    def keep_trace_clusterable(self) -> "WorkflowTrace":
+        if self.source_trust == SourceTrust.HOSTILE_UNTIL_SAFE:
+            raise ValueError("hostile workflow traces cannot be clustered into skills")
+        if self.external_effect_count:
+            raise ValueError("workflow clustering requires traces without external effects")
+        return self
+
+
+class WorkflowCluster(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    cluster_id: str = Field(min_length=1)
+    workflow_label: str = Field(min_length=1)
+    signature: str = Field(min_length=1)
+    trace_ids: list[str] = Field(min_length=1)
+    app_count: int = Field(ge=0)
+    action_count: int = Field(ge=0)
+    success_count: int = Field(ge=0)
+    evidence_ref_count: int = Field(ge=0)
+    candidate_skill: SkillRecord | None = None
+    candidate_only: bool = True
+    draft_preview_available: bool = True
+    content_redacted: bool = True
+    source_refs_redacted: bool = True
+    policy_refs: tuple[str, ...] = Field(default=(WORKFLOW_CLUSTERING_POLICY_REF,))
+
+    @model_validator(mode="after")
+    def enforce_candidate_only_cluster(self) -> "WorkflowCluster":
+        if WORKFLOW_CLUSTERING_POLICY_REF not in self.policy_refs:
+            raise ValueError("workflow clusters require policy ref")
+        if not self.candidate_only:
+            raise ValueError("workflow clusters must remain candidate-only")
+        if not self.content_redacted or not self.source_refs_redacted:
+            raise ValueError("workflow clusters must stay redacted")
+        if self.candidate_skill is not None:
+            if self.candidate_skill.status != MemoryStatus.CANDIDATE:
+                raise ValueError("cluster skills must remain candidates")
+            if self.candidate_skill.execution_mode != ExecutionMode.DRAFT_ONLY:
+                raise ValueError("cluster skills must remain draft-only")
+        return self
+
+
+class WorkflowClusteringResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    result_id: str = WORKFLOW_CLUSTERING_ID
+    generated_at: datetime
+    trace_count: int = Field(ge=0)
+    cluster_count: int = Field(ge=0)
+    candidate_count: int = Field(ge=0)
+    min_traces_for_candidate: int = MIN_SCENES_FOR_SKILL
+    clusters: list[WorkflowCluster]
+    candidate_only: bool = True
+    external_effect_count: int = 0
+    policy_refs: tuple[str, ...] = Field(default=(WORKFLOW_CLUSTERING_POLICY_REF,))
+
+    @model_validator(mode="after")
+    def enforce_safe_clustering_result(self) -> "WorkflowClusteringResult":
+        if WORKFLOW_CLUSTERING_POLICY_REF not in self.policy_refs:
+            raise ValueError("workflow clustering result requires policy ref")
+        if not self.candidate_only:
+            raise ValueError("workflow clustering result must remain candidate-only")
+        if self.external_effect_count:
+            raise ValueError("workflow clustering cannot include external effects")
+        if self.cluster_count != len(self.clusters):
+            raise ValueError("workflow clustering cluster_count mismatch")
+        if self.candidate_count != sum(1 for cluster in self.clusters if cluster.candidate_skill):
+            raise ValueError("workflow clustering candidate_count mismatch")
+        return self
+
+
 def detect_skill_candidates(scenes: list[Scene]) -> list[SkillRecord]:
     grouped: dict[str, list[Scene]] = defaultdict(list)
     for scene in scenes:
@@ -100,6 +200,28 @@ def detect_skill_candidates(scenes: list[Scene]) -> list[SkillRecord]:
             continue
         candidates.append(_candidate_from_group(scene_type, group))
     return candidates
+
+
+def cluster_workflow_traces(
+    traces: list[WorkflowTrace],
+    *,
+    now: datetime | None = None,
+) -> WorkflowClusteringResult:
+    grouped: dict[str, list[WorkflowTrace]] = defaultdict(list)
+    for trace in traces:
+        grouped[_workflow_signature(trace)].append(trace)
+
+    clusters: list[WorkflowCluster] = []
+    for signature, group in sorted(grouped.items()):
+        candidate = _candidate_from_trace_group(signature, group) if len(group) >= MIN_SCENES_FOR_SKILL else None
+        clusters.append(_cluster_from_trace_group(signature, group, candidate))
+    return WorkflowClusteringResult(
+        generated_at=now or datetime.now(UTC),
+        trace_count=len(traces),
+        cluster_count=len(clusters),
+        candidate_count=sum(1 for cluster in clusters if cluster.candidate_skill),
+        clusters=clusters,
+    )
 
 
 def derive_skill_candidate_from_document(
@@ -204,6 +326,92 @@ def _candidate_from_group(scene_type: str, scenes: list[Scene]) -> SkillRecord:
         requires_confirmation_before=[],
         status=MemoryStatus.CANDIDATE,
     )
+
+
+def _cluster_from_trace_group(
+    signature: str,
+    traces: list[WorkflowTrace],
+    candidate: SkillRecord | None,
+) -> WorkflowCluster:
+    apps = sorted({app for trace in traces for app in trace.apps})
+    action_kinds = sorted({action for trace in traces for action in trace.action_kinds})
+    evidence_refs = sorted({ref for trace in traces for ref in trace.evidence_refs})
+    label = traces[0].workflow_label
+    return WorkflowCluster(
+        cluster_id=f"cluster_{_slug(signature)}",
+        workflow_label=label,
+        signature=signature,
+        trace_ids=[trace.trace_id for trace in traces],
+        app_count=len(apps),
+        action_count=len(action_kinds),
+        success_count=sum(int(trace.outcome == "success") for trace in traces),
+        evidence_ref_count=len(evidence_refs),
+        candidate_skill=candidate,
+    )
+
+
+def _candidate_from_trace_group(signature: str, traces: list[WorkflowTrace]) -> SkillRecord:
+    label = traces[0].workflow_label
+    apps = sorted({app for trace in traces for app in trace.apps})
+    action_sequence = _common_action_prefix([trace.action_kinds for trace in traces])
+    learned_from = [trace.trace_id for trace in traces]
+    return SkillRecord(
+        skill_id=f"skill_workflow_{_slug(signature)}_candidate_v1",
+        name=f"{label} workflow",
+        description=(
+            "Draft-only workflow candidate clustered from repeated local/session traces "
+            f"across {', '.join(apps)}."
+        ),
+        learned_from=learned_from,
+        trigger_conditions=[
+            f"user starts {label.lower()}",
+            f"active apps include {', '.join(apps[:3])}",
+        ],
+        inputs={
+            "goal": "string",
+            "active_project": "string",
+            "review_scope": "session | project",
+        },
+        procedure=[_procedure_label(action) for action in action_sequence[:6]],
+        success_signals=[
+            "clustered traces ended successfully",
+            "user accepts draft preview",
+            "low correction rate after candidate review",
+        ],
+        failure_modes=[
+            "trace sequence is too sparse",
+            "workflow source refs are stale",
+            "draft attempts external effects before approval",
+        ],
+        risk_level=ActionRisk.MEDIUM if any("edit" in action for action in action_sequence) else ActionRisk.LOW,
+        maturity_level=2,
+        execution_mode=ExecutionMode.DRAFT_ONLY,
+        requires_confirmation_before=["promotion", "external_effect", "procedure_change"],
+        status=MemoryStatus.CANDIDATE,
+    )
+
+
+def _workflow_signature(trace: WorkflowTrace) -> str:
+    apps = ",".join(sorted(app.lower() for app in trace.apps[:4]))
+    actions = ">".join(action.lower().replace(" ", "_") for action in trace.action_kinds[:8])
+    return f"{_slug(trace.workflow_label)}::{apps}::{actions}"
+
+
+def _common_action_prefix(sequences: list[list[str]]) -> list[str]:
+    if not sequences:
+        return []
+    prefix: list[str] = []
+    for values in zip(*sequences, strict=False):
+        normalized = {value.lower().strip() for value in values}
+        if len(normalized) != 1:
+            break
+        prefix.append(values[0])
+    return prefix or sequences[0]
+
+
+def _procedure_label(action: str) -> str:
+    label = action.replace("_", " ").strip()
+    return f"Draft step: {label}"
 
 
 def _skill_name(scene_type: str) -> str:

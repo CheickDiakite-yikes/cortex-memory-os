@@ -8,8 +8,12 @@ from cortex_memory_os.contracts import OutcomeRecord, OutcomeStatus
 from cortex_memory_os.fixtures import load_json
 from cortex_memory_os.outcome_postmortem import (
     OUTCOME_POSTMORTEM_TRACE_POLICY_REF,
+    POSTMORTEM_SCORING_ID,
+    POSTMORTEM_SCORING_POLICY_REF,
     OutcomePostmortem,
+    PostmortemSelfImprovementScore,
     compile_outcome_postmortem_from_trace,
+    score_postmortem_for_self_improvement,
 )
 from cortex_memory_os.runtime_trace import AgentRuntimeTrace
 
@@ -83,4 +87,52 @@ def test_outcome_postmortem_contract_requires_redaction():
     with pytest.raises(ValidationError, match="summary text"):
         OutcomePostmortem.model_validate(
             postmortem.model_dump() | {"summary_text_redacted": False}
+        )
+
+
+def test_postmortem_scoring_creates_candidate_only_self_improvement_score():
+    trace = _trace()
+    postmortem = compile_outcome_postmortem_from_trace(
+        trace,
+        _outcome(trace),
+        created_at=datetime(2026, 4, 30, 6, 1, tzinfo=UTC),
+    )
+
+    score = score_postmortem_for_self_improvement(
+        postmortem,
+        created_at=datetime(2026, 4, 30, 6, 2, tzinfo=UTC),
+    )
+    payload = score.model_dump_json()
+
+    assert POSTMORTEM_SCORING_ID
+    assert score.postmortem_id == postmortem.postmortem_id
+    assert score.candidate_only is True
+    assert score.score > 0
+    assert score.confidence > 0
+    assert score.evidence_signal_count >= 3
+    assert "retry_observed" in score.scoring_reasons
+    assert "risk_review_needed" in score.scoring_reasons
+    assert score.proposed_lesson_type == "candidate_method_refinement"
+    assert score.promotion_allowed is False
+    assert score.active_self_lesson_created is False
+    assert score.skill_maturity_changed is False
+    assert score.content_redacted is True
+    assert score.raw_trace_text_included is False
+    assert POSTMORTEM_SCORING_POLICY_REF in score.policy_refs
+    assert "Agent started scoped debugging task" not in payload
+
+
+def test_postmortem_scoring_rejects_promotion_or_raw_trace_text():
+    trace = _trace()
+    postmortem = compile_outcome_postmortem_from_trace(trace, _outcome(trace))
+    score = score_postmortem_for_self_improvement(postmortem)
+
+    with pytest.raises(ValidationError, match="cannot promote"):
+        PostmortemSelfImprovementScore.model_validate(
+            score.model_dump() | {"active_self_lesson_created": True}
+        )
+
+    with pytest.raises(ValidationError, match="raw trace"):
+        PostmortemSelfImprovementScore.model_validate(
+            score.model_dump() | {"raw_trace_text_included": True}
         )

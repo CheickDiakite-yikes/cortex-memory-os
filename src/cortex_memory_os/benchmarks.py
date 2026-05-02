@@ -214,6 +214,7 @@ from cortex_memory_os.encrypted_graph_index import (
 from cortex_memory_os.key_management import (
     KEY_MANAGEMENT_PLAN_ID,
     KEY_MANAGEMENT_PLAN_POLICY_REF,
+    KeyMaterialClass,
     run_key_management_plan_smoke,
 )
 from cortex_memory_os.durable_synthetic_memory_receipts import (
@@ -359,7 +360,10 @@ from cortex_memory_os.outcome_postmortem import (
     GATEWAY_POSTMORTEM_STRESS_ID,
     OUTCOME_POSTMORTEM_TRACE_ID,
     OUTCOME_POSTMORTEM_TRACE_POLICY_REF,
+    POSTMORTEM_SCORING_ID,
+    POSTMORTEM_SCORING_POLICY_REF,
     compile_outcome_postmortem_from_trace,
+    score_postmortem_for_self_improvement,
 )
 from cortex_memory_os.temporal_graph import compile_temporal_edge
 from cortex_memory_os.swarm_governance import (
@@ -444,7 +448,11 @@ from cortex_memory_os.self_lesson_audit import (
 )
 from cortex_memory_os.skill_forge import (
     DOCUMENT_SKILL_DERIVATION_POLICY_REF,
+    WORKFLOW_CLUSTERING_ID,
+    WORKFLOW_CLUSTERING_POLICY_REF,
     DocumentSkillDerivationRequest,
+    WorkflowTrace,
+    cluster_workflow_traces,
     derive_skill_candidate_from_document,
     detect_skill_candidates,
 )
@@ -467,6 +475,22 @@ from cortex_memory_os.skill_policy import (
     evaluate_skill_promotion,
     evaluate_skill_rollback,
     rollback_skill,
+)
+from cortex_memory_os.dashboard_live_data_adapter import (
+    DASHBOARD_LIVE_DATA_ADAPTER_ID,
+    DASHBOARD_LIVE_DATA_ADAPTER_POLICY_REF,
+    LIVE_DASHBOARD_RECEIPTS_ID,
+    LIVE_DASHBOARD_RECEIPTS_POLICY_REF,
+)
+from cortex_memory_os.keychain_key_adapter import (
+    KEYCHAIN_KEY_ADAPTER_ID,
+    KEYCHAIN_KEY_ADAPTER_POLICY_REF,
+    run_keychain_key_adapter_smoke,
+)
+from cortex_memory_os.native_overlay_stream_smoke import (
+    NATIVE_OVERLAY_STREAM_SMOKE_ID,
+    NATIVE_OVERLAY_STREAM_SMOKE_POLICY_REF,
+    run_native_overlay_stream_smoke,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -524,8 +548,11 @@ def run_all() -> BenchmarkRunResult:
         case_memory_encryption_default_contract,
         case_unified_encrypted_graph_index_contract,
         case_key_management_plan_contract,
+        case_keychain_key_adapter_contract,
         case_durable_synthetic_memory_receipts_contract,
         case_encrypted_index_dashboard_live_contract,
+        case_dashboard_live_data_adapter_contract,
+        case_live_dashboard_receipts_contract,
         case_receipt_leak_stress_contract,
         case_gateway_context_pack,
         case_context_pack_scored_retrieval,
@@ -585,6 +612,7 @@ def run_all() -> BenchmarkRunResult:
         case_shadow_pointer_live_receipt_contract,
         case_spatial_proposal_schema_contract,
         case_native_shadow_pointer_live_feed_contract,
+        case_native_overlay_stream_smoke_contract,
         case_clicky_ux_companion_contract,
         case_shadow_pointer_native_overlay_contract,
         case_native_capture_permission_smoke_contract,
@@ -645,6 +673,7 @@ def run_all() -> BenchmarkRunResult:
         case_agent_runtime_trace_contract,
         case_gateway_runtime_trace_persistence_contract,
         case_outcome_postmortem_trace_handoff_contract,
+        case_postmortem_scoring_contract,
         case_gateway_outcome_postmortem_contract,
         case_gateway_postmortem_stress_contract,
         case_perception_event_envelope_contract,
@@ -667,6 +696,7 @@ def run_all() -> BenchmarkRunResult:
         case_gateway_self_lesson_deletion_tool,
         case_gateway_self_lesson_audit_list_tool,
         case_repeated_workflow_stays_draft_skill,
+        case_workflow_clustering_contract,
         case_robot_spatial_safety_contract,
         case_high_risk_action_requires_review,
         case_benchmark_plan_quality_gate,
@@ -2561,6 +2591,83 @@ def case_outcome_postmortem_trace_handoff_contract() -> BenchmarkCaseResult:
             "trace_id": postmortem.trace_id,
             "safe_findings": postmortem.safe_findings,
             "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_postmortem_scoring_contract() -> BenchmarkCaseResult:
+    trace = AgentRuntimeTrace.model_validate(
+        load_json("tests/fixtures/agent_runtime_trace.json")
+    )
+    outcome = OutcomeRecord(
+        outcome_id="outcome_onboarding_debug_001",
+        task_id=trace.task_id,
+        agent_id=trace.agent_id,
+        status=OutcomeStatus.SUCCESS,
+        evidence_refs=["outcome:onboarding-debug-local-tests"],
+        created_at=datetime(2026, 4, 30, 6, 0, tzinfo=UTC),
+    )
+    postmortem = compile_outcome_postmortem_from_trace(
+        trace,
+        outcome,
+        created_at=datetime(2026, 4, 30, 6, 1, tzinfo=UTC),
+    )
+    score = score_postmortem_for_self_improvement(
+        postmortem,
+        created_at=datetime(2026, 4, 30, 6, 2, tzinfo=UTC),
+    )
+    docs_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "docs" / "architecture" / "self-improvement-engine.md",
+            REPO_ROOT / "docs" / "architecture" / "outcome-postmortem-trace-handoff.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+            REPO_ROOT / "docs" / "ops" / "task-board.md",
+        ]
+        if path.exists()
+    )
+    missing_terms = _missing_terms(
+        docs_text,
+        [
+            POSTMORTEM_SCORING_ID,
+            POSTMORTEM_SCORING_POLICY_REF,
+            "candidate-only",
+            "self-improvement scoring",
+        ],
+    )
+    payload = score.model_dump_json()
+    passed = (
+        score.candidate_only
+        and score.score > 0
+        and score.confidence > 0
+        and score.evidence_signal_count > 0
+        and not score.promotion_allowed
+        and not score.active_self_lesson_created
+        and not score.skill_maturity_changed
+        and score.content_redacted
+        and not score.raw_trace_text_included
+        and "Agent started scoped debugging task" not in payload
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="POSTMORTEM-SCORING-001/candidate_only_self_improvement_score",
+        suite=POSTMORTEM_SCORING_ID,
+        passed=passed,
+        summary=(
+            "Postmortem receipts now feed candidate-only self-improvement "
+            "scoring without creating active lessons or changing skill maturity."
+        ),
+        metrics={
+            "score": score.score,
+            "confidence": score.confidence,
+            "evidence_signal_count": score.evidence_signal_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": POSTMORTEM_SCORING_POLICY_REF,
+            "scoring_reasons": score.scoring_reasons,
+            "missing_doc_terms": missing_terms,
         },
     )
 
@@ -4812,6 +4919,85 @@ def case_repeated_workflow_stays_draft_skill() -> BenchmarkCaseResult:
         summary="Repeated workflow fixture creates a draft-only candidate skill, not autonomy.",
         metrics={"maturity_level": skill.maturity_level},
         evidence={"skill_id": skill.skill_id, "execution_mode": skill.execution_mode.value},
+    )
+
+
+def case_workflow_clustering_contract() -> BenchmarkCaseResult:
+    traces = [
+        WorkflowTrace(
+            trace_id=f"trace_auth_debug_{index}",
+            workflow_label="Frontend auth debugging",
+            source_trust=SourceTrust.LOCAL_OBSERVED,
+            apps=["VS Code", "Terminal", "Chrome"],
+            action_kinds=[
+                "open_bug_context",
+                "inspect_logs",
+                "edit_small_patch",
+                "run_targeted_tests",
+            ],
+            outcome="success",
+            evidence_refs=[f"ev_auth_debug_{index}"],
+        )
+        for index in range(1, 4)
+    ]
+    result = cluster_workflow_traces(
+        traces,
+        now=datetime(2026, 5, 2, 12, 25, tzinfo=UTC),
+    )
+    docs_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "docs" / "architecture" / "skill-forge-lifecycle.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+            REPO_ROOT / "docs" / "ops" / "task-board.md",
+        ]
+        if path.exists()
+    )
+    missing_terms = _missing_terms(
+        docs_text,
+        [
+            WORKFLOW_CLUSTERING_ID,
+            WORKFLOW_CLUSTERING_POLICY_REF,
+            "workflow clustering",
+            "draft-only",
+        ],
+    )
+    cluster = result.clusters[0]
+    candidate = cluster.candidate_skill
+    passed = (
+        result.candidate_only
+        and result.trace_count == 3
+        and result.candidate_count == 1
+        and candidate is not None
+        and candidate.status == MemoryStatus.CANDIDATE
+        and candidate.execution_mode == ExecutionMode.DRAFT_ONLY
+        and candidate.maturity_level == 2
+        and "external_effect" in candidate.requires_confirmation_before
+        and cluster.content_redacted
+        and cluster.source_refs_redacted
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="WORKFLOW-CLUSTERING-001/repeated_trace_skill_candidate",
+        suite=WORKFLOW_CLUSTERING_ID,
+        passed=passed,
+        summary=(
+            "Repeated local/session workflow traces cluster into draft-only skill "
+            "candidates with review gates and redacted source details."
+        ),
+        metrics={
+            "trace_count": result.trace_count,
+            "cluster_count": result.cluster_count,
+            "candidate_count": result.candidate_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": WORKFLOW_CLUSTERING_POLICY_REF,
+            "cluster_id": cluster.cluster_id,
+            "candidate_skill_id": candidate.skill_id if candidate else None,
+            "missing_doc_terms": missing_terms,
+        },
     )
 
 
@@ -9799,6 +9985,62 @@ def case_native_shadow_pointer_live_feed_contract() -> BenchmarkCaseResult:
     )
 
 
+def case_native_overlay_stream_smoke_contract() -> BenchmarkCaseResult:
+    result = run_native_overlay_stream_smoke(now=datetime(2026, 5, 2, 12, 20, tzinfo=UTC))
+    docs_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "docs" / "architecture" / "native-shadow-pointer-live-feed.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+            REPO_ROOT / "docs" / "ops" / "task-board.md",
+        ]
+        if path.exists()
+    )
+    missing_terms = _missing_terms(
+        docs_text,
+        [
+            NATIVE_OVERLAY_STREAM_SMOKE_ID,
+            NATIVE_OVERLAY_STREAM_SMOKE_POLICY_REF,
+            "manual overlay smoke",
+            "local live receipt stream",
+        ],
+    )
+    payload = result.model_dump_json()
+    passed = (
+        result.passed
+        and result.manual_overlay_smoke_ready
+        and result.frame_count >= 3
+        and result.feed.display_only
+        and not result.capture_started
+        and not result.accessibility_observer_started
+        and not result.memory_write_allowed
+        and not result.raw_payload_included
+        and not result.raw_ref_retained
+        and "raw://" not in payload
+        and "encrypted_blob://" not in payload
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="NATIVE-OVERLAY-STREAM-SMOKE-001/manual_safe_receipt_stream",
+        suite=NATIVE_OVERLAY_STREAM_SMOKE_ID,
+        passed=passed,
+        summary=(
+            "Native overlay stream smoke advances local live receipt frames "
+            "without starting capture, observers, memory writes, or input actions."
+        ),
+        metrics={
+            "frame_count": result.frame_count,
+            "receipt_count": result.feed.receipt_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": NATIVE_OVERLAY_STREAM_SMOKE_POLICY_REF,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
 def case_clicky_ux_companion_contract() -> BenchmarkCaseResult:
     live_receipt = build_live_receipt(
         default_shadow_pointer_snapshot(),
@@ -14426,6 +14668,64 @@ def case_key_management_plan_contract() -> BenchmarkCaseResult:
     )
 
 
+def case_keychain_key_adapter_contract() -> BenchmarkCaseResult:
+    result = run_keychain_key_adapter_smoke(
+        now=datetime(2026, 5, 2, 12, 5, tzinfo=UTC),
+        platform_system="Darwin",
+        security_cli_detected=True,
+    )
+    docs_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "docs" / "security" / "key-management-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+            REPO_ROOT / "docs" / "ops" / "task-board.md",
+        ]
+        if path.exists()
+    )
+    missing_terms = _missing_terms(
+        docs_text,
+        [
+            KEYCHAIN_KEY_ADAPTER_ID,
+            KEYCHAIN_KEY_ADAPTER_POLICY_REF,
+            "macOS Keychain",
+            "read-only",
+        ],
+    )
+    payload = result.model_dump_json()
+    passed = (
+        result.passed
+        and result.key_ref_count == len(KeyMaterialClass)
+        and result.read_only_probe_used
+        and not result.keychain_write_attempted
+        and not result.key_material_returned
+        and not result.env_secret_used
+        and not result.production_noop_allowed
+        and "OPENAI_API_KEY=" not in payload
+        and "sk-" not in payload
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="KEYCHAIN-KEY-ADAPTER-001/read_only_keychain_refs",
+        suite=KEYCHAIN_KEY_ADAPTER_ID,
+        passed=passed,
+        summary=(
+            "macOS Keychain provider smoke returns key refs and backend status "
+            "without writing keychain items or exposing key material."
+        ),
+        metrics={
+            "key_ref_count": result.key_ref_count,
+            "native_backend_detected": int(result.native_backend_detected),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": KEYCHAIN_KEY_ADAPTER_POLICY_REF,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
 def case_durable_synthetic_memory_receipts_contract() -> BenchmarkCaseResult:
     receipt = run_durable_synthetic_memory_receipts(
         now=datetime(2026, 5, 2, 12, 0, tzinfo=UTC)
@@ -14554,6 +14854,126 @@ def case_encrypted_index_dashboard_live_contract() -> BenchmarkCaseResult:
         evidence={
             "policy_ref": ENCRYPTED_INDEX_DASHBOARD_LIVE_POLICY_REF,
             "backbone_policy_ref": DASHBOARD_LIVE_BACKBONE_POLICY_REF,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_dashboard_live_data_adapter_contract() -> BenchmarkCaseResult:
+    shell = build_dashboard_shell(now=datetime(2026, 5, 2, 12, 10, tzinfo=UTC))
+    snapshot = shell.dashboard_live_data_adapter
+    docs_ui_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "docs" / "product" / "cortex-dashboard-shell.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+            REPO_ROOT / "docs" / "ops" / "task-board.md",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "index.html",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "app.js",
+        ]
+        if path.exists()
+    )
+    missing_terms = _missing_terms(
+        docs_ui_text,
+        [
+            DASHBOARD_LIVE_DATA_ADAPTER_ID,
+            DASHBOARD_LIVE_DATA_ADAPTER_POLICY_REF,
+            "read-only adapter",
+            "local read-only adapters",
+        ],
+    )
+    payload = snapshot.model_dump_json()
+    passed = (
+        snapshot.read_only
+        and snapshot.local_only
+        and snapshot.gateway_executed_count > 0
+        and snapshot.gateway_blocked_count > 0
+        and snapshot.retrieval_receipt_count > 0
+        and snapshot.skill_metric_run_count > 0
+        and not snapshot.write_path_enabled
+        and not snapshot.mutation_enabled
+        and not snapshot.raw_payload_returned
+        and not snapshot.raw_ref_retained
+        and "raw://" not in payload
+        and "encrypted_blob://" not in payload
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="DASHBOARD-LIVE-DATA-ADAPTER-001/read_only_dashboard_adapters",
+        suite=DASHBOARD_LIVE_DATA_ADAPTER_ID,
+        passed=passed,
+        summary=(
+            "Dashboard live data now comes from local read-only adapter receipts "
+            "instead of static operational backbone assumptions."
+        ),
+        metrics={
+            "gateway_executed_count": snapshot.gateway_executed_count,
+            "gateway_blocked_count": snapshot.gateway_blocked_count,
+            "retrieval_receipt_count": snapshot.retrieval_receipt_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": DASHBOARD_LIVE_DATA_ADAPTER_POLICY_REF,
+            "adapter_sources": len(snapshot.adapter_sources),
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_live_dashboard_receipts_contract() -> BenchmarkCaseResult:
+    shell = build_dashboard_shell(now=datetime(2026, 5, 2, 12, 15, tzinfo=UTC))
+    panel = shell.live_dashboard_receipts
+    docs_ui_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "docs" / "product" / "cortex-dashboard-shell.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-plan.md",
+            REPO_ROOT / "docs" / "ops" / "benchmark-registry.md",
+            REPO_ROOT / "docs" / "ops" / "task-board.md",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "index.html",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "app.js",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "styles.css",
+        ]
+        if path.exists()
+    )
+    missing_terms = _missing_terms(
+        docs_ui_text,
+        [
+            LIVE_DASHBOARD_RECEIPTS_ID,
+            LIVE_DASHBOARD_RECEIPTS_POLICY_REF,
+            "Live Safe Receipts",
+            "renderLiveDashboardReceipts",
+        ],
+    )
+    payload = panel.model_dump_json()
+    passed = (
+        panel.refresh_mode == "read_only_receipts"
+        and panel.gateway_executed_count > 0
+        and panel.retrieval_receipt_count > 0
+        and panel.skill_metric_run_count > 0
+        and not panel.raw_payload_returned
+        and not panel.mutation_enabled
+        and "raw://" not in payload
+        and "encrypted_blob://" not in payload
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="LIVE-DASHBOARD-RECEIPTS-001/count_only_refresh_panel",
+        suite=LIVE_DASHBOARD_RECEIPTS_ID,
+        passed=passed,
+        summary=(
+            "Dashboard receipt panels refresh retrieval, encrypted index, ops "
+            "quality, and skill metrics from safe count-only receipts."
+        ),
+        metrics={
+            "gateway_executed_count": panel.gateway_executed_count,
+            "retrieval_receipt_count": panel.retrieval_receipt_count,
+            "skill_metric_run_count": panel.skill_metric_run_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": LIVE_DASHBOARD_RECEIPTS_POLICY_REF,
             "missing_doc_terms": missing_terms,
         },
     )

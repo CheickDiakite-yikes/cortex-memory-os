@@ -461,3 +461,31 @@ one project, agent, or session from silently shaping another.
 - malformed review queue cursors fail with a fixed redacted error;
 - cursor parse errors do not echo hostile cursor text or scoped provenance;
 - invalid cursor text is treated as untrusted data and never as instructions.
+
+## Postmortem Scoring
+
+`POSTMORTEM-SCORING-001` connects safe postmortem receipts to
+self-improvement scoring, but keeps the result candidate-only. The score can
+rank reviewed follow-ups; it cannot create an active self-lesson, promote a
+lesson, change skill maturity, or copy raw trace text.
+
+Inputs are the redacted `OutcomePostmortem` counts and findings:
+
+- outcome status;
+- retry count;
+- follow-up count;
+- highest risk;
+- external-effect count;
+- approval count;
+- evidence-ref count.
+
+Outputs are metadata only:
+
+- bounded score and confidence;
+- scoring reason IDs;
+- proposed lesson type;
+- explicit `promotion_allowed: false`;
+- explicit `active_self_lesson_created: false`;
+- explicit `skill_maturity_changed: false`.
+
+Policy: `policy_postmortem_scoring_v1`.

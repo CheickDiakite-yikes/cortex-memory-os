@@ -37,6 +37,15 @@ from cortex_memory_os.dashboard_gateway_actions import (
     DashboardGatewayActionReceipt,
     build_dashboard_gateway_action_receipts,
 )
+from cortex_memory_os.dashboard_live_data_adapter import (
+    DASHBOARD_LIVE_DATA_ADAPTER_POLICY_REF,
+    LIVE_DASHBOARD_RECEIPTS_POLICY_REF,
+    DashboardLiveDataAdapterSnapshot,
+    LiveDashboardReceiptsPanel,
+    build_dashboard_live_data_adapter_snapshot,
+    build_live_dashboard_receipts_panel,
+)
+from cortex_memory_os.dashboard_live_gateway import DashboardLiveGatewayPanel, build_dashboard_live_gateway_panel
 from cortex_memory_os.clicky_ux import (
     CLICKY_UX_COMPANION_POLICY_REF,
     CLICKY_UX_LESSONS_POLICY_REF,
@@ -258,6 +267,9 @@ class CortexDashboardShell(StrictModel):
     demo_path: DashboardDemoPath
     focus_inspector: DashboardFocusInspector
     gateway_action_receipts: list[DashboardGatewayActionReceipt] = Field(default_factory=list)
+    dashboard_live_gateway: DashboardLiveGatewayPanel
+    dashboard_live_data_adapter: DashboardLiveDataAdapterSnapshot
+    live_dashboard_receipts: LiveDashboardReceiptsPanel
     key_management_plan: KeyManagementPlan
     encrypted_index_panel: DashboardEncryptedIndexPanel
     native_live_feed: NativeShadowPointerLiveFeedReceipt
@@ -304,6 +316,8 @@ class DashboardShellSmokeResult(StrictModel):
     durable_synthetic_memory_receipt_present: bool
     dashboard_live_backbone_present: bool
     clicky_ux_companion_present: bool
+    dashboard_live_data_adapter_present: bool
+    live_dashboard_receipts_present: bool
     missing_ui_terms: list[str] = Field(default_factory=list)
     missing_doc_terms: list[str] = Field(default_factory=list)
 
@@ -338,6 +352,25 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
     operational_backbone = build_dashboard_operational_backbone(now=timestamp)
     clicky_ux_companion = build_clicky_ux_companion_panel(
         operational_backbone.native_live_feed
+    )
+    gateway_action_receipts = build_dashboard_gateway_action_receipts(
+        memory_dashboard,
+        skill_list,
+        now=timestamp,
+    )
+    dashboard_live_gateway = build_dashboard_live_gateway_panel(
+        gateway_action_receipts=gateway_action_receipts,
+        now=timestamp,
+    )
+    dashboard_live_data_adapter = build_dashboard_live_data_adapter_snapshot(
+        live_gateway_panel=dashboard_live_gateway,
+        operational_backbone=operational_backbone,
+        skill_metrics=skill_metrics,
+        retrieval_debug=retrieval_debug,
+        now=timestamp,
+    )
+    live_dashboard_receipts = build_live_dashboard_receipts_panel(
+        dashboard_live_data_adapter
     )
 
     return CortexDashboardShell(
@@ -410,11 +443,10 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
         consent_onboarding=default_consent_first_onboarding_plan(),
         safe_receipts=_sample_safe_receipts(timestamp),
         demo_path=_sample_demo_path(),
-        gateway_action_receipts=build_dashboard_gateway_action_receipts(
-            memory_dashboard,
-            skill_list,
-            now=timestamp,
-        ),
+        gateway_action_receipts=gateway_action_receipts,
+        dashboard_live_gateway=dashboard_live_gateway,
+        dashboard_live_data_adapter=dashboard_live_data_adapter,
+        live_dashboard_receipts=live_dashboard_receipts,
         focus_inspector=_sample_focus_inspector(),
         policy_refs=[
             DASHBOARD_SHELL_POLICY_REF,
@@ -436,6 +468,8 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             DASHBOARD_LIVE_BACKBONE_POLICY_REF,
             CLICKY_UX_LESSONS_POLICY_REF,
             CLICKY_UX_COMPANION_POLICY_REF,
+            DASHBOARD_LIVE_DATA_ADAPTER_POLICY_REF,
+            LIVE_DASHBOARD_RECEIPTS_POLICY_REF,
         ],
         design_notes=[
             "Two primary work areas stay centered while guardrail insight panels stay compact.",
@@ -450,9 +484,10 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Live Shadow Pointer receipt is compact and sits above deeper review queues.",
             "Clicky-inspired UX keeps live presence cursor-adjacent and makes the dashboard a review space.",
             "Encrypted index receipts show counts and policy state instead of raw memory or query text.",
+            "Live dashboard panels refresh from local read-only adapter receipts, not embedded raw payloads.",
         ],
         safety_notes=[
-            "Static fixture contains synthetic view-model data only.",
+            "Dashboard data is generated from local safe read-only adapters and synthetic view-model seeds.",
             "No raw private memory, screenshots, databases, logs, or API responses are embedded.",
             "Action buttons resolve to gateway receipts before any tool call is allowed.",
             "Skill metric cards do not include procedure text, task content, or autonomy-changing controls.",
@@ -460,6 +495,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Shadow Pointer receipts do not include raw page payloads or raw refs.",
             "Clicky UX lessons were treated as untrusted external evidence and no repo code was executed.",
             "Encrypted index dashboard panels never expose key material, token text, queries, or source refs.",
+            "Live adapters expose aggregate counts only and keep write paths disabled.",
         ],
         insight_panels=_sample_insight_panels(),
         key_management_plan=operational_backbone.key_management_plan,
@@ -535,6 +571,10 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "Encrypted Index Receipts",
         "Live Receipt Backbone",
         "memory.search_index",
+        "Live Safe Receipts",
+        "DASHBOARD-LIVE-DATA-ADAPTER-001",
+        "LIVE-DASHBOARD-RECEIPTS-001",
+        "renderLiveDashboardReceipts",
     ]
     missing_ui_terms = _missing_terms(ui_text + "\n" + data_js, required_ui_terms)
     doc_text = (
@@ -555,6 +595,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "Cursor Companion",
         "Clicky",
         "encrypted index receipts",
+        "read-only adapter",
+        "live safe receipts",
     ]
     missing_doc_terms = _missing_terms(doc_text, required_doc_terms)
     action_plans_present = any(
@@ -725,6 +767,33 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and "raw://" not in clicky_ux_payload
         and "encrypted_blob://" not in clicky_ux_payload
     )
+    adapter_payload = shell.dashboard_live_data_adapter.model_dump_json()
+    dashboard_live_data_adapter_present = (
+        shell.dashboard_live_data_adapter.read_only
+        and shell.dashboard_live_data_adapter.local_only
+        and not shell.dashboard_live_data_adapter.write_path_enabled
+        and not shell.dashboard_live_data_adapter.mutation_enabled
+        and not shell.dashboard_live_data_adapter.raw_payload_returned
+        and not shell.dashboard_live_data_adapter.raw_ref_retained
+        and shell.dashboard_live_data_adapter.gateway_executed_count > 0
+        and shell.dashboard_live_data_adapter.retrieval_receipt_count > 0
+        and DASHBOARD_LIVE_DATA_ADAPTER_POLICY_REF in shell.policy_refs
+        and "raw://" not in adapter_payload
+        and "encrypted_blob://" not in adapter_payload
+    )
+    live_receipts_payload = shell.live_dashboard_receipts.model_dump_json()
+    live_dashboard_receipts_present = (
+        "Live Safe Receipts" in ui_text + "\n" + data_js
+        and shell.live_dashboard_receipts.refresh_mode == "read_only_receipts"
+        and shell.live_dashboard_receipts.gateway_executed_count > 0
+        and shell.live_dashboard_receipts.retrieval_receipt_count > 0
+        and shell.live_dashboard_receipts.skill_metric_run_count > 0
+        and not shell.live_dashboard_receipts.raw_payload_returned
+        and not shell.live_dashboard_receipts.mutation_enabled
+        and LIVE_DASHBOARD_RECEIPTS_POLICY_REF in shell.policy_refs
+        and "raw://" not in live_receipts_payload
+        and "encrypted_blob://" not in live_receipts_payload
+    )
 
     passed = (
         ui_files_present
@@ -746,6 +815,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and durable_synthetic_memory_receipt_present
         and dashboard_live_backbone_present
         and clicky_ux_companion_present
+        and dashboard_live_data_adapter_present
+        and live_dashboard_receipts_present
         and gateway_actions_present
         and not secret_retained
         and not raw_private_data_retained
@@ -792,6 +863,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         durable_synthetic_memory_receipt_present=durable_synthetic_memory_receipt_present,
         dashboard_live_backbone_present=dashboard_live_backbone_present,
         clicky_ux_companion_present=clicky_ux_companion_present,
+        dashboard_live_data_adapter_present=dashboard_live_data_adapter_present,
+        live_dashboard_receipts_present=live_dashboard_receipts_present,
         missing_ui_terms=missing_ui_terms,
         missing_doc_terms=missing_doc_terms,
     )

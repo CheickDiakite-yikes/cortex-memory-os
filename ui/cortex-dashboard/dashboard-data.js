@@ -141,6 +141,1189 @@ window.CORTEX_DASHBOARD_DATA = {
     ],
     "synthetic_only": true
   },
+  "dashboard_live_data_adapter": {
+    "adapter_sources": [
+      "dashboard_gateway_runtime",
+      "context_pack_gateway",
+      "skill_review_gateway",
+      "ops_quality_reader",
+      "encrypted_index_receipts",
+      "native_shadow_pointer_feed",
+      "durable_synthetic_receipts",
+      "skill_metrics_reader",
+      "retrieval_receipts_reader"
+    ],
+    "content_redacted": true,
+    "context_pack_memory_count": 1,
+    "context_pack_warning_count": 2,
+    "durable_synthetic_write_count": 1,
+    "encrypted_index_candidate_open_count": 1,
+    "encrypted_index_search_result_count": 1,
+    "gateway_blocked_count": 27,
+    "gateway_executed_count": 7,
+    "generated_at": "2026-05-02T15:36:06.361115Z",
+    "local_only": true,
+    "mutation_enabled": false,
+    "native_receipt_count": 1,
+    "ops_passed_cases": 2,
+    "ops_total_cases": 2,
+    "policy_refs": [
+      "policy_dashboard_live_data_adapter_v1",
+      "policy_dashboard_gateway_runtime_readonly_v1",
+      "policy_dashboard_context_pack_summary_v1",
+      "policy_dashboard_skill_review_summary_v1",
+      "policy_dashboard_ops_quality_panel_v1",
+      "policy_encrypted_index_dashboard_live_v1",
+      "policy_skill_metrics_dashboard_surface_v1",
+      "policy_retrieval_receipts_dashboard_v1"
+    ],
+    "raw_payload_returned": false,
+    "raw_ref_retained": false,
+    "read_only": true,
+    "retrieval_receipt_count": 2,
+    "skill_metric_run_count": 5,
+    "skill_review_count": 3,
+    "snapshot_id": "DASHBOARD-LIVE-DATA-ADAPTER-001",
+    "source_refs_redacted": true,
+    "write_path_enabled": false
+  },
+  "dashboard_live_gateway": {
+    "content_redacted": true,
+    "context_pack": {
+      "blocked_memory_count": 0,
+      "budget_estimated_prompt_tokens": 84,
+      "content_redacted": true,
+      "fusion_diagnostic_count": 1,
+      "generated_at": "2026-05-02T15:36:06.361115Z",
+      "goal": "primary source research synthesis",
+      "next_step_count": 3,
+      "policy_refs": [
+        "policy_dashboard_context_pack_summary_v1"
+      ],
+      "raw_payload_returned": false,
+      "relevant_memory_count": 1,
+      "retrieval_receipt_count": 1,
+      "source_refs_redacted": true,
+      "summary_id": "DASHBOARD-CONTEXT-PACK-LIVE-SUMMARY-001",
+      "warning_count": 2
+    },
+    "generated_at": "2026-05-02T15:36:06.361115Z",
+    "ops_quality": {
+      "all_passed": true,
+      "artifact_name": "bench_20260501T010628Z.json",
+      "artifact_payload_redacted": true,
+      "content_redacted": true,
+      "failed_cases": 0,
+      "generated_at": "2026-05-02T15:36:06.361115Z",
+      "invalid_identifier_count": 0,
+      "latest_run_id": "bench_20260501T010628Z",
+      "panel_id": "DASHBOARD-OPS-QUALITY-PANEL-001",
+      "passed_cases": 2,
+      "policy_refs": [
+        "policy_dashboard_ops_quality_panel_v1"
+      ],
+      "raw_case_payloads_included": false,
+      "suite_count": 2,
+      "total_cases": 2
+    },
+    "panel_id": "dashboard_live_gateway_panel_v1",
+    "policy_refs": [
+      "policy_dashboard_gateway_runtime_readonly_v1",
+      "policy_dashboard_context_pack_summary_v1",
+      "policy_dashboard_skill_review_summary_v1",
+      "policy_dashboard_ops_quality_panel_v1"
+    ],
+    "raw_payload_returned": false,
+    "runtime": {
+      "batch_id": "DASHBOARD-GATEWAY-RUNTIME-READONLY-001",
+      "blocked_count": 27,
+      "content_redacted": true,
+      "data_egress_count": 4,
+      "executed_count": 7,
+      "external_effect_count": 0,
+      "failed_count": 0,
+      "generated_at": "2026-05-02T15:36:06.361115Z",
+      "mutation_count": 20,
+      "policy_refs": [
+        "policy_dashboard_gateway_runtime_readonly_v1"
+      ],
+      "raw_payload_count": 0,
+      "receipts": [
+        {
+          "action_key": "memory.explain:mem_auth_redirect_root_cause",
+          "blocked_reasons": [],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": true,
+          "gateway_tool": "memory.explain",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": false,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_explain_memory_mem_auth_redirect_root_cause",
+          "result_kind": "memory_explanation_summary",
+          "result_summary": {
+            "allowed_influence_count": 1,
+            "available_action_count": 3,
+            "forbidden_influence_count": 2,
+            "recall_eligible": true,
+            "source_ref_count": 2,
+            "status": "active"
+          },
+          "source_refs_redacted": true,
+          "status": "executed_read_only",
+          "target_ref": "mem_auth_redirect_root_cause"
+        },
+        {
+          "action_key": "memory.correct:mem_auth_redirect_root_cause",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "memory.correct",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_correct_memory_mem_auth_redirect_root_cause",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 3
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "mem_auth_redirect_root_cause"
+        },
+        {
+          "action_key": "memory.forget:mem_auth_redirect_root_cause",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "memory.forget",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_delete_memory_mem_auth_redirect_root_cause",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "mem_auth_redirect_root_cause"
+        },
+        {
+          "action_key": "memory.export:mem_auth_redirect_root_cause",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "data_egress_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": true,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "memory.export",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": false,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_export_memories_mem_auth_redirect_root_cause",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "mem_auth_redirect_root_cause"
+        },
+        {
+          "action_key": "memory.explain:mem_smallest_safe_change",
+          "blocked_reasons": [],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": true,
+          "gateway_tool": "memory.explain",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": false,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_explain_memory_mem_smallest_safe_change",
+          "result_kind": "memory_explanation_summary",
+          "result_summary": {
+            "allowed_influence_count": 2,
+            "available_action_count": 3,
+            "forbidden_influence_count": 2,
+            "recall_eligible": true,
+            "source_ref_count": 2,
+            "status": "active"
+          },
+          "source_refs_redacted": true,
+          "status": "executed_read_only",
+          "target_ref": "mem_smallest_safe_change"
+        },
+        {
+          "action_key": "memory.correct:mem_smallest_safe_change",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "memory.correct",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_correct_memory_mem_smallest_safe_change",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 3
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "mem_smallest_safe_change"
+        },
+        {
+          "action_key": "memory.forget:mem_smallest_safe_change",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "memory.forget",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_delete_memory_mem_smallest_safe_change",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "mem_smallest_safe_change"
+        },
+        {
+          "action_key": "memory.export:mem_smallest_safe_change",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "data_egress_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": true,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "memory.export",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": false,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_export_memories_mem_smallest_safe_change",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "mem_smallest_safe_change"
+        },
+        {
+          "action_key": "memory.explain:mem_linear_label_tracking",
+          "blocked_reasons": [],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": true,
+          "gateway_tool": "memory.explain",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": false,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_explain_memory_mem_linear_label_tracking",
+          "result_kind": "memory_explanation_summary",
+          "result_summary": {
+            "allowed_influence_count": 1,
+            "available_action_count": 3,
+            "forbidden_influence_count": 2,
+            "recall_eligible": true,
+            "source_ref_count": 2,
+            "status": "candidate"
+          },
+          "source_refs_redacted": true,
+          "status": "executed_read_only",
+          "target_ref": "mem_linear_label_tracking"
+        },
+        {
+          "action_key": "memory.correct:mem_linear_label_tracking",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "memory.correct",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_correct_memory_mem_linear_label_tracking",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 3
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "mem_linear_label_tracking"
+        },
+        {
+          "action_key": "memory.forget:mem_linear_label_tracking",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "memory.forget",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_delete_memory_mem_linear_label_tracking",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "mem_linear_label_tracking"
+        },
+        {
+          "action_key": "memory.export:mem_linear_label_tracking",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "data_egress_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": true,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "memory.export",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": false,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_export_memories_mem_linear_label_tracking",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "mem_linear_label_tracking"
+        },
+        {
+          "action_key": "memory.explain:mem_research_depth_candidate",
+          "blocked_reasons": [],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": true,
+          "gateway_tool": "memory.explain",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": false,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_explain_memory_mem_research_depth_candidate",
+          "result_kind": "memory_explanation_summary",
+          "result_summary": {
+            "allowed_influence_count": 1,
+            "available_action_count": 3,
+            "forbidden_influence_count": 2,
+            "recall_eligible": true,
+            "source_ref_count": 2,
+            "status": "candidate"
+          },
+          "source_refs_redacted": true,
+          "status": "executed_read_only",
+          "target_ref": "mem_research_depth_candidate"
+        },
+        {
+          "action_key": "memory.correct:mem_research_depth_candidate",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "memory.correct",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_correct_memory_mem_research_depth_candidate",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 3
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "mem_research_depth_candidate"
+        },
+        {
+          "action_key": "memory.forget:mem_research_depth_candidate",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "memory.forget",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_delete_memory_mem_research_depth_candidate",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "mem_research_depth_candidate"
+        },
+        {
+          "action_key": "memory.export:mem_research_depth_candidate",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "data_egress_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": true,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "memory.export",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": false,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_memory_palace_export_memories_mem_research_depth_candidate",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "mem_research_depth_candidate"
+        },
+        {
+          "action_key": "skill.review_candidate:skill_doc_doc_monthly_update_workflow_candidate_v1",
+          "blocked_reasons": [],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": true,
+          "gateway_tool": "skill.review_candidate",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": false,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_review_candidate_skill_doc_doc_monthly_update_workflow_candidate_v1",
+          "result_kind": "skill_candidate_review_summary",
+          "result_summary": {
+            "learned_from_count": 3,
+            "maturity_level": 2,
+            "procedure_step_count": 3,
+            "requires_confirmation_count": 4,
+            "risk_level": "high",
+            "trigger_count": 1
+          },
+          "source_refs_redacted": true,
+          "status": "executed_read_only",
+          "target_ref": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+        },
+        {
+          "action_key": "skill.execute_draft:skill_doc_doc_monthly_update_workflow_candidate_v1",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "skill.execute_draft",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": false,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_execute_draft_skill_doc_doc_monthly_update_workflow_candidate_v1",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 2
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+        },
+        {
+          "action_key": "skill.approve_draft_only:skill_doc_doc_monthly_update_workflow_candidate_v1",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "skill.approve_draft_only",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_approve_draft_only_skill_doc_doc_monthly_update_workflow_candidate_v1",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+        },
+        {
+          "action_key": "skill.edit_candidate:skill_doc_doc_monthly_update_workflow_candidate_v1",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "skill.edit_candidate",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_edit_steps_skill_doc_doc_monthly_update_workflow_candidate_v1",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+        },
+        {
+          "action_key": "skill.need_more_data:skill_doc_doc_monthly_update_workflow_candidate_v1",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "skill.need_more_data",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_need_more_data_skill_doc_doc_monthly_update_workflow_candidate_v1",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 3
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+        },
+        {
+          "action_key": "skill.reject_candidate:skill_doc_doc_monthly_update_workflow_candidate_v1",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "skill.reject_candidate",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_reject_candidate_skill_doc_doc_monthly_update_workflow_candidate_v1",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "skill_doc_doc_monthly_update_workflow_candidate_v1"
+        },
+        {
+          "action_key": "skill.review_candidate:skill_frontend_auth_debugging_flow_v1",
+          "blocked_reasons": [],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": true,
+          "gateway_tool": "skill.review_candidate",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": false,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_review_candidate_skill_frontend_auth_debugging_flow_v1",
+          "result_kind": "skill_candidate_review_summary",
+          "result_summary": {
+            "learned_from_count": 3,
+            "maturity_level": 2,
+            "procedure_step_count": 4,
+            "requires_confirmation_count": 1,
+            "risk_level": "medium",
+            "trigger_count": 2
+          },
+          "source_refs_redacted": true,
+          "status": "executed_read_only",
+          "target_ref": "skill_frontend_auth_debugging_flow_v1"
+        },
+        {
+          "action_key": "skill.execute_draft:skill_frontend_auth_debugging_flow_v1",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "skill.execute_draft",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": false,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_execute_draft_skill_frontend_auth_debugging_flow_v1",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 2
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "skill_frontend_auth_debugging_flow_v1"
+        },
+        {
+          "action_key": "skill.approve_draft_only:skill_frontend_auth_debugging_flow_v1",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "skill.approve_draft_only",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_approve_draft_only_skill_frontend_auth_debugging_flow_v1",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "skill_frontend_auth_debugging_flow_v1"
+        },
+        {
+          "action_key": "skill.edit_candidate:skill_frontend_auth_debugging_flow_v1",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "skill.edit_candidate",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_edit_steps_skill_frontend_auth_debugging_flow_v1",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "skill_frontend_auth_debugging_flow_v1"
+        },
+        {
+          "action_key": "skill.need_more_data:skill_frontend_auth_debugging_flow_v1",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "skill.need_more_data",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_need_more_data_skill_frontend_auth_debugging_flow_v1",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 3
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "skill_frontend_auth_debugging_flow_v1"
+        },
+        {
+          "action_key": "skill.reject_candidate:skill_frontend_auth_debugging_flow_v1",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "skill.reject_candidate",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_reject_candidate_skill_frontend_auth_debugging_flow_v1",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "skill_frontend_auth_debugging_flow_v1"
+        },
+        {
+          "action_key": "skill.review_candidate:skill_research_synthesis_blueprint_v1",
+          "blocked_reasons": [],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": true,
+          "gateway_tool": "skill.review_candidate",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": false,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_review_candidate_skill_research_synthesis_blueprint_v1",
+          "result_kind": "skill_candidate_review_summary",
+          "result_summary": {
+            "learned_from_count": 3,
+            "maturity_level": 2,
+            "procedure_step_count": 4,
+            "requires_confirmation_count": 0,
+            "risk_level": "low",
+            "trigger_count": 2
+          },
+          "source_refs_redacted": true,
+          "status": "executed_read_only",
+          "target_ref": "skill_research_synthesis_blueprint_v1"
+        },
+        {
+          "action_key": "skill.execute_draft:skill_research_synthesis_blueprint_v1",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "skill.execute_draft",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": false,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_execute_draft_skill_research_synthesis_blueprint_v1",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 2
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "skill_research_synthesis_blueprint_v1"
+        },
+        {
+          "action_key": "skill.approve_draft_only:skill_research_synthesis_blueprint_v1",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "skill.approve_draft_only",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_approve_draft_only_skill_research_synthesis_blueprint_v1",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "skill_research_synthesis_blueprint_v1"
+        },
+        {
+          "action_key": "skill.edit_candidate:skill_research_synthesis_blueprint_v1",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "skill.edit_candidate",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_edit_steps_skill_research_synthesis_blueprint_v1",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "skill_research_synthesis_blueprint_v1"
+        },
+        {
+          "action_key": "skill.need_more_data:skill_research_synthesis_blueprint_v1",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "skill.need_more_data",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_need_more_data_skill_research_synthesis_blueprint_v1",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 3
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "skill_research_synthesis_blueprint_v1"
+        },
+        {
+          "action_key": "skill.reject_candidate:skill_research_synthesis_blueprint_v1",
+          "blocked_reasons": [
+            "tool_not_enabled_for_read_only_dashboard_slice",
+            "not_read_only",
+            "mutation_blocked",
+            "confirmation_required"
+          ],
+          "content_redacted": true,
+          "data_egress": false,
+          "error_type": null,
+          "external_effect": false,
+          "gateway_called": false,
+          "gateway_tool": "skill.reject_candidate",
+          "generated_at": "2026-05-02T15:36:06.361115Z",
+          "mutation": true,
+          "policy_refs": [
+            "policy_dashboard_gateway_runtime_readonly_v1"
+          ],
+          "procedure_redacted": true,
+          "raw_payload_returned": false,
+          "receipt_id": "runtime_dash_gateway_skill_forge_reject_candidate_skill_research_synthesis_blueprint_v1",
+          "result_kind": "blocked_preview",
+          "result_summary": {
+            "blocked_reason_count": 4
+          },
+          "source_refs_redacted": true,
+          "status": "blocked_before_gateway",
+          "target_ref": "skill_research_synthesis_blueprint_v1"
+        }
+      ]
+    },
+    "skill_reviews": [
+      {
+        "content_redacted": true,
+        "execution_mode": "draft_only",
+        "external_effect": false,
+        "failure_mode_count": 3,
+        "generated_at": "2026-05-02T15:36:06.361115Z",
+        "learned_from_count": 3,
+        "maturity_level": 2,
+        "mutation": false,
+        "policy_refs": [
+          "policy_dashboard_skill_review_summary_v1"
+        ],
+        "procedure_redacted": true,
+        "procedure_step_count": 3,
+        "requires_confirmation_count": 4,
+        "risk_level": "high",
+        "skill_id": "skill_doc_doc_monthly_update_workflow_candidate_v1",
+        "success_signal_count": 3,
+        "summary_id": "DASHBOARD-SKILL-REVIEW-LIVE-SUMMARY-001",
+        "trigger_count": 1
+      },
+      {
+        "content_redacted": true,
+        "execution_mode": "draft_only",
+        "external_effect": false,
+        "failure_mode_count": 2,
+        "generated_at": "2026-05-02T15:36:06.361115Z",
+        "learned_from_count": 3,
+        "maturity_level": 2,
+        "mutation": false,
+        "policy_refs": [
+          "policy_dashboard_skill_review_summary_v1"
+        ],
+        "procedure_redacted": true,
+        "procedure_step_count": 4,
+        "requires_confirmation_count": 1,
+        "risk_level": "medium",
+        "skill_id": "skill_frontend_auth_debugging_flow_v1",
+        "success_signal_count": 2,
+        "summary_id": "DASHBOARD-SKILL-REVIEW-LIVE-SUMMARY-001",
+        "trigger_count": 2
+      },
+      {
+        "content_redacted": true,
+        "execution_mode": "draft_only",
+        "external_effect": false,
+        "failure_mode_count": 2,
+        "generated_at": "2026-05-02T15:36:06.361115Z",
+        "learned_from_count": 3,
+        "maturity_level": 2,
+        "mutation": false,
+        "policy_refs": [
+          "policy_dashboard_skill_review_summary_v1"
+        ],
+        "procedure_redacted": true,
+        "procedure_step_count": 4,
+        "requires_confirmation_count": 0,
+        "risk_level": "low",
+        "skill_id": "skill_research_synthesis_blueprint_v1",
+        "success_signal_count": 2,
+        "summary_id": "DASHBOARD-SKILL-REVIEW-LIVE-SUMMARY-001",
+        "trigger_count": 2
+      }
+    ]
+  },
   "demo_path": {
     "blocked_effects": [
       "real_screen_capture",
@@ -224,10 +1407,11 @@ window.CORTEX_DASHBOARD_DATA = {
     "Shadow Pointer Live Receipt stays compact and policy-first.",
     "Live Shadow Pointer receipt is compact and sits above deeper review queues.",
     "Clicky-inspired UX keeps live presence cursor-adjacent and makes the dashboard a review space.",
-    "Encrypted index receipts show counts and policy state instead of raw memory or query text."
+    "Encrypted index receipts show counts and policy state instead of raw memory or query text.",
+    "Live dashboard panels refresh from local read-only adapter receipts, not embedded raw payloads."
   ],
   "durable_synthetic_memory_receipt": {
-    "audit_event_id": "audit_durable_synthetic_memory_20260502T035049Z",
+    "audit_event_id": "audit_durable_synthetic_memory_20260502T153606Z",
     "audit_human_visible": true,
     "audit_written": true,
     "content_redacted": true,
@@ -235,7 +1419,7 @@ window.CORTEX_DASHBOARD_DATA = {
     "durable_private_memory_written": false,
     "durable_synthetic_memory_written": true,
     "encrypted_store_used": true,
-    "generated_at": "2026-05-02T03:50:49.185825Z",
+    "generated_at": "2026-05-02T15:36:06.361115Z",
     "graph_write_receipt": {
       "content_redacted": true,
       "edge_id": "edge_durable_synthetic_receipt_debug",
@@ -248,7 +1432,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "related_memory_count": 1,
       "sealed_byte_count": 311,
       "source_refs_redacted": true,
-      "stored_at": "2026-05-02T03:50:49.185825Z"
+      "stored_at": "2026-05-02T15:36:06.361115Z"
     },
     "index_write_receipt": {
       "allowed_effects": [
@@ -302,15 +1486,15 @@ window.CORTEX_DASHBOARD_DATA = {
           "status": "active"
         },
         "memory_id": "mem_durable_synthetic_receipt_debug",
-        "payload_sha256": "2e976b722e7ce7c6ebb2c449607d29d903a4cf8b8d55d382e4dfee7e9faece1a",
+        "payload_sha256": "250a9b003897aab27f11320f10f477f8ff02d5b2f63a55f6e5d6e68569c5f992",
         "policy_refs": [
           "policy_memory_encryption_default_v1"
         ],
         "sealed_byte_count": 795,
         "source_refs_redacted": true,
-        "stored_at": "2026-05-02T03:50:49.185825Z"
+        "stored_at": "2026-05-02T15:36:06.361115Z"
       },
-      "stored_at": "2026-05-02T03:50:49.185825Z",
+      "stored_at": "2026-05-02T15:36:06.361115Z",
       "token_digest_count": 22,
       "token_text_redacted": true
     },
@@ -329,7 +1513,7 @@ window.CORTEX_DASHBOARD_DATA = {
     "raw_payload_included": false,
     "raw_ref_retained": false,
     "real_screen_capture_started": false,
-    "receipt_id": "durable_synthetic_receipt_20260502T035049Z",
+    "receipt_id": "durable_synthetic_receipt_20260502T153606Z",
     "search_receipt": {
       "candidate_open_count": 1,
       "considered_index_rows": 1,
@@ -441,7 +1625,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.explain",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": false,
       "payload_preview": {
         "memory_id_or_visible_card_anchor": "mem_auth_redirect_root_cause"
@@ -477,7 +1661,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.correct",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "corrected_content": "<redacted_user_supplied_value>",
@@ -516,7 +1700,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.forget",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "explicit_delete_confirmation": "<required_at_confirmation>",
@@ -555,7 +1739,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": true,
       "external_effect": false,
       "gateway_tool": "memory.export",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": false,
       "payload_preview": {
         "explicit_export_confirmation": "<required_at_confirmation>",
@@ -589,7 +1773,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.explain",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": false,
       "payload_preview": {
         "memory_id_or_visible_card_anchor": "mem_smallest_safe_change"
@@ -625,7 +1809,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.correct",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "corrected_content": "<redacted_user_supplied_value>",
@@ -664,7 +1848,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.forget",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "explicit_delete_confirmation": "<required_at_confirmation>",
@@ -703,7 +1887,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": true,
       "external_effect": false,
       "gateway_tool": "memory.export",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": false,
       "payload_preview": {
         "explicit_export_confirmation": "<required_at_confirmation>",
@@ -737,7 +1921,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.explain",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": false,
       "payload_preview": {
         "memory_id_or_visible_card_anchor": "mem_linear_label_tracking"
@@ -773,7 +1957,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.correct",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "corrected_content": "<redacted_user_supplied_value>",
@@ -812,7 +1996,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.forget",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "explicit_delete_confirmation": "<required_at_confirmation>",
@@ -851,7 +2035,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": true,
       "external_effect": false,
       "gateway_tool": "memory.export",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": false,
       "payload_preview": {
         "explicit_export_confirmation": "<required_at_confirmation>",
@@ -885,7 +2069,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.explain",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": false,
       "payload_preview": {
         "memory_id_or_visible_card_anchor": "mem_research_depth_candidate"
@@ -921,7 +2105,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.correct",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "corrected_content": "<redacted_user_supplied_value>",
@@ -960,7 +2144,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.forget",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "explicit_delete_confirmation": "<required_at_confirmation>",
@@ -999,7 +2183,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": true,
       "external_effect": false,
       "gateway_tool": "memory.export",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": false,
       "payload_preview": {
         "explicit_export_confirmation": "<required_at_confirmation>",
@@ -1033,7 +2217,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.review_candidate",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": false,
       "payload_preview": {
         "skill_id": "skill_doc_doc_monthly_update_workflow_candidate_v1"
@@ -1068,7 +2252,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.execute_draft",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": false,
       "payload_preview": {
         "input_summary": "<redacted_user_supplied_value>",
@@ -1107,7 +2291,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.approve_draft_only",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1146,7 +2330,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.edit_candidate",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1186,7 +2370,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.need_more_data",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "reason": "<redacted_user_supplied_value>",
@@ -1225,7 +2409,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.reject_candidate",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1259,7 +2443,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.review_candidate",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": false,
       "payload_preview": {
         "skill_id": "skill_frontend_auth_debugging_flow_v1"
@@ -1294,7 +2478,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.execute_draft",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": false,
       "payload_preview": {
         "input_summary": "<redacted_user_supplied_value>",
@@ -1333,7 +2517,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.approve_draft_only",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1372,7 +2556,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.edit_candidate",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1412,7 +2596,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.need_more_data",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "reason": "<redacted_user_supplied_value>",
@@ -1451,7 +2635,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.reject_candidate",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1485,7 +2669,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.review_candidate",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": false,
       "payload_preview": {
         "skill_id": "skill_research_synthesis_blueprint_v1"
@@ -1520,7 +2704,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.execute_draft",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": false,
       "payload_preview": {
         "input_summary": "<redacted_user_supplied_value>",
@@ -1559,7 +2743,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.approve_draft_only",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1598,7 +2782,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.edit_candidate",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1638,7 +2822,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.need_more_data",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "reason": "<redacted_user_supplied_value>",
@@ -1677,7 +2861,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.reject_candidate",
-      "generated_at": "2026-05-02T03:50:49.185825Z",
+      "generated_at": "2026-05-02T15:36:06.361115Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -1701,7 +2885,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "target_ref": "skill_research_synthesis_blueprint_v1"
     }
   ],
-  "generated_at": "2026-05-02T03:50:49.185825Z",
+  "generated_at": "2026-05-02T15:36:06.361115Z",
   "insight_panels": [
     {
       "content_redacted": true,
@@ -2069,7 +3253,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "external_effect"
     ],
     "content_redacted": true,
-    "durable_receipt_id": "durable_synthetic_receipt_20260502T035049Z",
+    "durable_receipt_id": "durable_synthetic_receipt_20260502T153606Z",
     "encrypted_index_panel_id": "ENCRYPTED-INDEX-DASHBOARD-LIVE-001",
     "key_material_visible": false,
     "key_plan_id": "KEY-MANAGEMENT-PLAN-001",
@@ -2092,6 +3276,34 @@ window.CORTEX_DASHBOARD_DATA = {
     "source_refs_redacted": true,
     "summary": "Key lifecycle, encrypted index receipts, native overlay feed, and synthetic durable writes are wired as redacted receipts.",
     "title": "Live Receipt Backbone"
+  },
+  "live_dashboard_receipts": {
+    "content_redacted": true,
+    "encrypted_index_search_result_count": 1,
+    "gateway_blocked_count": 27,
+    "gateway_executed_count": 7,
+    "generated_at": "2026-05-02T15:36:06.361115Z",
+    "mutation_enabled": false,
+    "ops_passed_cases": 2,
+    "panel_id": "LIVE-DASHBOARD-RECEIPTS-001",
+    "policy_refs": [
+      "policy_live_dashboard_receipts_v1",
+      "policy_dashboard_live_data_adapter_v1"
+    ],
+    "raw_payload_returned": false,
+    "refresh_mode": "read_only_receipts",
+    "refresh_sources": [
+      "gateway_runtime",
+      "retrieval_receipts",
+      "encrypted_index",
+      "ops_quality",
+      "skill_metrics"
+    ],
+    "retrieval_receipt_count": 2,
+    "skill_metric_run_count": 5,
+    "source_refs_redacted": true,
+    "summary": "Retrieval, encrypted index, ops quality, skill metrics, and gateway receipts refresh from local read-only adapters.",
+    "title": "Live Safe Receipts"
   },
   "local_mode": true,
   "memory_palace": {
@@ -2403,7 +3615,7 @@ window.CORTEX_DASHBOARD_DATA = {
       }
     ],
     "confirmation_required_count": 8,
-    "dashboard_id": "memory_palace_dashboard_20260502T035049Z",
+    "dashboard_id": "memory_palace_dashboard_20260502T153606Z",
     "export_preview": {
       "data_egress": true,
       "exportable_count": 3,
@@ -2425,7 +3637,7 @@ window.CORTEX_DASHBOARD_DATA = {
       ],
       "selection_mode": "explicit_ids"
     },
-    "generated_at": "2026-05-02T03:50:49.185825Z",
+    "generated_at": "2026-05-02T15:36:06.361115Z",
     "policy_refs": [
       "policy_memory_palace_dashboard_v1",
       "policy_memory_export_deletion_aware_v1",
@@ -2462,7 +3674,7 @@ window.CORTEX_DASHBOARD_DATA = {
     "display_only": true,
     "external_untrusted_count": 1,
     "feed_id": "NATIVE-SHADOW-POINTER-LIVE-FEED-001",
-    "generated_at": "2026-05-02T03:50:49.185825Z",
+    "generated_at": "2026-05-02T15:36:06.361115Z",
     "latest_observation_mode": "session",
     "latest_state": "observing",
     "memory_eligible_count": 0,
@@ -2534,7 +3746,9 @@ window.CORTEX_DASHBOARD_DATA = {
     "policy_durable_synthetic_memory_receipts_v1",
     "policy_dashboard_live_backbone_v1",
     "policy_clicky_ux_lessons_v1",
-    "policy_clicky_ux_companion_v1"
+    "policy_clicky_ux_companion_v1",
+    "policy_dashboard_live_data_adapter_v1",
+    "policy_live_dashboard_receipts_v1"
   ],
   "retrieval_debug": {
     "cards": [
@@ -2588,7 +3802,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "evidence_only": 1,
       "included": 1
     },
-    "generated_at": "2026-05-02T03:50:49.185825Z",
+    "generated_at": "2026-05-02T15:36:06.361115Z",
     "hostile_text_included": false,
     "policy_refs": [
       "policy_retrieval_receipts_dashboard_v1",
@@ -2610,7 +3824,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_memory_created",
       "state": "healthy",
       "target_ref": "mem_smallest_safe_change",
-      "timestamp": "2026-05-02T03:50:49.185825Z"
+      "timestamp": "2026-05-02T15:36:06.361115Z"
     },
     {
       "actor": "system",
@@ -2619,7 +3833,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_memory_export_preview",
       "state": "neutral",
       "target_ref": "export_preview_project_scope",
-      "timestamp": "2026-05-02T03:50:49.185825Z"
+      "timestamp": "2026-05-02T15:36:06.361115Z"
     },
     {
       "actor": "system",
@@ -2628,7 +3842,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_skill_candidate_created",
       "state": "healthy",
       "target_ref": "skill_frontend_auth_debugging_flow_v1",
-      "timestamp": "2026-05-02T03:50:49.185825Z"
+      "timestamp": "2026-05-02T15:36:06.361115Z"
     },
     {
       "actor": "user",
@@ -2637,18 +3851,19 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_observation_paused",
       "state": "warning",
       "target_ref": "session_20260430",
-      "timestamp": "2026-05-02T03:50:49.185825Z"
+      "timestamp": "2026-05-02T15:36:06.361115Z"
     }
   ],
   "safety_notes": [
-    "Static fixture contains synthetic view-model data only.",
+    "Dashboard data is generated from local safe read-only adapters and synthetic view-model seeds.",
     "No raw private memory, screenshots, databases, logs, or API responses are embedded.",
     "Action buttons resolve to gateway receipts before any tool call is allowed.",
     "Skill metric cards do not include procedure text, task content, or autonomy-changing controls.",
     "Retrieval receipt cards do not include memory content, source refs, or hostile text.",
     "Shadow Pointer receipts do not include raw page payloads or raw refs.",
     "Clicky UX lessons were treated as untrusted external evidence and no repo code was executed.",
-    "Encrypted index dashboard panels never expose key material, token text, queries, or source refs."
+    "Encrypted index dashboard panels never expose key material, token text, queries, or source refs.",
+    "Live adapters expose aggregate counts only and keep write paths disabled."
   ],
   "shadow_pointer_live_receipt": {
     "action_required": false,
@@ -3217,8 +4432,8 @@ window.CORTEX_DASHBOARD_DATA = {
       }
     ],
     "external_effect_action_count": 0,
-    "generated_at": "2026-05-02T03:50:49.185825Z",
-    "list_id": "skill_forge_candidate_list_20260502T035049Z",
+    "generated_at": "2026-05-02T15:36:06.361115Z",
+    "list_id": "skill_forge_candidate_list_20260502T153606Z",
     "policy_refs": [
       "policy_skill_forge_candidate_list_v1"
     ],
@@ -3340,7 +4555,7 @@ window.CORTEX_DASHBOARD_DATA = {
     ],
     "content_redacted": true,
     "dashboard_id": "SKILL-METRICS-DASHBOARD-SURFACE-001",
-    "generated_at": "2026-05-02T03:50:49.185825Z",
+    "generated_at": "2026-05-02T15:36:06.361115Z",
     "policy_refs": [
       "policy_skill_metrics_dashboard_surface_v1",
       "policy_skill_success_metrics_v1"

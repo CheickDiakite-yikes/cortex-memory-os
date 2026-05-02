@@ -179,3 +179,20 @@ operational receipt, not a hidden duplicate of the skill.
 - provenance is preserved;
 - approval, rollback, and deletion paths are exposed;
 - hostile or instruction-like source documents are rejected.
+
+`WORKFLOW-CLUSTERING-001` adds workflow clustering over repeated synthetic or
+session traces. It groups traces by normalized workflow label, apps, and action
+sequence, then produces a candidate skill only after the repetition threshold is
+met.
+
+Required behavior:
+
+- clustered skills stay candidate-only and draft-only;
+- maturity cannot exceed Level 2;
+- source details stay redacted in cluster receipts;
+- hostile traces are rejected;
+- traces with external effects are rejected;
+- draft previews require review before promotion, procedure changes, or any
+  external effect.
+
+Policy ref: `policy_workflow_clustering_v1`.

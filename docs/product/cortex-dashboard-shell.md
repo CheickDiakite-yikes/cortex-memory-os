@@ -38,6 +38,14 @@ Clicky UX companion benchmark: `CLICKY-UX-COMPANION-001`
 
 Clicky UX companion policy: `policy_clicky_ux_companion_v1`
 
+Live data adapter benchmark: `DASHBOARD-LIVE-DATA-ADAPTER-001`
+
+Live data adapter policy: `policy_dashboard_live_data_adapter_v1`
+
+Live dashboard receipts benchmark: `LIVE-DASHBOARD-RECEIPTS-001`
+
+Live dashboard receipts policy: `policy_live_dashboard_receipts_v1`
+
 This slice turns the generated dashboard concept into a local, static,
 inspectable dashboard shell over safe view models. The goal is a usable product
 surface for Memory Palace and Skill Forge without introducing live capture,
@@ -76,6 +84,13 @@ receipt panel, display-only pointing, and onboarding by demonstration. The
 dashboard now shows the companion beside `Encrypted Index Receipts` so live
 status and encrypted retrieval health are visible without adding another dense
 queue.
+
+The live data adapter refinement replaces static backbone assumptions with a
+local read-only adapter over safe receipts. The dashboard reads count-only
+gateway, context-pack, skill-review, ops-quality, encrypted-index, native-feed,
+retrieval, and skill-metric receipts. The live safe receipts panel refreshes
+from those adapters without write paths, raw payloads, source refs, or private
+memory content.
 
 ## Design Source
 
@@ -120,6 +135,8 @@ safe view models:
 - `NativeShadowPointerLiveFeedReceipt`
 - `DurableSyntheticMemoryReceipt`
 - `ClickyUxCompanionPanel`
+- `DashboardLiveDataAdapterSnapshot`
+- `LiveDashboardReceiptsPanel`
 
 The generated `ui/cortex-dashboard/dashboard-data.js` contains synthetic,
 redacted, deterministic view-model data. It must contain no raw private memory,
@@ -159,6 +176,11 @@ The static app in `ui/cortex-dashboard/` must render:
 - `Live Receipt Backbone` for `DASHBOARD-LIVE-BACKBONE-001`, tying key
   management, encrypted index receipts, native live feed, and durable synthetic
   memory receipts together as redacted operational proof;
+- `Live Safe Receipts` for `LIVE-DASHBOARD-RECEIPTS-001`, showing retrieval,
+  encrypted index, ops quality, skill metric, and gateway runtime counts from
+  the local read-only adapter;
+- `DASHBOARD-LIVE-DATA-ADAPTER-001`, proving that dashboard panels can refresh
+  from local read-only adapters while write paths and raw payloads stay off;
 - Consent-first Onboarding for `CONSENT-FIRST-ONBOARDING-001`, showing the
   synthetic-only first-run path before real capture;
 - real tab views that hide unrelated panels when the user moves between

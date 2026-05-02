@@ -13,12 +13,6 @@ from pydantic import Field, model_validator
 
 from cortex_memory_os.contracts import StrictModel
 from cortex_memory_os.dashboard_gateway_actions import DashboardGatewayActionReceipt
-from cortex_memory_os.dashboard_shell import (
-    CortexDashboardShell,
-    _sample_memories,
-    _sample_skills,
-    build_dashboard_shell,
-)
 from cortex_memory_os.mcp_server import CortexMCPServer, JsonRpcError
 from cortex_memory_os.memory_palace import MemoryPalaceService
 from cortex_memory_os.ops_quality import OpsQualitySummary, summarize_ops_quality_payload
@@ -185,6 +179,8 @@ class DashboardLiveGatewayPanel(StrictModel):
 def build_dashboard_gateway_runtime_server(
     *, now: datetime | None = None
 ) -> CortexMCPServer:
+    from cortex_memory_os.dashboard_shell import _sample_memories, _sample_skills
+
     timestamp = _timestamp(now)
     tempdir = TemporaryDirectory()
     store = SQLiteMemoryGraphStore(Path(tempdir.name) / "cortex-dashboard.sqlite3")
@@ -201,16 +197,22 @@ def build_dashboard_gateway_runtime_server(
 
 def execute_dashboard_gateway_receipts(
     *,
-    shell: CortexDashboardShell | None = None,
+    gateway_action_receipts: list[DashboardGatewayActionReceipt] | None = None,
     server: CortexMCPServer | None = None,
     now: datetime | None = None,
 ) -> DashboardGatewayRuntimeBatch:
+    if gateway_action_receipts is None:
+        from cortex_memory_os.dashboard_shell import build_dashboard_shell
+
     timestamp = _timestamp(now)
-    shell = shell or build_dashboard_shell(now=timestamp)
+    if gateway_action_receipts is None:
+        gateway_action_receipts = build_dashboard_shell(
+            now=timestamp
+        ).gateway_action_receipts
     server = server or build_dashboard_gateway_runtime_server(now=timestamp)
     receipts = [
         _execute_receipt(receipt, server=server, now=timestamp)
-        for receipt in shell.gateway_action_receipts
+        for receipt in gateway_action_receipts
     ]
     return DashboardGatewayRuntimeBatch(
         generated_at=timestamp,
@@ -303,11 +305,17 @@ def build_ops_quality_panel(
 
 
 def build_dashboard_live_gateway_panel(
-    *, now: datetime | None = None
+    *,
+    gateway_action_receipts: list[DashboardGatewayActionReceipt] | None = None,
+    now: datetime | None = None,
 ) -> DashboardLiveGatewayPanel:
     timestamp = _timestamp(now)
     server = build_dashboard_gateway_runtime_server(now=timestamp)
-    runtime = execute_dashboard_gateway_receipts(server=server, now=timestamp)
+    runtime = execute_dashboard_gateway_receipts(
+        gateway_action_receipts=gateway_action_receipts,
+        server=server,
+        now=timestamp,
+    )
     context_pack = build_context_pack_live_summary(server=server, now=timestamp)
     skill_reviews = build_skill_review_live_summaries(server=server, now=timestamp)
     return DashboardLiveGatewayPanel(
