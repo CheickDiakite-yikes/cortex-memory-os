@@ -33,8 +33,8 @@ const skillMetricById = new Map((data.skill_metrics?.cards || []).map((card) => 
 const viewCopy = {
   overview: {
     label: "Overview",
-    title: "Cortex Memory OS",
-    copy: "System status, demo readiness, and guardrail health.",
+    title: "Cortex Home",
+    copy: "A simple control room for the live tutor, memory review, and safety state.",
   },
   memory_palace: {
     label: "Memory Palace",
@@ -324,6 +324,102 @@ function renderStatusStrip() {
 
   document.querySelector("#pause-observation").addEventListener("click", () => {
     writeReceipt("Observation pause previewed locally. Confirmation and audit receipt required.");
+  });
+}
+
+function renderHomeCommandCenter() {
+  const target = document.querySelector("#home-command-center");
+  if (!target) return;
+  const shadow = data.shadow_pointer_live_receipt || {};
+  const fields = shadow.compact_fields || {};
+  const liveTutor = data.live_tutor_panel || {};
+  const capturePanel = data.capture_control?.dashboard_panel || {};
+  const memoryCount = data.memory_palace?.cards?.length || 0;
+  const skillCount = data.skill_forge?.cards?.length || 0;
+  const receiptCount = data.safe_receipts?.length || 0;
+  const tutorHref = liveTutor.demo_url || "http://127.0.0.1:8797/";
+
+  target.innerHTML = `
+    <div class="home-hero">
+      <div class="home-hero-copy">
+        <p class="section-label">Cortex Home</p>
+        <h2>Cortex is in safe local mode.</h2>
+        <p>
+          Use the live tutor, review what Cortex thinks it knows, and inspect
+          safety state without digging through benchmark panels.
+        </p>
+      </div>
+      <div class="home-safety-card" aria-label="Current safety boundary">
+        <span>${svgIcon("shield")}</span>
+        <strong>No raw capture running</strong>
+        <p>Screen capture off. Memory writes off. Raw refs none.</p>
+      </div>
+    </div>
+    <div class="home-actions" aria-label="Primary actions">
+      <a class="home-action primary" href="${escapeHtml(tutorHref)}">
+        <span>${svgIcon("pointer")}</span>
+        <div>
+          <strong>Open Live Tutor</strong>
+          <em>Talk to the blue cursor demo</em>
+        </div>
+      </a>
+      <button class="home-action" type="button" data-home-view="agent_gateway">
+        <span>${svgIcon("play")}</span>
+        <div>
+          <strong>Turn On Cursor</strong>
+          <em>Open live controls</em>
+        </div>
+      </button>
+      <button class="home-action" type="button" data-home-view="memory_palace">
+        <span>${svgIcon("memory_palace")}</span>
+        <div>
+          <strong>Review Memory</strong>
+          <em>${memoryCount} safe cards</em>
+        </div>
+      </button>
+      <button class="home-action" type="button" data-home-view="skill_forge">
+        <span>${svgIcon("skill_forge")}</span>
+        <div>
+          <strong>Review Skills</strong>
+          <em>${skillCount} candidates</em>
+        </div>
+      </button>
+      <button class="home-action" type="button" data-home-view="policies">
+        <span>${svgIcon("shield")}</span>
+        <div>
+          <strong>Check Safety</strong>
+          <em>Capture and privacy gates</em>
+        </div>
+      </button>
+    </div>
+    <div class="home-state-row" aria-label="Current readable state">
+      <div>
+        <span>Observation</span>
+        <strong>${formatToken(shadow.state || "ready")}</strong>
+      </div>
+      <div>
+        <span>Trust</span>
+        <strong>${formatToken(fields.trust || "local")}</strong>
+      </div>
+      <div>
+        <span>Memory</span>
+        <strong>${formatToken(fields.memory || "off")}</strong>
+      </div>
+      <div>
+        <span>Raw refs</span>
+        <strong>${formatToken(fields.raw_refs || "none")}</strong>
+      </div>
+      <div>
+        <span>Receipts</span>
+        <strong>${receiptCount}</strong>
+      </div>
+    </div>
+  `;
+
+  target.querySelectorAll("[data-home-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setActiveView(button.dataset.homeView);
+    });
   });
 }
 
@@ -1137,6 +1233,7 @@ if (!data) {
   bindHeaderActions();
   renderNav();
   renderStatusStrip();
+  renderHomeCommandCenter();
   renderShadowPointerLiveReceipt();
   renderEncryptedIndexPanel();
   renderLiveTutorPanel();

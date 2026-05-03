@@ -593,6 +593,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Live dashboard panels refresh from local read-only adapter receipts, not embedded raw payloads.",
             "Capture control shows an honest button path for the native Shadow Clicker without claiming static HTML can launch it.",
             "Capture readiness ladder turns the next ten real-capture gates into one readable checklist.",
+            "The Overview now starts with a user-focused home instead of exposed benchmark machinery.",
         ],
         safety_notes=[
             "Dashboard data is generated from local safe read-only adapters and synthetic view-model seeds.",
@@ -678,6 +679,13 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "applyActiveView",
         "View updated locally",
         "window.CORTEX_DASHBOARD_DATA",
+        "DASHBOARD-USER-HOME-001",
+        "renderHomeCommandCenter",
+        "Cortex is in safe local mode.",
+        "Open Live Tutor",
+        "Turn On Cursor",
+        "Open live controls",
+        "No raw capture running",
         "Cursor Companion",
         "Clicky UX Lessons",
         "Encrypted Index Receipts",
@@ -729,6 +737,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         CAPTURE_READINESS_LADDER_ID,
         "Live Tutor Overlay",
         LIVE_TUTOR_OVERLAY_ID,
+        "user-focused home",
     ]
     missing_doc_terms = _missing_terms(doc_text, required_doc_terms)
     action_plans_present = any(

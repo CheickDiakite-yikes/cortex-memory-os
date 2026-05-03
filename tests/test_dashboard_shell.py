@@ -271,6 +271,26 @@ def test_dashboard_static_app_renders_live_tutor_panel():
     assert ".live-tutor-targets" in css
 
 
+def test_dashboard_static_app_renders_user_focused_home():
+    app_js = Path("ui/cortex-dashboard/app.js").read_text()
+    index_html = Path("ui/cortex-dashboard/index.html").read_text()
+    css = Path("ui/cortex-dashboard/styles.css").read_text()
+
+    assert "DASHBOARD-USER-HOME-001" in index_html
+    assert "home-command-center" in index_html
+    assert "function renderHomeCommandCenter()" in app_js
+    assert "renderHomeCommandCenter();" in app_js
+    assert "Cortex is in safe local mode." in app_js
+    assert "Open Live Tutor" in app_js
+    assert "Turn On Cursor" in app_js
+    assert "Open live controls" in app_js
+    assert "No raw capture running" in app_js
+    assert "data-home-view" in app_js
+    assert ".home-command-inner" in css
+    assert ".home-actions" in css
+    assert ".home-state-row" in css
+
+
 def test_dashboard_shell_smoke_contract_passes():
     result = run_dashboard_shell_smoke()
 

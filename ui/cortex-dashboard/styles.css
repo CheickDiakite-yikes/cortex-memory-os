@@ -191,8 +191,8 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 74px;
-  padding: 6px 2px 12px;
+  min-height: 60px;
+  padding: 4px 2px 10px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -228,6 +228,192 @@ button {
   color: var(--green);
   font-size: 12px;
   font-weight: 850;
+}
+
+.home-command-center {
+  min-width: 0;
+}
+
+.home-command-inner {
+  display: grid;
+  gap: 14px;
+  padding: 2px 0 0;
+}
+
+.home-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 0.34fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.home-hero-copy {
+  display: grid;
+  align-content: center;
+  min-height: 154px;
+}
+
+.home-hero-copy h2 {
+  max-width: 760px;
+  margin: 0;
+  font-size: clamp(32px, 5vw, 58px);
+  line-height: 0.98;
+  letter-spacing: 0;
+}
+
+.home-hero-copy p:last-child {
+  max-width: 650px;
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.home-safety-card {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-height: 142px;
+  padding: 16px;
+  border: 1px solid #d8e6dd;
+  border-radius: 10px;
+  background: #f8fcf9;
+}
+
+.home-safety-card span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #e8f7ee;
+  color: var(--green);
+}
+
+.home-safety-card svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2;
+}
+
+.home-safety-card strong {
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.home-safety-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.home-actions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.home-action {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  min-height: 78px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.home-action.primary {
+  border-color: #b8d5f4;
+  background: #edf6ff;
+}
+
+.home-action span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #f0f5fa;
+  color: var(--blue);
+}
+
+.home-action div {
+  min-width: 0;
+}
+
+.home-action svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2;
+}
+
+.home-action strong,
+.home-action em {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-action strong {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.home-action em {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.2;
+}
+
+.home-action:hover {
+  border-color: #b9d5f5;
+  box-shadow: 0 8px 22px rgba(21, 111, 209, 0.08);
+}
+
+.home-state-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.home-state-row div {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fbfdff;
+}
+
+.home-state-row span,
+.home-state-row strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-state-row span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.home-state-row strong {
+  margin-top: 4px;
+  font-size: 13px;
 }
 
 .status-strip {
@@ -1361,6 +1547,9 @@ button {
   }
 
   .status-strip,
+  .home-hero,
+  .home-actions,
+  .home-state-row,
   .workspace-grid,
   .insight-list,
   .focus-inspector-inner,
@@ -1457,6 +1646,18 @@ button {
 
   .status-item {
     min-height: 58px;
+  }
+
+  .home-command-inner {
+    padding: 14px;
+  }
+
+  .home-hero-copy {
+    min-height: 0;
+  }
+
+  .home-hero-copy h2 {
+    font-size: 34px;
   }
 
   .meta-grid,
