@@ -178,6 +178,13 @@ from cortex_memory_os.live_clicker_demo import (
     run_live_clicker_demo_smoke,
     run_live_clicker_hardening_smoke,
 )
+from cortex_memory_os.live_tutor_overlay import (
+    LIVE_TUTOR_OVERLAY_ID,
+    LIVE_TUTOR_OVERLAY_POLICY_REF,
+    build_live_tutor_dashboard_panel,
+    run_live_tutor_demo_smoke,
+    run_live_tutor_server_smoke,
+)
 from cortex_memory_os.synthetic_capture_ladder import (
     SYNTHETIC_CAPTURE_LADDER_ID,
     SYNTHETIC_CAPTURE_LADDER_POLICY_REF,
@@ -729,6 +736,7 @@ def run_all() -> BenchmarkRunResult:
         case_live_clicker_demo_contract,
         case_live_clicker_hardening_contract,
         case_live_clicker_allowlisted_origin_contract,
+        case_live_tutor_overlay_contract,
         case_synthetic_capture_ladder_contract,
         case_demo_readiness_contract,
         case_demo_stress_contract,
@@ -13051,6 +13059,132 @@ def case_live_clicker_allowlisted_origin_contract() -> BenchmarkCaseResult:
             "latest_browser_evidence_write_mode": results.latest_browser_evidence_write_mode,
             "missing_extension_terms": missing_extension_terms,
             "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_live_tutor_overlay_contract() -> BenchmarkCaseResult:
+    smoke = run_live_tutor_demo_smoke()
+    server_smoke = run_live_tutor_server_smoke()
+    panel = build_live_tutor_dashboard_panel(smoke)
+    docs_text = (
+        (REPO_ROOT / "docs" / "architecture" / "live-tutor-overlay.md").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (REPO_ROOT / "docs" / "adr" / "0006-live-tutor-overlay-before-real-capture.md").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(encoding="utf-8")
+        + "\n"
+        + (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (REPO_ROOT / "docs" / "product" / "cortex-dashboard-shell.md").read_text(
+            encoding="utf-8"
+        )
+    )
+    ui_text = "\n".join(
+        [
+            *[
+                (REPO_ROOT / "ui" / "live-tutor-demo" / name).read_text(
+                    encoding="utf-8"
+                )
+                for name in ("index.html", "app.js", "styles.css")
+            ],
+            *[
+                (REPO_ROOT / "ui" / "cortex-dashboard" / name).read_text(
+                    encoding="utf-8"
+                )
+                for name in ("index.html", "app.js", "styles.css", "dashboard-data.js")
+            ],
+        ]
+    )
+    pyproject_text = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    payload = "\n".join(
+        [
+            smoke.model_dump_json(),
+            server_smoke.model_dump_json(),
+            panel.model_dump_json(),
+        ]
+    )
+    required_doc_terms = [
+        LIVE_TUTOR_OVERLAY_ID,
+        LIVE_TUTOR_OVERLAY_POLICY_REF,
+        "secondary cursor",
+        "controlled creative-tool",
+        "no screen capture",
+        "no microphone capture",
+        "no raw refs",
+        "no durable memory",
+    ]
+    required_ui_terms = [
+        "Cortex Resolve Studio",
+        "shadow-tutor-cursor",
+        "target-highlight",
+        "instruction-bubble",
+        'fetch("/tutor/turn"',
+        "Live Tutor Overlay",
+        "renderLiveTutorPanel",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    missing_ui_terms = _missing_terms(ui_text, required_ui_terms)
+    prohibited_marker_count = sum(
+        1
+        for marker in ["OPENAI_API_KEY=", "CORTEX_FAKE_TOKEN", "sk-", "raw://", "encrypted_blob://"]
+        if marker in payload
+    )
+    passed = (
+        smoke.passed
+        and server_smoke.passed
+        and panel.display_only
+        and panel.controlled_surface
+        and not panel.memory_write_allowed
+        and not panel.raw_ref_retained
+        and not panel.external_effect_enabled
+        and not panel.real_screen_capture_started
+        and not panel.voice_capture_enabled
+        and "execute_click" in panel.blocked_effects
+        and "start_screen_capture" in panel.blocked_effects
+        and "write_memory" in panel.blocked_effects
+        and smoke.memory_write_count == 0
+        and smoke.raw_ref_retained_count == 0
+        and smoke.external_effect_count == 0
+        and server_smoke.memory_write_count == 0
+        and server_smoke.raw_ref_retained_count == 0
+        and server_smoke.external_effect_count == 0
+        and prohibited_marker_count == 0
+        and not missing_doc_terms
+        and not missing_ui_terms
+        and "cortex-live-tutor-demo" in pyproject_text
+    )
+    return BenchmarkCaseResult(
+        case_id="LIVE-TUTOR-OVERLAY-001/controlled_spatial_tutor_demo",
+        suite=LIVE_TUTOR_OVERLAY_ID,
+        passed=passed,
+        summary=(
+            "Controlled live tutor demo maps contextual questions to display-only "
+            "spatial cues and dashboard receipts without real capture, memory writes, "
+            "raw refs, clicks, typing, or external effects."
+        ),
+        metrics={
+            "turn_count": smoke.turn_count,
+            "server_turn_count": server_smoke.turn_count,
+            "cue_count": smoke.cue_count,
+            "missing_doc_terms": len(missing_doc_terms),
+            "missing_ui_terms": len(missing_ui_terms),
+            "prohibited_marker_count": prohibited_marker_count,
+        },
+        evidence={
+            "policy_ref": LIVE_TUTOR_OVERLAY_POLICY_REF,
+            "target_ids": smoke.target_ids,
+            "server_target_ids": server_smoke.target_ids,
+            "panel_targets": panel.latest_targets,
+            "blocked_effects": panel.blocked_effects,
+            "missing_doc_terms": missing_doc_terms,
+            "missing_ui_terms": missing_ui_terms,
         },
     )
 

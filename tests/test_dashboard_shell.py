@@ -18,6 +18,10 @@ from cortex_memory_os.clicky_ux import (
     CLICKY_UX_COMPANION_POLICY_REF,
     CLICKY_UX_LESSONS_POLICY_REF,
 )
+from cortex_memory_os.live_tutor_overlay import (
+    LIVE_TUTOR_OVERLAY_ID,
+    LIVE_TUTOR_OVERLAY_POLICY_REF,
+)
 from cortex_memory_os.dashboard_encrypted_index import (
     DASHBOARD_LIVE_BACKBONE_POLICY_REF,
     ENCRYPTED_INDEX_DASHBOARD_LIVE_POLICY_REF,
@@ -109,6 +113,15 @@ def test_dashboard_shell_composes_safe_view_models():
     assert shell.clicky_ux_companion.display_only is True
     assert shell.clicky_ux_companion.voice_capture_enabled is False
     assert shell.clicky_ux_companion.memory_write_allowed is False
+    assert LIVE_TUTOR_OVERLAY_POLICY_REF in shell.policy_refs
+    assert shell.live_tutor_panel.panel_id == LIVE_TUTOR_OVERLAY_ID
+    assert shell.live_tutor_panel.display_only is True
+    assert shell.live_tutor_panel.controlled_surface is True
+    assert shell.live_tutor_panel.memory_write_allowed is False
+    assert shell.live_tutor_panel.raw_ref_retained is False
+    assert shell.live_tutor_panel.external_effect_enabled is False
+    assert shell.live_tutor_panel.real_screen_capture_started is False
+    assert shell.live_tutor_panel.voice_capture_enabled is False
     assert shell.dashboard_live_data_adapter.read_only is True
     assert shell.dashboard_live_data_adapter.local_only is True
     assert shell.dashboard_live_data_adapter.gateway_executed_count > 0
@@ -198,6 +211,8 @@ def test_dashboard_data_js_is_redacted_and_static_app_ready():
     assert "DEMO-READINESS-001" in data_js
     assert "cortex-demo-stress" in data_js
     assert "Cursor Companion" in data_js
+    assert "Live Tutor Overlay" in data_js
+    assert LIVE_TUTOR_OVERLAY_ID in data_js
     assert "Encrypted Index Receipts" in data_js
     assert "Live Receipt Backbone" in data_js
     assert "Live Safe Receipts" in data_js
@@ -242,6 +257,20 @@ def test_dashboard_static_app_renders_capture_readiness_ladder():
     assert "CAPTURE-READINESS-LADDER-001" in index_html
 
 
+def test_dashboard_static_app_renders_live_tutor_panel():
+    app_js = Path("ui/cortex-dashboard/app.js").read_text()
+    index_html = Path("ui/cortex-dashboard/index.html").read_text()
+    css = Path("ui/cortex-dashboard/styles.css").read_text()
+
+    assert "function renderLiveTutorPanel()" in app_js
+    assert "renderLiveTutorPanel();" in app_js
+    assert "live-tutor-panel" in index_html
+    assert LIVE_TUTOR_OVERLAY_ID in index_html
+    assert "cortex-live-tutor-demo" in app_js
+    assert ".live-tutor-inner" in css
+    assert ".live-tutor-targets" in css
+
+
 def test_dashboard_shell_smoke_contract_passes():
     result = run_dashboard_shell_smoke()
 
@@ -266,6 +295,7 @@ def test_dashboard_shell_smoke_contract_passes():
     assert result.durable_synthetic_memory_receipt_present is True
     assert result.dashboard_live_backbone_present is True
     assert result.clicky_ux_companion_present is True
+    assert result.live_tutor_panel_present is True
     assert result.dashboard_live_data_adapter_present is True
     assert result.live_dashboard_receipts_present is True
     assert result.capture_control_present is True

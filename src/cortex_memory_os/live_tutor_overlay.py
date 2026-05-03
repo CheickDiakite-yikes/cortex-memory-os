@@ -244,6 +244,43 @@ class LiveTutorDemoResult(StrictModel):
     safety_failures: list[str] = Field(default_factory=list)
 
 
+class LiveTutorDashboardPanel(StrictModel):
+    panel_id: str = LIVE_TUTOR_OVERLAY_ID
+    title: str = "Live Tutor Overlay"
+    summary: str = Field(min_length=1)
+    demo_url: str = "http://127.0.0.1:8797/"
+    smoke_command: str = "uv run cortex-live-tutor-demo --server-smoke --json"
+    latest_targets: list[str] = Field(default_factory=list)
+    turn_count: int = Field(ge=0)
+    cue_count: int = Field(ge=0)
+    display_only: bool = True
+    controlled_surface: bool = True
+    memory_write_allowed: bool = False
+    raw_ref_retained: bool = False
+    external_effect_enabled: bool = False
+    real_screen_capture_started: bool = False
+    voice_capture_enabled: bool = False
+    raw_payload_included: bool = False
+    blocked_effects: list[str] = Field(default_factory=list)
+    policy_refs: list[str] = Field(default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF])
+
+    @model_validator(mode="after")
+    def keep_dashboard_panel_safe(self) -> LiveTutorDashboardPanel:
+        if not self.display_only or not self.controlled_surface:
+            raise ValueError("live tutor dashboard panel must be controlled and display-only")
+        if self.memory_write_allowed or self.raw_ref_retained or self.external_effect_enabled:
+            raise ValueError("live tutor dashboard panel cannot enable memory/raw/external effects")
+        if self.real_screen_capture_started or self.voice_capture_enabled:
+            raise ValueError("live tutor dashboard panel cannot enable screen or voice capture")
+        if self.raw_payload_included:
+            raise ValueError("live tutor dashboard panel cannot include raw payloads")
+        if missing := sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS.difference(self.blocked_effects)):
+            raise ValueError(f"live tutor dashboard panel missing blocked effects: {missing}")
+        if LIVE_TUTOR_OVERLAY_POLICY_REF not in self.policy_refs:
+            raise ValueError("live tutor dashboard panel requires policy ref")
+        return self
+
+
 class LiveTutorQuestionInput(StrictModel):
     user_utterance: str = Field(min_length=1, max_length=240)
     active_page: str = Field(default="edit", min_length=1, max_length=40)
@@ -659,6 +696,30 @@ def run_live_tutor_server_smoke() -> LiveTutorDemoResult:
         return LiveTutorDemoResult.model_validate_json(result_body)
     finally:
         demo.stop()
+
+
+def build_live_tutor_dashboard_panel(
+    result: LiveTutorDemoResult | None = None,
+) -> LiveTutorDashboardPanel:
+    result = result or run_live_tutor_demo_smoke()
+    return LiveTutorDashboardPanel(
+        summary=(
+            "Controlled creative-tool tutor demo: Cortex answers contextual questions "
+            "with a secondary blue cursor and receipt panel, without clicks, capture, "
+            "voice, raw refs, durable memory, or external effects."
+        ),
+        latest_targets=result.target_ids[-3:],
+        turn_count=result.turn_count,
+        cue_count=result.cue_count,
+        display_only=result.display_only,
+        controlled_surface=result.controlled_surface,
+        memory_write_allowed=result.memory_write_count > 0,
+        raw_ref_retained=result.raw_ref_retained_count > 0,
+        external_effect_enabled=result.external_effect_count > 0,
+        real_screen_capture_started=result.real_screen_capture_started,
+        voice_capture_enabled=result.voice_capture_enabled,
+        blocked_effects=sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS),
+    )
 
 
 def start_live_tutor_demo(

@@ -53,6 +53,12 @@ from cortex_memory_os.clicky_ux import (
     build_clicky_ux_companion_panel,
     default_clicky_ux_lessons,
 )
+from cortex_memory_os.live_tutor_overlay import (
+    LIVE_TUTOR_OVERLAY_ID,
+    LIVE_TUTOR_OVERLAY_POLICY_REF,
+    LiveTutorDashboardPanel,
+    build_live_tutor_dashboard_panel,
+)
 from cortex_memory_os.dashboard_encrypted_index import (
     DASHBOARD_LIVE_BACKBONE_POLICY_REF,
     ENCRYPTED_INDEX_DASHBOARD_LIVE_POLICY_REF,
@@ -319,6 +325,7 @@ class CortexDashboardShell(StrictModel):
     durable_synthetic_memory_receipt: DurableSyntheticMemoryReceipt
     live_backbone_panel: DashboardLiveBackbonePanel
     clicky_ux_companion: ClickyUxCompanionPanel
+    live_tutor_panel: LiveTutorDashboardPanel
     policy_refs: list[str] = Field(default_factory=list)
     design_notes: list[str] = Field(default_factory=list)
     safety_notes: list[str] = Field(default_factory=list)
@@ -359,6 +366,7 @@ class DashboardShellSmokeResult(StrictModel):
     durable_synthetic_memory_receipt_present: bool
     dashboard_live_backbone_present: bool
     clicky_ux_companion_present: bool
+    live_tutor_panel_present: bool
     dashboard_live_data_adapter_present: bool
     live_dashboard_receipts_present: bool
     capture_control_present: bool
@@ -398,6 +406,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
     clicky_ux_companion = build_clicky_ux_companion_panel(
         operational_backbone.native_live_feed
     )
+    live_tutor_panel = build_live_tutor_dashboard_panel()
     gateway_action_receipts = build_dashboard_gateway_action_receipts(
         memory_dashboard,
         skill_list,
@@ -553,6 +562,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             DASHBOARD_LIVE_BACKBONE_POLICY_REF,
             CLICKY_UX_LESSONS_POLICY_REF,
             CLICKY_UX_COMPANION_POLICY_REF,
+            LIVE_TUTOR_OVERLAY_POLICY_REF,
             DASHBOARD_LIVE_DATA_ADAPTER_POLICY_REF,
             LIVE_DASHBOARD_RECEIPTS_POLICY_REF,
             DASHBOARD_CAPTURE_CONTROL_POLICY_REF,
@@ -578,6 +588,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Shadow Pointer Live Receipt stays compact and policy-first.",
             "Live Shadow Pointer receipt is compact and sits above deeper review queues.",
             "Clicky-inspired UX keeps live presence cursor-adjacent and makes the dashboard a review space.",
+            "Live Tutor Overlay turns the Clicky-inspired interaction into a controlled creative-tool demo.",
             "Encrypted index receipts show counts and policy state instead of raw memory or query text.",
             "Live dashboard panels refresh from local read-only adapter receipts, not embedded raw payloads.",
             "Capture control shows an honest button path for the native Shadow Clicker without claiming static HTML can launch it.",
@@ -591,6 +602,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Retrieval receipt cards do not include memory content, source refs, or hostile text.",
             "Shadow Pointer receipts do not include raw page payloads or raw refs.",
             "Clicky UX lessons were treated as untrusted external evidence and no repo code was executed.",
+            "Live Tutor Overlay is display-only and controlled-state-only; it starts no screen, voice, memory, raw-ref, click, type, export, or external-effect path.",
             "Encrypted index dashboard panels never expose key material, token text, queries, or source refs.",
             "Live adapters expose aggregate counts only and keep write paths disabled.",
             "Real capture control starts with cursor overlay readiness and keeps raw storage and memory writes disabled.",
@@ -605,6 +617,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
         ),
         live_backbone_panel=operational_backbone.live_backbone_panel,
         clicky_ux_companion=clicky_ux_companion,
+        live_tutor_panel=live_tutor_panel,
     )
 
 
@@ -683,6 +696,10 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "renderCaptureReadinessLadder",
         "capture-readiness-ladder",
         CAPTURE_READINESS_LADDER_ID,
+        "Live Tutor Overlay",
+        "renderLiveTutorPanel",
+        LIVE_TUTOR_OVERLAY_ID,
+        "cortex-live-tutor-demo",
     ]
     missing_ui_terms = _missing_terms(ui_text + "\n" + data_js, required_ui_terms)
     doc_text = (
@@ -710,6 +727,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         DASHBOARD_CAPTURE_CONTROL_ID,
         "Capture Readiness Ladder",
         CAPTURE_READINESS_LADDER_ID,
+        "Live Tutor Overlay",
+        LIVE_TUTOR_OVERLAY_ID,
     ]
     missing_doc_terms = _missing_terms(doc_text, required_doc_terms)
     action_plans_present = any(
@@ -880,6 +899,25 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and "raw://" not in clicky_ux_payload
         and "encrypted_blob://" not in clicky_ux_payload
     )
+    live_tutor_payload = shell.live_tutor_panel.model_dump_json()
+    live_tutor_panel_present = (
+        "Live Tutor Overlay" in ui_text + "\n" + data_js
+        and LIVE_TUTOR_OVERLAY_ID in ui_text + "\n" + data_js
+        and shell.live_tutor_panel.display_only
+        and shell.live_tutor_panel.controlled_surface
+        and not shell.live_tutor_panel.memory_write_allowed
+        and not shell.live_tutor_panel.raw_ref_retained
+        and not shell.live_tutor_panel.external_effect_enabled
+        and not shell.live_tutor_panel.real_screen_capture_started
+        and not shell.live_tutor_panel.voice_capture_enabled
+        and not shell.live_tutor_panel.raw_payload_included
+        and LIVE_TUTOR_OVERLAY_POLICY_REF in shell.policy_refs
+        and "execute_click" in shell.live_tutor_panel.blocked_effects
+        and "start_screen_capture" in shell.live_tutor_panel.blocked_effects
+        and "write_memory" in shell.live_tutor_panel.blocked_effects
+        and "raw://" not in live_tutor_payload
+        and "encrypted_blob://" not in live_tutor_payload
+    )
     adapter_payload = shell.dashboard_live_data_adapter.model_dump_json()
     dashboard_live_data_adapter_present = (
         shell.dashboard_live_data_adapter.read_only
@@ -970,6 +1008,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and durable_synthetic_memory_receipt_present
         and dashboard_live_backbone_present
         and clicky_ux_companion_present
+        and live_tutor_panel_present
         and dashboard_live_data_adapter_present
         and live_dashboard_receipts_present
         and capture_control_present
@@ -1020,6 +1059,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         durable_synthetic_memory_receipt_present=durable_synthetic_memory_receipt_present,
         dashboard_live_backbone_present=dashboard_live_backbone_present,
         clicky_ux_companion_present=clicky_ux_companion_present,
+        live_tutor_panel_present=live_tutor_panel_present,
         dashboard_live_data_adapter_present=dashboard_live_data_adapter_present,
         live_dashboard_receipts_present=live_dashboard_receipts_present,
         capture_control_present=capture_control_present,

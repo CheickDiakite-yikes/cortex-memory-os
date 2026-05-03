@@ -736,6 +736,42 @@ function renderLiveDashboardReceipts() {
   });
 }
 
+function renderLiveTutorPanel() {
+  const target = document.querySelector("#live-tutor-panel");
+  const panel = data.live_tutor_panel;
+  if (!target || !panel) return;
+  target.innerHTML = `
+    <div class="live-tutor-copy">
+      <span class="live-tutor-icon">${svgIcon("pointer")}</span>
+      <span>
+        <strong>${escapeHtml(panel.title)}</strong>
+        <span>${escapeHtml(panel.summary)}</span>
+      </span>
+    </div>
+    <div class="live-tutor-grid">
+      <div><span>Turns</span><strong>${panel.turn_count}</strong></div>
+      <div><span>Cues</span><strong>${panel.cue_count}</strong></div>
+      <div><span>Mode</span><strong>${panel.display_only ? "display-only" : "blocked"}</strong></div>
+      <div><span>Surface</span><strong>${panel.controlled_surface ? "controlled" : "blocked"}</strong></div>
+      <div><span>Memory</span><strong>${panel.memory_write_allowed ? "enabled" : "off"}</strong></div>
+      <div><span>Raw refs</span><strong>${panel.raw_ref_retained ? "retained" : "none"}</strong></div>
+    </div>
+    <div class="live-tutor-targets">
+      ${(panel.latest_targets || []).map((item) => `<span>${formatToken(item)}</span>`).join("")}
+    </div>
+    <div class="shadow-live-actions">
+      <button class="text-command" type="button" id="live-tutor-open">Open demo</button>
+      <button class="text-command" type="button" id="live-tutor-smoke">cortex-live-tutor-demo</button>
+    </div>
+  `;
+  document.querySelector("#live-tutor-open").addEventListener("click", () => {
+    writeReceipt(`Live Tutor Overlay demo: ${panel.demo_url}. Start it with ${panel.smoke_command.replace(" --server-smoke --json", "")}.`);
+  });
+  document.querySelector("#live-tutor-smoke").addEventListener("click", () => {
+    writeReceipt(`${panel.panel_id}: ${panel.smoke_command}. Display-only, controlled surface, no capture, no memory write, no raw refs.`);
+  });
+}
+
 function renderFocusInspector() {
   const inspector = document.querySelector("#focus-inspector");
   if (!inspector || !selectedFocus) return;
@@ -1103,6 +1139,7 @@ if (!data) {
   renderStatusStrip();
   renderShadowPointerLiveReceipt();
   renderEncryptedIndexPanel();
+  renderLiveTutorPanel();
   renderLiveDashboardReceipts();
   renderDemoPath();
   renderCaptureControl();

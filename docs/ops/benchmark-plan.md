@@ -140,6 +140,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `RAW-REF-SCAVENGER-001` | Raw ref scavenger deletes expired temp refs without reading payloads. | Expired temp refs persist, or cleanup reads payloads/enables memory writes. |
 | `REAL-CAPTURE-NEXT-GATE-001` | Next ScreenCaptureKit gate is tokenized, permission-gated, metadata-only, and still blocks continuous capture. | Continuous capture, raw pixel return, sensitive app capture, or durable memory writes become default. |
 | `SCREEN-METADATA-STREAM-PLAN-001` | Future ScreenCaptureKit stream starts as metadata_count_receipts. | Continuous capture, raw pixel return, raw refs, or memory writes become enabled. |
+| `LIVE-TUTOR-OVERLAY-001` | Controlled creative-tool tutor demo maps contextual questions to display-only spatial cues and dashboard receipts. | Tutor executes clicks, types, starts capture/voice/Accessibility, writes memory, retains raw refs, exports, or reads uncontrolled screen content. |
 | `AUDIT-001` | Memory mutations persist human-visible audits. | Mutation lacks a redacted audit event. |
 | `EXPORT-001` | User memory export is scoped, redacted, and deletion-aware. | Deleted/revoked content appears in export output. |
 | `EXPORT-AUDIT-001` | Memory exports persist redacted audit receipts. | Export audit copies memory content or secret-like text. |

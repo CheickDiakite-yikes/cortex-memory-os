@@ -46,6 +46,10 @@ Live dashboard receipts benchmark: `LIVE-DASHBOARD-RECEIPTS-001`
 
 Live dashboard receipts policy: `policy_live_dashboard_receipts_v1`
 
+Live tutor benchmark: `LIVE-TUTOR-OVERLAY-001`
+
+Live tutor policy: `policy_live_tutor_overlay_v1`
+
 This slice turns the generated dashboard concept into a local, static,
 inspectable dashboard shell over safe view models. The goal is a usable product
 surface for Memory Palace and Skill Forge without introducing live capture,
@@ -92,6 +96,14 @@ retrieval, and skill-metric receipts. The live safe receipts panel refreshes
 from those adapters without write paths, raw payloads, source refs, or private
 memory content.
 
+The Live Tutor Overlay refinement turns the Clicky-inspired product lesson into
+a safe localhost creative-tool demo. The dashboard exposes the command and
+receipt summary, while the actual demo lives near the work surface with a blue
+secondary cursor, target highlight, and instruction bubble. It stays
+display-only and controlled-state-only: no screen capture, microphone capture,
+Accessibility observer, clicks, typing, raw refs, memory writes, exports, or
+external effects.
+
 ## Design Source
 
 The generated dashboard concept established the first visual direction:
@@ -137,6 +149,7 @@ safe view models:
 - `ClickyUxCompanionPanel`
 - `DashboardLiveDataAdapterSnapshot`
 - `LiveDashboardReceiptsPanel`
+- `LiveTutorDashboardPanel`
 
 The generated `ui/cortex-dashboard/dashboard-data.js` contains synthetic,
 redacted, deterministic view-model data. It must contain no raw private memory,
@@ -179,6 +192,9 @@ The static app in `ui/cortex-dashboard/` must render:
 - `Live Safe Receipts` for `LIVE-DASHBOARD-RECEIPTS-001`, showing retrieval,
   encrypted index, ops quality, skill metric, and gateway runtime counts from
   the local read-only adapter;
+- `Live Tutor Overlay` for `LIVE-TUTOR-OVERLAY-001`, linking to
+  `uv run cortex-live-tutor-demo` and showing display-only cue, controlled
+  surface, memory-off, raw-ref-free, and blocked-effect state;
 - `DASHBOARD-LIVE-DATA-ADAPTER-001`, proving that dashboard panels can refresh
   from local read-only adapters while write paths and raw payloads stay off;
 - Consent-first Onboarding for `CONSENT-FIRST-ONBOARDING-001`, showing the
@@ -292,6 +308,8 @@ Observation pause previewed locally. Confirmation and audit receipt required.
 - the visible shell includes `Capture Readiness Ladder` for
   `CAPTURE-READINESS-LADDER-001`, tied to
   `policy_capture_readiness_ladder_v1`;
+- the visible shell includes `Live Tutor Overlay` for
+  `LIVE-TUTOR-OVERLAY-001`, tied to `policy_live_tutor_overlay_v1`;
 - dashboard docs, task board, benchmark plan, and benchmark registry name the
   slice;
 - local browser proof confirms the first viewport renders without overlapping

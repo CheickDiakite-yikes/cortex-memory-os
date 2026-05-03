@@ -334,6 +334,10 @@ button {
   min-width: 0;
 }
 
+.live-tutor-rail {
+  min-width: 0;
+}
+
 .live-backbone-rail {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
@@ -343,6 +347,7 @@ button {
 
 .shadow-live-inner,
 .encrypted-index-inner,
+.live-tutor-inner,
 .live-receipts-inner,
 .capture-control-inner,
 .capture-ladder-inner {
@@ -369,6 +374,12 @@ button {
   background: #fcfffd;
 }
 
+.live-tutor-inner {
+  min-height: 104px;
+  border-color: #cdddf1;
+  background: #fbfdff;
+}
+
 .capture-control-inner {
   min-height: 96px;
   border-color: #d9dfeb;
@@ -383,6 +394,7 @@ button {
 
 .shadow-live-copy,
 .encrypted-index-copy,
+.live-tutor-copy,
 .live-receipts-copy,
 .capture-control-copy,
 .capture-ladder-copy {
@@ -395,6 +407,7 @@ button {
 
 .shadow-live-icon,
 .encrypted-index-icon,
+.live-tutor-icon,
 .live-receipts-icon,
 .capture-control-icon,
 .capture-ladder-icon {
@@ -410,6 +423,11 @@ button {
 .encrypted-index-icon {
   background: #eef8f2;
   color: var(--green);
+}
+
+.live-tutor-icon {
+  background: #edf3ff;
+  color: var(--blue);
 }
 
 .live-receipts-icon {
@@ -429,6 +447,7 @@ button {
 
 .shadow-live-icon svg,
 .encrypted-index-icon svg,
+.live-tutor-icon svg,
 .live-receipts-icon svg,
 .capture-control-icon svg,
 .capture-ladder-icon svg {
@@ -441,6 +460,8 @@ button {
 .shadow-live-copy span span,
 .encrypted-index-copy strong,
 .encrypted-index-copy span span,
+.live-tutor-copy strong,
+.live-tutor-copy span span,
 .live-receipts-copy strong,
 .live-receipts-copy span span,
 .capture-control-copy strong,
@@ -453,6 +474,7 @@ button {
 
 .shadow-live-copy strong,
 .encrypted-index-copy strong,
+.live-tutor-copy strong,
 .live-receipts-copy strong,
 .capture-control-copy strong,
 .capture-ladder-copy strong {
@@ -462,6 +484,7 @@ button {
 
 .shadow-live-copy span span,
 .encrypted-index-copy span span,
+.live-tutor-copy span span,
 .live-receipts-copy span span,
 .capture-control-copy span span,
 .capture-ladder-copy span span {
@@ -480,6 +503,7 @@ button {
 
 .shadow-live-grid,
 .encrypted-index-grid,
+.live-tutor-grid,
 .live-receipts-grid,
 .capture-control-grid,
 .capture-ladder-grid {
@@ -492,8 +516,13 @@ button {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.live-tutor-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
 .shadow-live-grid div,
 .encrypted-index-grid div,
+.live-tutor-grid div,
 .live-receipts-grid div,
 .capture-control-grid div,
 .capture-ladder-grid div {
@@ -508,6 +537,7 @@ button {
 
 .shadow-live-grid span,
 .encrypted-index-grid span,
+.live-tutor-grid span,
 .live-receipts-grid span,
 .capture-control-grid span,
 .capture-ladder-grid span {
@@ -519,6 +549,7 @@ button {
 
 .shadow-live-grid strong,
 .encrypted-index-grid strong,
+.live-tutor-grid strong,
 .live-receipts-grid strong,
 .capture-control-grid strong,
 .capture-ladder-grid strong {
@@ -527,6 +558,23 @@ button {
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.live-tutor-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.live-tutor-targets span {
+  min-height: 26px;
+  padding: 5px 8px;
+  border: 1px solid #d7e2ef;
+  border-radius: 999px;
+  background: #fff;
+  color: #435363;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .capture-ladder-list {

@@ -9,6 +9,7 @@ from cortex_memory_os.live_tutor_overlay import (
     UI_ROOT,
     LiveTutorDemoSession,
     SpatialTutorCue,
+    build_live_tutor_dashboard_panel,
     build_safe_creative_demo_surface,
     live_tutor_payload_is_safe,
     resolve_live_tutor_turn,
@@ -157,3 +158,23 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert ".shadow-tutor-cursor" in css
     assert ".target-highlight.visible" in css
     assert ".instruction-bubble.visible" in css
+
+
+def test_live_tutor_dashboard_panel_is_safe_and_command_ready():
+    panel = build_live_tutor_dashboard_panel()
+
+    assert panel.panel_id == LIVE_TUTOR_OVERLAY_ID
+    assert panel.smoke_command == "uv run cortex-live-tutor-demo --server-smoke --json"
+    assert panel.demo_url == "http://127.0.0.1:8797/"
+    assert panel.turn_count == 4
+    assert panel.cue_count == 4
+    assert panel.display_only is True
+    assert panel.controlled_surface is True
+    assert panel.memory_write_allowed is False
+    assert panel.raw_ref_retained is False
+    assert panel.external_effect_enabled is False
+    assert panel.real_screen_capture_started is False
+    assert panel.voice_capture_enabled is False
+    assert panel.raw_payload_included is False
+    assert set(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS).issubset(set(panel.blocked_effects))
+    assert LIVE_TUTOR_OVERLAY_POLICY_REF in panel.policy_refs
