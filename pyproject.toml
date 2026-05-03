@@ -41,6 +41,7 @@ cortex-native-screen-capture-probe = "cortex_memory_os.native_screen_capture_pro
 cortex-real-capture-hardening = "cortex_memory_os.real_capture_hardening:main"
 cortex-capture-preflight = "cortex_memory_os.capture_preflight_diagnostics:main"
 cortex-capture-readiness-ladder = "cortex_memory_os.capture_readiness_ladder:main"
+cortex-live-tutor-demo = "cortex_memory_os.live_tutor_overlay:main"
 
 [build-system]
 requires = ["setuptools>=69"]
