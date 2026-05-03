@@ -51,6 +51,9 @@ def test_browser_content_script_draws_visible_shadow_pointer_receipt():
 
     assert "Cortex Shadow Pointer" in content_script
     assert "Shadow Pointer Live Receipt" in content_script
+    assert "cortex-cursor-svg" in content_script
+    assert "cortex-click-ring" in content_script
+    assert "cortex-pointer-chip" in content_script
     assert "pointermove" in content_script
     assert "shadow_pointer_visible" in content_script
     assert "eligible_for_memory" in content_script

@@ -64,15 +64,60 @@
           position: fixed;
           left: 0;
           top: 0;
-          width: 18px;
-          height: 18px;
-          border: 2px solid #2563eb;
-          border-radius: 999px;
-          background: rgba(37, 99, 235, 0.14);
-          box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.12);
+          width: 72px;
+          height: 52px;
           transform: translate(28px, 28px);
+          transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        #${OVERLAY_ID} .cortex-cursor-svg {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 34px;
+          height: 42px;
+          overflow: visible;
+          filter: drop-shadow(0 10px 16px rgba(15, 23, 42, 0.28));
+        }
+        #${OVERLAY_ID} .cortex-cursor-body {
+          fill: #ffffff;
+          stroke: #1d4ed8;
+          stroke-width: 2.6;
+          stroke-linejoin: round;
+        }
+        #${OVERLAY_ID} .cortex-cursor-accent {
+          fill: #16a34a;
+          opacity: 0.94;
+        }
+        #${OVERLAY_ID} .cortex-click-ring {
+          position: absolute;
+          left: -9px;
+          top: -9px;
+          width: 26px;
+          height: 26px;
+          border: 2px solid rgba(37, 99, 235, 0.48);
+          border-radius: 999px;
+          background: rgba(37, 99, 235, 0.08);
+          box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.10);
+        }
+        #${OVERLAY_ID} .cortex-pointer-chip {
+          position: absolute;
+          left: 30px;
+          top: 17px;
+          padding: 4px 8px 5px;
+          border: 1px solid rgba(15, 23, 42, 0.12);
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.94);
+          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
+          color: #0f172a;
+          font-size: 11px;
+          font-weight: 850;
+          letter-spacing: 0;
+          white-space: nowrap;
         }
         #${OVERLAY_ID} .cortex-pointer.pulse {
+          animation: cortexNudge 220ms ease-out;
+        }
+        #${OVERLAY_ID} .cortex-pointer.pulse .cortex-click-ring {
           animation: cortexPulse 520ms ease-out;
         }
         #${OVERLAY_ID} .cortex-panel {
@@ -131,11 +176,31 @@
           font-size: 11px;
         }
         @keyframes cortexPulse {
-          0% { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.16); }
-          100% { box-shadow: 0 0 0 18px rgba(37, 99, 235, 0); }
+          0% {
+            opacity: 1;
+            transform: scale(0.82);
+            box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.16);
+          }
+          100% {
+            opacity: 0.35;
+            transform: scale(1.55);
+            box-shadow: 0 0 0 18px rgba(37, 99, 235, 0);
+          }
+        }
+        @keyframes cortexNudge {
+          0% { margin-top: 0; }
+          45% { margin-top: 2px; }
+          100% { margin-top: 0; }
         }
       </style>
-      <div class="cortex-pointer" data-cortex-pointer></div>
+      <div class="cortex-pointer" data-cortex-pointer>
+        <span class="cortex-click-ring"></span>
+        <svg class="cortex-cursor-svg" viewBox="0 0 36 44" aria-hidden="true" focusable="false">
+          <path class="cortex-cursor-body" d="M5 3.5 31 26.5 19.2 28.1 24.8 40.2 17.4 43 11.9 30.7 4.5 38.1 5 3.5Z"/>
+          <path class="cortex-cursor-accent" d="M18.2 30.5 21.8 38.1 19.4 39 15.8 31.3Z"/>
+        </svg>
+        <span class="cortex-pointer-chip">Cortex</span>
+      </div>
       <section class="cortex-panel" aria-label="Cortex live browser observation">
         <div class="cortex-kicker">Cortex Shadow Pointer</div>
         <div class="cortex-title">Shadow Pointer Live Receipt</div>

@@ -12991,6 +12991,9 @@ def case_live_clicker_allowlisted_origin_contract() -> BenchmarkCaseResult:
     required_extension_terms = [
         "Cortex Shadow Pointer",
         "Shadow Pointer Live Receipt",
+        "cortex-cursor-svg",
+        "cortex-click-ring",
+        "cortex-pointer-chip",
         "pointermove",
         "shadow_pointer_visible",
         "eligible_for_memory",

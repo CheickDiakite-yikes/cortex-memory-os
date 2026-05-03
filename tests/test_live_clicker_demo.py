@@ -118,6 +118,8 @@ def test_live_clicker_demo_static_page_drives_visible_shadow_clicker():
     css = (Path(UI_ROOT) / "styles.css").read_text(encoding="utf-8")
 
     assert "shadow-clicker" in html
+    assert "clicker-cursor" in html
+    assert "click-ring" in html
     assert 'name="cortex-demo-token"' in html
     assert "Cortex Shadow Clicker" in html
     assert "Observation Receipts" in html
@@ -128,3 +130,5 @@ def test_live_clicker_demo_static_page_drives_visible_shadow_clicker():
     assert "pointermove" in js
     assert "demo_candidate_memory_written" in js
     assert ".shadow-clicker" in css
+    assert ".shadow-clicker .clicker-cursor" in css
+    assert ".shadow-clicker .click-ring" in css

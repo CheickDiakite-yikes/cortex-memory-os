@@ -246,46 +246,68 @@ dd {
   left: 0;
   top: 0;
   transform: translate(36px, 36px);
-  transform-origin: center;
+  width: 76px;
+  height: 54px;
+  transform-origin: 5px 5px;
   pointer-events: none;
-  transition: transform 160ms ease-out;
+  transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.shadow-clicker .halo {
+.shadow-clicker .click-ring {
   position: absolute;
-  width: 42px;
-  height: 42px;
-  border: 2px solid rgba(25, 103, 210, 0.44);
+  left: -9px;
+  top: -9px;
+  width: 26px;
+  height: 26px;
+  border: 2px solid rgba(25, 103, 210, 0.48);
   border-radius: 999px;
-  transform: translate(-21px, -21px);
   background: rgba(25, 103, 210, 0.08);
+  box-shadow: 0 0 0 5px rgba(25, 103, 210, 0.1);
 }
 
-.shadow-clicker .dot {
+.shadow-clicker .clicker-cursor {
   position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  transform: translate(-5px, -5px);
-  background: var(--blue);
-  box-shadow: 0 0 0 5px rgba(25, 103, 210, 0.12);
+  left: 0;
+  top: 0;
+  width: 34px;
+  height: 42px;
+  overflow: visible;
+  filter: drop-shadow(0 10px 16px rgba(25, 38, 55, 0.28));
+}
+
+.shadow-clicker .cursor-body {
+  fill: #fff;
+  stroke: var(--blue);
+  stroke-width: 2.6;
+  stroke-linejoin: round;
+}
+
+.shadow-clicker .cursor-accent {
+  fill: var(--green);
+  opacity: 0.94;
 }
 
 .shadow-clicker .tag {
   position: absolute;
-  left: 16px;
-  top: -13px;
+  left: 30px;
+  top: 17px;
   width: max-content;
   max-width: 160px;
-  padding: 5px 8px;
+  padding: 4px 8px 5px;
+  border: 1px solid rgba(23, 32, 42, 0.12);
   border-radius: 999px;
-  background: #11253f;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 20px rgba(25, 38, 55, 0.16);
+  color: var(--ink);
   font-size: 0.75rem;
   font-weight: 800;
 }
 
-.shadow-clicker.pulse .halo {
+.shadow-clicker.pulse {
+  animation: clicker-nudge 220ms ease-out;
+}
+
+.shadow-clicker.pulse .click-ring {
   animation: pulse 420ms ease-out;
 }
 
@@ -300,12 +322,26 @@ dd {
 @keyframes pulse {
   from {
     opacity: 1;
-    transform: translate(-21px, -21px) scale(0.8);
+    transform: scale(0.82);
   }
 
   to {
     opacity: 0.4;
-    transform: translate(-21px, -21px) scale(1.25);
+    transform: scale(1.55);
+  }
+}
+
+@keyframes clicker-nudge {
+  0% {
+    margin-top: 0;
+  }
+
+  45% {
+    margin-top: 2px;
+  }
+
+  100% {
+    margin-top: 0;
   }
 }
 
