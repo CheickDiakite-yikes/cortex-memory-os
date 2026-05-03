@@ -526,6 +526,79 @@ function renderCaptureControl() {
   });
 }
 
+function renderCaptureReadinessLadder() {
+  const target = document.querySelector("#capture-readiness-ladder");
+  const ladder = data.capture_readiness_ladder;
+  if (!target || !ladder) return;
+  const steps = ladder.steps || [];
+  target.innerHTML = `
+    <div class="capture-ladder-copy">
+      <span class="capture-ladder-icon">${svgIcon("route")}</span>
+      <span>
+        <strong>${escapeHtml(ladder.title)}</strong>
+        <span>${escapeHtml(ladder.summary)}</span>
+      </span>
+    </div>
+    <div class="capture-ladder-grid">
+      <div><span>Ready</span><strong>${ladder.ready_count}/10</strong></div>
+      <div><span>Blocked</span><strong>${ladder.blocked_count}</strong></div>
+      <div><span>Next</span><strong>${escapeHtml(ladder.next_step_label)}</strong></div>
+      <div><span>Real capture</span><strong>${ladder.can_real_capture_now ? "ready" : "gated"}</strong></div>
+    </div>
+    <ol class="capture-ladder-list">
+      ${steps
+        .map(
+          (step) => `
+            <li class="capture-ladder-step ${statusClass(step.status)}" title="${escapeHtml(step.safety_note)}">
+              <span class="capture-ladder-step-index">${step.order}</span>
+              <span class="capture-ladder-step-main">
+                <strong>${escapeHtml(step.label)}</strong>
+                <span>${escapeHtml(step.surface)} · ${escapeHtml(step.proof)}</span>
+              </span>
+              <span class="capture-ladder-state">${formatToken(step.status)}</span>
+            </li>
+          `,
+        )
+        .join("")}
+    </ol>
+    <div class="shadow-live-actions">
+      <button class="text-command" type="button" id="capture-ladder-preflight">Preflight</button>
+      <button class="text-command" type="button" id="capture-ladder-screen-probe">Screen Probe</button>
+      <button class="text-command" type="button" id="capture-ladder-receipts">Receipts</button>
+    </div>
+  `;
+  document.querySelector("#capture-ladder-preflight").addEventListener("click", async () => {
+    try {
+      const receipt = await callCaptureControl("preflight");
+      writeReceipt(
+        `Capture Readiness Ladder preflight: ${receipt.missing_permissions.length} blocker(s); metadata probe=${receipt.safe_to_attempt_metadata_probe ? "ready" : "gated"}; real capture=${receipt.safe_to_start_real_capture_session ? "ready" : "gated"}.`,
+      );
+    } catch (_error) {
+      writeReceipt(`Capture Readiness Ladder: ${ladder.next_step_label} is next. Local bridge is unavailable, so no capture action was attempted.`);
+    }
+  });
+  document.querySelector("#capture-ladder-screen-probe").addEventListener("click", async () => {
+    try {
+      const receipt = await callCaptureControl("screenProbe", { allow_real_capture: true });
+      writeReceipt(
+        `Capture Readiness Ladder screen probe: attempted=${receipt.capture_attempted}; frame=${receipt.frame_captured ? `${receipt.frame_width}x${receipt.frame_height}` : "skipped"}; raw pixels=${receipt.raw_pixels_returned}; raw refs=${receipt.raw_ref_retained}; memory writes=${receipt.memory_write_allowed}.`,
+      );
+    } catch (_error) {
+      writeReceipt("Capture Readiness Ladder: Screen Probe stayed gated because the localhost bridge is unavailable.");
+    }
+  });
+  document.querySelector("#capture-ladder-receipts").addEventListener("click", async () => {
+    try {
+      const receipt = await callCaptureControl("receipts");
+      writeReceipt(
+        `Capture Readiness Ladder receipts: ${receipt.receipt_count} event(s); screen probes=${receipt.screen_probe_count}; skipped=${receipt.skipped_screen_probe_count}; raw refs=${receipt.raw_ref_retained}; memory writes=${receipt.memory_write_allowed}.`,
+      );
+    } catch (_error) {
+      writeReceipt("Capture Readiness Ladder receipt view is static until the localhost bridge is running.");
+    }
+  });
+}
+
 async function refreshCaptureRuntimeStatus(panel) {
   try {
     const receipt = await callCaptureControl("status");
@@ -1033,6 +1106,7 @@ if (!data) {
   renderLiveDashboardReceipts();
   renderDemoPath();
   renderCaptureControl();
+  renderCaptureReadinessLadder();
   renderInsights();
   renderReceipts();
   renderDashboard();

@@ -10,6 +10,10 @@ from cortex_memory_os.dashboard_shell import (
     render_dashboard_data_js,
     run_dashboard_shell_smoke,
 )
+from cortex_memory_os.capture_readiness_ladder import (
+    CAPTURE_READINESS_LADDER_ID,
+    CAPTURE_READINESS_LADDER_POLICY_REF,
+)
 from cortex_memory_os.clicky_ux import (
     CLICKY_UX_COMPANION_POLICY_REF,
     CLICKY_UX_LESSONS_POLICY_REF,
@@ -71,6 +75,7 @@ def test_dashboard_shell_composes_safe_view_models():
     assert CLICKY_UX_COMPANION_POLICY_REF in shell.policy_refs
     assert DASHBOARD_LIVE_DATA_ADAPTER_POLICY_REF in shell.policy_refs
     assert LIVE_DASHBOARD_RECEIPTS_POLICY_REF in shell.policy_refs
+    assert CAPTURE_READINESS_LADDER_POLICY_REF in shell.policy_refs
     assert len(shell.status_strip) == 4
     assert shell.shadow_pointer_live_receipt.memory_eligible is False
     assert shell.shadow_pointer_live_receipt.raw_ref_retained is False
@@ -117,6 +122,15 @@ def test_dashboard_shell_composes_safe_view_models():
     assert shell.live_dashboard_receipts.gateway_executed_count > 0
     assert shell.live_dashboard_receipts.mutation_enabled is False
     assert shell.live_dashboard_receipts.raw_payload_returned is False
+    assert shell.capture_readiness_ladder.ladder_id == CAPTURE_READINESS_LADDER_ID
+    assert len(shell.capture_readiness_ladder.steps) == 10
+    assert shell.capture_readiness_ladder.display_only is True
+    assert shell.capture_readiness_ladder.memory_write_allowed is False
+    assert shell.capture_readiness_ladder.raw_payloads_included is False
+    assert shell.capture_readiness_ladder.raw_ref_retained is False
+    assert shell.capture_readiness_ladder.external_effect_enabled is False
+    assert "continuous_capture" in shell.capture_readiness_ladder.blocked_effects
+    assert "durable_memory_write" in shell.capture_readiness_ladder.blocked_effects
     assert len(shell.insight_panels) >= 5
     assert any(panel.title == "Encryption Default" for panel in shell.insight_panels)
     assert all(panel.content_redacted for panel in shell.insight_panels)
@@ -188,6 +202,8 @@ def test_dashboard_data_js_is_redacted_and_static_app_ready():
     assert "Live Receipt Backbone" in data_js
     assert "Live Safe Receipts" in data_js
     assert "DASHBOARD-LIVE-DATA-ADAPTER-001" in data_js
+    assert "Capture Readiness Ladder" in data_js
+    assert CAPTURE_READINESS_LADDER_ID in data_js
     assert "data-view-section" not in data_js
     assert "Search primary sources" not in data_js
     assert "external:https://example.invalid/attack" not in data_js
@@ -213,6 +229,17 @@ def test_dashboard_static_app_refreshes_stale_capture_token():
     assert "missing_or_invalid_capture_token" in app_js
     assert "Capture bridge token refreshed. Retrying local command once." in app_js
     assert "callCaptureControlWithConfig(action, payload, { refreshed: true })" in app_js
+
+
+def test_dashboard_static_app_renders_capture_readiness_ladder():
+    app_js = Path("ui/cortex-dashboard/app.js").read_text()
+    index_html = Path("ui/cortex-dashboard/index.html").read_text()
+
+    assert "function renderCaptureReadinessLadder()" in app_js
+    assert "capture-ladder-preflight" in app_js
+    assert "capture-ladder-screen-probe" in app_js
+    assert "capture-readiness-ladder" in index_html
+    assert "CAPTURE-READINESS-LADDER-001" in index_html
 
 
 def test_dashboard_shell_smoke_contract_passes():
@@ -241,6 +268,8 @@ def test_dashboard_shell_smoke_contract_passes():
     assert result.clicky_ux_companion_present is True
     assert result.dashboard_live_data_adapter_present is True
     assert result.live_dashboard_receipts_present is True
+    assert result.capture_control_present is True
+    assert result.capture_readiness_ladder_present is True
     assert result.encryption_default_visible is True
     assert result.gateway_action_receipt_count > 0
     assert result.gateway_actions_present is True

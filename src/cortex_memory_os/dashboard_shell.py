@@ -68,7 +68,21 @@ from cortex_memory_os.key_management import (
     KEY_MANAGEMENT_PLAN_POLICY_REF,
     KeyManagementPlan,
 )
+from cortex_memory_os.capture_preflight_diagnostics import (
+    build_capture_preflight_diagnostics,
+    build_screen_metadata_stream_plan,
+)
+from cortex_memory_os.capture_readiness_ladder import (
+    CAPTURE_READINESS_LADDER_ID,
+    CAPTURE_READINESS_LADDER_POLICY_REF,
+    CaptureReadinessLadderPanel,
+    build_capture_readiness_ladder,
+    build_empty_capture_control_receipt_summary,
+)
 from cortex_memory_os.native_permission_smoke import build_fixture_permission_smoke_result
+from cortex_memory_os.native_screen_capture_probe import (
+    build_fixture_native_screen_capture_probe_result,
+)
 from cortex_memory_os.real_capture_control import (
     DASHBOARD_CAPTURE_CONTROL_ID,
     DASHBOARD_CAPTURE_CONTROL_POLICY_REF,
@@ -90,6 +104,10 @@ from cortex_memory_os.real_capture_control import (
     REAL_CAPTURE_STOP_RECEIPT_POLICY_REF,
     RealCaptureControlBundle,
     build_real_capture_control_bundle,
+)
+from cortex_memory_os.real_capture_hardening import (
+    RawRefScavengerReceipt,
+    build_real_capture_next_gate_plan,
 )
 from cortex_memory_os.shadow_pointer_native_live_feed import (
     NATIVE_SHADOW_POINTER_LIVE_FEED_POLICY_REF,
@@ -294,6 +312,7 @@ class CortexDashboardShell(StrictModel):
     dashboard_live_data_adapter: DashboardLiveDataAdapterSnapshot
     live_dashboard_receipts: LiveDashboardReceiptsPanel
     capture_control: RealCaptureControlBundle
+    capture_readiness_ladder: CaptureReadinessLadderPanel
     key_management_plan: KeyManagementPlan
     encrypted_index_panel: DashboardEncryptedIndexPanel
     native_live_feed: NativeShadowPointerLiveFeedReceipt
@@ -343,6 +362,7 @@ class DashboardShellSmokeResult(StrictModel):
     dashboard_live_data_adapter_present: bool
     live_dashboard_receipts_present: bool
     capture_control_present: bool
+    capture_readiness_ladder_present: bool
     missing_ui_terms: list[str] = Field(default_factory=list)
     missing_doc_terms: list[str] = Field(default_factory=list)
 
@@ -397,12 +417,42 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
     live_dashboard_receipts = build_live_dashboard_receipts_panel(
         dashboard_live_data_adapter
     )
+    permission_smoke = build_fixture_permission_smoke_result(
+        screen_recording_preflight=False,
+        accessibility_trusted=False,
+        checked_at=timestamp,
+    )
     capture_control = build_real_capture_control_bundle(
-        permission_smoke=build_fixture_permission_smoke_result(
-            screen_recording_preflight=False,
-            accessibility_trusted=False,
+        permission_smoke=permission_smoke,
+        now=timestamp,
+    )
+    capture_preflight = build_capture_preflight_diagnostics(
+        permission_smoke,
+        checked_at=timestamp,
+        host_pid=123,
+        executable_path="/Applications/Codex.app/Contents/MacOS/Codex",
+    )
+    capture_screen_probe = build_fixture_native_screen_capture_probe_result(
+        allow_real_capture=True,
+        screen_recording_preflight=permission_smoke.screen_recording_preflight,
+        checked_at=timestamp,
+    )
+    capture_readiness_ladder = build_capture_readiness_ladder(
+        bundle=capture_control,
+        preflight=capture_preflight,
+        screen_probe=capture_screen_probe,
+        receipt_summary=build_empty_capture_control_receipt_summary(),
+        raw_ref_scavenger=RawRefScavengerReceipt(
             checked_at=timestamp,
+            temp_root="/tmp/cortex/raw_refs",
+            ttl_seconds=600,
+            scanned_count=0,
+            deleted_count=0,
+            retained_count=0,
+            passed=True,
         ),
+        next_gate=build_real_capture_next_gate_plan(),
+        metadata_stream_plan=build_screen_metadata_stream_plan(),
         now=timestamp,
     )
 
@@ -481,6 +531,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
         dashboard_live_data_adapter=dashboard_live_data_adapter,
         live_dashboard_receipts=live_dashboard_receipts,
         capture_control=capture_control,
+        capture_readiness_ladder=capture_readiness_ladder,
         focus_inspector=_sample_focus_inspector(),
         policy_refs=[
             DASHBOARD_SHELL_POLICY_REF,
@@ -513,6 +564,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             REAL_CAPTURE_STOP_RECEIPT_POLICY_REF,
             REAL_CAPTURE_EPHEMERAL_RAW_REF_POLICY_REF,
             REAL_CAPTURE_OBSERVATION_SAMPLER_POLICY_REF,
+            CAPTURE_READINESS_LADDER_POLICY_REF,
         ],
         design_notes=[
             "Two primary work areas stay centered while guardrail insight panels stay compact.",
@@ -529,6 +581,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Encrypted index receipts show counts and policy state instead of raw memory or query text.",
             "Live dashboard panels refresh from local read-only adapter receipts, not embedded raw payloads.",
             "Capture control shows an honest button path for the native Shadow Clicker without claiming static HTML can launch it.",
+            "Capture readiness ladder turns the next ten real-capture gates into one readable checklist.",
         ],
         safety_notes=[
             "Dashboard data is generated from local safe read-only adapters and synthetic view-model seeds.",
@@ -541,6 +594,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Encrypted index dashboard panels never expose key material, token text, queries, or source refs.",
             "Live adapters expose aggregate counts only and keep write paths disabled.",
             "Real capture control starts with cursor overlay readiness and keeps raw storage and memory writes disabled.",
+            "Capture readiness ladder is display-only; it blocks continuous capture, raw pixels, durable memory writes, and external effects.",
         ],
         insight_panels=_sample_insight_panels(),
         key_management_plan=operational_backbone.key_management_plan,
@@ -625,6 +679,10 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "cortex-shadow-clicker",
         "renderCaptureControl",
         DASHBOARD_CAPTURE_CONTROL_ID,
+        "Capture Readiness Ladder",
+        "renderCaptureReadinessLadder",
+        "capture-readiness-ladder",
+        CAPTURE_READINESS_LADDER_ID,
     ]
     missing_ui_terms = _missing_terms(ui_text + "\n" + data_js, required_ui_terms)
     doc_text = (
@@ -650,6 +708,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "Capture Control",
         "native Shadow Clicker",
         DASHBOARD_CAPTURE_CONTROL_ID,
+        "Capture Readiness Ladder",
+        CAPTURE_READINESS_LADDER_ID,
     ]
     missing_doc_terms = _missing_terms(doc_text, required_doc_terms)
     action_plans_present = any(
@@ -872,6 +932,23 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and "raw://" not in capture_control_payload
         and "encrypted_blob://" not in capture_control_payload
     )
+    capture_readiness_payload = shell.capture_readiness_ladder.model_dump_json()
+    capture_readiness_ladder_present = (
+        "Capture Readiness Ladder" in ui_text + "\n" + data_js
+        and "capture-readiness-ladder" in ui_text
+        and len(shell.capture_readiness_ladder.steps) == 10
+        and shell.capture_readiness_ladder.display_only
+        and not shell.capture_readiness_ladder.raw_payloads_included
+        and not shell.capture_readiness_ladder.raw_ref_retained
+        and not shell.capture_readiness_ladder.memory_write_allowed
+        and not shell.capture_readiness_ladder.external_effect_enabled
+        and CAPTURE_READINESS_LADDER_POLICY_REF in shell.policy_refs
+        and CAPTURE_READINESS_LADDER_POLICY_REF in shell.capture_readiness_ladder.policy_refs
+        and "continuous_capture" in shell.capture_readiness_ladder.blocked_effects
+        and "durable_memory_write" in shell.capture_readiness_ladder.blocked_effects
+        and "raw://" not in capture_readiness_payload
+        and "encrypted_blob://" not in capture_readiness_payload
+    )
 
     passed = (
         ui_files_present
@@ -896,6 +973,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and dashboard_live_data_adapter_present
         and live_dashboard_receipts_present
         and capture_control_present
+        and capture_readiness_ladder_present
         and gateway_actions_present
         and not secret_retained
         and not raw_private_data_retained
@@ -945,6 +1023,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         dashboard_live_data_adapter_present=dashboard_live_data_adapter_present,
         live_dashboard_receipts_present=live_dashboard_receipts_present,
         capture_control_present=capture_control_present,
+        capture_readiness_ladder_present=capture_readiness_ladder_present,
         missing_ui_terms=missing_ui_terms,
         missing_doc_terms=missing_doc_terms,
     )

@@ -324,6 +324,9 @@ button {
 }
 
 .capture-control-rail {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.78fr) minmax(360px, 1.22fr);
+  gap: 12px;
   min-width: 0;
 }
 
@@ -341,7 +344,8 @@ button {
 .shadow-live-inner,
 .encrypted-index-inner,
 .live-receipts-inner,
-.capture-control-inner {
+.capture-control-inner,
+.capture-ladder-inner {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;
@@ -371,10 +375,17 @@ button {
   background: #fcfcff;
 }
 
+.capture-ladder-inner {
+  min-height: 96px;
+  border-color: #d7e2dc;
+  background: #fcfffd;
+}
+
 .shadow-live-copy,
 .encrypted-index-copy,
 .live-receipts-copy,
-.capture-control-copy {
+.capture-control-copy,
+.capture-ladder-copy {
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr);
   gap: 9px;
@@ -385,7 +396,8 @@ button {
 .shadow-live-icon,
 .encrypted-index-icon,
 .live-receipts-icon,
-.capture-control-icon {
+.capture-control-icon,
+.capture-ladder-icon {
   display: grid;
   place-items: center;
   width: 30px;
@@ -410,10 +422,16 @@ button {
   color: #376487;
 }
 
+.capture-ladder-icon {
+  background: #eef8f2;
+  color: #2c7458;
+}
+
 .shadow-live-icon svg,
 .encrypted-index-icon svg,
 .live-receipts-icon svg,
-.capture-control-icon svg {
+.capture-control-icon svg,
+.capture-ladder-icon svg {
   width: 18px;
   height: 18px;
   stroke-width: 2.2;
@@ -426,7 +444,9 @@ button {
 .live-receipts-copy strong,
 .live-receipts-copy span span,
 .capture-control-copy strong,
-.capture-control-copy span span {
+.capture-control-copy span span,
+.capture-ladder-copy strong,
+.capture-ladder-copy span span {
   display: block;
   min-width: 0;
 }
@@ -434,7 +454,8 @@ button {
 .shadow-live-copy strong,
 .encrypted-index-copy strong,
 .live-receipts-copy strong,
-.capture-control-copy strong {
+.capture-control-copy strong,
+.capture-ladder-copy strong {
   font-size: 14px;
   line-height: 1.2;
 }
@@ -442,7 +463,8 @@ button {
 .shadow-live-copy span span,
 .encrypted-index-copy span span,
 .live-receipts-copy span span,
-.capture-control-copy span span {
+.capture-control-copy span span,
+.capture-ladder-copy span span {
   margin-top: 3px;
   color: var(--muted);
   font-size: 12px;
@@ -459,7 +481,8 @@ button {
 .shadow-live-grid,
 .encrypted-index-grid,
 .live-receipts-grid,
-.capture-control-grid {
+.capture-control-grid,
+.capture-ladder-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 7px;
@@ -472,7 +495,8 @@ button {
 .shadow-live-grid div,
 .encrypted-index-grid div,
 .live-receipts-grid div,
-.capture-control-grid div {
+.capture-control-grid div,
+.capture-ladder-grid div {
   display: grid;
   gap: 3px;
   min-height: 46px;
@@ -485,7 +509,8 @@ button {
 .shadow-live-grid span,
 .encrypted-index-grid span,
 .live-receipts-grid span,
-.capture-control-grid span {
+.capture-control-grid span,
+.capture-ladder-grid span {
   color: var(--muted);
   font-size: 10px;
   font-weight: 850;
@@ -495,12 +520,89 @@ button {
 .shadow-live-grid strong,
 .encrypted-index-grid strong,
 .live-receipts-grid strong,
-.capture-control-grid strong {
+.capture-control-grid strong,
+.capture-ladder-grid strong {
   overflow: hidden;
   font-size: 12px;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.capture-ladder-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.capture-ladder-step {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.capture-ladder-step.status-blocked {
+  border-color: #f2d6cc;
+  background: #fff8f5;
+}
+
+.capture-ladder-step.status-planned,
+.capture-ladder-step.status-watching {
+  border-style: dashed;
+  background: #fbfcff;
+}
+
+.capture-ladder-step-index {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #eef8f2;
+  color: #27604a;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.capture-ladder-step-main {
+  min-width: 0;
+}
+
+.capture-ladder-step-main strong,
+.capture-ladder-step-main span {
+  display: block;
+  min-width: 0;
+}
+
+.capture-ladder-step-main strong {
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.capture-ladder-step-main span {
+  overflow: hidden;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.capture-ladder-state {
+  color: #315066;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .shadow-live-actions {
@@ -1215,13 +1317,17 @@ button {
   .insight-list,
   .focus-inspector-inner,
   .live-backbone-rail,
+  .capture-control-rail,
   .shadow-live-inner,
   .live-receipts-inner,
   .capture-control-inner,
+  .capture-ladder-inner,
   .shadow-live-grid,
   .encrypted-index-grid,
   .live-receipts-grid,
   .capture-control-grid,
+  .capture-ladder-grid,
+  .capture-ladder-list,
   .demo-path-inner,
   .demo-step-list {
     grid-template-columns: 1fr;

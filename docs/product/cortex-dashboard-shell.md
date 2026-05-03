@@ -289,6 +289,9 @@ Observation pause previewed locally. Confirmation and audit receipt required.
   `policy_dashboard_live_backbone_v1`;
 - the visible shell includes `Capture Control` and `Turn On Cortex` tied to
   `policy_dashboard_capture_control_v1`;
+- the visible shell includes `Capture Readiness Ladder` for
+  `CAPTURE-READINESS-LADDER-001`, tied to
+  `policy_capture_readiness_ladder_v1`;
 - dashboard docs, task board, benchmark plan, and benchmark registry name the
   slice;
 - local browser proof confirms the first viewport renders without overlapping

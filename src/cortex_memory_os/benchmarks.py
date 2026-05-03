@@ -137,6 +137,11 @@ from cortex_memory_os.dashboard_shell import (
     build_dashboard_shell,
     run_dashboard_shell_smoke,
 )
+from cortex_memory_os.capture_readiness_ladder import (
+    CAPTURE_READINESS_LADDER_ID,
+    CAPTURE_READINESS_LADDER_POLICY_REF,
+    build_fixture_capture_readiness_ladder,
+)
 from cortex_memory_os.dashboard_live_proof import (
     COMPUTER_DASHBOARD_LIVE_PROOF_ID,
     COMPUTER_DASHBOARD_LIVE_PROOF_POLICY_REF,
@@ -736,6 +741,7 @@ def run_all() -> BenchmarkRunResult:
         case_real_capture_ephemeral_raw_ref_contract,
         case_real_capture_observation_sampler_contract,
         case_dashboard_capture_control_contract,
+        case_capture_readiness_ladder_contract,
         case_capture_control_token_contract,
         case_capture_control_origin_csrf_contract,
         case_capture_control_lifecycle_contract,
@@ -13605,6 +13611,91 @@ def case_dashboard_capture_control_contract() -> BenchmarkCaseResult:
         ),
         metrics={"missing_doc_terms": len(missing_terms)},
         evidence={"policy_ref": DASHBOARD_CAPTURE_CONTROL_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_capture_readiness_ladder_contract() -> BenchmarkCaseResult:
+    blocked = build_fixture_capture_readiness_ladder(
+        permissions_ready=False,
+        now=datetime(2026, 5, 2, 21, 0, tzinfo=UTC),
+    )
+    ready = build_fixture_capture_readiness_ladder(
+        permissions_ready=True,
+        now=datetime(2026, 5, 2, 21, 5, tzinfo=UTC),
+    )
+    shell = build_dashboard_shell(now=datetime(2026, 5, 2, 21, 10, tzinfo=UTC))
+    app_js = (REPO_ROOT / "ui" / "cortex-dashboard" / "app.js").read_text(encoding="utf-8")
+    index_html = (REPO_ROOT / "ui" / "cortex-dashboard" / "index.html").read_text(
+        encoding="utf-8"
+    )
+    docs_text = (
+        (REPO_ROOT / "docs" / "product" / "capture-readiness-ladder.md").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (REPO_ROOT / "docs" / "product" / "cortex-dashboard-shell.md").read_text(
+            encoding="utf-8"
+        )
+    )
+    payload = blocked.model_dump_json() + "\n" + ready.model_dump_json()
+    required_terms = [
+        CAPTURE_READINESS_LADDER_ID,
+        CAPTURE_READINESS_LADDER_POLICY_REF,
+        "Bridge token",
+        "Permission preflight",
+        "Screen Probe",
+        "Raw ref scavenger",
+        "Receipt audit",
+        "continuous_capture",
+        "durable_memory_write",
+    ]
+    missing_doc_terms = _missing_terms(docs_text + "\n" + app_js + "\n" + index_html, required_terms)
+    passed = (
+        blocked.ladder_id == CAPTURE_READINESS_LADDER_ID
+        and len(blocked.steps) == 10
+        and blocked.blocked_count == 2
+        and blocked.can_demo_now
+        and not blocked.can_probe_now
+        and not blocked.can_real_capture_now
+        and ready.blocked_count == 0
+        and ready.can_probe_now
+        and ready.can_real_capture_now
+        and blocked.display_only
+        and not blocked.raw_payloads_included
+        and not blocked.raw_ref_retained
+        and not blocked.memory_write_allowed
+        and not blocked.external_effect_enabled
+        and "continuous_capture" in blocked.blocked_effects
+        and "raw_pixel_return" in blocked.blocked_effects
+        and "durable_memory_write" in blocked.blocked_effects
+        and shell.capture_readiness_ladder.ladder_id == CAPTURE_READINESS_LADDER_ID
+        and CAPTURE_READINESS_LADDER_POLICY_REF in shell.policy_refs
+        and "renderCaptureReadinessLadder" in app_js
+        and "capture-readiness-ladder" in index_html
+        and "raw://" not in payload
+        and "encrypted_blob://" not in payload
+        and not missing_doc_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="CAPTURE-READINESS-LADDER-001/ten_gate_dashboard_path",
+        suite=CAPTURE_READINESS_LADDER_ID,
+        passed=passed,
+        summary=(
+            "Dashboard composes ten real-capture readiness gates from local "
+            "bridge, preflight, probe, scavenger, stream-plan, and receipt "
+            "contracts without enabling raw payloads or memory writes."
+        ),
+        metrics={
+            "step_count": len(blocked.steps),
+            "blocked_count": blocked.blocked_count,
+            "ready_blocked_count": ready.blocked_count,
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": CAPTURE_READINESS_LADDER_POLICY_REF,
+            "next_step_label": blocked.next_step_label,
+            "missing_doc_terms": missing_doc_terms,
+        },
     )
 
 
