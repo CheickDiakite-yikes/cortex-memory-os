@@ -13123,6 +13123,9 @@ def case_live_tutor_overlay_contract() -> BenchmarkCaseResult:
     required_ui_terms = [
         "Cortex Resolve Studio",
         "shadow-tutor-cursor",
+        "cursor-trace-layer",
+        "cursor-talk-card",
+        "pointermove",
         "target-highlight",
         "instruction-bubble",
         'fetch("/tutor/turn"',

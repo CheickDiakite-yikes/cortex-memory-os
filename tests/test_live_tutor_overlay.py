@@ -145,6 +145,8 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
 
     assert "Cortex Resolve Studio" in html
     assert "shadow-tutor-cursor" in html
+    assert "cursor-trace-layer" in html
+    assert "cursor-talk-card" in html
     assert "target-highlight" in html
     assert "instruction-bubble" in html
     assert 'data-target-id="color_page_button"' in html
@@ -154,8 +156,14 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert LIVE_TUTOR_TOKEN_HEADER in js
     assert "active_page" in js
     assert "renderTurn" in js
+    assert "pointermove" in js
+    assert "placeTutorFollower" in js
+    assert "cursor-trace-dot" in js
     assert "raw refs" in js
     assert ".shadow-tutor-cursor" in css
+    assert ".shadow-tutor-cursor.tracking" in css
+    assert ".cursor-trace-dot" in css
+    assert ".cursor-talk-card.visible" in css
     assert ".target-highlight.visible" in css
     assert ".instruction-bubble.visible" in css
 

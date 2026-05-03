@@ -335,6 +335,13 @@ button {
   opacity: 1;
 }
 
+.shadow-tutor-cursor.tracking {
+  transition:
+    left 90ms linear,
+    top 90ms linear,
+    opacity 120ms ease;
+}
+
 .shadow-tutor-cursor svg {
   width: 34px;
   height: 42px;
@@ -348,6 +355,25 @@ button {
   stroke-linejoin: round;
 }
 
+.cursor-trace-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cursor-trace-dot {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border: 2px solid rgba(22, 99, 215, 0.42);
+  border-radius: 999px;
+  background: rgba(22, 99, 215, 0.14);
+  transform: translate(-50%, -50%);
+  animation: cursor-trace-fade 820ms ease-out forwards;
+}
+
 .cursor-ring {
   position: absolute;
   left: -9px;
@@ -357,6 +383,48 @@ button {
   border: 2px solid rgba(22, 99, 215, 0.52);
   border-radius: 999px;
   background: rgba(22, 99, 215, 0.1);
+}
+
+.cursor-talk-card {
+  position: absolute;
+  z-index: 8;
+  display: grid;
+  gap: 1px;
+  min-width: 118px;
+  padding: 8px 10px;
+  border: 1px solid rgba(22, 99, 215, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 28px rgba(21, 31, 47, 0.16);
+  color: var(--ink);
+  opacity: 0;
+  pointer-events: auto;
+  text-align: left;
+  transition:
+    left 90ms linear,
+    top 90ms linear,
+    opacity 120ms ease;
+}
+
+.cursor-talk-card.visible {
+  opacity: 1;
+}
+
+.cursor-talk-card span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cursor-talk-card strong {
+  color: var(--blue);
+  font-size: 0.82rem;
+}
+
+.cursor-talk-card:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
 }
 
 .cursor-tag {
@@ -543,6 +611,18 @@ dd {
   to {
     opacity: 0.36;
     transform: scale(1.55);
+  }
+}
+
+@keyframes cursor-trace-fade {
+  from {
+    opacity: 0.78;
+    transform: translate(-50%, -50%) scale(0.72);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.9);
   }
 }
 

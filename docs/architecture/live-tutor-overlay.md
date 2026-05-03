@@ -36,6 +36,12 @@ assistant spatial, visible, and shoulder-to-shoulder with the task. Cortex
 adapts that as a second cursor and small instruction bubble that point at UI
 targets while the user remains in control of actual clicks.
 
+The interaction must feel alive before the user asks a question. The demo keeps
+a secondary cursor tracking beside the user's pointer on the controlled work
+surface, leaves a fading cursor trace, and keeps a compact cursor-adjacent
+"Ask Cortex" affordance available. Target answering is layered on top of that
+continuous companion behavior, not substituted for it.
+
 The dashboard remains a review and receipt surface. The live tutor belongs near
 the work surface.
 

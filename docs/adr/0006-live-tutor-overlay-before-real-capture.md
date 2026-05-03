@@ -22,7 +22,10 @@ demo:
 
 - read only controlled DOM/state;
 - resolve a small set of contextual tutor intents;
-- render a blue secondary cursor, target highlight, and instruction bubble;
+- render a blue secondary cursor that continuously tracks beside the user's
+  pointer inside the controlled frame;
+- leave a fading cursor trace and cursor-adjacent ask affordance;
+- render target highlights and instruction bubbles when answering;
 - persist only safe turn receipts in memory for the running demo process;
 - expose dashboard-safe aggregate state;
 - block click, type, capture, voice, raw-ref, memory-write, export, and
