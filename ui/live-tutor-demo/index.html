@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="cortex-live-tutor-token" content="__CORTEX_LIVE_TUTOR_TOKEN__" />
+    <title>Cortex Live Tutor Demo</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="tutor-shell">
+      <section class="studio-panel" aria-label="Safe creative tool demo">
+        <header class="studio-topbar">
+          <div>
+            <strong>Cortex Resolve Studio</strong>
+            <span>Controlled localhost demo surface</span>
+          </div>
+          <div class="topbar-actions" aria-label="Demo state">
+            <span id="active-page-chip">Edit page</span>
+            <span>Screen capture off</span>
+            <span>Memory writes off</span>
+          </div>
+        </header>
+
+        <div class="studio-frame" id="studio-frame">
+          <aside class="media-bin" data-target-id="media_bin">
+            <h2>Media Bin</h2>
+            <button type="button">Interview_A_cam_001</button>
+            <button type="button">B-roll_city_evening</button>
+            <button type="button">Music_soft_pulse</button>
+          </aside>
+
+          <section class="viewer" aria-label="Preview viewer">
+            <div class="viewer-frame">
+              <span class="playhead"></span>
+              <p>Preview</p>
+            </div>
+          </section>
+
+          <section class="node-graph" data-target-id="node_graph" aria-label="Node Graph">
+            <h2>Node Graph</h2>
+            <div class="node-row">
+              <span>01 Balance</span>
+              <span>02 Contrast</span>
+              <span>03 Look</span>
+            </div>
+          </section>
+
+          <aside class="inspector" data-target-id="inspector">
+            <h2>Inspector</h2>
+            <label>
+              Temperature
+              <input type="range" min="-100" max="100" value="8" />
+            </label>
+            <label>
+              Tint
+              <input type="range" min="-100" max="100" value="-4" />
+            </label>
+            <button type="button" class="lut-button" data-target-id="lut_menu">LUT Menu</button>
+          </aside>
+
+          <section class="timeline" data-target-id="timeline" aria-label="Timeline">
+            <h2>Timeline</h2>
+            <div class="tracks">
+              <span class="clip wide">Interview_A_cam_001</span>
+              <span class="clip">B-roll</span>
+              <span class="audio">Music</span>
+            </div>
+          </section>
+
+          <nav class="page-switcher" aria-label="Workspace switcher">
+            <button type="button">Media</button>
+            <button type="button">Cut</button>
+            <button type="button" id="color-page-button" data-target-id="color_page_button">Color</button>
+            <button type="button">Fairlight</button>
+            <button type="button">Deliver</button>
+          </nav>
+
+          <div class="target-highlight" id="target-highlight" aria-hidden="true"></div>
+          <div class="shadow-tutor-cursor" id="shadow-tutor-cursor" aria-hidden="true">
+            <span class="cursor-ring"></span>
+            <svg viewBox="0 0 36 44" focusable="false">
+              <path d="M5 3.5 31 26.5 19.2 28.1 24.8 40.2 17.4 43 11.9 30.7 4.5 38.1 5 3.5Z" />
+            </svg>
+            <span class="cursor-tag">Cortex</span>
+          </div>
+          <p class="instruction-bubble" id="instruction-bubble" aria-live="polite">
+            Ask a question and I will point without clicking.
+          </p>
+        </div>
+      </section>
+
+      <aside class="tutor-panel" aria-label="Live tutor controls">
+        <header>
+          <p class="section-label">Live Tutor</p>
+          <h1>Show Me, Safely</h1>
+          <p>
+            Ask contextual questions. Cortex reads only this controlled demo state,
+            points with a secondary cursor, and writes a safe receipt.
+          </p>
+        </header>
+
+        <form id="question-form" class="question-form">
+          <label for="question-input">Question</label>
+          <textarea id="question-input" rows="3">How do I start color grading?</textarea>
+          <button type="submit">Ask Cortex</button>
+        </form>
+
+        <div class="quick-prompts" aria-label="Quick prompts">
+          <button type="button">How do I start color grading?</button>
+          <button type="button">Where is the node graph?</button>
+          <button type="button">How do I add a LUT?</button>
+          <button type="button">What should I click next?</button>
+        </div>
+
+        <section class="receipt-card" aria-label="Latest safe receipt">
+          <p class="section-label">Latest Receipt</p>
+          <dl>
+            <div><dt>Target</dt><dd id="receipt-target">none</dd></div>
+            <div><dt>Intent</dt><dd id="receipt-intent">waiting</dd></div>
+            <div><dt>Confidence</dt><dd id="receipt-confidence">0.00</dd></div>
+            <div><dt>Effects</dt><dd id="receipt-effects">display-only</dd></div>
+            <div><dt>Blocked</dt><dd id="receipt-blocked">clicks, capture, memory</dd></div>
+          </dl>
+        </section>
+
+        <section class="turn-log" aria-label="Tutor turn log">
+          <p class="section-label">Turn Receipts</p>
+          <ol id="turn-list"></ol>
+        </section>
+      </aside>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
