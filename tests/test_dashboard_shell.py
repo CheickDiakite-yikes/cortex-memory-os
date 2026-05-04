@@ -280,15 +280,22 @@ def test_dashboard_static_app_renders_user_focused_home():
     assert "home-command-center" in index_html
     assert "function renderHomeCommandCenter()" in app_js
     assert "renderHomeCommandCenter();" in app_js
-    assert "Cortex is in safe local mode." in app_js
-    assert "Open Live Tutor" in app_js
-    assert "Turn On Cursor" in app_js
-    assert "Open live controls" in app_js
-    assert "No raw capture running" in app_js
+    assert "Cortex is ready." in app_js
+    assert "What do you want Cortex to do?" in app_js
+    assert "Ask the helper" in app_js
+    assert "Start cursor" in app_js
+    assert "Memory book" in app_js
+    assert "Safety lock" in app_js
+    assert "Nothing private is being saved." in app_js
+    assert "Helper cursor" in app_js
+    assert "asks first" in app_js
     assert "data-home-view" in app_js
     assert ".home-command-inner" in css
+    assert ".home-question" in css
     assert ".home-actions" in css
-    assert ".home-state-row" in css
+    assert ".home-safety-lights" in css
+    assert "body[data-active-view=\"overview\"] .health-panel" in css
+    assert "body[data-active-view=\"overview\"] .dashboard-header" in css
 
 
 def test_dashboard_shell_smoke_contract_passes():

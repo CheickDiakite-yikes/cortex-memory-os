@@ -145,6 +145,10 @@ button {
   background: #fbfdff;
 }
 
+body[data-active-view="overview"] .health-panel {
+  display: none;
+}
+
 .health-panel h2,
 .audit-rail h2 {
   margin: 0;
@@ -236,14 +240,14 @@ button {
 
 .home-command-inner {
   display: grid;
-  gap: 14px;
+  gap: 18px;
   padding: 2px 0 0;
 }
 
 .home-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(230px, 0.34fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.36fr);
+  gap: 22px;
   align-items: stretch;
 }
 
@@ -256,17 +260,17 @@ button {
 .home-hero-copy h2 {
   max-width: 760px;
   margin: 0;
-  font-size: clamp(32px, 5vw, 58px);
-  line-height: 0.98;
+  font-size: clamp(42px, 5.6vw, 76px);
+  line-height: 0.95;
   letter-spacing: 0;
 }
 
 .home-hero-copy p:last-child {
   max-width: 650px;
-  margin: 14px 0 0;
+  margin: 18px 0 0;
   color: var(--muted);
-  font-size: 15px;
-  line-height: 1.55;
+  font-size: 18px;
+  line-height: 1.45;
 }
 
 .home-safety-card {
@@ -274,7 +278,7 @@ button {
   align-content: center;
   gap: 8px;
   min-height: 142px;
-  padding: 16px;
+  padding: 22px;
   border: 1px solid #d8e6dd;
   border-radius: 10px;
   background: #f8fcf9;
@@ -283,44 +287,64 @@ button {
 .home-safety-card span {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: #e8f7ee;
   color: var(--green);
 }
 
 .home-safety-card svg {
-  width: 19px;
-  height: 19px;
+  width: 24px;
+  height: 24px;
   stroke-width: 2;
 }
 
 .home-safety-card strong {
-  font-size: 16px;
+  font-size: 20px;
   line-height: 1.2;
 }
 
 .home-safety-card p {
   margin: 0;
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.35;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.home-question {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: baseline;
+  min-height: 42px;
+  padding: 0 2px;
+}
+
+.home-question strong {
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+.home-question span {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.4;
 }
 
 .home-actions {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .home-action {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  gap: 9px;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
   align-items: center;
-  min-height: 78px;
-  padding: 12px;
+  min-height: 104px;
+  padding: 16px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #fff;
@@ -338,9 +362,9 @@ button {
 .home-action span {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: #f0f5fa;
   color: var(--blue);
 }
@@ -350,8 +374,8 @@ button {
 }
 
 .home-action svg {
-  width: 17px;
-  height: 17px;
+  width: 24px;
+  height: 24px;
   stroke-width: 2;
 }
 
@@ -359,22 +383,20 @@ button {
 .home-action em {
   display: block;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .home-action strong {
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.2;
 }
 
 .home-action em {
-  margin-top: 3px;
+  margin-top: 6px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
   font-style: normal;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .home-action:hover {
@@ -382,38 +404,37 @@ button {
   box-shadow: 0 8px 22px rgba(21, 111, 209, 0.08);
 }
 
-.home-state-row {
+.home-safety-lights {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.home-state-row div {
+.home-safety-lights div {
   min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: #fbfdff;
+  padding: 14px 16px;
+  border: 1px solid #d8e6dd;
+  border-radius: 10px;
+  background: #f8fcf9;
 }
 
-.home-state-row span,
-.home-state-row strong {
+.home-safety-lights span,
+.home-safety-lights strong {
   display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
-.home-state-row span {
+.home-safety-lights span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
 }
 
-.home-state-row strong {
-  margin-top: 4px;
-  font-size: 13px;
+.home-safety-lights strong {
+  margin-top: 6px;
+  font-size: 18px;
+  line-height: 1.15;
 }
 
 .status-strip {
@@ -1549,7 +1570,7 @@ button {
   .status-strip,
   .home-hero,
   .home-actions,
-  .home-state-row,
+  .home-safety-lights,
   .workspace-grid,
   .insight-list,
   .focus-inspector-inner,
@@ -1636,6 +1657,10 @@ button {
     flex-direction: column;
   }
 
+  body[data-active-view="overview"] .dashboard-header {
+    display: none;
+  }
+
   .header-actions {
     justify-content: flex-start;
   }
@@ -1649,7 +1674,7 @@ button {
   }
 
   .home-command-inner {
-    padding: 14px;
+    padding: 12px 14px 18px;
   }
 
   .home-hero-copy {
@@ -1657,7 +1682,7 @@ button {
   }
 
   .home-hero-copy h2 {
-    font-size: 34px;
+    font-size: 38px;
   }
 
   .meta-grid,

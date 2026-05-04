@@ -32,34 +32,34 @@ const gatewayReceiptByAction = new Map(
 const skillMetricById = new Map((data.skill_metrics?.cards || []).map((card) => [card.skill_id, card]));
 const viewCopy = {
   overview: {
-    label: "Overview",
+    label: "Home",
     title: "Cortex Home",
-    copy: "A simple control room for the live tutor, memory review, and safety state.",
+    copy: "Pick one big button. Cortex will show what is on and what is off.",
   },
   memory_palace: {
-    label: "Memory Palace",
-    title: "Memory Review Queue",
-    copy: "Inspectable memories with correction, scope, and forget receipts.",
+    label: "Book",
+    title: "Memory Book",
+    copy: "See and fix what Cortex thinks it knows.",
   },
   skill_forge: {
-    label: "Skill Forge",
-    title: "Candidate Workflows",
-    copy: "Draft-only skills, maturity signals, and blocked promotion paths.",
+    label: "Learn",
+    title: "Things Cortex Learned",
+    copy: "Check the workflows Cortex can draft for you.",
   },
   agent_gateway: {
-    label: "Agent Gateway",
-    title: "Gateway Receipts",
-    copy: "Read-only context and review calls stay separate from blocked effects.",
+    label: "Help",
+    title: "Helper Cursor Controls",
+    copy: "Start, stop, and test the blue helper cursor.",
   },
   audit: {
-    label: "Audit",
-    title: "Safe Receipts",
-    copy: "Recent local receipts and blocked gateway previews.",
+    label: "Log",
+    title: "What Happened",
+    copy: "A simple list of what Cortex previewed or blocked.",
   },
   policies: {
-    label: "Policies",
-    title: "Guardrail State",
-    copy: "Privacy, evidence, encryption, and ops quality gates.",
+    label: "Safe",
+    title: "Safety Lock",
+    copy: "See what is on, off, allowed, and blocked.",
   },
 };
 let activeView = initialView();
@@ -288,9 +288,9 @@ function renderNav() {
   nav.innerHTML = data.nav_items
     .map(
       (item) => `
-        <button class="nav-item ${item.item_id === activeView ? "active" : ""}" type="button" data-nav="${escapeHtml(item.item_id)}" title="${escapeHtml(item.label)}" aria-pressed="${item.item_id === activeView ? "true" : "false"}">
+        <button class="nav-item ${item.item_id === activeView ? "active" : ""}" type="button" data-nav="${escapeHtml(item.item_id)}" title="${escapeHtml(viewCopy[item.item_id]?.label || item.label)}" aria-pressed="${item.item_id === activeView ? "true" : "false"}">
           ${svgIcon(item.item_id)}
-          <span class="label">${escapeHtml(item.label)}</span>
+          <span class="label">${escapeHtml(viewCopy[item.item_id]?.label || item.label)}</span>
           ${Number.isInteger(item.count) ? `<span class="nav-count">${item.count}</span>` : ""}
         </button>
       `,
@@ -330,88 +330,84 @@ function renderStatusStrip() {
 function renderHomeCommandCenter() {
   const target = document.querySelector("#home-command-center");
   if (!target) return;
-  const shadow = data.shadow_pointer_live_receipt || {};
-  const fields = shadow.compact_fields || {};
   const liveTutor = data.live_tutor_panel || {};
-  const capturePanel = data.capture_control?.dashboard_panel || {};
   const memoryCount = data.memory_palace?.cards?.length || 0;
   const skillCount = data.skill_forge?.cards?.length || 0;
-  const receiptCount = data.safe_receipts?.length || 0;
   const tutorHref = liveTutor.demo_url || "http://127.0.0.1:8797/";
 
   target.innerHTML = `
     <div class="home-hero">
       <div class="home-hero-copy">
         <p class="section-label">Cortex Home</p>
-        <h2>Cortex is in safe local mode.</h2>
+        <h2>Cortex is ready.</h2>
         <p>
-          Use the live tutor, review what Cortex thinks it knows, and inspect
-          safety state without digging through benchmark panels.
+          Pick what you want to do. Cortex can point, explain, and remember
+          only when the safety lights allow it.
         </p>
       </div>
       <div class="home-safety-card" aria-label="Current safety boundary">
         <span>${svgIcon("shield")}</span>
-        <strong>No raw capture running</strong>
-        <p>Screen capture off. Memory writes off. Raw refs none.</p>
+        <strong>Nothing private is being saved.</strong>
+        <p>Screen saving is off. Memory asks first. Secrets stay hidden.</p>
       </div>
+    </div>
+    <div class="home-question" aria-label="Main choice">
+      <strong>What do you want Cortex to do?</strong>
+      <span>Start with the blue helper cursor, then open memory or safety when you need it.</span>
     </div>
     <div class="home-actions" aria-label="Primary actions">
       <a class="home-action primary" href="${escapeHtml(tutorHref)}">
         <span>${svgIcon("pointer")}</span>
         <div>
-          <strong>Open Live Tutor</strong>
-          <em>Talk to the blue cursor demo</em>
+          <strong>Ask the helper</strong>
+          <em>Use the blue cursor demo</em>
         </div>
       </a>
       <button class="home-action" type="button" data-home-view="agent_gateway">
         <span>${svgIcon("play")}</span>
         <div>
-          <strong>Turn On Cursor</strong>
-          <em>Open live controls</em>
+          <strong>Start cursor</strong>
+          <em>Follow my mouse</em>
         </div>
       </button>
       <button class="home-action" type="button" data-home-view="memory_palace">
         <span>${svgIcon("memory_palace")}</span>
         <div>
-          <strong>Review Memory</strong>
-          <em>${memoryCount} safe cards</em>
+          <strong>Memory book</strong>
+          <em>${memoryCount} things to check</em>
         </div>
       </button>
       <button class="home-action" type="button" data-home-view="skill_forge">
         <span>${svgIcon("skill_forge")}</span>
         <div>
-          <strong>Review Skills</strong>
-          <em>${skillCount} candidates</em>
+          <strong>Things learned</strong>
+          <em>${skillCount} drafts to review</em>
         </div>
       </button>
       <button class="home-action" type="button" data-home-view="policies">
         <span>${svgIcon("shield")}</span>
         <div>
-          <strong>Check Safety</strong>
-          <em>Capture and privacy gates</em>
+          <strong>Safety lock</strong>
+          <em>See what is blocked</em>
         </div>
       </button>
     </div>
-    <div class="home-state-row" aria-label="Current readable state">
+    <div class="home-safety-lights" aria-label="Simple safety lights">
       <div>
-        <span>Observation</span>
-        <strong>${formatToken(shadow.state || "ready")}</strong>
+        <span>Helper cursor</span>
+        <strong>ready</strong>
       </div>
       <div>
-        <span>Trust</span>
-        <strong>${formatToken(fields.trust || "local")}</strong>
+        <span>Screen saving</span>
+        <strong>off</strong>
       </div>
       <div>
         <span>Memory</span>
-        <strong>${formatToken(fields.memory || "off")}</strong>
+        <strong>asks first</strong>
       </div>
       <div>
-        <span>Raw refs</span>
-        <strong>${formatToken(fields.raw_refs || "none")}</strong>
-      </div>
-      <div>
-        <span>Receipts</span>
-        <strong>${receiptCount}</strong>
+        <span>Secrets</span>
+        <strong>hidden</strong>
       </div>
     </div>
   `;
@@ -705,7 +701,6 @@ async function refreshCaptureRuntimeStatus(panel) {
     const pid = document.querySelector("#capture-runtime-pid");
     if (status) status.textContent = "static";
     if (pid) pid.textContent = "none";
-    writeReceipt(describeCaptureBridgeFallback(panel));
   }
 }
 

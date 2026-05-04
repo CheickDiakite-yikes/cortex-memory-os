@@ -104,12 +104,13 @@ display-only and controlled-state-only: no screen capture, microphone capture,
 Accessibility observer, clicks, typing, raw refs, memory writes, exports, or
 external effects.
 
-The 2026-05-03 user-focused home refinement makes the Overview a readable
-control room instead of an ops wall. The first screen answers what a person
-needs first: whether Cortex is in safe local mode, what primary action to try,
-what is blocked, and where to go next. Deeper benchmark receipts, encrypted
-index metadata, capture readiness, live adapter counts, and policy detail move
-behind Agent Gateway, Audit, and Policies tabs.
+The 2026-05-04 child-readable home refinement makes the Overview a plain
+control pad instead of an ops wall. The first screen uses words a new user can
+understand quickly: Cortex is ready, ask the helper, start cursor, memory book,
+things learned, safety lock, helper cursor, screen saving, memory, and secrets.
+Deeper benchmark receipts, encrypted index metadata, capture readiness, live
+adapter counts, status strips, and policy detail move behind Help, Log, and
+Safe tabs.
 
 ## Design Source
 
@@ -137,7 +138,8 @@ The generated dashboard concept established the first visual direction:
 - restrained local-ops palette with green, blue, amber, and red status
   accents;
 - dense but readable operational UI, not a landing page.
-- a user-focused home that exposes primary actions before operational receipts.
+- a child-readable home that exposes plain-language actions before operational
+  receipts.
 
 ## Data Boundary
 
@@ -168,10 +170,10 @@ tokens.
 
 The static app in `ui/cortex-dashboard/` must render:
 
-- a simplified user-focused home for `DASHBOARD-USER-HOME-001`, with "Open Live
-  Tutor", "Turn On Cursor", memory review, skill review, safety review, and
-  visible no-raw-capture/no-memory-write/no-raw-ref state;
-- the status strip;
+- a simplified child-readable home for `DASHBOARD-USER-HOME-001`, with "Ask the
+  helper", "Start cursor", "Memory book", "Things learned", "Safety lock", and
+  plain safety lights for helper cursor, screen saving, memory, and secrets;
+- the status strip in deeper operations views, not on the default Overview;
 - Memory Palace review cards with status, confidence, source count, recall
   state, and exact gateway action plans;
 - Skill Forge candidate cards with observed refs, risk, maturity, promotion
