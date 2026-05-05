@@ -307,16 +307,24 @@ def test_dashboard_static_app_renders_manual_memory_book():
     assert "memory-book-live" in index_html
     assert "Tell Cortex what to remember." in app_js
     assert "Save memory" in app_js
+    assert "Ask memory" in app_js
     assert "Find a memory" in app_js
+    assert "Why Cortex remembers this" in app_js
+    assert "Undo forget" in app_js
     assert "Fix this memory:" in app_js
     assert "Forget this memory?" in app_js
     assert "callMemoryBook(\"save\"" in app_js
+    assert "callMemoryBook(\"ask\"" in app_js
+    assert "callMemoryBook(\"explain\"" in app_js
     assert "callMemoryBook(\"search\"" in app_js
     assert "callMemoryBook(\"correct\"" in app_js
     assert "callMemoryBook(\"forget\"" in app_js
+    assert "callMemoryBook(\"undo-forget\"" in app_js
     assert "refreshMemoryBook({ silent: true })" in app_js
     assert ".memory-book-panel" in css
     assert ".memory-book-card" in css
+    assert ".memory-book-safety" in css
+    assert ".memory-book-log" in css
     assert "body[data-active-view=\"memory_palace\"] #memory-list" in css
 
 

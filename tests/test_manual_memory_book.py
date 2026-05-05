@@ -110,6 +110,44 @@ def test_manual_memory_search_correct_forget_and_audit_flow(tmp_path):
     assert "simple words" not in audit.model_dump_json()
 
 
+def test_manual_memory_ask_explain_status_and_undo_forget(tmp_path):
+    service = ManualMemoryBookService(
+        tmp_path / "memory-book.sqlite3",
+        now=_clock(
+            datetime(2026, 5, 4, 10, 0, tzinfo=UTC),
+            datetime(2026, 5, 4, 10, 1, tzinfo=UTC),
+            datetime(2026, 5, 4, 10, 2, tzinfo=UTC),
+            datetime(2026, 5, 4, 10, 3, tzinfo=UTC),
+            datetime(2026, 5, 4, 10, 4, tzinfo=UTC),
+            datetime(2026, 5, 4, 10, 5, tzinfo=UTC),
+        ),
+    )
+
+    saved = service.save(ManualMemoryInput(text="Cortex likes tiny clear cards."))
+    asked = service.ask("What cards does Cortex like?")
+    explained = service.explain(saved.card.memory_id)
+    forgotten = service.forget(saved.card.memory_id, confirm_forget=True)
+    status_after_forget = service.status()
+    restored = service.undo_forget(forgotten.undo_id or "")
+    status_after_restore = service.status()
+
+    assert asked.used_memory_ids == [saved.card.memory_id]
+    assert asked.answer == "I found this memory: Cortex likes tiny clear cards."
+    assert asked.question_redacted_in_receipt
+    assert "user-confirmed" in " ".join(explained.why_lines)
+    assert "No screen capture" in " ".join(explained.safety_lines)
+    assert forgotten.can_undo
+    assert forgotten.undo_id
+    assert forgotten.undo_expires_at is not None
+    assert status_after_forget.saved_count == 0
+    assert status_after_forget.pending_undo_count == 1
+    assert status_after_forget.direct_query_only
+    assert not status_after_forget.screen_capture_enabled
+    assert restored.card.memory_id == saved.card.memory_id
+    assert service.search("tiny clear cards").used_memory_ids == [saved.card.memory_id]
+    assert status_after_restore.saved_count == 1
+
+
 def test_manual_memory_forget_requires_explicit_confirmation(tmp_path):
     service = ManualMemoryBookService(tmp_path / "memory-book.sqlite3")
     saved = service.save(ManualMemoryInput(text="Cortex remembers only with a button."))

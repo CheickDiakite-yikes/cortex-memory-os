@@ -12182,7 +12182,10 @@ def case_manual_memory_book_loop_contract() -> BenchmarkCaseResult:
         MANUAL_MEMORY_BOOK_POLICY_REF,
         "Tell Cortex what to remember.",
         "Save memory",
+        "Ask memory",
         "Find a memory",
+        "Why Cortex remembers this",
+        "Undo forget",
         "Forget this memory?",
         "direct-query",
     ]
@@ -12196,15 +12199,21 @@ def case_manual_memory_book_loop_contract() -> BenchmarkCaseResult:
         )
         listed = service.list_cards()
         found = service.search("blue notebook")
+        asked = service.ask("What should Cortex remember about the blue notebook?")
+        explained = service.explain(saved.card.memory_id)
         corrected = service.correct(
             saved.card.memory_id,
             ManualMemoryInput(text="Cortex should remember clear Memory Book cards."),
         )
         old_search = service.search("blue notebook")
         corrected_search = service.search("clear Memory Book cards")
-        service.forget(corrected.card.memory_id, confirm_forget=True)
+        forgotten = service.forget(corrected.card.memory_id, confirm_forget=True)
+        status_after_forget = service.status()
+        restored = service.undo_forget(forgotten.undo_id or "")
+        service.forget(restored.card.memory_id, confirm_forget=True)
         after_forget = service.search("clear Memory Book cards")
         audit = service.audit_events()
+        status_after_final_forget = service.status()
         raw_db = db_path.read_bytes()
 
     db_hides_payload = (
@@ -12225,11 +12234,23 @@ def case_manual_memory_book_loop_contract() -> BenchmarkCaseResult:
     passed = (
         listed.cards
         and found.cards
+        and asked.used_memory_ids == [saved.card.memory_id]
+        and explained.card.memory_id == saved.card.memory_id
         and not old_search.cards
         and corrected_search.cards
+        and forgotten.can_undo
+        and status_after_forget.pending_undo_count == 1
+        and restored.card.memory_id == corrected.card.memory_id
         and not after_forget.cards
-        and len(audit.events) >= 3
-        and {"manual_memory.save", "manual_memory.correct", "manual_memory.forget"}
+        and len(audit.events) >= 5
+        and status_after_final_forget.direct_query_only
+        and not status_after_final_forget.screen_capture_enabled
+        and {
+            "manual_memory.save",
+            "manual_memory.correct",
+            "manual_memory.forget",
+            "manual_memory.undo_forget",
+        }
         <= set(audit_actions)
         and saved_card.influence_level == InfluenceLevel.DIRECT_QUERY
         and saved_card.scope == ScopeLevel.PROJECT_SPECIFIC
@@ -12252,10 +12273,12 @@ def case_manual_memory_book_loop_contract() -> BenchmarkCaseResult:
         metrics={
             "listed_count": len(listed.cards),
             "initial_search_count": len(found.cards),
+            "ask_result_count": len(asked.cards),
             "old_search_after_correct_count": len(old_search.cards),
             "corrected_search_count": len(corrected_search.cards),
             "after_forget_count": len(after_forget.cards),
             "audit_count": len(audit.events),
+            "pending_undo_count": status_after_final_forget.pending_undo_count,
             "missing_doc_terms": len(missing_terms),
         },
         evidence={

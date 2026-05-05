@@ -22,7 +22,7 @@ Build the first durable memory loop as a manual Memory Book:
 - child-readable cards that explain what Cortex remembers, why the memory
   exists, where it can be used, and whether it is safe;
 - `direct-query` influence by default;
-- explicit save, find, fix, and forget actions;
+- explicit save, ask, find, explain-why, fix, forget, and undo-forget actions;
 - redacted audit receipts for save, correct, and forget;
 - rejection of secret-like and prompt-injection-like input before any write.
 
@@ -34,7 +34,9 @@ benchmark anchor is `MANUAL-MEMORY-BOOK-001`.
 This gives the live cursor and future tutor overlays a real memory substrate to
 plug into without widening observation authority. It also gives users a small
 trust-building flow before any capture, microphone, raw ref, autonomous action,
-export, or external effect is introduced.
+export, or external effect is introduced. The undo window is intentionally
+short and local; it restores only a user-forgotten manual memory and does not
+make forgotten memories searchable while they are forgotten.
 
 ## Alternatives considered
 
@@ -51,5 +53,6 @@ export, or external effect is introduced.
 - `uv run cortex-manual-memory-book --smoke --json`
 - `uv run cortex-capture-control-server --smoke --json`
 - `uv run cortex-bench --no-write`, including `MANUAL-MEMORY-BOOK-001`
-- Browser proof against the localhost dashboard: save, find, fix, forget, and
-  confirm forgotten memories no longer appear in retrieval.
+- Browser proof against the localhost dashboard: save, ask, explain why, find,
+  fix, forget, undo, forget again, and confirm forgotten memories no longer
+  appear in retrieval.

@@ -5,6 +5,11 @@ const memoryBookState = {
   searchCards: [],
   auditEvents: [],
   lastReceipt: null,
+  status: null,
+  askAnswer: null,
+  askCards: [],
+  explained: null,
+  lastUndo: null,
   loading: false,
   error: null,
   searched: false,
@@ -193,12 +198,16 @@ async function callMemoryBook(action, payload = {}, options = {}) {
     save: "memorySavePath",
     list: "memoryListPath",
     search: "memorySearchPath",
+    ask: "memoryAskPath",
+    explain: "memoryExplainPath",
     correct: "memoryCorrectPath",
     forget: "memoryForgetPath",
+    "undo-forget": "memoryUndoForgetPath",
     audit: "memoryAuditPath",
+    status: "memoryStatusPath",
   };
   const path = captureControlConfig[configKeys[action]] || `/api/memory/${action}`;
-  const readOnly = action === "list" || action === "audit";
+  const readOnly = action === "list" || action === "audit" || action === "status";
   const response = await fetch(path, {
     method: readOnly ? "GET" : "POST",
     headers: {
@@ -232,12 +241,14 @@ async function refreshMemoryBook({ silent = false } = {}) {
   memoryBookState.error = null;
   renderMemoryBookLive();
   try {
-    const [list, audit] = await Promise.all([
+    const [list, audit, status] = await Promise.all([
       callMemoryBook("list"),
       callMemoryBook("audit"),
+      callMemoryBook("status"),
     ]);
     memoryBookState.cards = list.cards || [];
     memoryBookState.auditEvents = audit.events || [];
+    memoryBookState.status = status;
     memoryBookState.lastReceipt = list.receipt;
     memoryBookState.loading = false;
     renderNav();
@@ -463,6 +474,13 @@ function renderHomeCommandCenter() {
           <em>${memoryCount} things to check</em>
         </div>
       </button>
+      <button class="home-action" type="button" data-home-view="memory_palace" data-focus-memory-ask="true">
+        <span>${svgIcon("eye")}</span>
+        <div>
+          <strong>Ask memory</strong>
+          <em>Find what Cortex knows</em>
+        </div>
+      </button>
       <button class="home-action" type="button" data-home-view="skill_forge">
         <span>${svgIcon("skill_forge")}</span>
         <div>
@@ -501,6 +519,9 @@ function renderHomeCommandCenter() {
   target.querySelectorAll("[data-home-view]").forEach((button) => {
     button.addEventListener("click", () => {
       setActiveView(button.dataset.homeView);
+      if (button.dataset.focusMemoryAsk) {
+        setTimeout(() => document.querySelector("#manual-memory-question")?.focus(), 0);
+      }
     });
   });
 }
@@ -1078,9 +1099,41 @@ function renderMemoryBookLive() {
   const cardHtml = shownCards.length
     ? shownCards.map(renderMemoryBookCard).join("")
     : `<div class="memory-book-empty">${memoryBookState.searched ? "Nothing matched that search." : "Nothing saved yet. Add one small memory above."}</div>`;
-  const auditLine = memoryBookState.auditEvents.length
-    ? `${memoryBookState.auditEvents.length} safe Memory Book actions logged.`
+  const status = memoryBookState.status || {};
+  const auditLine = status.audit_count
+    ? `${status.audit_count} safe Memory Book actions logged.`
     : "No Memory Book actions yet.";
+  const askHtml = memoryBookState.askAnswer
+    ? `
+      <div class="memory-book-answer">
+        <strong>Cortex says</strong>
+        <p>${escapeHtml(memoryBookState.askAnswer.answer)}</p>
+        <span>${escapeHtml(memoryBookState.askCards.length)} memory match${memoryBookState.askCards.length === 1 ? "" : "es"} · confidence ${escapeHtml(Math.round((memoryBookState.askAnswer.confidence || 0) * 100))}%</span>
+      </div>
+    `
+    : "";
+  const explainHtml = memoryBookState.explained
+    ? `
+      <div class="memory-book-explain" aria-label="Why Cortex remembers this">
+        <strong>Why Cortex remembers this</strong>
+        <ul>
+          ${memoryBookState.explained.why_lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}
+        </ul>
+        <strong>Safety</strong>
+        <ul>
+          ${memoryBookState.explained.safety_lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}
+        </ul>
+      </div>
+    `
+    : "";
+  const undoHtml = memoryBookState.lastUndo?.undo_id
+    ? `
+      <div class="memory-book-undo">
+        <span>Forgot by mistake?</span>
+        <button class="text-command" type="button" id="manual-memory-undo">Undo forget</button>
+      </div>
+    `
+    : "";
   target.innerHTML = `
     <section class="memory-book-panel" aria-label="Manual Memory Book">
       <div class="memory-book-intro">
@@ -1106,6 +1159,14 @@ function renderMemoryBookLive() {
           ${svgIcon("route")} Refresh
         </button>
       </div>
+      <div class="memory-book-ask" role="search">
+        <label class="memory-book-label" for="manual-memory-question">Ask memory</label>
+        <div>
+          <input id="manual-memory-question" type="search" placeholder="Ask: what should Cortex remember?" />
+          <button class="text-command" type="button" id="manual-memory-ask">Ask</button>
+        </div>
+      </div>
+      ${askHtml}
       <div class="memory-book-search" role="search">
         <label class="memory-book-label" for="manual-memory-search">Find a memory</label>
         <div>
@@ -1117,9 +1178,21 @@ function renderMemoryBookLive() {
       <div class="memory-book-status" data-state="${memoryBookState.error ? "warning" : "healthy"}">
         ${memoryBookState.loading ? "Loading Memory Book..." : memoryBookState.error ? escapeHtml(memoryBookState.error) : escapeHtml(auditLine)}
       </div>
+      <div class="memory-book-safety" aria-label="Memory Book safety">
+        <div><span>Safety lock</span><strong>${escapeHtml(status.safety_label || "Locked")}</strong></div>
+        <div><span>Saved</span><strong>${escapeHtml(status.saved_count ?? memoryBookState.cards.length)}</strong></div>
+        <div><span>Use</span><strong>${status.direct_query_only === false ? "wider" : "ask only"}</strong></div>
+        <div><span>Screen</span><strong>${status.screen_capture_enabled ? "on" : "off"}</strong></div>
+      </div>
+      ${undoHtml}
+      ${explainHtml}
       <div class="memory-book-list" aria-label="${escapeHtml(title)}">
         <h2>${escapeHtml(title)}</h2>
         ${cardHtml}
+      </div>
+      <div class="memory-book-log" aria-label="Memory Book log">
+        <h2>Log</h2>
+        ${renderMemoryBookAuditLog()}
       </div>
     </section>
   `;
@@ -1139,10 +1212,27 @@ function renderMemoryBookCard(card) {
         <div><dt>Safe</dt><dd>${escapeHtml(card.safety_status)}</dd></div>
       </dl>
       <div class="memory-book-card-actions">
+        <button class="text-command" type="button" data-memory-action="why" data-memory-id="${escapeHtml(card.memory_id)}">Why?</button>
         <button class="text-command" type="button" data-memory-action="fix" data-memory-id="${escapeHtml(card.memory_id)}">Fix</button>
         <button class="text-command danger" type="button" data-memory-action="forget" data-memory-id="${escapeHtml(card.memory_id)}">Forget</button>
       </div>
     </article>
+  `;
+}
+
+function renderMemoryBookAuditLog() {
+  if (!memoryBookState.auditEvents.length) {
+    return '<div class="memory-book-empty">No Memory Book actions yet.</div>';
+  }
+  return `
+    <ol>
+      ${memoryBookState.auditEvents.slice(0, 5).map((event) => `
+        <li>
+          <strong>${escapeHtml(String(event.action || "").replace("manual_memory.", ""))}</strong>
+          <span>${escapeHtml(event.result || "logged")}</span>
+        </li>
+      `).join("")}
+    </ol>
   `;
 }
 
@@ -1175,6 +1265,30 @@ function bindMemoryBookControls(root) {
     refreshMemoryBook();
   });
 
+  root.querySelector("#manual-memory-ask")?.addEventListener("click", async () => {
+    const input = root.querySelector("#manual-memory-question");
+    const question = input?.value || "";
+    if (!question.trim()) {
+      writeReceipt("Ask a short memory question first.");
+      return;
+    }
+    writeReceipt("Asking the local Memory Book.");
+    try {
+      const response = await callMemoryBook("ask", { question });
+      memoryBookState.askAnswer = response;
+      memoryBookState.askCards = response.cards || [];
+      memoryBookState.searchCards = response.cards || [];
+      memoryBookState.searched = true;
+      memoryBookState.lastReceipt = response.receipt;
+      renderMemoryBookLive();
+      writeReceipt(response.cards?.length ? "Cortex answered from saved memory." : "Cortex does not know that yet.");
+    } catch (error) {
+      writeReceipt(`Ask blocked: ${error.message}`);
+      memoryBookState.error = error.message;
+      renderMemoryBookLive();
+    }
+  });
+
   root.querySelector("#manual-memory-find")?.addEventListener("click", async () => {
     const input = root.querySelector("#manual-memory-search");
     const query = input?.value || "";
@@ -1202,6 +1316,41 @@ function bindMemoryBookControls(root) {
     memoryBookState.searchCards = [];
     renderMemoryBookLive();
     writeReceipt("Showing all saved memories.");
+  });
+
+  root.querySelector("#manual-memory-undo")?.addEventListener("click", async () => {
+    if (!memoryBookState.lastUndo?.undo_id) return;
+    try {
+      const response = await callMemoryBook("undo-forget", {
+        undo_id: memoryBookState.lastUndo.undo_id,
+      });
+      memoryBookState.lastUndo = null;
+      await refreshMemoryBook({ silent: true });
+      memoryBookState.searchCards = [response.card];
+      memoryBookState.searched = true;
+      renderMemoryBookLive();
+      writeReceipt("Undo complete. The memory is back.");
+    } catch (error) {
+      writeReceipt(`Undo blocked: ${error.message}`);
+    }
+  });
+
+  root.querySelectorAll("[data-memory-action='why']").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const card = findManualMemoryCard(button.dataset.memoryId);
+      if (!card) return;
+      try {
+        const response = await callMemoryBook("explain", {
+          memory_id: card.memory_id,
+        });
+        memoryBookState.explained = response;
+        memoryBookState.lastReceipt = response.receipt;
+        renderMemoryBookLive();
+        writeReceipt("Showing why Cortex remembers this.");
+      } catch (error) {
+        writeReceipt(`Explain blocked: ${error.message}`);
+      }
+    });
   });
 
   root.querySelectorAll("[data-memory-action='fix']").forEach((button) => {
@@ -1239,10 +1388,11 @@ function bindMemoryBookControls(root) {
         return;
       }
       try {
-        await callMemoryBook("forget", {
+        const response = await callMemoryBook("forget", {
           memory_id: card.memory_id,
           confirm_forget: true,
         });
+        memoryBookState.lastUndo = response;
         await refreshMemoryBook({ silent: true });
         memoryBookState.searchCards = memoryBookState.searchCards.filter(
           (item) => item.memory_id !== card.memory_id,

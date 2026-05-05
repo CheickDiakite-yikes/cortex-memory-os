@@ -67,9 +67,13 @@ CAPTURE_CONTROL_CONFIG_PATH = "/capture-control-config.js"
 MEMORY_BOOK_SAVE_PATH = "/api/memory/save"
 MEMORY_BOOK_LIST_PATH = "/api/memory/list"
 MEMORY_BOOK_SEARCH_PATH = "/api/memory/search"
+MEMORY_BOOK_ASK_PATH = "/api/memory/ask"
+MEMORY_BOOK_EXPLAIN_PATH = "/api/memory/explain"
 MEMORY_BOOK_CORRECT_PATH = "/api/memory/correct"
 MEMORY_BOOK_FORGET_PATH = "/api/memory/forget"
+MEMORY_BOOK_UNDO_FORGET_PATH = "/api/memory/undo-forget"
 MEMORY_BOOK_AUDIT_PATH = "/api/memory/audit"
+MEMORY_BOOK_STATUS_PATH = "/api/memory/status"
 CAPTURE_CONTROL_PREFLIGHT_BRIDGE_ID = "CAPTURE-CONTROL-PREFLIGHT-BRIDGE-001"
 CAPTURE_SESSION_WATCHDOG_ID = "CAPTURE-SESSION-WATCHDOG-001"
 UI_ROOT = REPO_ROOT / "ui" / "cortex-dashboard"
@@ -156,13 +160,19 @@ class CaptureControlServerSmokeResult(StrictModel):
     memory_save_status_code: int
     memory_list_status_code: int
     memory_search_status_code: int
+    memory_ask_status_code: int
+    memory_explain_status_code: int
     memory_correct_status_code: int
     memory_forget_status_code: int
+    memory_undo_status_code: int
     memory_after_forget_status_code: int
     memory_audit_status_code: int
+    memory_status_status_code: int
     memory_search_result_count: int
+    memory_ask_result_count: int
     memory_after_forget_result_count: int
     memory_audit_count: int
+    memory_pending_undo_count: int
     config_status_code: int
     config_query_status_code: int
     token_required: bool
@@ -376,9 +386,13 @@ def build_capture_control_handler(
                         "memorySavePath": MEMORY_BOOK_SAVE_PATH,
                         "memoryListPath": MEMORY_BOOK_LIST_PATH,
                         "memorySearchPath": MEMORY_BOOK_SEARCH_PATH,
+                        "memoryAskPath": MEMORY_BOOK_ASK_PATH,
+                        "memoryExplainPath": MEMORY_BOOK_EXPLAIN_PATH,
                         "memoryCorrectPath": MEMORY_BOOK_CORRECT_PATH,
                         "memoryForgetPath": MEMORY_BOOK_FORGET_PATH,
+                        "memoryUndoForgetPath": MEMORY_BOOK_UNDO_FORGET_PATH,
                         "memoryAuditPath": MEMORY_BOOK_AUDIT_PATH,
+                        "memoryStatusPath": MEMORY_BOOK_STATUS_PATH,
                     },
                 )
                 return
@@ -429,6 +443,14 @@ def build_capture_control_handler(
                     active_memory_book.audit_events().model_dump(mode="json"),
                 )
                 return
+            if route == MEMORY_BOOK_STATUS_PATH:
+                if not self._authorized():
+                    return
+                self._write_json(
+                    200,
+                    active_memory_book.status().model_dump(mode="json"),
+                )
+                return
             self._serve_ui_file()
 
         def do_POST(self) -> None:
@@ -458,11 +480,20 @@ def build_capture_control_handler(
             if route == MEMORY_BOOK_SEARCH_PATH:
                 self._handle_memory_search()
                 return
+            if route == MEMORY_BOOK_ASK_PATH:
+                self._handle_memory_ask()
+                return
+            if route == MEMORY_BOOK_EXPLAIN_PATH:
+                self._handle_memory_explain()
+                return
             if route == MEMORY_BOOK_CORRECT_PATH:
                 self._handle_memory_correct()
                 return
             if route == MEMORY_BOOK_FORGET_PATH:
                 self._handle_memory_forget()
+                return
+            if route == MEMORY_BOOK_UNDO_FORGET_PATH:
+                self._handle_memory_undo_forget()
                 return
             self._write_json(404, _error_receipt("unknown_path").model_dump(mode="json"))
 
@@ -554,6 +585,29 @@ def build_capture_control_handler(
                 return
             self._write_json(200, response.model_dump(mode="json"))
 
+        def _handle_memory_ask(self) -> None:
+            payload = self._read_json()
+            try:
+                response = active_memory_book.ask(
+                    str(payload.get("question", "")),
+                    limit=int(payload.get("limit", 3)),
+                )
+            except (ManualMemoryRejectedError, ValueError) as error:
+                self._write_json(400, _memory_error(str(error)))
+                return
+            self._write_json(200, response.model_dump(mode="json"))
+
+        def _handle_memory_explain(self) -> None:
+            payload = self._read_json()
+            try:
+                response = active_memory_book.explain(
+                    str(payload.get("memory_id", "")),
+                )
+            except KeyError:
+                self._write_json(404, _memory_error("memory not found"))
+                return
+            self._write_json(200, response.model_dump(mode="json"))
+
         def _handle_memory_correct(self) -> None:
             payload = self._read_json()
             try:
@@ -566,6 +620,20 @@ def build_capture_control_handler(
                 )
             except KeyError:
                 self._write_json(404, _memory_error("memory not found"))
+                return
+            except (ManualMemoryRejectedError, ValueError) as error:
+                self._write_json(400, _memory_error(str(error)))
+                return
+            self._write_json(200, response.model_dump(mode="json"))
+
+        def _handle_memory_undo_forget(self) -> None:
+            payload = self._read_json()
+            try:
+                response = active_memory_book.undo_forget(
+                    str(payload.get("undo_id", "")),
+                )
+            except KeyError:
+                self._write_json(404, _memory_error("undo not found"))
                 return
             except (ManualMemoryRejectedError, ValueError) as error:
                 self._write_json(400, _memory_error(str(error)))
@@ -751,6 +819,18 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
             payload={"query": "Memory Book simple"},
             headers=headers,
         )
+        memory_ask_code, memory_ask_payload = _request_json(
+            endpoint.base_url + MEMORY_BOOK_ASK_PATH,
+            method="POST",
+            payload={"question": "What should Cortex remember about the Memory Book?"},
+            headers=headers,
+        )
+        memory_explain_code, memory_explain_payload = _request_json(
+            endpoint.base_url + MEMORY_BOOK_EXPLAIN_PATH,
+            method="POST",
+            payload={"memory_id": saved_memory_id},
+            headers=headers,
+        )
         memory_correct_code, memory_correct_payload = _request_json(
             endpoint.base_url + MEMORY_BOOK_CORRECT_PATH,
             method="POST",
@@ -761,11 +841,28 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
             headers=headers,
         )
         corrected_memory_id = memory_correct_payload["card"]["memory_id"]
-        memory_forget_code, _memory_forget_payload = _request_json(
+        memory_forget_code, memory_forget_payload = _request_json(
             endpoint.base_url + MEMORY_BOOK_FORGET_PATH,
             method="POST",
             payload={
                 "memory_id": corrected_memory_id,
+                "confirm_forget": True,
+            },
+            headers=headers,
+        )
+        memory_undo_id = memory_forget_payload["undo_id"]
+        memory_undo_code, memory_undo_payload = _request_json(
+            endpoint.base_url + MEMORY_BOOK_UNDO_FORGET_PATH,
+            method="POST",
+            payload={"undo_id": memory_undo_id},
+            headers=headers,
+        )
+        restored_memory_id = memory_undo_payload["card"]["memory_id"]
+        _memory_forget_again_code, _memory_forget_again_payload = _request_json(
+            endpoint.base_url + MEMORY_BOOK_FORGET_PATH,
+            method="POST",
+            payload={
+                "memory_id": restored_memory_id,
                 "confirm_forget": True,
             },
             headers=headers,
@@ -778,6 +875,10 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         )
         memory_audit_code, memory_audit_payload = _request_json(
             endpoint.base_url + MEMORY_BOOK_AUDIT_PATH,
+            headers=headers,
+        )
+        memory_status_code, memory_status_payload = _request_json(
+            endpoint.base_url + MEMORY_BOOK_STATUS_PATH,
             headers=headers,
         )
         receipts_code, receipts_payload = _request_json(
@@ -821,10 +922,14 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         and memory_save_code == 200
         and memory_list_code == 200
         and memory_search_code == 200
+        and memory_ask_code == 200
+        and memory_explain_code == 200
         and memory_correct_code == 200
         and memory_forget_code == 200
+        and memory_undo_code == 200
         and memory_after_forget_code == 200
         and memory_audit_code == 200
+        and memory_status_code == 200
         and receipts_code == 200
         and remote_code == 403
         and start_receipt.running
@@ -845,8 +950,12 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         and not receipt_summary.memory_write_allowed
         and len(memory_list_payload["cards"]) == 1
         and saved_memory_id in memory_search_payload["used_memory_ids"]
+        and saved_memory_id in memory_ask_payload["used_memory_ids"]
+        and memory_explain_payload["card"]["memory_id"] == saved_memory_id
+        and memory_undo_payload["card"]["memory_id"] == corrected_memory_id
         and memory_after_forget_payload["used_memory_ids"] == []
-        and len(memory_audit_payload["events"]) == 3
+        and len(memory_audit_payload["events"]) == 5
+        and memory_status_payload["pending_undo_count"] >= 1
     )
     return CaptureControlServerSmokeResult(
         passed=passed,
@@ -869,13 +978,19 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         memory_save_status_code=memory_save_code,
         memory_list_status_code=memory_list_code,
         memory_search_status_code=memory_search_code,
+        memory_ask_status_code=memory_ask_code,
+        memory_explain_status_code=memory_explain_code,
         memory_correct_status_code=memory_correct_code,
         memory_forget_status_code=memory_forget_code,
+        memory_undo_status_code=memory_undo_code,
         memory_after_forget_status_code=memory_after_forget_code,
         memory_audit_status_code=memory_audit_code,
+        memory_status_status_code=memory_status_code,
         memory_search_result_count=len(memory_search_payload["cards"]),
+        memory_ask_result_count=len(memory_ask_payload["cards"]),
         memory_after_forget_result_count=len(memory_after_forget_payload["cards"]),
         memory_audit_count=len(memory_audit_payload["events"]),
+        memory_pending_undo_count=memory_status_payload["pending_undo_count"],
         config_status_code=config_code,
         config_query_status_code=config_query_code,
         token_required=True,

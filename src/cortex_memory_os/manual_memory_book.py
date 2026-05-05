@@ -9,7 +9,7 @@ import json
 import os
 import sqlite3
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Sequence
 
@@ -39,6 +39,7 @@ from cortex_memory_os.sensitive_data_policy import SECRET_PII_POLICY_REF
 MANUAL_MEMORY_BOOK_ID = "MANUAL-MEMORY-BOOK-001"
 MANUAL_MEMORY_BOOK_POLICY_REF = "policy_manual_memory_book_v1"
 MANUAL_MEMORY_BOOK_MAX_CHARS = 600
+MANUAL_MEMORY_BOOK_UNDO_MINUTES = 10
 DEFAULT_MEMORY_BOOK_DB_PATH = (
     Path.home() / ".cortex-memory-os" / "memory-book.sqlite3"
 )
@@ -200,6 +201,22 @@ class ManualMemorySearchResponse(StrictModel):
     query_redacted_in_receipt: bool = True
 
 
+class ManualMemoryAskResponse(StrictModel):
+    question_redacted_in_receipt: bool = True
+    answer: str = Field(min_length=1)
+    cards: list[MemoryBookCard]
+    used_memory_ids: list[str]
+    confidence: float = Field(ge=0.0, le=1.0)
+    receipt: ManualMemoryReceipt
+
+
+class ManualMemoryExplainResponse(StrictModel):
+    card: MemoryBookCard
+    why_lines: list[str] = Field(min_length=1)
+    safety_lines: list[str] = Field(min_length=1)
+    receipt: ManualMemoryReceipt
+
+
 class ManualMemoryCorrectionResponse(StrictModel):
     old_memory_id: str = Field(min_length=1)
     card: MemoryBookCard
@@ -208,6 +225,33 @@ class ManualMemoryCorrectionResponse(StrictModel):
 
 class ManualMemoryForgetResponse(StrictModel):
     forgotten_memory_id: str = Field(min_length=1)
+    undo_id: str | None = None
+    undo_expires_at: datetime | None = None
+    can_undo: bool = False
+    receipt: ManualMemoryReceipt
+
+
+class ManualMemoryUndoResponse(StrictModel):
+    card: MemoryBookCard
+    undo_id: str = Field(min_length=1)
+    receipt: ManualMemoryReceipt
+
+
+class ManualMemoryStatusResponse(StrictModel):
+    saved_count: int = Field(ge=0)
+    audit_count: int = Field(ge=0)
+    pending_undo_count: int = Field(ge=0)
+    encrypted_store_used: bool = True
+    authenticated_cipher_used: bool = True
+    direct_query_only: bool = True
+    screen_capture_enabled: bool = False
+    raw_refs_enabled: bool = False
+    external_effects_enabled: bool = False
+    db_path_redacted: bool = True
+    safety_label: str = "Locked"
+    safety_summary: str = (
+        "Manual memories are encrypted locally and used only when you ask."
+    )
     receipt: ManualMemoryReceipt
 
 
@@ -233,6 +277,7 @@ class ManualMemoryBookService:
         self.active_project = active_project
         self.now = now or (lambda: datetime.now(UTC))
         active_cipher = cipher or DevAuthenticatedMemoryCipher()
+        self._cipher = active_cipher
         active_index_key = index_key or hashlib.sha256(_DEV_KEY + b":index").digest()
         self.index = UnifiedEncryptedGraphIndex(
             self.db_path,
@@ -292,6 +337,46 @@ class ManualMemoryBookService:
             receipt=self._receipt("search", "manual_memory_book", "searched", timestamp),
         )
 
+    def ask(self, question: str, *, limit: int = 3) -> ManualMemoryAskResponse:
+        timestamp = _ensure_utc(self.now())
+        safe_question = _validate_safe_manual_text(question)
+        search = self.search(safe_question, limit=limit)
+        if not search.cards:
+            answer = "I do not know yet. Save a memory first, then ask again."
+            confidence = 0.0
+        elif len(search.cards) == 1:
+            answer = f"I found this memory: {search.cards[0].what_cortex_remembers}"
+            confidence = search.cards[0].confidence
+        else:
+            answer = f"I found {len(search.cards)} memories that may help."
+            confidence = min(card.confidence for card in search.cards)
+        return ManualMemoryAskResponse(
+            answer=answer,
+            cards=search.cards,
+            used_memory_ids=search.used_memory_ids,
+            confidence=confidence,
+            receipt=self._receipt("ask", "manual_memory_book", "answered", timestamp),
+        )
+
+    def explain(self, memory_id: str) -> ManualMemoryExplainResponse:
+        timestamp = _ensure_utc(self.now())
+        memory = self._require_active_memory(memory_id)
+        card = self._card(memory)
+        return ManualMemoryExplainResponse(
+            card=card,
+            why_lines=[
+                "You pressed Save memory, so this is user-confirmed.",
+                "Cortex can use it only for direct memory search.",
+                "It is project-specific and visible in your Memory Book.",
+            ],
+            safety_lines=[
+                "Saved through the encrypted local memory boundary.",
+                "Receipts hide content and source refs.",
+                "No screen capture, raw refs, tool actions, exports, or autonomy.",
+            ],
+            receipt=self._receipt("explain", memory.memory_id, "explained", timestamp),
+        )
+
     def correct(
         self,
         memory_id: str,
@@ -339,6 +424,8 @@ class ManualMemoryBookService:
         if not confirm_forget:
             raise ManualMemoryRejectedError("forget requires explicit confirmation")
         original = self._require_active_memory(memory_id)
+        undo_id = self._store_undo(original, timestamp=timestamp)
+        undo_expires_at = timestamp + timedelta(minutes=MANUAL_MEMORY_BOOK_UNDO_MINUTES)
         tombstone = _tombstone_memory(
             original,
             content="This memory was forgotten by the user.",
@@ -355,7 +442,46 @@ class ManualMemoryBookService:
         self._add_audit(audit)
         return ManualMemoryForgetResponse(
             forgotten_memory_id=original.memory_id,
+            undo_id=undo_id,
+            undo_expires_at=undo_expires_at,
+            can_undo=True,
             receipt=self._receipt("forget", original.memory_id, "forgotten", timestamp),
+        )
+
+    def undo_forget(self, undo_id: str) -> ManualMemoryUndoResponse:
+        timestamp = _ensure_utc(self.now())
+        memory = self._pop_valid_undo(undo_id, timestamp=timestamp)
+        restored = memory.model_copy(
+            update={
+                "status": MemoryStatus.ACTIVE,
+                "valid_to": None,
+                "influence_level": InfluenceLevel.DIRECT_QUERY,
+                "allowed_influence": ["direct_memory_search"],
+                "user_visible": True,
+            }
+        )
+        self.index.add_memory(restored, now=timestamp)
+        audit = self._audit_event(
+            action="manual_memory.undo_forget",
+            target_ref=restored.memory_id,
+            timestamp=timestamp,
+            result="restored",
+            summary="User undid a forget action; the memory is active again.",
+        )
+        self._add_audit(audit)
+        return ManualMemoryUndoResponse(
+            card=self._card(restored),
+            undo_id=undo_id,
+            receipt=self._receipt("undo_forget", restored.memory_id, "restored", timestamp),
+        )
+
+    def status(self) -> ManualMemoryStatusResponse:
+        timestamp = _ensure_utc(self.now())
+        return ManualMemoryStatusResponse(
+            saved_count=len(self.list_cards(limit=1000).cards),
+            audit_count=self._audit_count(),
+            pending_undo_count=self._pending_undo_count(timestamp),
+            receipt=self._receipt("status", "manual_memory_book", "reported", timestamp),
         )
 
     def audit_events(self, *, limit: int = 20) -> ManualMemoryAuditResponse:
@@ -386,7 +512,7 @@ class ManualMemoryBookService:
     ) -> MemoryRecord:
         digest = hashlib.sha256(f"{timestamp.isoformat()}:{text}".encode()).hexdigest()
         return MemoryRecord(
-            memory_id=f"mem_manual_{timestamp.strftime('%Y%m%dT%H%M%SZ')}_{digest[:10]}",
+            memory_id=f"mem_manual_{_timestamp_id(timestamp)}_{digest[:10]}",
             type=MemoryType.PROJECT,
             content=text,
             source_refs=source_refs or ["manual:user_confirmed"],
@@ -439,7 +565,7 @@ class ManualMemoryBookService:
         return AuditEvent(
             audit_event_id=(
                 f"audit_{action.replace('.', '_')}_{_safe_id_fragment(target_ref)}_"
-                f"{timestamp.strftime('%Y%m%dT%H%M%SZ')}"
+                f"{_timestamp_id(timestamp)}"
             ),
             timestamp=timestamp,
             actor="user",
@@ -459,7 +585,7 @@ class ManualMemoryBookService:
         timestamp: datetime,
     ) -> ManualMemoryReceipt:
         return ManualMemoryReceipt(
-            receipt_id=f"receipt_manual_memory_{action}_{timestamp.strftime('%Y%m%dT%H%M%SZ')}",
+            receipt_id=f"receipt_manual_memory_{action}_{_timestamp_id(timestamp)}",
             action=action,
             memory_id=memory_id,
             result=result,
@@ -502,6 +628,71 @@ class ManualMemoryBookService:
                 )
                 """
             )
+            con.execute(
+                """
+                CREATE TABLE IF NOT EXISTS manual_memory_undo (
+                    undo_id TEXT PRIMARY KEY,
+                    memory_id TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    sealed_payload BLOB NOT NULL
+                )
+                """
+            )
+
+    def _audit_count(self) -> int:
+        with self._connect() as con:
+            row = con.execute("SELECT COUNT(*) AS count FROM manual_memory_audit").fetchone()
+        return int(row["count"] if row else 0)
+
+    def _pending_undo_count(self, timestamp: datetime) -> int:
+        with self._connect() as con:
+            row = con.execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM manual_memory_undo
+                WHERE expires_at > ?
+                """,
+                (timestamp.isoformat(),),
+            ).fetchone()
+        return int(row["count"] if row else 0)
+
+    def _store_undo(self, memory: MemoryRecord, *, timestamp: datetime) -> str:
+        undo_id = f"undo_{_safe_id_fragment(memory.memory_id)}_{_timestamp_id(timestamp)}"
+        expires_at = timestamp + timedelta(minutes=MANUAL_MEMORY_BOOK_UNDO_MINUTES)
+        sealed_payload = self._cipher.seal(
+            memory.model_dump_json().encode("utf-8")
+        )
+        with self._connect() as con:
+            con.execute(
+                """
+                INSERT INTO manual_memory_undo (
+                    undo_id, memory_id, expires_at, sealed_payload
+                )
+                VALUES (?, ?, ?, ?)
+                """,
+                (undo_id, memory.memory_id, expires_at.isoformat(), sealed_payload),
+            )
+        return undo_id
+
+    def _pop_valid_undo(self, undo_id: str, *, timestamp: datetime) -> MemoryRecord:
+        with self._connect() as con:
+            row = con.execute(
+                """
+                SELECT sealed_payload, expires_at
+                FROM manual_memory_undo
+                WHERE undo_id = ?
+                """,
+                (undo_id,),
+            ).fetchone()
+            if row is None:
+                raise KeyError(undo_id)
+            expires_at = datetime.fromisoformat(row["expires_at"])
+            if _ensure_utc(expires_at) <= timestamp:
+                con.execute("DELETE FROM manual_memory_undo WHERE undo_id = ?", (undo_id,))
+                raise ManualMemoryRejectedError("undo window expired")
+            con.execute("DELETE FROM manual_memory_undo WHERE undo_id = ?", (undo_id,))
+        payload = self._cipher.open(row["sealed_payload"]).decode("utf-8")
+        return MemoryRecord.model_validate_json(payload)
 
     def _connect(self) -> sqlite3.Connection:
         con = sqlite3.connect(self.db_path)
@@ -580,6 +771,10 @@ def _safe_id_fragment(value: str) -> str:
     return "".join(character if character.isalnum() else "_" for character in value)[:80]
 
 
+def _timestamp_id(timestamp: datetime) -> str:
+    return timestamp.strftime("%Y%m%dT%H%M%S%fZ")
+
+
 def _xor_with_stream(payload: bytes, key: bytes, nonce: bytes) -> bytes:
     output = bytearray()
     counter = 0
@@ -613,25 +808,38 @@ def run_manual_memory_book_smoke(db_path: Path | None = None) -> dict[str, objec
             ManualMemoryInput(text="Cortex should keep the dashboard simple.")
         )
         searched = service.search("dashboard simple")
+        asked = service.ask("What should Cortex keep simple?")
+        explained = service.explain(saved.card.memory_id)
         corrected = service.correct(
             saved.card.memory_id,
             ManualMemoryInput(text="Cortex should keep the Memory Book simple."),
         )
         forgotten = service.forget(corrected.card.memory_id, confirm_forget=True)
+        status_after_forget = service.status()
+        restored = service.undo_forget(forgotten.undo_id or "")
+        forgotten_again = service.forget(restored.card.memory_id, confirm_forget=True)
         after_forget = service.search("Memory Book simple")
         audit = service.audit_events()
         return {
             "passed": (
                 saved.card.memory_id in searched.used_memory_ids
+                and saved.card.memory_id in asked.used_memory_ids
+                and explained.card.memory_id == saved.card.memory_id
                 and corrected.card.memory_id != saved.card.memory_id
-                and forgotten.forgotten_memory_id == corrected.card.memory_id
+                and forgotten.can_undo
+                and status_after_forget.pending_undo_count == 1
+                and restored.card.memory_id == corrected.card.memory_id
+                and forgotten_again.forgotten_memory_id == corrected.card.memory_id
                 and after_forget.used_memory_ids == []
-                and len(audit.events) == 3
+                and len(audit.events) == 5
             ),
             "saved_memory_id": saved.card.memory_id,
             "corrected_memory_id": corrected.card.memory_id,
+            "ask_count": len(asked.cards),
+            "explained_memory_id": explained.card.memory_id,
             "after_forget_count": len(after_forget.cards),
             "audit_count": len(audit.events),
+            "pending_undo_count": status_after_forget.pending_undo_count,
             "encrypted_store_used": saved.receipt.encrypted_store_used,
             "content_redacted": saved.receipt.content_redacted,
             "raw_ref_retained": saved.receipt.raw_ref_retained,
