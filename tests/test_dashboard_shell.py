@@ -298,6 +298,28 @@ def test_dashboard_static_app_renders_user_focused_home():
     assert "body[data-active-view=\"overview\"] .dashboard-header" in css
 
 
+def test_dashboard_static_app_renders_manual_memory_book():
+    app_js = Path("ui/cortex-dashboard/app.js").read_text()
+    index_html = Path("ui/cortex-dashboard/index.html").read_text()
+    css = Path("ui/cortex-dashboard/styles.css").read_text()
+
+    assert "MANUAL-MEMORY-BOOK-001" in index_html
+    assert "memory-book-live" in index_html
+    assert "Tell Cortex what to remember." in app_js
+    assert "Save memory" in app_js
+    assert "Find a memory" in app_js
+    assert "Fix this memory:" in app_js
+    assert "Forget this memory?" in app_js
+    assert "callMemoryBook(\"save\"" in app_js
+    assert "callMemoryBook(\"search\"" in app_js
+    assert "callMemoryBook(\"correct\"" in app_js
+    assert "callMemoryBook(\"forget\"" in app_js
+    assert "refreshMemoryBook({ silent: true })" in app_js
+    assert ".memory-book-panel" in css
+    assert ".memory-book-card" in css
+    assert "body[data-active-view=\"memory_palace\"] #memory-list" in css
+
+
 def test_dashboard_shell_smoke_contract_passes():
     result = run_dashboard_shell_smoke()
 

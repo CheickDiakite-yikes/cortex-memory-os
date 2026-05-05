@@ -67,6 +67,16 @@ def test_capture_control_server_smoke_serves_dashboard_and_blocks_remote_probe()
     assert smoke.permission_status_code == 200
     assert smoke.preflight_status_code == 200
     assert smoke.screen_probe_status_code == 200
+    assert smoke.memory_save_status_code == 200
+    assert smoke.memory_list_status_code == 200
+    assert smoke.memory_search_status_code == 200
+    assert smoke.memory_correct_status_code == 200
+    assert smoke.memory_forget_status_code == 200
+    assert smoke.memory_after_forget_status_code == 200
+    assert smoke.memory_audit_status_code == 200
+    assert smoke.memory_search_result_count == 1
+    assert smoke.memory_after_forget_result_count == 0
+    assert smoke.memory_audit_count == 3
     assert smoke.receipts_status_code == 200
     assert smoke.served_dashboard
     assert smoke.remote_rejected_status_code == 403

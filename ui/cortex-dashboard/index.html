@@ -114,7 +114,7 @@
         <section
           class="focus-inspector"
           aria-label="Focus Inspector"
-          data-view-section="memory_palace skill_forge"
+          data-view-section="skill_forge"
         >
           <div id="focus-inspector" class="focus-inspector-inner"></div>
         </section>
@@ -131,11 +131,17 @@
           >
             <div class="panel-heading">
               <div>
-                <p class="section-label">Memory Palace</p>
-                <h1 id="memory-heading">Memory Palace Review Queue</h1>
+                <p class="section-label">Memory Book</p>
+                <h1 id="memory-heading">Save, find, fix, or forget</h1>
               </div>
               <span class="count-pill" id="memory-count">0</span>
             </div>
+            <div
+              id="memory-book-live"
+              class="memory-book-live"
+              aria-live="polite"
+              data-benchmark-id="MANUAL-MEMORY-BOOK-001"
+            ></div>
             <div id="memory-tabs" class="tab-row" aria-label="Memory filters"></div>
             <div id="memory-list" class="card-list" aria-live="polite"></div>
           </article>

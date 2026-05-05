@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Protocol
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -45,6 +46,11 @@ from cortex_memory_os.capture_preflight_diagnostics import (
 from cortex_memory_os.real_capture_control import (
     DASHBOARD_CAPTURE_CONTROL_ID,
 )
+from cortex_memory_os.manual_memory_book import (
+    ManualMemoryBookService,
+    ManualMemoryInput,
+    ManualMemoryRejectedError,
+)
 
 CAPTURE_CONTROL_SERVER_POLICY_REF = "policy_capture_control_local_bridge_v1"
 DEFAULT_CAPTURE_CONTROL_HOST = "127.0.0.1"
@@ -58,6 +64,12 @@ CAPTURE_CONTROL_PREFLIGHT_PATH = "/api/capture/preflight"
 CAPTURE_CONTROL_SCREEN_PROBE_PATH = "/api/capture/screen-probe"
 CAPTURE_CONTROL_RECEIPTS_PATH = "/api/capture/receipts"
 CAPTURE_CONTROL_CONFIG_PATH = "/capture-control-config.js"
+MEMORY_BOOK_SAVE_PATH = "/api/memory/save"
+MEMORY_BOOK_LIST_PATH = "/api/memory/list"
+MEMORY_BOOK_SEARCH_PATH = "/api/memory/search"
+MEMORY_BOOK_CORRECT_PATH = "/api/memory/correct"
+MEMORY_BOOK_FORGET_PATH = "/api/memory/forget"
+MEMORY_BOOK_AUDIT_PATH = "/api/memory/audit"
 CAPTURE_CONTROL_PREFLIGHT_BRIDGE_ID = "CAPTURE-CONTROL-PREFLIGHT-BRIDGE-001"
 CAPTURE_SESSION_WATCHDOG_ID = "CAPTURE-SESSION-WATCHDOG-001"
 UI_ROOT = REPO_ROOT / "ui" / "cortex-dashboard"
@@ -141,6 +153,16 @@ class CaptureControlServerSmokeResult(StrictModel):
     preflight_receipt: CapturePreflightDiagnostics
     screen_probe_status_code: int
     screen_probe_receipt: NativeScreenCaptureProbeResult
+    memory_save_status_code: int
+    memory_list_status_code: int
+    memory_search_status_code: int
+    memory_correct_status_code: int
+    memory_forget_status_code: int
+    memory_after_forget_status_code: int
+    memory_audit_status_code: int
+    memory_search_result_count: int
+    memory_after_forget_result_count: int
+    memory_audit_count: int
     config_status_code: int
     config_query_status_code: int
     token_required: bool
@@ -330,7 +352,10 @@ def build_capture_control_handler(
     permission_runner: PermissionRunner = run_native_permission_smoke,
     screen_probe_runner: ScreenProbeRunner = run_native_screen_capture_probe,
     remote_probe_status: int | None = None,
+    memory_book: ManualMemoryBookService | None = None,
 ) -> type[BaseHTTPRequestHandler]:
+    active_memory_book = memory_book or ManualMemoryBookService()
+
     class CaptureControlHandler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
             if not self._client_allowed():
@@ -348,6 +373,12 @@ def build_capture_control_handler(
                         "preflightPath": CAPTURE_CONTROL_PREFLIGHT_PATH,
                         "screenProbePath": CAPTURE_CONTROL_SCREEN_PROBE_PATH,
                         "receiptsPath": CAPTURE_CONTROL_RECEIPTS_PATH,
+                        "memorySavePath": MEMORY_BOOK_SAVE_PATH,
+                        "memoryListPath": MEMORY_BOOK_LIST_PATH,
+                        "memorySearchPath": MEMORY_BOOK_SEARCH_PATH,
+                        "memoryCorrectPath": MEMORY_BOOK_CORRECT_PATH,
+                        "memoryForgetPath": MEMORY_BOOK_FORGET_PATH,
+                        "memoryAuditPath": MEMORY_BOOK_AUDIT_PATH,
                     },
                 )
                 return
@@ -382,6 +413,22 @@ def build_capture_control_handler(
                     return
                 self._write_json(200, manager.receipt_summary().model_dump(mode="json"))
                 return
+            if route == MEMORY_BOOK_LIST_PATH:
+                if not self._authorized():
+                    return
+                self._write_json(
+                    200,
+                    active_memory_book.list_cards().model_dump(mode="json"),
+                )
+                return
+            if route == MEMORY_BOOK_AUDIT_PATH:
+                if not self._authorized():
+                    return
+                self._write_json(
+                    200,
+                    active_memory_book.audit_events().model_dump(mode="json"),
+                )
+                return
             self._serve_ui_file()
 
         def do_POST(self) -> None:
@@ -389,20 +436,33 @@ def build_capture_control_handler(
                 return
             if not self._authorized():
                 return
-            if self.path == CAPTURE_CONTROL_START_PATH:
+            route = self.path.split("?", 1)[0]
+            if route == CAPTURE_CONTROL_START_PATH:
                 payload = self._read_json()
                 duration = float(payload.get("duration_seconds", 30)) if isinstance(payload, dict) else 30
                 self._write_json(200, manager.start(duration_seconds=duration).model_dump(mode="json"))
                 return
-            if self.path == CAPTURE_CONTROL_STOP_PATH:
+            if route == CAPTURE_CONTROL_STOP_PATH:
                 self._write_json(200, manager.stop().model_dump(mode="json"))
                 return
-            if self.path == CAPTURE_CONTROL_SCREEN_PROBE_PATH:
+            if route == CAPTURE_CONTROL_SCREEN_PROBE_PATH:
                 payload = self._read_json()
                 allow_real_capture = bool(payload.get("allow_real_capture", False))
                 receipt = screen_probe_runner(allow_real_capture=allow_real_capture)
                 manager.record_bridge_receipt(_bridge_receipt_from_screen_probe(receipt))
                 self._write_json(200, receipt.model_dump(mode="json"))
+                return
+            if route == MEMORY_BOOK_SAVE_PATH:
+                self._handle_memory_save()
+                return
+            if route == MEMORY_BOOK_SEARCH_PATH:
+                self._handle_memory_search()
+                return
+            if route == MEMORY_BOOK_CORRECT_PATH:
+                self._handle_memory_correct()
+                return
+            if route == MEMORY_BOOK_FORGET_PATH:
+                self._handle_memory_forget()
                 return
             self._write_json(404, _error_receipt("unknown_path").model_dump(mode="json"))
 
@@ -468,6 +528,65 @@ def build_capture_control_handler(
             self.end_headers()
             self.wfile.write(payload)
 
+        def _handle_memory_save(self) -> None:
+            payload = self._read_json()
+            try:
+                response = active_memory_book.save(
+                    ManualMemoryInput(
+                        text=str(payload.get("text", "")),
+                        title=payload.get("title"),
+                    )
+                )
+            except (ManualMemoryRejectedError, ValueError) as error:
+                self._write_json(400, _memory_error(str(error)))
+                return
+            self._write_json(200, response.model_dump(mode="json"))
+
+        def _handle_memory_search(self) -> None:
+            payload = self._read_json()
+            try:
+                response = active_memory_book.search(
+                    str(payload.get("query", "")),
+                    limit=int(payload.get("limit", 5)),
+                )
+            except (ManualMemoryRejectedError, ValueError) as error:
+                self._write_json(400, _memory_error(str(error)))
+                return
+            self._write_json(200, response.model_dump(mode="json"))
+
+        def _handle_memory_correct(self) -> None:
+            payload = self._read_json()
+            try:
+                response = active_memory_book.correct(
+                    str(payload.get("memory_id", "")),
+                    ManualMemoryInput(
+                        text=str(payload.get("text", "")),
+                        title=payload.get("title"),
+                    ),
+                )
+            except KeyError:
+                self._write_json(404, _memory_error("memory not found"))
+                return
+            except (ManualMemoryRejectedError, ValueError) as error:
+                self._write_json(400, _memory_error(str(error)))
+                return
+            self._write_json(200, response.model_dump(mode="json"))
+
+        def _handle_memory_forget(self) -> None:
+            payload = self._read_json()
+            try:
+                response = active_memory_book.forget(
+                    str(payload.get("memory_id", "")),
+                    confirm_forget=bool(payload.get("confirm_forget", False)),
+                )
+            except KeyError:
+                self._write_json(404, _memory_error("memory not found"))
+                return
+            except (ManualMemoryRejectedError, ValueError) as error:
+                self._write_json(400, _memory_error(str(error)))
+                return
+            self._write_json(200, response.model_dump(mode="json"))
+
         def _read_json(self) -> dict[str, Any]:
             length = int(self.headers.get("Content-Length", "0") or "0")
             if length <= 0:
@@ -513,6 +632,7 @@ def start_capture_control_server(
     session_token: str | None = None,
     permission_runner: PermissionRunner = run_native_permission_smoke,
     screen_probe_runner: ScreenProbeRunner = run_native_screen_capture_probe,
+    memory_book: ManualMemoryBookService | None = None,
 ) -> CaptureControlEndpoint:
     if not client_host_allowed(host):
         raise ValueError("capture control server must bind localhost")
@@ -526,6 +646,7 @@ def start_capture_control_server(
             session_token=token,
             permission_runner=permission_runner,
             screen_probe_runner=screen_probe_runner,
+            memory_book=memory_book,
         ),
     )
     thread = threading.Thread(target=server.serve_forever, name="cortex-capture-control-server")
@@ -544,6 +665,8 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
     manager = CaptureControlProcessManager(popen_factory=FakePopen)
     permission_fixture = _fixture_permission_receipt()
     screen_probe_fixture = _fixture_screen_probe_receipt()
+    tempdir = TemporaryDirectory()
+    memory_book = ManualMemoryBookService(Path(tempdir.name) / "memory-book.sqlite3")
     endpoint = start_capture_control_server(
         port=0,
         manager=manager,
@@ -552,6 +675,7 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         screen_probe_runner=lambda *, allow_real_capture: screen_probe_fixture.model_copy(
             update={"allow_real_capture": allow_real_capture}
         ),
+        memory_book=memory_book,
     )
     remote_handler = build_capture_control_handler(
         manager,
@@ -560,6 +684,7 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         screen_probe_runner=lambda *, allow_real_capture: screen_probe_fixture.model_copy(
             update={"allow_real_capture": allow_real_capture}
         ),
+        memory_book=memory_book,
         remote_probe_status=403,
     )
     headers = {"X-Cortex-Capture-Token": endpoint.session_token}
@@ -609,6 +734,52 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
             payload={},
             headers=headers,
         )
+        memory_save_code, memory_save_payload = _request_json(
+            endpoint.base_url + MEMORY_BOOK_SAVE_PATH,
+            method="POST",
+            payload={"text": "Cortex should keep the Memory Book simple."},
+            headers=headers,
+        )
+        saved_memory_id = memory_save_payload["card"]["memory_id"]
+        memory_list_code, memory_list_payload = _request_json(
+            endpoint.base_url + MEMORY_BOOK_LIST_PATH,
+            headers=headers,
+        )
+        memory_search_code, memory_search_payload = _request_json(
+            endpoint.base_url + MEMORY_BOOK_SEARCH_PATH,
+            method="POST",
+            payload={"query": "Memory Book simple"},
+            headers=headers,
+        )
+        memory_correct_code, memory_correct_payload = _request_json(
+            endpoint.base_url + MEMORY_BOOK_CORRECT_PATH,
+            method="POST",
+            payload={
+                "memory_id": saved_memory_id,
+                "text": "Cortex should keep the Memory Book simple and clear.",
+            },
+            headers=headers,
+        )
+        corrected_memory_id = memory_correct_payload["card"]["memory_id"]
+        memory_forget_code, _memory_forget_payload = _request_json(
+            endpoint.base_url + MEMORY_BOOK_FORGET_PATH,
+            method="POST",
+            payload={
+                "memory_id": corrected_memory_id,
+                "confirm_forget": True,
+            },
+            headers=headers,
+        )
+        memory_after_forget_code, memory_after_forget_payload = _request_json(
+            endpoint.base_url + MEMORY_BOOK_SEARCH_PATH,
+            method="POST",
+            payload={"query": "Memory Book simple clear"},
+            headers=headers,
+        )
+        memory_audit_code, memory_audit_payload = _request_json(
+            endpoint.base_url + MEMORY_BOOK_AUDIT_PATH,
+            headers=headers,
+        )
         receipts_code, receipts_payload = _request_json(
             endpoint.base_url + CAPTURE_CONTROL_RECEIPTS_PATH,
             headers=headers,
@@ -625,6 +796,7 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         remote_server.server_close()
     finally:
         endpoint.shutdown()
+        tempdir.cleanup()
 
     start_receipt = CaptureControlBridgeReceipt.model_validate(start_payload)
     stop_receipt = CaptureControlBridgeReceipt.model_validate(stop_payload)
@@ -646,6 +818,13 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         and start_code == 200
         and screen_probe_code == 200
         and stop_code == 200
+        and memory_save_code == 200
+        and memory_list_code == 200
+        and memory_search_code == 200
+        and memory_correct_code == 200
+        and memory_forget_code == 200
+        and memory_after_forget_code == 200
+        and memory_audit_code == 200
         and receipts_code == 200
         and remote_code == 403
         and start_receipt.running
@@ -664,6 +843,10 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         and not receipt_summary.raw_pixels_returned
         and not receipt_summary.raw_ref_retained
         and not receipt_summary.memory_write_allowed
+        and len(memory_list_payload["cards"]) == 1
+        and saved_memory_id in memory_search_payload["used_memory_ids"]
+        and memory_after_forget_payload["used_memory_ids"] == []
+        and len(memory_audit_payload["events"]) == 3
     )
     return CaptureControlServerSmokeResult(
         passed=passed,
@@ -683,6 +866,16 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         preflight_receipt=preflight_receipt,
         screen_probe_status_code=screen_probe_code,
         screen_probe_receipt=screen_probe_receipt,
+        memory_save_status_code=memory_save_code,
+        memory_list_status_code=memory_list_code,
+        memory_search_status_code=memory_search_code,
+        memory_correct_status_code=memory_correct_code,
+        memory_forget_status_code=memory_forget_code,
+        memory_after_forget_status_code=memory_after_forget_code,
+        memory_audit_status_code=memory_audit_code,
+        memory_search_result_count=len(memory_search_payload["cards"]),
+        memory_after_forget_result_count=len(memory_after_forget_payload["cards"]),
+        memory_audit_count=len(memory_audit_payload["events"]),
         config_status_code=config_code,
         config_query_status_code=config_query_code,
         token_required=True,
@@ -712,6 +905,17 @@ def _error_receipt(error_code: str) -> CaptureControlBridgeReceipt:
         running=False,
         error_code=error_code,
     )
+
+
+def _memory_error(error_code: str) -> dict[str, str | bool | list[str]]:
+    return {
+        "error_code": error_code,
+        "content_redacted": True,
+        "source_refs_redacted": True,
+        "raw_ref_retained": False,
+        "external_effect_enabled": False,
+        "policy_refs": ["policy_manual_memory_book_v1"],
+    }
 
 
 def _bridge_receipt_from_permission_result(

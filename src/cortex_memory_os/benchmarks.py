@@ -117,6 +117,12 @@ from cortex_memory_os.manual_adapter_proof import (
     MANUAL_ADAPTER_PROOF_POLICY_REF,
     run_manual_adapter_proof,
 )
+from cortex_memory_os.manual_memory_book import (
+    MANUAL_MEMORY_BOOK_ID,
+    MANUAL_MEMORY_BOOK_POLICY_REF,
+    ManualMemoryBookService,
+    ManualMemoryInput,
+)
 from cortex_memory_os.native_permission_smoke import (
     NATIVE_CAPTURE_PERMISSION_SMOKE_ID,
     NATIVE_CAPTURE_PERMISSION_SMOKE_POLICY_REF,
@@ -723,6 +729,7 @@ def run_all() -> BenchmarkRunResult:
         case_skill_success_metrics_contract,
         case_skill_metrics_dashboard_surface_contract,
         case_dashboard_shell_contract,
+        case_manual_memory_book_loop_contract,
         case_dashboard_focus_inspector_contract,
         case_dashboard_gateway_actions_contract,
         case_computer_dashboard_live_proof_contract,
@@ -12103,7 +12110,9 @@ def case_dashboard_shell_contract() -> BenchmarkCaseResult:
     ]
     ui_text = "\n".join(path.read_text(encoding="utf-8") for path in ui_paths if path.exists())
     required_ui_terms = [
-        "Memory Palace Review Queue",
+        "Save, find, fix, or forget",
+        "MANUAL-MEMORY-BOOK-001",
+        "Tell Cortex what to remember.",
         "Skill Forge Candidate Workflows",
         "Recent Safe Receipts",
         "Pause Observation",
@@ -12149,6 +12158,113 @@ def case_dashboard_shell_contract() -> BenchmarkCaseResult:
             "ui_root": "ui/cortex-dashboard",
             "missing_ui_terms": missing_ui_terms,
             "missing_doc_terms": smoke.missing_doc_terms,
+        },
+    )
+
+
+def case_manual_memory_book_loop_contract() -> BenchmarkCaseResult:
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    adr_text = (REPO_ROOT / "docs" / "adr" / "0007-manual-memory-book-first.md").read_text(
+        encoding="utf-8"
+    )
+    ui_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "ui" / "cortex-dashboard" / "index.html",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "styles.css",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "app.js",
+        ]
+    )
+    required_terms = [
+        MANUAL_MEMORY_BOOK_ID,
+        MANUAL_MEMORY_BOOK_POLICY_REF,
+        "Tell Cortex what to remember.",
+        "Save memory",
+        "Find a memory",
+        "Forget this memory?",
+        "direct-query",
+    ]
+    missing_terms = _missing_terms(registry_text + "\n" + adr_text + "\n" + ui_text, required_terms)
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        db_path = Path(temp_dir) / "memory-book.sqlite3"
+        service = ManualMemoryBookService(db_path=db_path)
+        saved = service.save(
+            ManualMemoryInput(text="Cortex should remember the blue notebook demo.")
+        )
+        listed = service.list_cards()
+        found = service.search("blue notebook")
+        corrected = service.correct(
+            saved.card.memory_id,
+            ManualMemoryInput(text="Cortex should remember clear Memory Book cards."),
+        )
+        old_search = service.search("blue notebook")
+        corrected_search = service.search("clear Memory Book cards")
+        service.forget(corrected.card.memory_id, confirm_forget=True)
+        after_forget = service.search("clear Memory Book cards")
+        audit = service.audit_events()
+        raw_db = db_path.read_bytes()
+
+    db_hides_payload = (
+        b"blue notebook" not in raw_db
+        and b"clear Memory Book cards" not in raw_db
+        and b"manual:user_confirmed" not in raw_db
+    )
+    audit_actions = [event.action for event in audit.events]
+    receipts_safe = all(
+        receipt.content_redacted
+        and receipt.source_refs_redacted
+        and not receipt.raw_ref_retained
+        and not receipt.raw_payload_included
+        and not receipt.external_effect_enabled
+        for receipt in [saved.receipt, found.receipt, corrected.receipt, audit.receipt]
+    )
+    saved_card = saved.card
+    passed = (
+        listed.cards
+        and found.cards
+        and not old_search.cards
+        and corrected_search.cards
+        and not after_forget.cards
+        and len(audit.events) >= 3
+        and {"manual_memory.save", "manual_memory.correct", "manual_memory.forget"}
+        <= set(audit_actions)
+        and saved_card.influence_level == InfluenceLevel.DIRECT_QUERY
+        and saved_card.scope == ScopeLevel.PROJECT_SPECIFIC
+        and saved_card.status == MemoryStatus.ACTIVE
+        and saved_card.content_redacted_in_receipts
+        and saved_card.source_refs_redacted_in_receipts
+        and db_hides_payload
+        and receipts_safe
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="MANUAL-MEMORY-BOOK-001/save_find_fix_forget",
+        suite=MANUAL_MEMORY_BOOK_ID,
+        passed=bool(passed),
+        summary=(
+            "Manual Memory Book saves a user-confirmed memory, finds it, "
+            "corrects it by superseding the old memory, forgets it, and keeps "
+            "receipts metadata-only."
+        ),
+        metrics={
+            "listed_count": len(listed.cards),
+            "initial_search_count": len(found.cards),
+            "old_search_after_correct_count": len(old_search.cards),
+            "corrected_search_count": len(corrected_search.cards),
+            "after_forget_count": len(after_forget.cards),
+            "audit_count": len(audit.events),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": MANUAL_MEMORY_BOOK_POLICY_REF,
+            "benchmark_id": MANUAL_MEMORY_BOOK_ID,
+            "db_hides_payload": db_hides_payload,
+            "receipts_safe": receipts_safe,
+            "audit_actions": audit_actions,
+            "missing_doc_terms": missing_terms,
         },
     )
 

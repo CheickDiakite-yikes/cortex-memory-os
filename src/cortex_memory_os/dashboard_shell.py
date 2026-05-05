@@ -655,7 +655,15 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
     ui_text = "\n".join(path.read_text(encoding="utf-8") for path in ui_paths if path.exists())
     required_ui_terms = [
         DASHBOARD_SHELL_ID,
-        "Memory Palace Review Queue",
+        "Save, find, fix, or forget",
+        "MANUAL-MEMORY-BOOK-001",
+        "Tell Cortex what to remember.",
+        "Save memory",
+        "Find a memory",
+        "Fix this memory:",
+        "Forget this memory?",
+        "callMemoryBook",
+        "refreshMemoryBook",
         "Skill Forge Candidate Workflows",
         "Shadow Pointer",
         "Safety Firewall",

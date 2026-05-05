@@ -149,6 +149,11 @@ body[data-active-view="overview"] .health-panel {
   display: none;
 }
 
+body[data-active-view="memory_palace"] #memory-tabs,
+body[data-active-view="memory_palace"] #memory-list {
+  display: none;
+}
+
 .health-panel h2,
 .audit-rail h2 {
   margin: 0;
@@ -522,8 +527,212 @@ body[data-active-view="overview"] .health-panel {
 }
 
 .workspace-grid.single-view {
-  grid-template-columns: minmax(0, 760px);
+  grid-template-columns: minmax(0, 860px);
   justify-content: start;
+}
+
+.memory-book-live {
+  min-width: 0;
+}
+
+.memory-book-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.memory-book-intro {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 70px;
+  padding: 14px;
+  border: 1px solid #cfe0ee;
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.memory-book-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: #edf6ff;
+  color: var(--blue);
+}
+
+.memory-book-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.2;
+}
+
+.memory-book-intro strong,
+.memory-book-intro em {
+  display: block;
+  min-width: 0;
+}
+
+.memory-book-intro strong {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.memory-book-intro em {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 14px;
+  font-style: normal;
+  line-height: 1.35;
+}
+
+.memory-book-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.memory-book-textarea,
+.memory-book-search input {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+
+.memory-book-textarea {
+  min-height: 88px;
+  resize: vertical;
+  padding: 12px;
+  line-height: 1.4;
+}
+
+.memory-book-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.memory-book-search {
+  display: grid;
+  gap: 8px;
+}
+
+.memory-book-search > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.memory-book-search input {
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.memory-book-status {
+  min-height: 38px;
+  padding: 10px 12px;
+  border: 1px solid #d8e6dd;
+  border-radius: 8px;
+  background: #f8fcf9;
+  color: #315f43;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.memory-book-status[data-state="warning"] {
+  border-color: #f0d5c4;
+  background: #fff8f3;
+  color: #835122;
+}
+
+.memory-book-list {
+  display: grid;
+  gap: 10px;
+}
+
+.memory-book-list h2 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.memory-book-empty,
+.memory-book-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.memory-book-empty {
+  padding: 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.memory-book-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.memory-book-card strong {
+  display: block;
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.memory-book-card p {
+  margin: 8px 0 0;
+  color: #24313d;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.memory-book-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.memory-book-card dl div {
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid #e0e8ef;
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.memory-book-card dt,
+.memory-book-card dd {
+  margin: 0;
+}
+
+.memory-book-card dt {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.memory-book-card dd {
+  margin-top: 4px;
+  color: #2d3b48;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.memory-book-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .demo-path-rail {
@@ -1416,6 +1625,10 @@ body[data-active-view="overview"] .health-panel {
   font-weight: 800;
 }
 
+.text-command.danger {
+  color: var(--red);
+}
+
 .receipt-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(160px, 1fr));
@@ -1586,6 +1799,8 @@ body[data-active-view="overview"] .health-panel {
   .capture-control-grid,
   .capture-ladder-grid,
   .capture-ladder-list,
+  .memory-book-card dl,
+  .memory-book-search > div,
   .demo-path-inner,
   .demo-step-list {
     grid-template-columns: 1fr;
