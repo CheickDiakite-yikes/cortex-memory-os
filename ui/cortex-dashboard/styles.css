@@ -704,9 +704,32 @@ body[data-active-view="memory_palace"] #memory-list {
 
 .memory-book-context-pack {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   border-color: #d8e6dd;
   background: #f8fcf9;
+}
+
+.memory-book-agent-heading {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.memory-book-agent-heading > span {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 8px;
+  color: #17633b;
+  background: #e7f6ec;
+}
+
+.memory-book-agent-heading svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.2;
 }
 
 .memory-book-context-pack strong {
@@ -714,11 +737,24 @@ body[data-active-view="memory_palace"] #memory-list {
 }
 
 .memory-book-context-pack p,
+.memory-book-agent-heading em,
 .memory-book-context-pack li {
   margin: 0;
   color: #2d3b48;
   font-size: 13px;
   line-height: 1.35;
+}
+
+.memory-book-agent-heading p {
+  margin-top: 3px;
+}
+
+.memory-book-agent-heading em {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 800;
 }
 
 .memory-book-context-pack dl {
@@ -760,6 +796,33 @@ body[data-active-view="memory_palace"] #memory-list {
   gap: 5px;
   margin: 0;
   padding-left: 18px;
+}
+
+.memory-book-agent-effects {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.memory-book-agent-effects > div,
+.memory-book-helper-note {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #d8e6dd;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.memory-book-agent-effects strong,
+.memory-book-helper-note strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #213040;
+}
+
+.memory-book-agent-effects ul,
+.memory-book-helper-note ul {
+  padding-left: 16px;
 }
 
 .memory-book-safety {
@@ -2060,6 +2123,7 @@ body[data-active-view="memory_palace"] #memory-list {
   .memory-book-card dl,
   .memory-book-steps,
   .memory-book-context-pack dl,
+  .memory-book-agent-effects,
   .memory-book-search > div,
   .memory-book-ask > div,
   .memory-book-safety,

@@ -315,6 +315,9 @@ def test_dashboard_static_app_renders_manual_memory_book():
     assert "Forget this memory?" in app_js
     assert "Yes, forget" in app_js
     assert "Keep memory" in app_js
+    assert "Agent handoff" in app_js
+    assert "Codex or Claude can read this helper note when you ask." in app_js
+    assert "No clicks, exports, or memory changes." in app_js
     assert "Helper note" in app_js
     assert "callMemoryBook(\"context-pack\"" in app_js
     assert "callMemoryBook(\"snapshot\"" in app_js
@@ -333,6 +336,7 @@ def test_dashboard_static_app_renders_manual_memory_book():
     assert ".memory-book-card" in css
     assert ".memory-book-steps" in css
     assert ".memory-book-context-pack" in css
+    assert ".memory-book-agent-effects" in css
     assert ".memory-book-confirm" in css
     assert ".memory-book-safety-note" in css
     assert ".memory-book-safety" in css

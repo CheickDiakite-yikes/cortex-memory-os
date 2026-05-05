@@ -12188,6 +12188,8 @@ def case_manual_memory_book_loop_contract() -> BenchmarkCaseResult:
         "Find a memory",
         "Why Cortex remembers this",
         "Helper note",
+        "Agent handoff",
+        "No clicks, exports, or memory changes.",
         "Undo forget",
         "Yes, forget",
         "direct-query",

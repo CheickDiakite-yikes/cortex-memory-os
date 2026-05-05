@@ -1287,18 +1287,46 @@ function renderMemoryBookSteps() {
 function renderMemoryBookContextPack() {
   const pack = memoryBookState.contextPack;
   if (!pack) return "";
+  const relevantMemories = pack.relevant_memories || [];
+  const allowedEffects = pack.allowed_effects || ["direct_memory_answer"];
+  const blockedEffects = pack.blocked_effects || ["tool_action", "external_export"];
+  const safetyLock = pack.external_effect_enabled ? "needs review" : "locked";
   return `
-    <div class="memory-book-context-pack" aria-label="Helper note from Memory Book">
-      <strong>Helper note</strong>
-      <p>${escapeHtml(pack.relevant_memories.length ? "Use these saved memories only." : "Cortex does not know this yet.")}</p>
+    <div class="memory-book-context-pack" aria-label="Agent handoff from Memory Book">
+      <div class="memory-book-agent-heading">
+        <span>${svgIcon("agent_gateway")}</span>
+        <div>
+          <strong>Agent handoff</strong>
+          <p>Codex or Claude can read this helper note when you ask.</p>
+          <em>No clicks, exports, or memory changes.</em>
+        </div>
+      </div>
+      <p>${escapeHtml(relevantMemories.length ? "Use these saved memories only." : "Cortex does not know this yet.")}</p>
       <dl>
-        <div><dt>Matches</dt><dd>${escapeHtml(pack.relevant_memories.length)}</dd></div>
-        <div><dt>Use</dt><dd>ask only</dd></div>
-        <div><dt>Actions</dt><dd>blocked</dd></div>
+        <div><dt>Saved memories used</dt><dd>${escapeHtml(relevantMemories.length)}</dd></div>
+        <div><dt>Agent use</dt><dd>answer only</dd></div>
+        <div><dt>Safety lock</dt><dd>${escapeHtml(safetyLock)}</dd></div>
       </dl>
-      <ul>
-        ${pack.recommended_next_steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
-      </ul>
+      <div class="memory-book-agent-effects" aria-label="Agent handoff safety">
+        <div>
+          <strong>Allowed</strong>
+          <ul>
+            ${allowedEffects.map((effect) => `<li>${formatToken(effect)}</li>`).join("")}
+          </ul>
+        </div>
+        <div>
+          <strong>Blocked</strong>
+          <ul>
+            ${blockedEffects.slice(0, 4).map((effect) => `<li>${formatToken(effect)}</li>`).join("")}
+          </ul>
+        </div>
+      </div>
+      <div class="memory-book-helper-note" aria-label="Helper note from Memory Book">
+        <strong>Helper note</strong>
+        <ul>
+          ${(pack.recommended_next_steps || []).map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+        </ul>
+      </div>
     </div>
   `;
 }

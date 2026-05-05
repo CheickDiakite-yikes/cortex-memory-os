@@ -26,6 +26,8 @@ Build the first durable memory loop as a manual Memory Book:
 - a read-only snapshot for first-run guidance and safety lights;
 - a direct-query-only helper context pack that lets agents answer from
   user-saved memories without gaining tool/action authority;
+- a plain dashboard Agent handoff card that shows what agents may read and what
+  remains blocked;
 - MCP read-only tools for `manual_memory.snapshot`, `manual_memory.list`,
   `manual_memory.ask`, and `manual_memory.context_pack`;
 - redacted audit receipts for save, correct, and forget;
