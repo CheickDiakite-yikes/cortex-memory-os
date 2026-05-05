@@ -23,6 +23,9 @@ Build the first durable memory loop as a manual Memory Book:
   exists, where it can be used, and whether it is safe;
 - `direct-query` influence by default;
 - explicit save, ask, find, explain-why, fix, forget, and undo-forget actions;
+- a read-only snapshot for first-run guidance and safety lights;
+- a direct-query-only helper context pack that lets agents answer from
+  user-saved memories without gaining tool/action authority;
 - redacted audit receipts for save, correct, and forget;
 - rejection of secret-like and prompt-injection-like input before any write.
 
@@ -32,11 +35,15 @@ benchmark anchor is `MANUAL-MEMORY-BOOK-001`.
 ## Consequences
 
 This gives the live cursor and future tutor overlays a real memory substrate to
-plug into without widening observation authority. It also gives users a small
-trust-building flow before any capture, microphone, raw ref, autonomous action,
-export, or external effect is introduced. The undo window is intentionally
-short and local; it restores only a user-forgotten manual memory and does not
-make forgotten memories searchable while they are forgotten.
+plug into without widening observation authority. The helper context pack is
+the first bridge from memory to agents: it can carry relevant user-confirmed
+memory cards for a direct answer, but it still blocks screen capture, raw refs,
+tool actions, autonomous workflows, exports, and external effects. It also
+gives users a small trust-building flow before any capture, microphone, raw
+ref, autonomous action, export, or external effect is introduced. The undo
+window is intentionally short and local; it restores only a user-forgotten
+manual memory and does not make forgotten memories searchable while they are
+forgotten.
 
 ## Alternatives considered
 
@@ -53,6 +60,6 @@ make forgotten memories searchable while they are forgotten.
 - `uv run cortex-manual-memory-book --smoke --json`
 - `uv run cortex-capture-control-server --smoke --json`
 - `uv run cortex-bench --no-write`, including `MANUAL-MEMORY-BOOK-001`
-- Browser proof against the localhost dashboard: save, ask, explain why, find,
-  fix, forget, undo, forget again, and confirm forgotten memories no longer
-  appear in retrieval.
+- Browser proof against the localhost dashboard: save, ask, build the helper
+  note, explain why, find, fix inline, confirm forget in-page, undo, forget
+  again, and confirm forgotten memories no longer appear in retrieval.

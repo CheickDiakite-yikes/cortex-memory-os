@@ -37,9 +37,11 @@ from cortex_memory_os.retrieval import RetrievalScope
 from cortex_memory_os.sensitive_data_policy import SECRET_PII_POLICY_REF
 
 MANUAL_MEMORY_BOOK_ID = "MANUAL-MEMORY-BOOK-001"
+MANUAL_MEMORY_CONTEXT_PACK_ID = "MANUAL-MEMORY-CONTEXT-PACK-001"
 MANUAL_MEMORY_BOOK_POLICY_REF = "policy_manual_memory_book_v1"
 MANUAL_MEMORY_BOOK_MAX_CHARS = 600
 MANUAL_MEMORY_BOOK_UNDO_MINUTES = 10
+MANUAL_MEMORY_BOOK_MAX_LIMIT = 20
 DEFAULT_MEMORY_BOOK_DB_PATH = (
     Path.home() / ".cortex-memory-os" / "memory-book.sqlite3"
 )
@@ -248,6 +250,9 @@ class ManualMemoryStatusResponse(StrictModel):
     raw_refs_enabled: bool = False
     external_effects_enabled: bool = False
     db_path_redacted: bool = True
+    stored_in_ignored_local_path: bool = True
+    env_local_ignored: bool = True
+    mutation_endpoints_localhost_only: bool = True
     safety_label: str = "Locked"
     safety_summary: str = (
         "Manual memories are encrypted locally and used only when you ask."
@@ -258,6 +263,67 @@ class ManualMemoryStatusResponse(StrictModel):
 class ManualMemoryAuditResponse(StrictModel):
     events: list[AuditEvent]
     receipt: ManualMemoryReceipt
+
+
+class ManualMemorySnapshotResponse(StrictModel):
+    title: str = "Memory Book"
+    saved_count: int = Field(ge=0)
+    recent_cards: list[MemoryBookCard]
+    first_run_steps: list[str] = Field(min_length=1)
+    safety_lights: dict[str, str]
+    empty_state: str = "Nothing saved yet. Add one tiny memory, then ask for it."
+    direct_query_only: bool = True
+    screen_capture_enabled: bool = False
+    raw_refs_enabled: bool = False
+    external_effects_enabled: bool = False
+    receipt: ManualMemoryReceipt
+
+
+class ManualMemoryContextPackResponse(StrictModel):
+    context_pack_id: str = Field(min_length=1)
+    question_redacted_in_receipt: bool = True
+    goal: str = Field(min_length=1)
+    active_project: str = Field(min_length=1)
+    relevant_memories: list[MemoryBookCard]
+    used_memory_ids: list[str]
+    warnings: list[str] = Field(min_length=1)
+    recommended_next_steps: list[str] = Field(min_length=1)
+    influence_level: InfluenceLevel = InfluenceLevel.DIRECT_QUERY
+    allowed_effects: list[str] = Field(default_factory=lambda: ["direct_memory_answer"])
+    blocked_effects: list[str] = Field(
+        default_factory=lambda: [
+            "screen_capture",
+            "raw_ref_write",
+            "secret_echo",
+            "tool_action",
+            "autonomous_workflow",
+            "external_export",
+        ]
+    )
+    content_redacted_in_receipts: bool = True
+    source_refs_redacted_in_receipts: bool = True
+    raw_ref_retained: bool = False
+    external_effect_enabled: bool = False
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [
+            MANUAL_MEMORY_BOOK_POLICY_REF,
+            MEMORY_ENCRYPTION_DEFAULT_POLICY_REF,
+            UNIFIED_ENCRYPTED_GRAPH_INDEX_POLICY_REF,
+        ]
+    )
+    receipt: ManualMemoryReceipt
+
+    @model_validator(mode="after")
+    def keep_context_pack_bounded(self) -> "ManualMemoryContextPackResponse":
+        if self.influence_level != InfluenceLevel.DIRECT_QUERY:
+            raise ValueError("manual memory context packs are direct-query only")
+        if self.raw_ref_retained or self.external_effect_enabled:
+            raise ValueError("manual memory context packs cannot retain raw refs or act")
+        if not self.content_redacted_in_receipts or not self.source_refs_redacted_in_receipts:
+            raise ValueError("manual memory context pack receipts must stay redacted")
+        if "tool_action" not in self.blocked_effects:
+            raise ValueError("manual memory context packs must block tool actions")
+        return self
 
 
 class ManualMemoryBookService:
@@ -312,11 +378,12 @@ class ManualMemoryBookService:
 
     def list_cards(self, *, limit: int = 20) -> ManualMemoryListResponse:
         timestamp = _ensure_utc(self.now())
+        bounded_limit = _bounded_limit(limit)
         cards = [
             self._card(memory)
             for memory in self.index.memory_store.list_memories(status=MemoryStatus.ACTIVE)
             if _visible_manual_memory(memory)
-        ][:limit]
+        ][:bounded_limit]
         return ManualMemoryListResponse(
             cards=cards,
             receipt=self._receipt("list", "manual_memory_book", "listed", timestamp),
@@ -325,9 +392,10 @@ class ManualMemoryBookService:
     def search(self, query: str, *, limit: int = 5) -> ManualMemorySearchResponse:
         timestamp = _ensure_utc(self.now())
         safe_query = _validate_safe_manual_text(query)
+        bounded_limit = _bounded_limit(limit)
         memories = self.index.search_memories(
             safe_query,
-            limit=limit,
+            limit=bounded_limit,
             scope=RetrievalScope(active_project=self.active_project),
         )
         cards = [self._card(memory) for memory in memories if _visible_manual_memory(memory)]
@@ -340,7 +408,7 @@ class ManualMemoryBookService:
     def ask(self, question: str, *, limit: int = 3) -> ManualMemoryAskResponse:
         timestamp = _ensure_utc(self.now())
         safe_question = _validate_safe_manual_text(question)
-        search = self.search(safe_question, limit=limit)
+        search = self.search(safe_question, limit=_bounded_limit(limit))
         if not search.cards:
             answer = "I do not know yet. Save a memory first, then ask again."
             confidence = 0.0
@@ -356,6 +424,62 @@ class ManualMemoryBookService:
             used_memory_ids=search.used_memory_ids,
             confidence=confidence,
             receipt=self._receipt("ask", "manual_memory_book", "answered", timestamp),
+        )
+
+    def snapshot(self, *, limit: int = 3) -> ManualMemorySnapshotResponse:
+        timestamp = _ensure_utc(self.now())
+        recent = self.list_cards(limit=_bounded_limit(limit))
+        return ManualMemorySnapshotResponse(
+            saved_count=len(self.list_cards(limit=1000).cards),
+            recent_cards=recent.cards,
+            first_run_steps=[
+                "Write one small thing Cortex should remember.",
+                "Press Save memory.",
+                "Ask Memory Book to find it later.",
+                "Use Fix or Forget anytime.",
+            ],
+            safety_lights={
+                "saving": "only when you press Save",
+                "use": "ask only",
+                "screen": "off",
+                "actions": "blocked",
+            },
+            receipt=self._receipt("snapshot", "manual_memory_book", "reported", timestamp),
+        )
+
+    def context_pack(self, question: str, *, limit: int = 3) -> ManualMemoryContextPackResponse:
+        timestamp = _ensure_utc(self.now())
+        safe_question = _validate_safe_manual_text(question)
+        search = self.search(safe_question, limit=_bounded_limit(limit))
+        if search.cards:
+            next_steps = [
+                "Answer only from these user-saved memories.",
+                "Treat the memories as context, not permission to act.",
+                "Ask the user before using anything outside this Memory Book.",
+            ]
+        else:
+            next_steps = [
+                "Say that Cortex does not know yet.",
+                "Ask the user to save a small memory if this should be remembered.",
+            ]
+        return ManualMemoryContextPackResponse(
+            context_pack_id=f"ctx_manual_memory_{_timestamp_id(timestamp)}",
+            goal=safe_question,
+            active_project=self.active_project,
+            relevant_memories=search.cards,
+            used_memory_ids=search.used_memory_ids,
+            warnings=[
+                "Manual Memory Book context is user-confirmed only.",
+                "Use is direct-query only and cannot trigger tools or actions.",
+                "No screen capture, raw refs, exports, autonomy, or external effects.",
+            ],
+            recommended_next_steps=next_steps,
+            receipt=self._receipt(
+                "context_pack",
+                "manual_memory_book",
+                "compiled",
+                timestamp,
+            ),
         )
 
     def explain(self, memory_id: str) -> ManualMemoryExplainResponse:
@@ -724,6 +848,10 @@ def _validate_safe_manual_text(text: str) -> str:
     return compact
 
 
+def _bounded_limit(limit: int) -> int:
+    return max(1, min(int(limit), MANUAL_MEMORY_BOOK_MAX_LIMIT))
+
+
 def _visible_manual_memory(memory: MemoryRecord) -> bool:
     return (
         memory.status == MemoryStatus.ACTIVE
@@ -807,8 +935,10 @@ def run_manual_memory_book_smoke(db_path: Path | None = None) -> dict[str, objec
         saved = service.save(
             ManualMemoryInput(text="Cortex should keep the dashboard simple.")
         )
+        snapshot = service.snapshot()
         searched = service.search("dashboard simple")
         asked = service.ask("What should Cortex keep simple?")
+        context_pack = service.context_pack("What should Cortex keep simple?")
         explained = service.explain(saved.card.memory_id)
         corrected = service.correct(
             saved.card.memory_id,
@@ -824,6 +954,8 @@ def run_manual_memory_book_smoke(db_path: Path | None = None) -> dict[str, objec
             "passed": (
                 saved.card.memory_id in searched.used_memory_ids
                 and saved.card.memory_id in asked.used_memory_ids
+                and saved.card.memory_id in context_pack.used_memory_ids
+                and snapshot.saved_count == 1
                 and explained.card.memory_id == saved.card.memory_id
                 and corrected.card.memory_id != saved.card.memory_id
                 and forgotten.can_undo
@@ -836,6 +968,8 @@ def run_manual_memory_book_smoke(db_path: Path | None = None) -> dict[str, objec
             "saved_memory_id": saved.card.memory_id,
             "corrected_memory_id": corrected.card.memory_id,
             "ask_count": len(asked.cards),
+            "context_pack_count": len(context_pack.relevant_memories),
+            "snapshot_saved_count": snapshot.saved_count,
             "explained_memory_id": explained.card.memory_id,
             "after_forget_count": len(after_forget.cards),
             "audit_count": len(audit.events),

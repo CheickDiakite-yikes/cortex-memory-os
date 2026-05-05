@@ -143,9 +143,45 @@ def test_manual_memory_ask_explain_status_and_undo_forget(tmp_path):
     assert status_after_forget.pending_undo_count == 1
     assert status_after_forget.direct_query_only
     assert not status_after_forget.screen_capture_enabled
+    assert status_after_forget.stored_in_ignored_local_path
+    assert status_after_forget.env_local_ignored
+    assert status_after_forget.mutation_endpoints_localhost_only
     assert restored.card.memory_id == saved.card.memory_id
     assert service.search("tiny clear cards").used_memory_ids == [saved.card.memory_id]
     assert status_after_restore.saved_count == 1
+
+
+def test_manual_memory_snapshot_and_context_pack_are_direct_query_only(tmp_path):
+    service = ManualMemoryBookService(
+        tmp_path / "memory-book.sqlite3",
+        now=lambda: datetime(2026, 5, 4, 10, 0, tzinfo=UTC),
+    )
+
+    saved = service.save(ManualMemoryInput(text="Cortex should explain memory simply."))
+    snapshot = service.snapshot()
+    context_pack = service.context_pack("How should Cortex explain memory?")
+    empty_service = ManualMemoryBookService(tmp_path / "empty-memory-book.sqlite3")
+    empty_context_pack = empty_service.context_pack("What does Cortex know about invoices?")
+
+    assert snapshot.saved_count == 1
+    assert snapshot.recent_cards[0].memory_id == saved.card.memory_id
+    assert snapshot.direct_query_only
+    assert not snapshot.screen_capture_enabled
+    assert not snapshot.raw_refs_enabled
+    assert snapshot.safety_lights["screen"] == "off"
+    assert "Press Save memory." in snapshot.first_run_steps
+    assert context_pack.used_memory_ids == [saved.card.memory_id]
+    assert context_pack.relevant_memories[0].memory_id == saved.card.memory_id
+    assert context_pack.influence_level == InfluenceLevel.DIRECT_QUERY
+    assert context_pack.allowed_effects == ["direct_memory_answer"]
+    assert "tool_action" in context_pack.blocked_effects
+    assert context_pack.question_redacted_in_receipt
+    assert context_pack.content_redacted_in_receipts
+    assert context_pack.source_refs_redacted_in_receipts
+    assert not context_pack.raw_ref_retained
+    assert not context_pack.external_effect_enabled
+    assert empty_context_pack.used_memory_ids == []
+    assert "does not know yet" in empty_context_pack.recommended_next_steps[0]
 
 
 def test_manual_memory_forget_requires_explicit_confirmation(tmp_path):

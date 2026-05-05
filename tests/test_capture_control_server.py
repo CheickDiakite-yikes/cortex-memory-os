@@ -71,6 +71,7 @@ def test_capture_control_server_smoke_serves_dashboard_and_blocks_remote_probe()
     assert smoke.memory_list_status_code == 200
     assert smoke.memory_search_status_code == 200
     assert smoke.memory_ask_status_code == 200
+    assert smoke.memory_context_pack_status_code == 200
     assert smoke.memory_explain_status_code == 200
     assert smoke.memory_correct_status_code == 200
     assert smoke.memory_forget_status_code == 200
@@ -78,8 +79,10 @@ def test_capture_control_server_smoke_serves_dashboard_and_blocks_remote_probe()
     assert smoke.memory_after_forget_status_code == 200
     assert smoke.memory_audit_status_code == 200
     assert smoke.memory_status_status_code == 200
+    assert smoke.memory_snapshot_status_code == 200
     assert smoke.memory_search_result_count == 1
     assert smoke.memory_ask_result_count == 1
+    assert smoke.memory_context_pack_result_count == 1
     assert smoke.memory_after_forget_result_count == 0
     assert smoke.memory_audit_count == 5
     assert smoke.memory_pending_undo_count >= 1

@@ -595,6 +595,7 @@ body[data-active-view="memory_palace"] #memory-list {
 }
 
 .memory-book-textarea,
+.memory-book-inline-textarea,
 .memory-book-search input,
 .memory-book-ask input {
   width: 100%;
@@ -610,6 +611,35 @@ body[data-active-view="memory_palace"] #memory-list {
   resize: vertical;
   padding: 12px;
   line-height: 1.4;
+}
+
+.memory-book-inline-textarea {
+  min-height: 78px;
+  margin-top: 8px;
+  resize: vertical;
+  padding: 10px;
+  line-height: 1.4;
+}
+
+.memory-book-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.memory-book-steps li {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #d8e6dd;
+  border-radius: 8px;
+  background: #f8fcf9;
+  color: #2d6040;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.3;
 }
 
 .memory-book-actions {
@@ -643,6 +673,7 @@ body[data-active-view="memory_palace"] #memory-list {
 }
 
 .memory-book-answer,
+.memory-book-context-pack,
 .memory-book-explain,
 .memory-book-undo {
   padding: 12px;
@@ -669,6 +700,66 @@ body[data-active-view="memory_palace"] #memory-list {
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
+}
+
+.memory-book-context-pack {
+  display: grid;
+  gap: 8px;
+  border-color: #d8e6dd;
+  background: #f8fcf9;
+}
+
+.memory-book-context-pack strong {
+  font-size: 14px;
+}
+
+.memory-book-context-pack p,
+.memory-book-context-pack li {
+  margin: 0;
+  color: #2d3b48;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.memory-book-context-pack dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.memory-book-context-pack dl div {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #d8e6dd;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.memory-book-context-pack dt,
+.memory-book-context-pack dd {
+  margin: 0;
+}
+
+.memory-book-context-pack dt {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.memory-book-context-pack dd {
+  margin-top: 3px;
+  color: #235c3a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.memory-book-context-pack ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 18px;
 }
 
 .memory-book-safety {
@@ -702,6 +793,13 @@ body[data-active-view="memory_palace"] #memory-list {
   color: #235c3a;
   font-size: 15px;
   line-height: 1.2;
+}
+
+.memory-book-safety-note {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .memory-book-undo {
@@ -830,6 +928,31 @@ body[data-active-view="memory_palace"] #memory-list {
 }
 
 .memory-book-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.memory-book-confirm {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #ecd7ad;
+  border-radius: 8px;
+  background: #fffaf0;
+}
+
+.memory-book-confirm strong {
+  color: #694500;
+  font-size: 14px;
+}
+
+.memory-book-confirm span {
+  color: #694500;
+  font-size: 13px;
+}
+
+.memory-book-confirm div {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1935,6 +2058,8 @@ body[data-active-view="memory_palace"] #memory-list {
   .capture-ladder-grid,
   .capture-ladder-list,
   .memory-book-card dl,
+  .memory-book-steps,
+  .memory-book-context-pack dl,
   .memory-book-search > div,
   .memory-book-ask > div,
   .memory-book-safety,

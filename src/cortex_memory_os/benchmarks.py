@@ -12185,8 +12185,9 @@ def case_manual_memory_book_loop_contract() -> BenchmarkCaseResult:
         "Ask memory",
         "Find a memory",
         "Why Cortex remembers this",
+        "Helper note",
         "Undo forget",
-        "Forget this memory?",
+        "Yes, forget",
         "direct-query",
     ]
     missing_terms = _missing_terms(registry_text + "\n" + adr_text + "\n" + ui_text, required_terms)
@@ -12197,9 +12198,13 @@ def case_manual_memory_book_loop_contract() -> BenchmarkCaseResult:
         saved = service.save(
             ManualMemoryInput(text="Cortex should remember the blue notebook demo.")
         )
+        snapshot = service.snapshot()
         listed = service.list_cards()
         found = service.search("blue notebook")
         asked = service.ask("What should Cortex remember about the blue notebook?")
+        context_pack = service.context_pack(
+            "What should Cortex remember about the blue notebook?"
+        )
         explained = service.explain(saved.card.memory_id)
         corrected = service.correct(
             saved.card.memory_id,
@@ -12233,8 +12238,14 @@ def case_manual_memory_book_loop_contract() -> BenchmarkCaseResult:
     saved_card = saved.card
     passed = (
         listed.cards
+        and snapshot.saved_count == 1
+        and snapshot.direct_query_only
+        and not snapshot.screen_capture_enabled
         and found.cards
         and asked.used_memory_ids == [saved.card.memory_id]
+        and context_pack.used_memory_ids == [saved.card.memory_id]
+        and context_pack.influence_level == InfluenceLevel.DIRECT_QUERY
+        and "tool_action" in context_pack.blocked_effects
         and explained.card.memory_id == saved.card.memory_id
         and not old_search.cards
         and corrected_search.cards
@@ -12272,8 +12283,10 @@ def case_manual_memory_book_loop_contract() -> BenchmarkCaseResult:
         ),
         metrics={
             "listed_count": len(listed.cards),
+            "snapshot_saved_count": snapshot.saved_count,
             "initial_search_count": len(found.cards),
             "ask_result_count": len(asked.cards),
+            "context_pack_result_count": len(context_pack.relevant_memories),
             "old_search_after_correct_count": len(old_search.cards),
             "corrected_search_count": len(corrected_search.cards),
             "after_forget_count": len(after_forget.cards),
