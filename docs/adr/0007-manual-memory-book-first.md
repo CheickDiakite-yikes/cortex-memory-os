@@ -26,6 +26,8 @@ Build the first durable memory loop as a manual Memory Book:
 - a read-only snapshot for first-run guidance and safety lights;
 - a direct-query-only helper context pack that lets agents answer from
   user-saved memories without gaining tool/action authority;
+- MCP read-only tools for `manual_memory.snapshot`, `manual_memory.list`,
+  `manual_memory.ask`, and `manual_memory.context_pack`;
 - redacted audit receipts for save, correct, and forget;
 - rejection of secret-like and prompt-injection-like input before any write.
 
@@ -45,6 +47,11 @@ window is intentionally short and local; it restores only a user-forgotten
 manual memory and does not make forgotten memories searchable while they are
 forgotten.
 
+The gateway intentionally does not expose `manual_memory.save`,
+`manual_memory.correct`, `manual_memory.forget`, or `manual_memory.export`.
+Those remain dashboard-local, user-confirmed flows until agent-triggered
+mutation approvals are designed and tested.
+
 ## Alternatives considered
 
 - Continue polishing dense dashboard panels. This would improve appearances but
@@ -60,6 +67,7 @@ forgotten.
 - `uv run cortex-manual-memory-book --smoke --json`
 - `uv run cortex-capture-control-server --smoke --json`
 - `uv run cortex-bench --no-write`, including `MANUAL-MEMORY-BOOK-001`
+- `uv run cortex-mcp --smoke`, including `manual_memory.context_pack`
 - Browser proof against the localhost dashboard: save, ask, build the helper
   note, explain why, find, fix inline, confirm forget in-page, undo, forget
   again, and confirm forgotten memories no longer appear in retrieval.

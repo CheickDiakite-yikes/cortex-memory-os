@@ -119,6 +119,7 @@ from cortex_memory_os.manual_adapter_proof import (
 )
 from cortex_memory_os.manual_memory_book import (
     MANUAL_MEMORY_BOOK_ID,
+    MANUAL_MEMORY_CONTEXT_PACK_ID,
     MANUAL_MEMORY_BOOK_POLICY_REF,
     ManualMemoryBookService,
     ManualMemoryInput,
@@ -730,6 +731,7 @@ def run_all() -> BenchmarkRunResult:
         case_skill_metrics_dashboard_surface_contract,
         case_dashboard_shell_contract,
         case_manual_memory_book_loop_contract,
+        case_manual_memory_gateway_contract,
         case_dashboard_focus_inspector_contract,
         case_dashboard_gateway_actions_contract,
         case_computer_dashboard_live_proof_contract,
@@ -12300,6 +12302,84 @@ def case_manual_memory_book_loop_contract() -> BenchmarkCaseResult:
             "db_hides_payload": db_hides_payload,
             "receipts_safe": receipts_safe,
             "audit_actions": audit_actions,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_manual_memory_gateway_contract() -> BenchmarkCaseResult:
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    tools_doc = (REPO_ROOT / "docs" / "adr" / "0007-manual-memory-book-first.md").read_text(
+        encoding="utf-8"
+    )
+    required_terms = [
+        MANUAL_MEMORY_CONTEXT_PACK_ID,
+        "manual_memory.snapshot",
+        "manual_memory.list",
+        "manual_memory.ask",
+        "manual_memory.context_pack",
+        "direct-query-only helper context pack",
+    ]
+    missing_terms = _missing_terms(registry_text + "\n" + tools_doc, required_terms)
+    server = default_server()
+    tool_names = {tool["name"] for tool in server.list_tools()}
+    snapshot = server.call_tool("manual_memory.snapshot", {})
+    listed = server.call_tool("manual_memory.list", {"limit": 5})
+    asked = server.call_tool(
+        "manual_memory.ask",
+        {"question": "Where should Cortex answer manual-memory questions from?"},
+    )
+    context_pack = server.call_tool(
+        "manual_memory.context_pack",
+        {"question": "Where should Cortex answer manual-memory questions from?"},
+    )
+    serialized_pack = json.dumps(context_pack, sort_keys=True)
+    blocked_mutation_tools = {
+        "manual_memory.save",
+        "manual_memory.correct",
+        "manual_memory.forget",
+        "manual_memory.export",
+    }.isdisjoint(tool_names)
+    passed = (
+        snapshot["saved_count"] == 1
+        and snapshot["direct_query_only"] is True
+        and snapshot["screen_capture_enabled"] is False
+        and len(listed["cards"]) == 1
+        and asked["used_memory_ids"] == [listed["cards"][0]["memory_id"]]
+        and asked["receipt"]["content_redacted"] is True
+        and context_pack["used_memory_ids"] == [listed["cards"][0]["memory_id"]]
+        and context_pack["influence_level"] == 1
+        and context_pack["allowed_effects"] == ["direct_memory_answer"]
+        and "tool_action" in context_pack["blocked_effects"]
+        and context_pack["raw_ref_retained"] is False
+        and context_pack["external_effect_enabled"] is False
+        and blocked_mutation_tools
+        and "raw://" not in serialized_pack
+        and "encrypted_blob://" not in serialized_pack
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="MANUAL-MEMORY-CONTEXT-PACK-001/gateway_read_only_tools",
+        suite=MANUAL_MEMORY_CONTEXT_PACK_ID,
+        passed=bool(passed),
+        summary=(
+            "MCP exposes manual Memory Book snapshot, list, ask, and context-pack "
+            "tools as read-only direct-query surfaces while mutation/export tools stay absent."
+        ),
+        metrics={
+            "tool_count": len(tool_names),
+            "listed_count": len(listed["cards"]),
+            "ask_result_count": len(asked["cards"]),
+            "context_pack_result_count": len(context_pack["relevant_memories"]),
+            "blocked_mutation_tool_count": int(blocked_mutation_tools),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": MANUAL_MEMORY_BOOK_POLICY_REF,
+            "benchmark_id": MANUAL_MEMORY_CONTEXT_PACK_ID,
+            "blocked_mutation_tools": blocked_mutation_tools,
             "missing_doc_terms": missing_terms,
         },
     )

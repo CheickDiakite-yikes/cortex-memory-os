@@ -52,6 +52,10 @@ from cortex_memory_os.encrypted_graph_index import (
     UNIFIED_ENCRYPTED_GRAPH_INDEX_POLICY_REF,
 )
 from cortex_memory_os.memory_export import export_memories_with_audit
+from cortex_memory_os.manual_memory_book import (
+    ManualMemoryBookService,
+    ManualMemoryInput,
+)
 from cortex_memory_os.memory_palace import MemoryExplanation, MemoryPalaceService
 from cortex_memory_os.memory_palace_flows import (
     SelfLessonReviewAction,
@@ -128,6 +132,7 @@ class CortexMCPServer:
     palace: MemoryPalaceService | None = None
     skills: dict[str, SkillRecord] = field(default_factory=dict)
     self_lessons: tuple[SelfLesson, ...] = ()
+    manual_memory_book: ManualMemoryBookService | None = None
     _tempdir: TemporaryDirectory[str] | None = field(default=None, repr=False)
 
     def list_tools(self) -> list[dict[str, Any]]:
@@ -509,6 +514,59 @@ class CortexMCPServer:
                     },
                 }
             )
+        if self.manual_memory_book is not None:
+            tools.extend(
+                [
+                    {
+                        "name": "manual_memory.snapshot",
+                        "description": "Read the user-saved Memory Book snapshot and safety lights.",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "limit": {"type": "integer", "minimum": 1, "maximum": 20}
+                            },
+                            "additionalProperties": False,
+                        },
+                    },
+                    {
+                        "name": "manual_memory.list",
+                        "description": "List user-confirmed manual memories for direct query only.",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "limit": {"type": "integer", "minimum": 1, "maximum": 20}
+                            },
+                            "additionalProperties": False,
+                        },
+                    },
+                    {
+                        "name": "manual_memory.ask",
+                        "description": "Answer from user-saved manual memories without tool/action authority.",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "question": {"type": "string"},
+                                "limit": {"type": "integer", "minimum": 1, "maximum": 20},
+                            },
+                            "required": ["question"],
+                            "additionalProperties": False,
+                        },
+                    },
+                    {
+                        "name": "manual_memory.context_pack",
+                        "description": "Compile a direct-query-only helper context pack from user-saved memories.",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "question": {"type": "string"},
+                                "limit": {"type": "integer", "minimum": 1, "maximum": 20},
+                            },
+                            "required": ["question"],
+                            "additionalProperties": False,
+                        },
+                    },
+                ]
+            )
         if self.palace is not None:
             tools.extend(
                 [
@@ -612,6 +670,28 @@ class CortexMCPServer:
             ).model_dump(mode="json")
         if name == "memory.get_context_pack":
             return self.get_context_pack(arguments).model_dump(mode="json")
+        if name == "manual_memory.snapshot":
+            book = self._require_manual_memory_book()
+            return book.snapshot(
+                limit=_optional_int_range(arguments, "limit", default=3, minimum=1, maximum=20)
+            ).model_dump(mode="json")
+        if name == "manual_memory.list":
+            book = self._require_manual_memory_book()
+            return book.list_cards(
+                limit=_optional_int_range(arguments, "limit", default=20, minimum=1, maximum=20)
+            ).model_dump(mode="json")
+        if name == "manual_memory.ask":
+            book = self._require_manual_memory_book()
+            return book.ask(
+                _require_string(arguments, "question"),
+                limit=_optional_int_range(arguments, "limit", default=3, minimum=1, maximum=20),
+            ).model_dump(mode="json")
+        if name == "manual_memory.context_pack":
+            book = self._require_manual_memory_book()
+            return book.context_pack(
+                _require_string(arguments, "question"),
+                limit=_optional_int_range(arguments, "limit", default=3, minimum=1, maximum=20),
+            ).model_dump(mode="json")
         if name == "runtime_trace.record":
             store = self._require_runtime_trace_store()
             try:
@@ -1416,6 +1496,11 @@ class CortexMCPServer:
             raise JsonRpcError(-32601, "runtime trace persistence tools are not configured")
         return self.store
 
+    def _require_manual_memory_book(self) -> ManualMemoryBookService:
+        if self.manual_memory_book is None:
+            raise JsonRpcError(-32601, "manual memory book tools are not configured")
+        return self.manual_memory_book
+
 
 def default_server() -> CortexMCPServer:
     fixture_path = "tests/fixtures/memory_preference.json"
@@ -1425,11 +1510,18 @@ def default_server() -> CortexMCPServer:
     tempdir = TemporaryDirectory()
     store = SQLiteMemoryGraphStore(Path(tempdir.name) / "cortex.sqlite3")
     store.add_memory(memory)
+    manual_memory_book = ManualMemoryBookService(Path(tempdir.name) / "manual-memory.sqlite3")
+    manual_memory_book.save(
+        ManualMemoryInput(
+            text="Cortex should answer manual-memory questions from saved Memory Book cards."
+        )
+    )
     return CortexMCPServer(
         store=store,
         palace=MemoryPalaceService(store),
         skills={skill.skill_id: skill},
         self_lessons=(self_lesson,),
+        manual_memory_book=manual_memory_book,
         _tempdir=tempdir,
     )
 
@@ -2414,7 +2506,7 @@ def main() -> int:
 
     server = default_server()
     if args.smoke:
-        response = server.handle_jsonrpc(
+        context_pack_response = server.handle_jsonrpc(
             {
                 "jsonrpc": "2.0",
                 "id": 1,
@@ -2425,8 +2517,25 @@ def main() -> int:
                 },
             }
         )
+        manual_memory_response = server.handle_jsonrpc(
+            {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {
+                    "name": "manual_memory.context_pack",
+                    "arguments": {
+                        "question": "Where should Cortex answer manual-memory questions from?"
+                    },
+                },
+            }
+        )
+        response = {
+            "context_pack": context_pack_response,
+            "manual_memory_context_pack": manual_memory_response,
+        }
         print(json.dumps(response, indent=2, sort_keys=True))
-        return 0 if "result" in response else 1
+        return 0 if all("result" in item for item in response.values()) else 1
 
     return serve_stdio(server)
 

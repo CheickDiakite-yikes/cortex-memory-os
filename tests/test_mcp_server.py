@@ -82,6 +82,10 @@ def test_lists_memory_tools():
     assert {tool["name"] for tool in tools} == {
         "memory.search",
         "memory.get_context_pack",
+        "manual_memory.snapshot",
+        "manual_memory.list",
+        "manual_memory.ask",
+        "manual_memory.context_pack",
         "runtime_trace.record",
         "runtime_trace.get",
         "runtime_trace.list",
@@ -106,6 +110,40 @@ def test_lists_memory_tools():
         "memory.export",
         "skill.audit",
     }
+
+
+def test_manual_memory_gateway_tools_are_read_only_direct_query():
+    server = default_server()
+
+    snapshot = server.call_tool("manual_memory.snapshot", {})
+    listed = server.call_tool("manual_memory.list", {"limit": 5})
+    asked = server.call_tool(
+        "manual_memory.ask",
+        {"question": "Where should Cortex answer manual-memory questions from?"},
+    )
+    context_pack = server.call_tool(
+        "manual_memory.context_pack",
+        {"question": "Where should Cortex answer manual-memory questions from?"},
+    )
+    tool_names = {tool["name"] for tool in server.list_tools()}
+
+    assert snapshot["saved_count"] == 1
+    assert snapshot["direct_query_only"] is True
+    assert snapshot["screen_capture_enabled"] is False
+    assert listed["cards"][0]["influence_level"] == 1
+    assert asked["used_memory_ids"] == [listed["cards"][0]["memory_id"]]
+    assert asked["receipt"]["content_redacted"] is True
+    assert context_pack["used_memory_ids"] == [listed["cards"][0]["memory_id"]]
+    assert context_pack["influence_level"] == 1
+    assert context_pack["allowed_effects"] == ["direct_memory_answer"]
+    assert "tool_action" in context_pack["blocked_effects"]
+    assert context_pack["raw_ref_retained"] is False
+    assert context_pack["external_effect_enabled"] is False
+    assert "manual_memory.save" not in tool_names
+    assert "manual_memory.correct" not in tool_names
+    assert "manual_memory.forget" not in tool_names
+    assert "raw://" not in json.dumps(context_pack)
+    assert "encrypted_blob://" not in json.dumps(context_pack)
 
 
 def test_memory_search_returns_governed_memory():
