@@ -4,6 +4,7 @@ from cortex_memory_os.capture_control_server import (
     CAPTURE_CONTROL_SERVER_POLICY_REF,
     CaptureControlProcessManager,
     FakePopen,
+    _memory_error,
     run_capture_control_server_smoke,
 )
 
@@ -68,6 +69,8 @@ def test_capture_control_server_smoke_serves_dashboard_and_blocks_remote_probe()
     assert smoke.preflight_status_code == 200
     assert smoke.screen_probe_status_code == 200
     assert smoke.memory_save_status_code == 200
+    assert smoke.memory_validate_status_code == 200
+    assert smoke.memory_validate_accepted is False
     assert smoke.memory_list_status_code == 200
     assert smoke.memory_search_status_code == 200
     assert smoke.memory_ask_status_code == 200
@@ -105,3 +108,19 @@ def test_capture_control_server_smoke_serves_dashboard_and_blocks_remote_probe()
     assert not smoke.receipt_summary.raw_ref_retained
     assert not smoke.receipt_summary.memory_write_allowed
     assert smoke.stop_receipt.action == "stop"
+
+
+def test_manual_memory_errors_are_user_safe_and_redacted() -> None:
+    secret_error = _memory_error("secret-like text cannot be saved")
+    injection_error = _memory_error("prompt-injection-like text cannot be saved")
+
+    assert secret_error["user_message"] == (
+        "Safety lock worked. Cortex blocked secret-like text before saving."
+    )
+    assert injection_error["user_message"] == (
+        "Safety lock worked. Cortex blocked instruction-like text before saving."
+    )
+    assert secret_error["content_redacted"] is True
+    assert secret_error["source_refs_redacted"] is True
+    assert secret_error["raw_ref_retained"] is False
+    assert secret_error["external_effect_enabled"] is False

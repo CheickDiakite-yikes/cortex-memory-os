@@ -12,6 +12,7 @@ const memoryBookState = {
   contextPack: null,
   explained: null,
   lastUndo: null,
+  safetyCheck: null,
   editingMemoryId: null,
   editingText: "",
   pendingForgetId: null,
@@ -206,6 +207,7 @@ async function callMemoryBook(action, payload = {}, options = {}) {
   }
   const configKeys = {
     save: "memorySavePath",
+    validate: "memoryValidatePath",
     list: "memoryListPath",
     search: "memorySearchPath",
     ask: "memoryAskPath",
@@ -238,7 +240,7 @@ async function callMemoryBook(action, payload = {}, options = {}) {
       await refreshCaptureControlConfig();
       return callMemoryBook(action, payload, { refreshed: true });
     }
-    throw new Error(result.error_code || `Memory Book ${action} failed.`);
+    throw new Error(result.user_message || result.error_code || `Memory Book ${action} failed.`);
   }
   return result;
 }
@@ -1148,6 +1150,14 @@ function renderMemoryBookLive() {
       </div>
     `
     : "";
+  const safetyCheckHtml = memoryBookState.safetyCheck
+    ? `
+      <div class="memory-book-secret-check" data-state="${escapeHtml(memoryBookState.safetyCheck.state)}">
+        <strong>${escapeHtml(memoryBookState.safetyCheck.title)}</strong>
+        <span>${escapeHtml(memoryBookState.safetyCheck.message)}</span>
+      </div>
+    `
+    : "";
   target.innerHTML = `
     <section class="memory-book-panel" aria-label="Manual Memory Book">
       <div class="memory-book-intro">
@@ -1169,6 +1179,12 @@ function renderMemoryBookLive() {
       <div class="memory-book-actions">
         <button class="command-button" type="button" id="manual-memory-save">
           ${svgIcon("check")} Save memory
+        </button>
+        <button class="command-button secondary" type="button" id="manual-memory-demo">
+          ${svgIcon("file")} Try demo
+        </button>
+        <button class="command-button secondary" type="button" id="manual-memory-secret-test">
+          ${svgIcon("shield")} Test secret lock
         </button>
         <button class="command-button secondary" type="button" id="manual-memory-refresh">
           ${svgIcon("route")} Refresh
@@ -1201,6 +1217,7 @@ function renderMemoryBookLive() {
         <div><span>Screen</span><strong>${status.screen_capture_enabled ? "on" : "off"}</strong></div>
       </div>
       <p class="memory-book-safety-note">${status.stored_in_ignored_local_path === false ? "Check local data path before sharing." : "Local data is ignored by git. .env.local stays out of commits."}</p>
+      ${safetyCheckHtml}
       ${undoHtml}
       ${explainHtml}
       <div class="memory-book-list" aria-label="${escapeHtml(title)}">
@@ -1375,6 +1392,49 @@ function bindMemoryBookControls(root) {
 
   root.querySelector("#manual-memory-refresh")?.addEventListener("click", () => {
     refreshMemoryBook();
+  });
+
+  root.querySelector("#manual-memory-demo")?.addEventListener("click", () => {
+    const input = root.querySelector("#manual-memory-text");
+    if (input) {
+      input.value = "Cortex should remember that the dashboard demo stays simple.";
+      input.focus();
+    }
+    memoryBookState.safetyCheck = null;
+    writeReceipt("Demo memory is ready. Press Save memory when you want Cortex to remember it.");
+  });
+
+  root.querySelector("#manual-memory-secret-test")?.addEventListener("click", async () => {
+    writeReceipt("Testing secret lock with a fake secret-shaped value.");
+    try {
+      const response = await callMemoryBook("validate", {
+        text: ["OPENAI", "_API", "_KEY=fake-test-value"].join(""),
+      });
+      if (response.accepted) {
+        memoryBookState.safetyCheck = {
+          state: "warning",
+          title: "Secret lock failed",
+          message: "The fake secret-shaped value was not blocked.",
+        };
+        writeReceipt("Secret lock failed. Do not use Memory Book until this is fixed.");
+      } else {
+        memoryBookState.safetyCheck = {
+          state: "healthy",
+          title: "Secret lock worked",
+          message: response.user_message,
+        };
+        writeReceipt("Secret lock worked. Nothing was saved.");
+      }
+    } catch (error) {
+      memoryBookState.safetyCheck = {
+        state: "warning",
+        title: "Secret lock test failed",
+        message: error.message,
+      };
+      writeReceipt("Secret lock test could not run.");
+    }
+    await refreshMemoryBook({ silent: true });
+    renderMemoryBookLive();
   });
 
   root.querySelector("#manual-memory-text")?.addEventListener("keydown", (event) => {

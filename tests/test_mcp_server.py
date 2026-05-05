@@ -84,7 +84,10 @@ def test_lists_memory_tools():
         "memory.get_context_pack",
         "manual_memory.snapshot",
         "manual_memory.list",
+        "manual_memory.status",
         "manual_memory.ask",
+        "manual_memory.explain",
+        "manual_memory.audit",
         "manual_memory.context_pack",
         "runtime_trace.record",
         "runtime_trace.get",
@@ -117,10 +120,16 @@ def test_manual_memory_gateway_tools_are_read_only_direct_query():
 
     snapshot = server.call_tool("manual_memory.snapshot", {})
     listed = server.call_tool("manual_memory.list", {"limit": 5})
+    status = server.call_tool("manual_memory.status", {})
     asked = server.call_tool(
         "manual_memory.ask",
         {"question": "Where should Cortex answer manual-memory questions from?"},
     )
+    explained = server.call_tool(
+        "manual_memory.explain",
+        {"memory_id": listed["cards"][0]["memory_id"]},
+    )
+    audit = server.call_tool("manual_memory.audit", {"limit": 5})
     context_pack = server.call_tool(
         "manual_memory.context_pack",
         {"question": "Where should Cortex answer manual-memory questions from?"},
@@ -131,8 +140,15 @@ def test_manual_memory_gateway_tools_are_read_only_direct_query():
     assert snapshot["direct_query_only"] is True
     assert snapshot["screen_capture_enabled"] is False
     assert listed["cards"][0]["influence_level"] == 1
+    assert status["saved_count"] == 1
+    assert status["direct_query_only"] is True
+    assert status["db_path_redacted"] is True
     assert asked["used_memory_ids"] == [listed["cards"][0]["memory_id"]]
     assert asked["receipt"]["content_redacted"] is True
+    assert explained["card"]["memory_id"] == listed["cards"][0]["memory_id"]
+    assert "No screen capture" in " ".join(explained["safety_lines"])
+    assert audit["events"][0]["action"] == "manual_memory.save"
+    assert audit["receipt"]["content_redacted"] is True
     assert context_pack["used_memory_ids"] == [listed["cards"][0]["memory_id"]]
     assert context_pack["influence_level"] == 1
     assert context_pack["allowed_effects"] == ["direct_memory_answer"]
@@ -142,6 +158,7 @@ def test_manual_memory_gateway_tools_are_read_only_direct_query():
     assert "manual_memory.save" not in tool_names
     assert "manual_memory.correct" not in tool_names
     assert "manual_memory.forget" not in tool_names
+    assert "manual_memory.export" not in tool_names
     assert "raw://" not in json.dumps(context_pack)
     assert "encrypted_blob://" not in json.dumps(context_pack)
 

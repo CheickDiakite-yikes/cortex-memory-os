@@ -865,6 +865,32 @@ body[data-active-view="memory_palace"] #memory-list {
   line-height: 1.35;
 }
 
+.memory-book-secret-check {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid #d8e6dd;
+  border-radius: 8px;
+  background: #f8fcf9;
+}
+
+.memory-book-secret-check[data-state="warning"] {
+  border-color: #f1c7c0;
+  background: #fff8f6;
+}
+
+.memory-book-secret-check strong {
+  color: #213040;
+  font-size: 13px;
+}
+
+.memory-book-secret-check span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
 .memory-book-undo {
   display: flex;
   align-items: center;

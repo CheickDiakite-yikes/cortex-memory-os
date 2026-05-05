@@ -63,6 +63,26 @@ def test_manual_memory_rejects_secret_and_prompt_injection_text(tmp_path, unsafe
     assert service.list_cards().cards == []
 
 
+def test_manual_memory_validate_rejects_without_saving_or_echoing_secret(tmp_path):
+    service = ManualMemoryBookService(tmp_path / "memory-book.sqlite3")
+
+    blocked = service.validate_text("OPENAI_API_KEY=sk-manual-secret-fixture")
+    accepted = service.validate_text("Cortex should keep a simple demo memory.")
+
+    assert blocked.accepted is False
+    assert blocked.user_message == (
+        "Safety lock worked. Cortex blocked secret-like text before saving."
+    )
+    assert blocked.content_redacted is True
+    assert blocked.source_refs_redacted is True
+    assert blocked.raw_ref_retained is False
+    assert blocked.external_effect_enabled is False
+    assert "OPENAI_API_KEY" not in blocked.model_dump_json()
+    assert "sk-manual-secret-fixture" not in blocked.model_dump_json()
+    assert accepted.accepted is True
+    assert service.list_cards().cards == []
+
+
 def test_manual_memory_search_correct_forget_and_audit_flow(tmp_path):
     service = ManualMemoryBookService(
         tmp_path / "memory-book.sqlite3",

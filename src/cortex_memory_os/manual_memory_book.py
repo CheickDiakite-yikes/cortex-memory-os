@@ -191,6 +191,16 @@ class ManualMemorySaveResponse(StrictModel):
     receipt: ManualMemoryReceipt
 
 
+class ManualMemoryValidationResponse(StrictModel):
+    accepted: bool
+    user_message: str = Field(min_length=1)
+    content_redacted: bool = True
+    source_refs_redacted: bool = True
+    raw_ref_retained: bool = False
+    external_effect_enabled: bool = False
+    receipt: ManualMemoryReceipt
+
+
 class ManualMemoryListResponse(StrictModel):
     cards: list[MemoryBookCard]
     receipt: ManualMemoryReceipt
@@ -374,6 +384,22 @@ class ManualMemoryBookService:
         return ManualMemorySaveResponse(
             card=self._card(memory),
             receipt=self._receipt("save", memory.memory_id, "saved", timestamp),
+        )
+
+    def validate_text(self, text: str) -> ManualMemoryValidationResponse:
+        timestamp = _ensure_utc(self.now())
+        try:
+            _validate_safe_manual_text(text)
+        except ManualMemoryRejectedError as error:
+            return ManualMemoryValidationResponse(
+                accepted=False,
+                user_message=manual_memory_user_message(str(error)),
+                receipt=self._receipt("validate", "manual_memory_book", "rejected", timestamp),
+            )
+        return ManualMemoryValidationResponse(
+            accepted=True,
+            user_message="This is safe to save when you are ready.",
+            receipt=self._receipt("validate", "manual_memory_book", "accepted", timestamp),
         )
 
     def list_cards(self, *, limit: int = 20) -> ManualMemoryListResponse:
@@ -846,6 +872,22 @@ def _validate_safe_manual_text(text: str) -> str:
     if any(marker.lower() in lowered for marker in _SECRET_MARKERS):
         raise ManualMemoryRejectedError("secret-like text cannot be saved")
     return compact
+
+
+def manual_memory_user_message(error_code: str) -> str:
+    if "secret-like" in error_code:
+        return "Safety lock worked. Cortex blocked secret-like text before saving."
+    if "prompt-injection-like" in error_code:
+        return "Safety lock worked. Cortex blocked instruction-like text before saving."
+    if "empty" in error_code:
+        return "Type one small thing first."
+    if "too long" in error_code:
+        return "That memory is too long. Make it shorter and try again."
+    if "not found" in error_code:
+        return "Cortex could not find that saved memory."
+    if "confirmation" in error_code:
+        return "Cortex needs one more confirmation before forgetting."
+    return "Memory Book blocked that request safely."
 
 
 def _bounded_limit(limit: int) -> int:

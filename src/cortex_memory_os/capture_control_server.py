@@ -50,6 +50,7 @@ from cortex_memory_os.manual_memory_book import (
     ManualMemoryBookService,
     ManualMemoryInput,
     ManualMemoryRejectedError,
+    manual_memory_user_message,
 )
 
 CAPTURE_CONTROL_SERVER_POLICY_REF = "policy_capture_control_local_bridge_v1"
@@ -65,6 +66,7 @@ CAPTURE_CONTROL_SCREEN_PROBE_PATH = "/api/capture/screen-probe"
 CAPTURE_CONTROL_RECEIPTS_PATH = "/api/capture/receipts"
 CAPTURE_CONTROL_CONFIG_PATH = "/capture-control-config.js"
 MEMORY_BOOK_SAVE_PATH = "/api/memory/save"
+MEMORY_BOOK_VALIDATE_PATH = "/api/memory/validate"
 MEMORY_BOOK_LIST_PATH = "/api/memory/list"
 MEMORY_BOOK_SEARCH_PATH = "/api/memory/search"
 MEMORY_BOOK_ASK_PATH = "/api/memory/ask"
@@ -160,6 +162,8 @@ class CaptureControlServerSmokeResult(StrictModel):
     screen_probe_status_code: int
     screen_probe_receipt: NativeScreenCaptureProbeResult
     memory_save_status_code: int
+    memory_validate_status_code: int
+    memory_validate_accepted: bool
     memory_list_status_code: int
     memory_search_status_code: int
     memory_ask_status_code: int
@@ -389,6 +393,7 @@ def build_capture_control_handler(
                         "screenProbePath": CAPTURE_CONTROL_SCREEN_PROBE_PATH,
                         "receiptsPath": CAPTURE_CONTROL_RECEIPTS_PATH,
                         "memorySavePath": MEMORY_BOOK_SAVE_PATH,
+                        "memoryValidatePath": MEMORY_BOOK_VALIDATE_PATH,
                         "memoryListPath": MEMORY_BOOK_LIST_PATH,
                         "memorySearchPath": MEMORY_BOOK_SEARCH_PATH,
                         "memoryAskPath": MEMORY_BOOK_ASK_PATH,
@@ -492,6 +497,9 @@ def build_capture_control_handler(
             if route == MEMORY_BOOK_SAVE_PATH:
                 self._handle_memory_save()
                 return
+            if route == MEMORY_BOOK_VALIDATE_PATH:
+                self._handle_memory_validate()
+                return
             if route == MEMORY_BOOK_SEARCH_PATH:
                 self._handle_memory_search()
                 return
@@ -589,6 +597,11 @@ def build_capture_control_handler(
             except (ManualMemoryRejectedError, ValueError) as error:
                 self._write_json(400, _memory_error(str(error)))
                 return
+            self._write_json(200, response.model_dump(mode="json"))
+
+        def _handle_memory_validate(self) -> None:
+            payload = self._read_json()
+            response = active_memory_book.validate_text(str(payload.get("text", "")))
             self._write_json(200, response.model_dump(mode="json"))
 
         def _handle_memory_search(self) -> None:
@@ -838,6 +851,12 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
             payload={"text": "Cortex should keep the Memory Book simple."},
             headers=headers,
         )
+        memory_validate_code, memory_validate_payload = _request_json(
+            endpoint.base_url + MEMORY_BOOK_VALIDATE_PATH,
+            method="POST",
+            payload={"text": "OPENAI_API_KEY=fake-test-value"},
+            headers=headers,
+        )
         saved_memory_id = memory_save_payload["card"]["memory_id"]
         memory_list_code, memory_list_payload = _request_json(
             endpoint.base_url + MEMORY_BOOK_LIST_PATH,
@@ -960,6 +979,7 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         and screen_probe_code == 200
         and stop_code == 200
         and memory_save_code == 200
+        and memory_validate_code == 200
         and memory_list_code == 200
         and memory_search_code == 200
         and memory_ask_code == 200
@@ -990,6 +1010,11 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         and not receipt_summary.raw_pixels_returned
         and not receipt_summary.raw_ref_retained
         and not receipt_summary.memory_write_allowed
+        and memory_validate_payload["accepted"] is False
+        and memory_validate_payload["content_redacted"] is True
+        and memory_validate_payload["raw_ref_retained"] is False
+        and "OPENAI_API_KEY" not in json.dumps(memory_validate_payload)
+        and "fake-test-value" not in json.dumps(memory_validate_payload)
         and len(memory_list_payload["cards"]) == 1
         and saved_memory_id in memory_search_payload["used_memory_ids"]
         and saved_memory_id in memory_ask_payload["used_memory_ids"]
@@ -1020,6 +1045,8 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         screen_probe_status_code=screen_probe_code,
         screen_probe_receipt=screen_probe_receipt,
         memory_save_status_code=memory_save_code,
+        memory_validate_status_code=memory_validate_code,
+        memory_validate_accepted=bool(memory_validate_payload["accepted"]),
         memory_list_status_code=memory_list_code,
         memory_search_status_code=memory_search_code,
         memory_ask_status_code=memory_ask_code,
@@ -1074,6 +1101,8 @@ def _error_receipt(error_code: str) -> CaptureControlBridgeReceipt:
 def _memory_error(error_code: str) -> dict[str, str | bool | list[str]]:
     return {
         "error_code": error_code,
+        "user_message": manual_memory_user_message(error_code),
+        "safe_to_retry": True,
         "content_redacted": True,
         "source_refs_redacted": True,
         "raw_ref_retained": False,

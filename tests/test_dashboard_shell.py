@@ -307,6 +307,11 @@ def test_dashboard_static_app_renders_manual_memory_book():
     assert "memory-book-live" in index_html
     assert "Tell Cortex what to remember." in app_js
     assert "Save memory" in app_js
+    assert "Try demo" in app_js
+    assert "Test secret lock" in app_js
+    assert "Secret lock worked" in app_js
+    assert "Nothing was saved." in app_js
+    assert "callMemoryBook(\"validate\"" in app_js
     assert "Ask memory" in app_js
     assert "Find a memory" in app_js
     assert "Why Cortex remembers this" in app_js
@@ -337,6 +342,7 @@ def test_dashboard_static_app_renders_manual_memory_book():
     assert ".memory-book-steps" in css
     assert ".memory-book-context-pack" in css
     assert ".memory-book-agent-effects" in css
+    assert ".memory-book-secret-check" in css
     assert ".memory-book-confirm" in css
     assert ".memory-book-safety-note" in css
     assert ".memory-book-safety" in css

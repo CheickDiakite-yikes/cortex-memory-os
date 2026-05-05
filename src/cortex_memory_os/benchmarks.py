@@ -12171,6 +12171,9 @@ def case_manual_memory_book_loop_contract() -> BenchmarkCaseResult:
     adr_text = (REPO_ROOT / "docs" / "adr" / "0007-manual-memory-book-first.md").read_text(
         encoding="utf-8"
     )
+    self_test_text = (
+        REPO_ROOT / "docs" / "product" / "memory-book-self-test.md"
+    ).read_text(encoding="utf-8")
     ui_text = "\n".join(
         path.read_text(encoding="utf-8")
         for path in [
@@ -12184,6 +12187,10 @@ def case_manual_memory_book_loop_contract() -> BenchmarkCaseResult:
         MANUAL_MEMORY_BOOK_POLICY_REF,
         "Tell Cortex what to remember.",
         "Save memory",
+        "Try demo",
+        "Test secret lock",
+        "Secret lock worked",
+        "Memory Book Self-Test",
         "Ask memory",
         "Find a memory",
         "Why Cortex remembers this",
@@ -12194,7 +12201,10 @@ def case_manual_memory_book_loop_contract() -> BenchmarkCaseResult:
         "Yes, forget",
         "direct-query",
     ]
-    missing_terms = _missing_terms(registry_text + "\n" + adr_text + "\n" + ui_text, required_terms)
+    missing_terms = _missing_terms(
+        registry_text + "\n" + adr_text + "\n" + ui_text + "\n" + self_test_text,
+        required_terms,
+    )
 
     with tempfile.TemporaryDirectory() as temp_dir:
         db_path = Path(temp_dir) / "memory-book.sqlite3"
@@ -12320,7 +12330,10 @@ def case_manual_memory_gateway_contract() -> BenchmarkCaseResult:
         MANUAL_MEMORY_CONTEXT_PACK_ID,
         "manual_memory.snapshot",
         "manual_memory.list",
+        "manual_memory.status",
         "manual_memory.ask",
+        "manual_memory.explain",
+        "manual_memory.audit",
         "manual_memory.context_pack",
         "direct-query-only helper context pack",
     ]
@@ -12329,10 +12342,16 @@ def case_manual_memory_gateway_contract() -> BenchmarkCaseResult:
     tool_names = {tool["name"] for tool in server.list_tools()}
     snapshot = server.call_tool("manual_memory.snapshot", {})
     listed = server.call_tool("manual_memory.list", {"limit": 5})
+    status = server.call_tool("manual_memory.status", {})
     asked = server.call_tool(
         "manual_memory.ask",
         {"question": "Where should Cortex answer manual-memory questions from?"},
     )
+    explained = server.call_tool(
+        "manual_memory.explain",
+        {"memory_id": listed["cards"][0]["memory_id"]},
+    )
+    audit = server.call_tool("manual_memory.audit", {"limit": 5})
     context_pack = server.call_tool(
         "manual_memory.context_pack",
         {"question": "Where should Cortex answer manual-memory questions from?"},
@@ -12349,8 +12368,15 @@ def case_manual_memory_gateway_contract() -> BenchmarkCaseResult:
         and snapshot["direct_query_only"] is True
         and snapshot["screen_capture_enabled"] is False
         and len(listed["cards"]) == 1
+        and status["saved_count"] == 1
+        and status["direct_query_only"] is True
+        and status["db_path_redacted"] is True
         and asked["used_memory_ids"] == [listed["cards"][0]["memory_id"]]
         and asked["receipt"]["content_redacted"] is True
+        and explained["card"]["memory_id"] == listed["cards"][0]["memory_id"]
+        and explained["receipt"]["raw_ref_retained"] is False
+        and audit["events"][0]["action"] == "manual_memory.save"
+        and audit["receipt"]["source_refs_redacted"] is True
         and context_pack["used_memory_ids"] == [listed["cards"][0]["memory_id"]]
         and context_pack["influence_level"] == 1
         and context_pack["allowed_effects"] == ["direct_memory_answer"]
@@ -12374,6 +12400,7 @@ def case_manual_memory_gateway_contract() -> BenchmarkCaseResult:
             "tool_count": len(tool_names),
             "listed_count": len(listed["cards"]),
             "ask_result_count": len(asked["cards"]),
+            "audit_event_count": len(audit["events"]),
             "context_pack_result_count": len(context_pack["relevant_memories"]),
             "blocked_mutation_tool_count": int(blocked_mutation_tools),
             "missing_doc_terms": len(missing_terms),

@@ -540,6 +540,15 @@ class CortexMCPServer:
                         },
                     },
                     {
+                        "name": "manual_memory.status",
+                        "description": "Read Memory Book safety status without exposing raw local paths.",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": False,
+                        },
+                    },
+                    {
                         "name": "manual_memory.ask",
                         "description": "Answer from user-saved manual memories without tool/action authority.",
                         "inputSchema": {
@@ -549,6 +558,27 @@ class CortexMCPServer:
                                 "limit": {"type": "integer", "minimum": 1, "maximum": 20},
                             },
                             "required": ["question"],
+                            "additionalProperties": False,
+                        },
+                    },
+                    {
+                        "name": "manual_memory.explain",
+                        "description": "Explain one user-saved manual memory and its safety limits.",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {"memory_id": {"type": "string"}},
+                            "required": ["memory_id"],
+                            "additionalProperties": False,
+                        },
+                    },
+                    {
+                        "name": "manual_memory.audit",
+                        "description": "List redacted Memory Book audit events.",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "limit": {"type": "integer", "minimum": 1, "maximum": 20}
+                            },
                             "additionalProperties": False,
                         },
                     },
@@ -680,11 +710,25 @@ class CortexMCPServer:
             return book.list_cards(
                 limit=_optional_int_range(arguments, "limit", default=20, minimum=1, maximum=20)
             ).model_dump(mode="json")
+        if name == "manual_memory.status":
+            book = self._require_manual_memory_book()
+            return book.status().model_dump(mode="json")
         if name == "manual_memory.ask":
             book = self._require_manual_memory_book()
             return book.ask(
                 _require_string(arguments, "question"),
                 limit=_optional_int_range(arguments, "limit", default=3, minimum=1, maximum=20),
+            ).model_dump(mode="json")
+        if name == "manual_memory.explain":
+            book = self._require_manual_memory_book()
+            try:
+                return book.explain(_require_string(arguments, "memory_id")).model_dump(mode="json")
+            except KeyError as error:
+                raise JsonRpcError(-32602, "unknown manual memory_id") from error
+        if name == "manual_memory.audit":
+            book = self._require_manual_memory_book()
+            return book.audit_events(
+                limit=_optional_int_range(arguments, "limit", default=20, minimum=1, maximum=20)
             ).model_dump(mode="json")
         if name == "manual_memory.context_pack":
             book = self._require_manual_memory_book()

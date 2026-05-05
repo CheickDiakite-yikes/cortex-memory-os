@@ -28,8 +28,11 @@ Build the first durable memory loop as a manual Memory Book:
   user-saved memories without gaining tool/action authority;
 - a plain dashboard Agent handoff card that shows what agents may read and what
   remains blocked;
+- a pre-save validation path so the dashboard can prove the secret lock without
+  attempting a memory write;
 - MCP read-only tools for `manual_memory.snapshot`, `manual_memory.list`,
-  `manual_memory.ask`, and `manual_memory.context_pack`;
+  `manual_memory.status`, `manual_memory.ask`, `manual_memory.explain`,
+  `manual_memory.audit`, and `manual_memory.context_pack`;
 - redacted audit receipts for save, correct, and forget;
 - rejection of secret-like and prompt-injection-like input before any write.
 
@@ -73,3 +76,6 @@ mutation approvals are designed and tested.
 - Browser proof against the localhost dashboard: save, ask, build the helper
   note, explain why, find, fix inline, confirm forget in-page, undo, forget
   again, and confirm forgotten memories no longer appear in retrieval.
+- User self-test path in `docs/product/memory-book-self-test.md`: Try demo,
+  ask, inspect Agent handoff, then prove the secret lock blocks fake
+  secret-shaped text before save.
