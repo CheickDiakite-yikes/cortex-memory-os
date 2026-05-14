@@ -24,6 +24,13 @@
         </header>
 
         <div class="studio-frame" id="studio-frame">
+          <div class="wake-card" id="wake-card">
+            <p>Cortex Pointer</p>
+            <h2>A helper that points, explains, and remembers only when you approve.</h2>
+            <button type="button" id="wake-helper">Start pointer helper</button>
+            <span>Safe demo mode: no screen capture, no real clicks, no memory writes.</span>
+          </div>
+
           <aside class="media-bin" data-target-id="media_bin">
             <h2>Media Bin</h2>
             <button type="button">Interview_A_cam_001</button>
@@ -89,12 +96,28 @@
           <div class="cursor-talk-card" id="cursor-talk-card" role="group" aria-label="Cortex pointer actions">
             <span id="pointer-status-label">Cortex sees</span>
             <strong id="pointer-target-label">this surface</strong>
+            <small id="pointer-safety-label">Display only. You stay in control.</small>
             <div class="cursor-action-row">
               <button type="button" data-pointer-command="Explain this">Explain</button>
               <button type="button" data-pointer-command="What next?">Next</button>
+              <button type="button" data-pointer-local="pin-target">Pin</button>
               <button type="button" data-pointer-command="Remember this">Remember</button>
             </div>
           </div>
+          <div class="companion-dock" id="companion-dock" aria-live="polite">
+            <strong id="dock-state">Pointer off</strong>
+            <span id="dock-summary">Start helper to see Cortex follow inside this safe demo.</span>
+            <div class="pinned-targets" id="pinned-targets"></div>
+          </div>
+          <section class="memory-proposal-card" id="memory-proposal-card" aria-label="Memory proposal">
+            <p>Memory card ready</p>
+            <strong id="memory-proposal-target">No target</strong>
+            <span id="memory-proposal-preview">Nothing has been saved.</span>
+            <div>
+              <button type="button" id="review-memory-proposal">Review</button>
+              <button type="button" id="dismiss-memory-proposal">Dismiss</button>
+            </div>
+          </section>
           <p class="instruction-bubble" id="instruction-bubble" aria-live="polite">
             Ask a question and I will point without clicking.
           </p>
@@ -103,16 +126,16 @@
 
       <aside class="tutor-panel" aria-label="Live tutor controls">
         <header>
-          <p class="section-label">Live Tutor</p>
-          <h1>Show Me, Safely</h1>
+          <p class="section-label">Cortex Pointer</p>
+          <h1>Point, Ask, Remember</h1>
           <p>
-            Ask contextual questions. Cortex reads only this controlled demo state,
-            points with a secondary cursor, and writes a safe receipt.
+            A secondary cursor stays beside your work. It can explain what you point at,
+            suggest the next safe step, and prepare memory cards for review.
           </p>
         </header>
 
         <form id="question-form" class="question-form">
-          <label for="question-input">Question</label>
+          <label for="question-input">Ask about the thing under your pointer</label>
           <textarea id="question-input" rows="3">How do I start color grading?</textarea>
           <button type="submit">Ask Cortex</button>
         </form>
@@ -122,24 +145,29 @@
           <button type="button">Where is the node graph?</button>
           <button type="button">How do I add a LUT?</button>
           <button type="button">What should I click next?</button>
+          <button type="button">Explain these</button>
         </div>
 
-        <section class="receipt-card" aria-label="Latest safe receipt">
-          <p class="section-label">Latest Receipt</p>
-          <dl>
-            <div><dt>Target</dt><dd id="receipt-target">none</dd></div>
-            <div><dt>Intent</dt><dd id="receipt-intent">waiting</dd></div>
-            <div><dt>Referent</dt><dd id="receipt-referent">none</dd></div>
-            <div><dt>Confidence</dt><dd id="receipt-confidence">0.00</dd></div>
-            <div><dt>Effects</dt><dd id="receipt-effects">display-only</dd></div>
-            <div><dt>Blocked</dt><dd id="receipt-blocked">clicks, capture, memory</dd></div>
-          </dl>
-        </section>
+        <p class="receipt-summary" id="receipt-summary">No pointer receipt yet.</p>
+        <button type="button" class="receipts-toggle" id="receipts-toggle">Show safety receipts</button>
+        <div class="receipt-stack collapsed" id="receipt-stack">
+          <section class="receipt-card" aria-label="Latest safe receipt">
+            <p class="section-label">Latest Receipt</p>
+            <dl>
+              <div><dt>Target</dt><dd id="receipt-target">none</dd></div>
+              <div><dt>Intent</dt><dd id="receipt-intent">waiting</dd></div>
+              <div><dt>Referent</dt><dd id="receipt-referent">none</dd></div>
+              <div><dt>Confidence</dt><dd id="receipt-confidence">0.00</dd></div>
+              <div><dt>Effects</dt><dd id="receipt-effects">display-only</dd></div>
+              <div><dt>Blocked</dt><dd id="receipt-blocked">clicks, capture, memory</dd></div>
+            </dl>
+          </section>
 
-        <section class="turn-log" aria-label="Tutor turn log">
-          <p class="section-label">Turn Receipts</p>
-          <ol id="turn-list"></ol>
-        </section>
+          <section class="turn-log" aria-label="Tutor turn log">
+            <p class="section-label">Turn Receipts</p>
+            <ol id="turn-list"></ol>
+          </section>
+        </div>
       </aside>
     </main>
 

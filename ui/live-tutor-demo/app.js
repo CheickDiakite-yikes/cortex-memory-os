@@ -5,12 +5,26 @@ const cursor = document.querySelector("#shadow-tutor-cursor");
 const talkCard = document.querySelector("#cursor-talk-card");
 const pointerStatusLabel = document.querySelector("#pointer-status-label");
 const pointerTargetLabel = document.querySelector("#pointer-target-label");
+const pointerSafetyLabel = document.querySelector("#pointer-safety-label");
 const bubble = document.querySelector("#instruction-bubble");
+const wakeCard = document.querySelector("#wake-card");
+const wakeHelperButton = document.querySelector("#wake-helper");
+const dockState = document.querySelector("#dock-state");
+const dockSummary = document.querySelector("#dock-summary");
+const pinnedTargets = document.querySelector("#pinned-targets");
+const memoryProposalCard = document.querySelector("#memory-proposal-card");
+const memoryProposalTarget = document.querySelector("#memory-proposal-target");
+const memoryProposalPreview = document.querySelector("#memory-proposal-preview");
+const reviewMemoryProposal = document.querySelector("#review-memory-proposal");
+const dismissMemoryProposal = document.querySelector("#dismiss-memory-proposal");
 const form = document.querySelector("#question-form");
 const input = document.querySelector("#question-input");
 const token = document.querySelector('meta[name="cortex-live-tutor-token"]')?.content || "";
 const activePageChip = document.querySelector("#active-page-chip");
 const turnList = document.querySelector("#turn-list");
+const receiptSummary = document.querySelector("#receipt-summary");
+const receiptsToggle = document.querySelector("#receipts-toggle");
+const receiptStack = document.querySelector("#receipt-stack");
 const fields = {
   target: document.querySelector("#receipt-target"),
   intent: document.querySelector("#receipt-intent"),
@@ -23,10 +37,12 @@ const fields = {
 let activePage = "edit";
 let lastTraceAt = 0;
 let followerVisible = false;
+let helperActive = false;
 let currentTargetId = null;
 let currentTargetLabel = "this surface";
 let previousTargetId = null;
 let selectedTargetIds = [];
+let pinnedTargetIds = [];
 let lastPointer = { x: null, y: null };
 
 function clamp(value, min, max) {
@@ -47,6 +63,9 @@ function formatToken(value) {
 }
 
 async function askTutor(question) {
+  if (!helperActive) {
+    setHelperActive(true);
+  }
   fields.intent.textContent = "thinking";
   const response = await fetch("/tutor/turn", {
     method: "POST",
@@ -59,7 +78,7 @@ async function askTutor(question) {
       active_page: activePage,
       pointed_target_id: currentTargetId,
       previous_target_id: previousTargetId,
-      selected_target_ids: selectedTargetIds,
+      selected_target_ids: pinnedTargetIds.length ? pinnedTargetIds : selectedTargetIds,
       pointer_x: lastPointer.x,
       pointer_y: lastPointer.y,
     }),
@@ -79,6 +98,9 @@ function renderError(payload) {
   fields.confidence.textContent = "0.00";
   fields.effects.textContent = "none";
   fields.blocked.textContent = "request rejected before receipt";
+  receiptSummary.textContent = "Request blocked before Cortex produced a pointer receipt.";
+  dockState.textContent = "Blocked";
+  dockSummary.textContent = "No action was taken.";
   bubble.textContent = "That request was blocked before any tutor cue.";
 }
 
@@ -104,6 +126,7 @@ function updatePointerTarget(targetId) {
   pointerStatusLabel.textContent = currentTargetId ? "Cortex sees" : "Cortex nearby";
   pointerTargetLabel.textContent = currentTargetLabel;
   fields.target.textContent = currentTargetLabel;
+  renderPinnedTargets();
 }
 
 function targetFromEvent(event) {
@@ -112,6 +135,7 @@ function targetFromEvent(event) {
 }
 
 function placeTutorFollower(x, y, { trace = true } = {}) {
+  if (!helperActive) return;
   const frameRect = frame.getBoundingClientRect();
   lastPointer = {
     x: Math.round(clamp(x, 0, frameRect.width)),
@@ -147,9 +171,65 @@ function placeTutorFollower(x, y, { trace = true } = {}) {
 }
 
 function handlePointerMove(event) {
+  if (!helperActive) return;
   const frameRect = frame.getBoundingClientRect();
   updatePointerTarget(targetFromEvent(event));
   placeTutorFollower(event.clientX - frameRect.left, event.clientY - frameRect.top);
+}
+
+function setHelperActive(active) {
+  helperActive = active;
+  document.body.classList.toggle("helper-active", active);
+  wakeCard.classList.toggle("hidden", active);
+  talkCard.classList.toggle("visible", active);
+  dockState.textContent = active ? "Pointer awake" : "Pointer off";
+  dockSummary.textContent = active
+    ? "Move over the studio. Cortex will stay beside your pointer."
+    : "Start helper to see Cortex follow inside this safe demo.";
+}
+
+function wakeHelper() {
+  if (helperActive) return;
+  setHelperActive(true);
+  bubble.textContent = "Pointer helper is awake. Move over a tool or ask a question.";
+  bubble.classList.add("visible");
+  askTutor(input.value.trim() || "How do I start color grading?");
+}
+
+function renderPinnedTargets() {
+  const ids = pinnedTargetIds.length ? pinnedTargetIds : selectedTargetIds;
+  pinnedTargets.innerHTML = "";
+  ids.slice(-4).forEach((targetId) => {
+    const chip = document.createElement("span");
+    chip.textContent = targetLabel(targetId);
+    chip.className = pinnedTargetIds.includes(targetId) ? "pinned" : "";
+    pinnedTargets.append(chip);
+  });
+}
+
+function pinCurrentTarget() {
+  if (!currentTargetId) {
+    dockSummary.textContent = "Point at a target before pinning it.";
+    return;
+  }
+  if (pinnedTargetIds.includes(currentTargetId)) {
+    pinnedTargetIds = pinnedTargetIds.filter((targetId) => targetId !== currentTargetId);
+    dockSummary.textContent = `${currentTargetLabel} removed from the target stack.`;
+  } else {
+    pinnedTargetIds = [...pinnedTargetIds, currentTargetId].slice(-4);
+    dockSummary.textContent = `${currentTargetLabel} pinned. Ask about "these" to use the stack.`;
+  }
+  renderPinnedTargets();
+}
+
+function showMemoryProposal(proposal) {
+  if (!proposal) {
+    memoryProposalCard.classList.remove("visible");
+    return;
+  }
+  memoryProposalTarget.textContent = proposal.target_label;
+  memoryProposalPreview.textContent = proposal.content_preview;
+  memoryProposalCard.classList.add("visible");
 }
 
 function renderTurn(turn) {
@@ -176,9 +256,17 @@ function renderTurn(turn) {
   cursor.classList.add("visible", "pulse");
   window.setTimeout(() => cursor.classList.remove("pulse"), 360);
   followerVisible = false;
+  updatePointerTarget(turn.target_id);
+  const bubbleX = clamp(centerX + 28, 8, frameRect.width - 330);
+  const bubbleY = clamp(centerY - 132, 18, frameRect.height - 180);
+  talkCard.style.left = `${clamp(centerX + 42, 8, frameRect.width - 232)}px`;
+  talkCard.style.top = `${clamp(bubbleY + 96, 8, frameRect.height - 88)}px`;
+  talkCard.classList.add("visible");
+  pointerSafetyLabel.textContent =
+    turn.companion_state?.safety_caption || "Display only. You stay in control.";
 
-  bubble.style.left = `${Math.min(centerX + 28, frameRect.width - 320)}px`;
-  bubble.style.top = `${Math.max(centerY - 24, 18)}px`;
+  bubble.style.left = `${bubbleX}px`;
+  bubble.style.top = `${bubbleY}px`;
   bubble.textContent = turn.assistant_response;
   bubble.classList.add("visible");
 
@@ -191,10 +279,15 @@ function renderTurn(turn) {
     .slice(1, 4)
     .join(", ");
   fields.blocked.textContent = "click, type, capture, memory, export";
+  receiptSummary.textContent =
+    turn.user_readable_receipt || "Cortex answered safely beside the pointer.";
+  dockState.textContent = turn.companion_state?.label || `Pointing at ${turn.target_label}`;
+  dockSummary.textContent = turn.micro_steps?.[0] || turn.next_user_action;
+  showMemoryProposal(turn.manual_memory_proposal);
 
   const item = document.createElement("li");
   const proposalText = turn.manual_memory_proposal ? " · memory proposal needs review" : "";
-  item.innerHTML = `<strong>${escapeHtml(turn.target_label)}</strong><span>${escapeHtml(formatToken(turn.intent_label))} · ${escapeHtml(turn.pointer_referent || "none")} · confidence ${Number(turn.confidence).toFixed(2)} · raw refs ${turn.raw_ref_retained ? "retained" : "none"}${proposalText}</span>`;
+  item.innerHTML = `<strong>${escapeHtml(turn.target_label)}</strong><span>${escapeHtml(turn.user_readable_receipt || formatToken(turn.intent_label))} · ${escapeHtml(turn.pointer_referent || "none")} · confidence ${Number(turn.confidence).toFixed(2)} · raw refs ${turn.raw_ref_retained ? "retained" : "none"}${proposalText}</span>`;
   turnList.prepend(item);
 }
 
@@ -218,6 +311,7 @@ document.querySelector("#color-page-button").addEventListener("click", () => {
 });
 
 frame.addEventListener("pointerenter", (event) => {
+  if (!helperActive) return;
   const frameRect = frame.getBoundingClientRect();
   updatePointerTarget(targetFromEvent(event));
   placeTutorFollower(event.clientX - frameRect.left, event.clientY - frameRect.top, {
@@ -228,7 +322,9 @@ frame.addEventListener("pointerenter", (event) => {
 frame.addEventListener("pointermove", handlePointerMove);
 
 frame.addEventListener("pointerleave", () => {
-  talkCard.classList.remove("visible");
+  dockSummary.textContent = helperActive
+    ? "Pointer helper is still awake inside the safe demo surface."
+    : "Start helper to see Cortex follow inside this safe demo.";
 });
 
 document.querySelectorAll("[data-pointer-command]").forEach((button) => {
@@ -237,6 +333,15 @@ document.querySelectorAll("[data-pointer-command]").forEach((button) => {
     const command = button.dataset.pointerCommand || "Explain this";
     input.value = command;
     askTutor(command);
+  });
+});
+
+document.querySelectorAll("[data-pointer-local]").forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (button.dataset.pointerLocal === "pin-target") {
+      pinCurrentTarget();
+    }
   });
 });
 
@@ -251,4 +356,23 @@ talkCard.addEventListener("click", (event) => {
   bubble.classList.add("visible");
 });
 
-askTutor(input.value);
+wakeHelperButton.addEventListener("click", wakeHelper);
+
+reviewMemoryProposal.addEventListener("click", () => {
+  receiptSummary.textContent =
+    "Memory proposal opened for review. It still has not been saved.";
+  dockState.textContent = "Review memory";
+  dockSummary.textContent = "Save only from the Memory Book after checking the card.";
+});
+
+dismissMemoryProposal.addEventListener("click", () => {
+  memoryProposalCard.classList.remove("visible");
+  receiptSummary.textContent = "Memory proposal dismissed. Nothing was saved.";
+  dockState.textContent = "Proposal dismissed";
+  dockSummary.textContent = "Cortex will keep pointing without saving that memory.";
+});
+
+receiptsToggle.addEventListener("click", () => {
+  const collapsed = receiptStack.classList.toggle("collapsed");
+  receiptsToggle.textContent = collapsed ? "Show safety receipts" : "Hide safety receipts";
+});

@@ -231,6 +231,30 @@ class ManualMemoryProposal(StrictModel):
         return self
 
 
+class LiveTutorCompanionState(StrictModel):
+    mode: Literal["tracking", "answering", "review_required"] = "answering"
+    label: str = Field(min_length=1, max_length=80)
+    safety_caption: str = Field(min_length=1, max_length=140)
+    display_only: bool = True
+    answer_anchor: Literal["beside_pointer"] = "beside_pointer"
+    policy_refs: list[str] = Field(default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF])
+
+    @field_validator("label", "safety_caption")
+    @classmethod
+    def reject_prohibited_text(cls, value: str) -> str:
+        if any(marker in value for marker in _PROHIBITED_MARKERS):
+            raise ValueError("companion state cannot carry secret/raw markers")
+        return value
+
+    @model_validator(mode="after")
+    def keep_companion_display_only(self) -> LiveTutorCompanionState:
+        if not self.display_only:
+            raise ValueError("live tutor companion state must be display-only")
+        if LIVE_TUTOR_OVERLAY_POLICY_REF not in self.policy_refs:
+            raise ValueError("live tutor companion state requires policy ref")
+        return self
+
+
 class LiveTutorTurn(StrictModel):
     turn_id: str = Field(min_length=1)
     session_id: str = Field(min_length=1)
@@ -244,6 +268,9 @@ class LiveTutorTurn(StrictModel):
     pointer_referent: Literal["this", "that", "these", "none"] = "none"
     target_coordinates: SpatialTutorCue
     assistant_response: str = Field(min_length=1, max_length=420)
+    micro_steps: list[str] = Field(default_factory=list, min_length=1, max_length=3)
+    user_readable_receipt: str = Field(min_length=1, max_length=260)
+    companion_state: LiveTutorCompanionState
     confidence: float = Field(ge=0, le=1)
     next_user_action: str = Field(min_length=1)
     manual_memory_proposal: ManualMemoryProposal | None = None
@@ -261,6 +288,14 @@ class LiveTutorTurn(StrictModel):
     def reject_prohibited_markers(cls, value: str) -> str:
         if any(marker in value for marker in _PROHIBITED_MARKERS):
             raise ValueError("live tutor turn cannot carry secret/raw/prompt-injection markers")
+        return value
+
+    @field_validator("micro_steps")
+    @classmethod
+    def reject_prohibited_micro_steps(cls, value: list[str]) -> list[str]:
+        for step in value:
+            if any(marker in step for marker in _PROHIBITED_MARKERS):
+                raise ValueError("live tutor micro steps cannot carry secret/raw markers")
         return value
 
     @model_validator(mode="after")
@@ -697,6 +732,7 @@ def resolve_live_tutor_turn(
         ],
         blocked_effects=sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS),
     )
+    companion_state = _companion_state_for_intent(intent_label, target=target)
     return LiveTutorTurn(
         turn_id=f"live_tutor_turn_{sequence:03d}",
         session_id=session_id,
@@ -710,6 +746,13 @@ def resolve_live_tutor_turn(
         pointer_referent=referent,
         target_coordinates=cue,
         assistant_response=response,
+        micro_steps=_micro_steps_for_intent(intent_label, target=target, surface=surface),
+        user_readable_receipt=_user_readable_receipt(
+            intent_label=intent_label,
+            target=target,
+            proposal_created=proposal is not None,
+        ),
+        companion_state=companion_state,
         confidence=confidence,
         next_user_action=next_action,
         manual_memory_proposal=proposal,
@@ -1106,6 +1149,94 @@ def _build_manual_memory_proposal(
         content_preview=(
             f"Remember that {target.label} is {target.plain_description.lower()}"
         ),
+    )
+
+
+def _companion_state_for_intent(
+    intent_label: str,
+    *,
+    target: DemoTarget,
+) -> LiveTutorCompanionState:
+    if intent_label == "propose_manual_memory":
+        return LiveTutorCompanionState(
+            mode="review_required",
+            label=f"Review memory for {target.label}",
+            safety_caption="Nothing is saved until you approve the Memory Book card.",
+        )
+    return LiveTutorCompanionState(
+        mode="answering",
+        label=f"Pointing at {target.label}",
+        safety_caption="Display only. No clicks, capture, mic, or memory write.",
+    )
+
+
+def _micro_steps_for_intent(
+    intent_label: str,
+    *,
+    target: DemoTarget,
+    surface: SafeCreativeDemoSurface,
+) -> list[str]:
+    if intent_label == "start_color_grading":
+        return [
+            "Look at the highlighted Color button.",
+            "Click it yourself to switch workspaces.",
+            "Then ask what to inspect next.",
+        ]
+    if intent_label == "next_step_color_workspace":
+        return [
+            f"Use {target.label} as the next visual anchor.",
+            "Inspect before changing any grade.",
+            "Ask Cortex to explain this target if needed.",
+        ]
+    if intent_label == "add_lut":
+        return [
+            "Open the LUT menu only if you want a look preset.",
+            "Preview before applying anything.",
+            "Ask Cortex to remember the workflow only after review.",
+        ]
+    if intent_label == "find_node_graph":
+        return [
+            "Look at the highlighted node graph.",
+            "Treat each node as one step in the color chain.",
+            "Ask about this node area before changing it.",
+        ]
+    if intent_label == "propose_manual_memory":
+        return [
+            f"Review the proposed card for {target.label}.",
+            "Save it manually in Memory Book later.",
+            "Dismiss it if the context is not useful.",
+        ]
+    if intent_label == "multi_target_reference":
+        return [
+            "Cortex grouped your recent pointer targets.",
+            "Review the relationship before turning it into a workflow.",
+            "No combined action was executed.",
+        ]
+    if intent_label == "explain_pointed_target":
+        return [
+            f"Use {target.label} as the current reference.",
+            "Ask 'what next' when you are ready.",
+            f"Cortex sees this inside the {surface.app_label} demo only.",
+        ]
+    return [
+        f"Start from {target.label}.",
+        "Ask a narrower question if needed.",
+        "Cortex will keep the action display-only.",
+    ]
+
+
+def _user_readable_receipt(
+    *,
+    intent_label: str,
+    target: DemoTarget,
+    proposal_created: bool,
+) -> str:
+    if proposal_created:
+        return (
+            f"Saw {target.label}, drafted a memory card for review, and saved nothing."
+        )
+    return (
+        f"Saw {target.label}, answered beside the pointer, and did not click, record, or save."
     )
 
 

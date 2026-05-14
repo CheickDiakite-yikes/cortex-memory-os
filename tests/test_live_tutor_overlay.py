@@ -57,6 +57,10 @@ def test_live_tutor_turn_is_display_only_and_bounded():
     assert set(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS).issubset(
         set(turn.target_coordinates.blocked_effects)
     )
+    assert turn.companion_state.mode == "answering"
+    assert turn.companion_state.answer_anchor == "beside_pointer"
+    assert turn.micro_steps
+    assert "did not click, record, or save" in turn.user_readable_receipt
     assert turn.memory_write_allowed is False
     assert turn.raw_ref_retained is False
     assert turn.external_effect_executed is False
@@ -131,6 +135,8 @@ def test_live_tutor_remember_this_proposes_memory_without_write():
     assert turn.manual_memory_proposal.target_id == "node_graph"
     assert turn.manual_memory_proposal.user_confirmation_required is True
     assert turn.manual_memory_proposal.durable_write_performed is False
+    assert turn.companion_state.mode == "review_required"
+    assert "drafted a memory card for review" in turn.user_readable_receipt
     assert turn.memory_write_allowed is False
     assert "Nothing is saved until you confirm it." in turn.assistant_response
 
@@ -202,12 +208,21 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     css = (UI_ROOT / "styles.css").read_text(encoding="utf-8")
 
     assert "Cortex Resolve Studio" in html
+    assert "wake-helper" in html
+    assert "Start pointer helper" in html
     assert "shadow-tutor-cursor" in html
     assert "cursor-trace-layer" in html
     assert "cursor-talk-card" in html
+    assert "pointer-safety-label" in html
     assert "pointer-target-label" in html
     assert 'data-pointer-command="Explain this"' in html
     assert 'data-pointer-command="Remember this"' in html
+    assert 'data-pointer-local="pin-target"' in html
+    assert "companion-dock" in html
+    assert "pinned-targets" in html
+    assert "memory-proposal-card" in html
+    assert "receipt-summary" in html
+    assert "receipts-toggle" in html
     assert "target-highlight" in html
     assert "instruction-bubble" in html
     assert "receipt-referent" in html
@@ -219,6 +234,13 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "active_page" in js
     assert "pointed_target_id" in js
     assert "selected_target_ids" in js
+    assert "pinnedTargetIds" in js
+    assert "setHelperActive" in js
+    assert "wakeHelper" in js
+    assert "pinCurrentTarget" in js
+    assert "showMemoryProposal" in js
+    assert "user_readable_receipt" in js
+    assert "micro_steps" in js
     assert "renderTurn" in js
     assert "pointermove" in js
     assert "updatePointerTarget" in js
@@ -232,6 +254,11 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert ".cursor-trace-dot" in css
     assert ".cursor-talk-card.visible" in css
     assert ".cursor-action-row" in css
+    assert ".wake-card" in css
+    assert ".companion-dock" in css
+    assert ".pinned-targets" in css
+    assert ".memory-proposal-card.visible" in css
+    assert ".receipt-stack.collapsed" in css
     assert ".target-highlight.visible" in css
     assert ".instruction-bubble.visible" in css
 

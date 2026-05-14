@@ -24,10 +24,14 @@ The first pointer-first spine remains safe-local:
 
 - controlled localhost DOM targets stand in for screen perception;
 - the Cortex secondary pointer follows near the user's real pointer;
+- the helper has an explicit wake moment before it starts tracking;
 - hover resolves a structured target entity;
 - short utterances such as "explain this", "what next", and "remember this"
   resolve against the current target;
-- responses render beside the pointer or target;
+- pointer-local commands render beside the cursor, not in a distant dashboard;
+- responses, micro-steps, and reviewed memory proposals render beside the
+  pointer or target;
+- target pinning makes "these" visible before it becomes an agent reference;
 - memory writes require an explicit user command and remain manual-memory-bound;
 - click, type, real capture, microphone, Accessibility observation, export, and
   external effects remain blocked.

@@ -1,6 +1,6 @@
 # Live Tutor Overlay
 
-Last updated: 2026-05-03
+Last updated: 2026-05-14
 
 Benchmark: `LIVE-TUTOR-OVERLAY-001`
 
@@ -24,7 +24,8 @@ pointer hover
 -> current target entity
 -> cursor-adjacent command chip
 -> "this / that / these" resolution from target history
--> answer or manual memory proposal beside the work
+-> wakeable pointer helper state
+-> answer, tiny next-step hints, or manual memory proposal beside the work
 -> simple safe receipt
 ```
 
@@ -53,15 +54,25 @@ surface, leaves a fading cursor trace, and keeps a compact cursor-adjacent
 "Ask Cortex" affordance available. Target answering is layered on top of that
 continuous companion behavior, not substituted for it.
 
-The cursor-adjacent affordance is now the primary UI. It shows what Cortex
-currently sees and exposes three tiny actions:
+The cursor-adjacent affordance is now the primary UI. A simple wake card starts
+the helper, then the pointer chip shows what Cortex currently sees and exposes
+pointer-local commands:
 
 - `Explain this`
 - `What next?`
+- `Pin`
 - `Remember this`
 
+`Pin` builds a small target stack so "these" has visible meaning. The stack is
+local state only and is not a memory write.
+
 `Remember this` creates a reviewed manual-memory proposal only. It does not
-write durable memory.
+write durable memory. The in-canvas memory proposal card must say plainly that
+nothing has been saved yet.
+
+Each turn carries a child-readable receipt sentence and up to three micro-steps.
+The UI renders the first micro-step in the pointer dock so the user does not
+need to parse an engineering receipt to know what happened.
 
 The dashboard remains a review and receipt surface. The live tutor belongs near
 the work surface.
@@ -107,7 +118,8 @@ Receipts report target, intent, confidence, allowed display effects, and blocked
 effect categories. They report `raw refs: none`.
 
 Pointer-first receipts also report the referent (`this`, `that`, `these`, or
-`none`) and whether a memory proposal needs review.
+`none`), the pointer companion state, the user-readable receipt, and whether a
+memory proposal needs review.
 
 ## Next Ladder
 
