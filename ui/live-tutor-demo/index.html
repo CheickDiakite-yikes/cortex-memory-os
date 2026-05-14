@@ -86,10 +86,15 @@
             </svg>
             <span class="cursor-tag">Cortex</span>
           </div>
-          <button class="cursor-talk-card" id="cursor-talk-card" type="button">
-            <span>Tracking</span>
-            <strong>Ask Cortex</strong>
-          </button>
+          <div class="cursor-talk-card" id="cursor-talk-card" role="group" aria-label="Cortex pointer actions">
+            <span id="pointer-status-label">Cortex sees</span>
+            <strong id="pointer-target-label">this surface</strong>
+            <div class="cursor-action-row">
+              <button type="button" data-pointer-command="Explain this">Explain</button>
+              <button type="button" data-pointer-command="What next?">Next</button>
+              <button type="button" data-pointer-command="Remember this">Remember</button>
+            </div>
+          </div>
           <p class="instruction-bubble" id="instruction-bubble" aria-live="polite">
             Ask a question and I will point without clicking.
           </p>
@@ -124,6 +129,7 @@
           <dl>
             <div><dt>Target</dt><dd id="receipt-target">none</dd></div>
             <div><dt>Intent</dt><dd id="receipt-intent">waiting</dd></div>
+            <div><dt>Referent</dt><dd id="receipt-referent">none</dd></div>
             <div><dt>Confidence</dt><dd id="receipt-confidence">0.00</dd></div>
             <div><dt>Effects</dt><dd id="receipt-effects">display-only</dd></div>
             <div><dt>Blocked</dt><dd id="receipt-blocked">clicks, capture, memory</dd></div>

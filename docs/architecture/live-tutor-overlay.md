@@ -17,6 +17,17 @@ user question
 -> safe turn receipt
 ```
 
+After the AI Pointer frame study, this contract is pointer-first:
+
+```text
+pointer hover
+-> current target entity
+-> cursor-adjacent command chip
+-> "this / that / these" resolution from target history
+-> answer or manual memory proposal beside the work
+-> simple safe receipt
+```
+
 The runnable demo is:
 
 ```bash
@@ -41,6 +52,16 @@ a secondary cursor tracking beside the user's pointer on the controlled work
 surface, leaves a fading cursor trace, and keeps a compact cursor-adjacent
 "Ask Cortex" affordance available. Target answering is layered on top of that
 continuous companion behavior, not substituted for it.
+
+The cursor-adjacent affordance is now the primary UI. It shows what Cortex
+currently sees and exposes three tiny actions:
+
+- `Explain this`
+- `What next?`
+- `Remember this`
+
+`Remember this` creates a reviewed manual-memory proposal only. It does not
+write durable memory.
 
 The dashboard remains a review and receipt surface. The live tutor belongs near
 the work surface.
@@ -84,6 +105,9 @@ The safe demo resolves these starter questions:
 
 Receipts report target, intent, confidence, allowed display effects, and blocked
 effect categories. They report `raw refs: none`.
+
+Pointer-first receipts also report the referent (`this`, `that`, `these`, or
+`none`) and whether a memory proposal needs review.
 
 ## Next Ladder
 

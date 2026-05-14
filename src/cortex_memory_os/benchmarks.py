@@ -13337,6 +13337,17 @@ def case_live_tutor_overlay_contract() -> BenchmarkCaseResult:
             encoding="utf-8"
         )
         + "\n"
+        + (REPO_ROOT / "docs" / "adr" / "0008-pointer-first-ai-interface.md").read_text(
+            encoding="utf-8"
+        )
+        + "\n"
+        + (
+            REPO_ROOT
+            / "docs"
+            / "research"
+            / "deepmind-ai-pointer-frame-study-2026-05-14.md"
+        ).read_text(encoding="utf-8")
+        + "\n"
         + (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(encoding="utf-8")
         + "\n"
         + (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
@@ -13376,6 +13387,11 @@ def case_live_tutor_overlay_contract() -> BenchmarkCaseResult:
         LIVE_TUTOR_OVERLAY_POLICY_REF,
         "secondary cursor",
         "controlled creative-tool",
+        "pointer-first",
+        "this",
+        "that",
+        "these",
+        "manual-memory proposal",
         "no screen capture",
         "no microphone capture",
         "no raw refs",
@@ -13386,6 +13402,10 @@ def case_live_tutor_overlay_contract() -> BenchmarkCaseResult:
         "shadow-tutor-cursor",
         "cursor-trace-layer",
         "cursor-talk-card",
+        "pointer-target-label",
+        'data-pointer-command="Explain this"',
+        "pointed_target_id",
+        "selected_target_ids",
         "pointermove",
         "target-highlight",
         "instruction-bubble",
@@ -13414,6 +13434,7 @@ def case_live_tutor_overlay_contract() -> BenchmarkCaseResult:
         and "start_screen_capture" in panel.blocked_effects
         and "write_memory" in panel.blocked_effects
         and smoke.memory_write_count == 0
+        and smoke.manual_memory_proposal_count == 1
         and smoke.raw_ref_retained_count == 0
         and smoke.external_effect_count == 0
         and server_smoke.memory_write_count == 0
@@ -13440,6 +13461,7 @@ def case_live_tutor_overlay_contract() -> BenchmarkCaseResult:
             "missing_doc_terms": len(missing_doc_terms),
             "missing_ui_terms": len(missing_ui_terms),
             "prohibited_marker_count": prohibited_marker_count,
+            "manual_memory_proposal_count": smoke.manual_memory_proposal_count,
         },
         evidence={
             "policy_ref": LIVE_TUTOR_OVERLAY_POLICY_REF,

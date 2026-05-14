@@ -1340,6 +1340,14 @@ body[data-active-view="memory_palace"] #memory-list {
   font-weight: 800;
 }
 
+.live-tutor-receipt {
+  margin: 0;
+  color: #435363;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
 .capture-ladder-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

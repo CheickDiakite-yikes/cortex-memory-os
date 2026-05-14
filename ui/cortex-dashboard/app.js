@@ -967,9 +967,10 @@ function renderLiveTutorPanel() {
       <div><span>Cues</span><strong>${panel.cue_count}</strong></div>
       <div><span>Mode</span><strong>${panel.display_only ? "display-only" : "blocked"}</strong></div>
       <div><span>Surface</span><strong>${panel.controlled_surface ? "controlled" : "blocked"}</strong></div>
-      <div><span>Memory</span><strong>${panel.memory_write_allowed ? "enabled" : "off"}</strong></div>
+      <div><span>Memory</span><strong>${panel.manual_memory_proposal_count ? "review" : "off"}</strong></div>
       <div><span>Raw refs</span><strong>${panel.raw_ref_retained ? "retained" : "none"}</strong></div>
     </div>
+    <p class="live-tutor-receipt">Pointer-first: hover target -> this/that -> answer chip -> reviewed memory proposal.</p>
     <div class="live-tutor-targets">
       ${(panel.latest_targets || []).map((item) => `<span>${formatToken(item)}</span>`).join("")}
     </div>
@@ -982,7 +983,7 @@ function renderLiveTutorPanel() {
     writeReceipt(`Live Tutor Overlay demo: ${panel.demo_url}. Start it with ${panel.smoke_command.replace(" --server-smoke --json", "")}.`);
   });
   document.querySelector("#live-tutor-smoke").addEventListener("click", () => {
-    writeReceipt(`${panel.panel_id}: ${panel.smoke_command}. Display-only, controlled surface, no capture, no memory write, no raw refs.`);
+    writeReceipt(`${panel.panel_id}: ${panel.smoke_command}. Pointer-first, display-only, controlled surface, ${panel.manual_memory_proposal_count || 0} reviewed memory proposal, no capture, no memory write, no raw refs.`);
   });
 }
 

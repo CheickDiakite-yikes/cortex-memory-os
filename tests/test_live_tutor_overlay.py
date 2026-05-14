@@ -8,6 +8,7 @@ from cortex_memory_os.live_tutor_overlay import (
     LIVE_TUTOR_TOKEN_HEADER,
     UI_ROOT,
     LiveTutorDemoSession,
+    LiveTutorPointerState,
     SpatialTutorCue,
     build_live_tutor_dashboard_panel,
     build_safe_creative_demo_surface,
@@ -24,12 +25,13 @@ def test_live_tutor_smoke_resolves_core_spatial_flows():
     assert result.passed
     assert result.proof_id == LIVE_TUTOR_OVERLAY_ID
     assert result.policy_ref == LIVE_TUTOR_OVERLAY_POLICY_REF
-    assert result.turn_count == 4
-    assert result.cue_count == 4
+    assert result.turn_count == 5
+    assert result.cue_count == 5
     assert result.controlled_surface is True
     assert result.display_only is True
     assert {"color_page_button", "node_graph", "lut_menu"}.issubset(result.target_ids)
     assert result.memory_write_count == 0
+    assert result.manual_memory_proposal_count == 1
     assert result.raw_ref_retained_count == 0
     assert result.external_effect_count == 0
     assert result.real_screen_capture_started is False
@@ -75,6 +77,62 @@ def test_live_tutor_adapts_next_step_to_controlled_state():
 
     assert edit_turn.target_id == "color_page_button"
     assert color_turn.target_id == "node_graph"
+
+
+def test_live_tutor_resolves_this_that_and_these_from_pointer_history():
+    surface = build_safe_creative_demo_surface(active_page="color")
+
+    this_turn = resolve_live_tutor_turn(
+        "Explain this",
+        surface=surface,
+        pointer_state=LiveTutorPointerState(current_target_id="lut_menu", referent_phrase="this"),
+    )
+    that_turn = resolve_live_tutor_turn(
+        "Explain that",
+        surface=surface,
+        pointer_state=LiveTutorPointerState(
+            current_target_id="node_graph",
+            previous_target_id="lut_menu",
+            referent_phrase="that",
+        ),
+    )
+    these_turn = resolve_live_tutor_turn(
+        "Explain these",
+        surface=surface,
+        pointer_state=LiveTutorPointerState(
+            current_target_id="node_graph",
+            previous_target_id="lut_menu",
+            selected_target_ids=["lut_menu", "node_graph"],
+            referent_phrase="these",
+        ),
+    )
+
+    assert this_turn.target_id == "lut_menu"
+    assert this_turn.intent_label == "explain_pointed_target"
+    assert this_turn.pointer_referent == "this"
+    assert that_turn.target_id == "lut_menu"
+    assert that_turn.pointer_referent == "that"
+    assert these_turn.target_id == "node_graph"
+    assert these_turn.pointer_referent == "these"
+    assert these_turn.referenced_target_ids == ["lut_menu", "node_graph"]
+    assert these_turn.intent_label == "multi_target_reference"
+
+
+def test_live_tutor_remember_this_proposes_memory_without_write():
+    turn = resolve_live_tutor_turn(
+        "Remember this",
+        surface=build_safe_creative_demo_surface(active_page="color"),
+        pointer_state=LiveTutorPointerState(current_target_id="node_graph", referent_phrase="this"),
+    )
+
+    assert turn.target_id == "node_graph"
+    assert turn.intent_label == "propose_manual_memory"
+    assert turn.manual_memory_proposal is not None
+    assert turn.manual_memory_proposal.target_id == "node_graph"
+    assert turn.manual_memory_proposal.user_confirmation_required is True
+    assert turn.manual_memory_proposal.durable_write_performed is False
+    assert turn.memory_write_allowed is False
+    assert "Nothing is saved until you confirm it." in turn.assistant_response
 
 
 def test_live_tutor_blocks_broad_allowed_effects_and_out_of_bounds_cues():
@@ -147,16 +205,25 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "shadow-tutor-cursor" in html
     assert "cursor-trace-layer" in html
     assert "cursor-talk-card" in html
+    assert "pointer-target-label" in html
+    assert 'data-pointer-command="Explain this"' in html
+    assert 'data-pointer-command="Remember this"' in html
     assert "target-highlight" in html
     assert "instruction-bubble" in html
+    assert "receipt-referent" in html
     assert 'data-target-id="color_page_button"' in html
     assert 'data-target-id="node_graph"' in html
     assert 'data-target-id="lut_menu"' in html
     assert 'fetch("/tutor/turn"' in js
     assert LIVE_TUTOR_TOKEN_HEADER in js
     assert "active_page" in js
+    assert "pointed_target_id" in js
+    assert "selected_target_ids" in js
     assert "renderTurn" in js
     assert "pointermove" in js
+    assert "updatePointerTarget" in js
+    assert "Cortex sees" in js
+    assert "memory proposal needs review" in js
     assert "placeTutorFollower" in js
     assert "cursor-trace-dot" in js
     assert "raw refs" in js
@@ -164,6 +231,7 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert ".shadow-tutor-cursor.tracking" in css
     assert ".cursor-trace-dot" in css
     assert ".cursor-talk-card.visible" in css
+    assert ".cursor-action-row" in css
     assert ".target-highlight.visible" in css
     assert ".instruction-bubble.visible" in css
 
@@ -174,8 +242,8 @@ def test_live_tutor_dashboard_panel_is_safe_and_command_ready():
     assert panel.panel_id == LIVE_TUTOR_OVERLAY_ID
     assert panel.smoke_command == "uv run cortex-live-tutor-demo --server-smoke --json"
     assert panel.demo_url == "http://127.0.0.1:8797/"
-    assert panel.turn_count == 4
-    assert panel.cue_count == 4
+    assert panel.turn_count == 5
+    assert panel.cue_count == 5
     assert panel.display_only is True
     assert panel.controlled_surface is True
     assert panel.memory_write_allowed is False

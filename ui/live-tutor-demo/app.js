@@ -3,6 +3,8 @@ const highlight = document.querySelector("#target-highlight");
 const traceLayer = document.querySelector("#cursor-trace-layer");
 const cursor = document.querySelector("#shadow-tutor-cursor");
 const talkCard = document.querySelector("#cursor-talk-card");
+const pointerStatusLabel = document.querySelector("#pointer-status-label");
+const pointerTargetLabel = document.querySelector("#pointer-target-label");
 const bubble = document.querySelector("#instruction-bubble");
 const form = document.querySelector("#question-form");
 const input = document.querySelector("#question-input");
@@ -12,6 +14,7 @@ const turnList = document.querySelector("#turn-list");
 const fields = {
   target: document.querySelector("#receipt-target"),
   intent: document.querySelector("#receipt-intent"),
+  referent: document.querySelector("#receipt-referent"),
   confidence: document.querySelector("#receipt-confidence"),
   effects: document.querySelector("#receipt-effects"),
   blocked: document.querySelector("#receipt-blocked"),
@@ -20,6 +23,11 @@ const fields = {
 let activePage = "edit";
 let lastTraceAt = 0;
 let followerVisible = false;
+let currentTargetId = null;
+let currentTargetLabel = "this surface";
+let previousTargetId = null;
+let selectedTargetIds = [];
+let lastPointer = { x: null, y: null };
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -49,6 +57,11 @@ async function askTutor(question) {
     body: JSON.stringify({
       user_utterance: question,
       active_page: activePage,
+      pointed_target_id: currentTargetId,
+      previous_target_id: previousTargetId,
+      selected_target_ids: selectedTargetIds,
+      pointer_x: lastPointer.x,
+      pointer_y: lastPointer.y,
     }),
   });
   const payload = await response.json();
@@ -62,14 +75,48 @@ async function askTutor(question) {
 function renderError(payload) {
   fields.target.textContent = "blocked";
   fields.intent.textContent = payload.error || "rejected";
+  fields.referent.textContent = "none";
   fields.confidence.textContent = "0.00";
   fields.effects.textContent = "none";
   fields.blocked.textContent = "request rejected before receipt";
   bubble.textContent = "That request was blocked before any tutor cue.";
 }
 
+function targetLabel(targetId) {
+  if (!targetId) return "this surface";
+  const element = document.querySelector(`[data-target-id="${targetId}"]`);
+  if (!element) return targetId.replaceAll("_", " ");
+  return (
+    element.getAttribute("aria-label") ||
+    element.querySelector("h2")?.textContent ||
+    element.textContent ||
+    targetId.replaceAll("_", " ")
+  ).trim();
+}
+
+function updatePointerTarget(targetId) {
+  if (targetId && targetId !== currentTargetId) {
+    previousTargetId = currentTargetId;
+    currentTargetId = targetId;
+    currentTargetLabel = targetLabel(targetId);
+    selectedTargetIds = [previousTargetId, currentTargetId].filter(Boolean).slice(-4);
+  }
+  pointerStatusLabel.textContent = currentTargetId ? "Cortex sees" : "Cortex nearby";
+  pointerTargetLabel.textContent = currentTargetLabel;
+  fields.target.textContent = currentTargetLabel;
+}
+
+function targetFromEvent(event) {
+  const element = event.target?.closest?.("[data-target-id]");
+  return element?.dataset?.targetId || null;
+}
+
 function placeTutorFollower(x, y, { trace = true } = {}) {
   const frameRect = frame.getBoundingClientRect();
+  lastPointer = {
+    x: Math.round(clamp(x, 0, frameRect.width)),
+    y: Math.round(clamp(y, 0, frameRect.height)),
+  };
   const followerX = clamp(x + 18, 10, frameRect.width - 84);
   const followerY = clamp(y + 18, 10, frameRect.height - 58);
 
@@ -77,7 +124,7 @@ function placeTutorFollower(x, y, { trace = true } = {}) {
   cursor.style.top = `${followerY}px`;
   cursor.classList.add("visible", "tracking");
 
-  talkCard.style.left = `${clamp(followerX + 42, 8, frameRect.width - 146)}px`;
+  talkCard.style.left = `${clamp(followerX + 42, 8, frameRect.width - 220)}px`;
   talkCard.style.top = `${clamp(followerY + 22, 8, frameRect.height - 62)}px`;
   talkCard.classList.add("visible");
 
@@ -101,6 +148,7 @@ function placeTutorFollower(x, y, { trace = true } = {}) {
 
 function handlePointerMove(event) {
   const frameRect = frame.getBoundingClientRect();
+  updatePointerTarget(targetFromEvent(event));
   placeTutorFollower(event.clientX - frameRect.left, event.clientY - frameRect.top);
 }
 
@@ -136,6 +184,7 @@ function renderTurn(turn) {
 
   fields.target.textContent = turn.target_label;
   fields.intent.textContent = formatToken(turn.intent_label);
+  fields.referent.textContent = turn.pointer_referent || "none";
   fields.confidence.textContent = Number(turn.confidence).toFixed(2);
   fields.effects.textContent = turn.target_coordinates.allowed_effects
     .map(formatToken)
@@ -144,7 +193,8 @@ function renderTurn(turn) {
   fields.blocked.textContent = "click, type, capture, memory, export";
 
   const item = document.createElement("li");
-  item.innerHTML = `<strong>${escapeHtml(turn.target_label)}</strong><span>${escapeHtml(formatToken(turn.intent_label))} · confidence ${Number(turn.confidence).toFixed(2)} · raw refs ${turn.raw_ref_retained ? "retained" : "none"}</span>`;
+  const proposalText = turn.manual_memory_proposal ? " · memory proposal needs review" : "";
+  item.innerHTML = `<strong>${escapeHtml(turn.target_label)}</strong><span>${escapeHtml(formatToken(turn.intent_label))} · ${escapeHtml(turn.pointer_referent || "none")} · confidence ${Number(turn.confidence).toFixed(2)} · raw refs ${turn.raw_ref_retained ? "retained" : "none"}${proposalText}</span>`;
   turnList.prepend(item);
 }
 
@@ -169,6 +219,7 @@ document.querySelector("#color-page-button").addEventListener("click", () => {
 
 frame.addEventListener("pointerenter", (event) => {
   const frameRect = frame.getBoundingClientRect();
+  updatePointerTarget(targetFromEvent(event));
   placeTutorFollower(event.clientX - frameRect.left, event.clientY - frameRect.top, {
     trace: false,
   });
@@ -180,10 +231,23 @@ frame.addEventListener("pointerleave", () => {
   talkCard.classList.remove("visible");
 });
 
-talkCard.addEventListener("click", () => {
+document.querySelectorAll("[data-pointer-command]").forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const command = button.dataset.pointerCommand || "Explain this";
+    input.value = command;
+    askTutor(command);
+  });
+});
+
+talkCard.addEventListener("click", (event) => {
+  if (event.target?.matches?.("button")) return;
+  input.value = currentTargetId ? "Explain this" : "What should I click next?";
   input.focus();
   input.select();
-  bubble.textContent = "I am tracking beside your cursor. Ask here and I will point without clicking.";
+  bubble.textContent = currentTargetId
+    ? `I understand ${currentTargetLabel}. Use the tiny actions beside the pointer.`
+    : "I am tracking beside your cursor. Point at something and ask.";
   bubble.classList.add("visible");
 });
 

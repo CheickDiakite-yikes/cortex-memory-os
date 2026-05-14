@@ -81,6 +81,7 @@ class DemoTarget(StrictModel):
     label: str = Field(min_length=1)
     role: str = Field(min_length=1)
     region: str = Field(min_length=1)
+    plain_description: str = Field(default="", max_length=180)
     x: float = Field(ge=0)
     y: float = Field(ge=0)
     width: float = Field(gt=0)
@@ -177,6 +178,59 @@ class SpatialTutorCue(StrictModel):
         return self
 
 
+class LiveTutorPointerState(StrictModel):
+    current_target_id: str | None = None
+    previous_target_id: str | None = None
+    selected_target_ids: list[str] = Field(default_factory=list, max_length=4)
+    pointer_x: float | None = Field(default=None, ge=0, le=1440)
+    pointer_y: float | None = Field(default=None, ge=0, le=960)
+    referent_phrase: Literal["this", "that", "these", "none"] = "none"
+
+    @field_validator("current_target_id", "previous_target_id")
+    @classmethod
+    def reject_prohibited_target_markers(cls, value: str | None) -> str | None:
+        if value is not None and any(marker in value for marker in _PROHIBITED_MARKERS):
+            raise ValueError("pointer target cannot carry secret/raw/prompt-injection markers")
+        return value
+
+    @field_validator("selected_target_ids")
+    @classmethod
+    def keep_selected_targets_safe(cls, value: list[str]) -> list[str]:
+        for target_id in value:
+            if any(marker in target_id for marker in _PROHIBITED_MARKERS):
+                raise ValueError("selected target cannot carry secret/raw/prompt-injection markers")
+        return value
+
+
+class ManualMemoryProposal(StrictModel):
+    proposal_id: str = Field(min_length=1)
+    target_id: str = Field(min_length=1)
+    target_label: str = Field(min_length=1)
+    content_preview: str = Field(min_length=1, max_length=220)
+    status: Literal["needs_user_confirmation"] = "needs_user_confirmation"
+    scope: Literal["manual_memory_book"] = "manual_memory_book"
+    durable_write_performed: bool = False
+    user_confirmation_required: bool = True
+    policy_refs: list[str] = Field(default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF])
+
+    @field_validator("content_preview")
+    @classmethod
+    def reject_prohibited_content(cls, value: str) -> str:
+        if any(marker in value for marker in _PROHIBITED_MARKERS):
+            raise ValueError("manual memory proposal cannot carry secret/raw markers")
+        return value
+
+    @model_validator(mode="after")
+    def keep_proposal_manual_only(self) -> ManualMemoryProposal:
+        if self.durable_write_performed:
+            raise ValueError("live tutor cannot perform durable memory writes")
+        if not self.user_confirmation_required:
+            raise ValueError("manual memory proposal requires user confirmation")
+        if LIVE_TUTOR_OVERLAY_POLICY_REF not in self.policy_refs:
+            raise ValueError("manual memory proposal requires policy ref")
+        return self
+
+
 class LiveTutorTurn(StrictModel):
     turn_id: str = Field(min_length=1)
     session_id: str = Field(min_length=1)
@@ -186,10 +240,13 @@ class LiveTutorTurn(StrictModel):
     intent_label: str = Field(min_length=1)
     target_id: str = Field(min_length=1)
     target_label: str = Field(min_length=1)
+    referenced_target_ids: list[str] = Field(default_factory=list, min_length=1, max_length=4)
+    pointer_referent: Literal["this", "that", "these", "none"] = "none"
     target_coordinates: SpatialTutorCue
     assistant_response: str = Field(min_length=1, max_length=420)
     confidence: float = Field(ge=0, le=1)
     next_user_action: str = Field(min_length=1)
+    manual_memory_proposal: ManualMemoryProposal | None = None
     safety_flags: list[str] = Field(default_factory=list)
     display_only: bool = True
     memory_write_allowed: bool = False
@@ -220,6 +277,10 @@ class LiveTutorTurn(StrictModel):
             raise ValueError("live tutor turn cannot start screen or voice capture")
         if self.target_coordinates.target_id != self.target_id:
             raise ValueError("live tutor turn target and cue target must match")
+        if self.target_id not in self.referenced_target_ids:
+            raise ValueError("live tutor turn must reference its primary target")
+        if self.manual_memory_proposal and self.memory_write_allowed:
+            raise ValueError("memory proposal cannot authorize a memory write")
         if LIVE_TUTOR_OVERLAY_POLICY_REF not in self.policy_refs:
             raise ValueError("live tutor turn requires policy ref")
         return self
@@ -236,6 +297,7 @@ class LiveTutorDemoResult(StrictModel):
     controlled_surface: bool
     display_only: bool
     memory_write_count: int = Field(ge=0)
+    manual_memory_proposal_count: int = Field(default=0, ge=0)
     raw_ref_retained_count: int = Field(ge=0)
     external_effect_count: int = Field(ge=0)
     real_screen_capture_started: bool = False
@@ -253,6 +315,7 @@ class LiveTutorDashboardPanel(StrictModel):
     latest_targets: list[str] = Field(default_factory=list)
     turn_count: int = Field(ge=0)
     cue_count: int = Field(ge=0)
+    manual_memory_proposal_count: int = Field(default=0, ge=0)
     display_only: bool = True
     controlled_surface: bool = True
     memory_write_allowed: bool = False
@@ -284,6 +347,11 @@ class LiveTutorDashboardPanel(StrictModel):
 class LiveTutorQuestionInput(StrictModel):
     user_utterance: str = Field(min_length=1, max_length=240)
     active_page: str = Field(default="edit", min_length=1, max_length=40)
+    pointed_target_id: str | None = None
+    previous_target_id: str | None = None
+    selected_target_ids: list[str] = Field(default_factory=list, max_length=4)
+    pointer_x: float | None = Field(default=None, ge=0, le=1440)
+    pointer_y: float | None = Field(default=None, ge=0, le=960)
 
     @field_validator("user_utterance")
     @classmethod
@@ -311,11 +379,14 @@ class LiveTutorDemoSession:
 
     def answer(self, payload: Mapping[str, Any]) -> LiveTutorTurn:
         question = LiveTutorQuestionInput.model_validate(payload)
+        surface = build_safe_creative_demo_surface(active_page=question.active_page)
+        pointer_state = _pointer_state_from_question(question, surface=surface)
         with self._lock:
             sequence = len(self._turns) + 1
             turn = resolve_live_tutor_turn(
                 question.user_utterance,
-                surface=build_safe_creative_demo_surface(active_page=question.active_page),
+                surface=surface,
+                pointer_state=pointer_state,
                 sequence=sequence,
             )
             self._turns.append(turn)
@@ -328,7 +399,7 @@ class LiveTutorDemoSession:
     def result(self) -> LiveTutorDemoResult:
         with self._lock:
             turns = list(self._turns)
-        return _result_from_turns(turns)
+        return _result_from_turns(turns, require_core_targets=False)
 
 
 class LiveTutorDemoHandler(BaseHTTPRequestHandler):
@@ -518,6 +589,7 @@ def build_safe_creative_demo_surface(
             label="Media Bin",
             role="asset_library",
             region="left rail",
+            plain_description="Project clips, audio, and assets live here before they are added to the timeline.",
             x=28,
             y=118,
             width=250,
@@ -528,6 +600,7 @@ def build_safe_creative_demo_surface(
             label="Timeline",
             role="timeline",
             region="bottom rail",
+            plain_description="The sequence of clips and audio the editor is currently assembling.",
             x=312,
             y=676,
             width=928,
@@ -538,6 +611,7 @@ def build_safe_creative_demo_surface(
             label="Color Page",
             role="workspace_switcher",
             region="bottom navigation",
+            plain_description="The workspace switcher that opens color grading tools.",
             x=646,
             y=902,
             width=72,
@@ -549,6 +623,7 @@ def build_safe_creative_demo_surface(
             label="Node Graph",
             role="color_workspace",
             region="upper right",
+            plain_description="A visual chain of color-correction nodes for the selected clip.",
             x=1028,
             y=142,
             width=340,
@@ -559,6 +634,7 @@ def build_safe_creative_demo_surface(
             label="LUT Menu",
             role="color_tool_menu",
             region="right inspector",
+            plain_description="A menu for previewing and applying look presets. It should be reviewed before use.",
             x=1178,
             y=424,
             width=172,
@@ -569,6 +645,7 @@ def build_safe_creative_demo_surface(
             label="Inspector",
             role="settings_panel",
             region="right rail",
+            plain_description="A settings panel for checking and adjusting the selected clip.",
             x=1118,
             y=494,
             width=250,
@@ -586,15 +663,23 @@ def resolve_live_tutor_turn(
     user_utterance: str,
     *,
     surface: SafeCreativeDemoSurface | None = None,
+    pointer_state: LiveTutorPointerState | None = None,
     session_id: str = "live_tutor_demo_session",
     sequence: int = 1,
 ) -> LiveTutorTurn:
     surface = surface or build_safe_creative_demo_surface()
-    target_id, intent_label, response, next_action, confidence = _resolve_intent(
+    pointer_state = pointer_state or LiveTutorPointerState()
+    target_id, intent_label, response, next_action, confidence, referent, referenced_ids = _resolve_intent(
         user_utterance,
         surface=surface,
+        pointer_state=pointer_state,
     )
     target = surface.target_by_id(target_id)
+    proposal = (
+        _build_manual_memory_proposal(target, sequence=sequence)
+        if intent_label == "propose_manual_memory"
+        else None
+    )
     cue = SpatialTutorCue(
         cue_id=f"cue_live_tutor_{sequence:03d}",
         target_id=target.target_id,
@@ -621,13 +706,17 @@ def resolve_live_tutor_turn(
         intent_label=intent_label,
         target_id=target.target_id,
         target_label=target.label,
+        referenced_target_ids=referenced_ids,
+        pointer_referent=referent,
         target_coordinates=cue,
         assistant_response=response,
         confidence=confidence,
         next_user_action=next_action,
+        manual_memory_proposal=proposal,
         safety_flags=[
             "controlled_demo_surface",
             "display_only_pointer",
+            "pointer_target_context",
             "no_real_screen_capture",
             "no_voice_capture",
             "no_memory_write",
@@ -638,17 +727,31 @@ def resolve_live_tutor_turn(
 
 def run_live_tutor_demo_smoke() -> LiveTutorDemoResult:
     surface = build_safe_creative_demo_surface()
-    utterances = [
-        "How do I start color grading?",
-        "Where is the node graph?",
-        "How do I add a LUT?",
-        "What should I click next?",
+    requests = [
+        ("How do I start color grading?", None),
+        ("Where is the node graph?", None),
+        ("How do I add a LUT?", None),
+        ("Explain this", LiveTutorPointerState(current_target_id="lut_menu", referent_phrase="this")),
+        (
+            "Remember this",
+            LiveTutorPointerState(
+                current_target_id="node_graph",
+                previous_target_id="lut_menu",
+                selected_target_ids=["lut_menu", "node_graph"],
+                referent_phrase="this",
+            ),
+        ),
     ]
     turns = [
-        resolve_live_tutor_turn(utterance, surface=surface, sequence=index)
-        for index, utterance in enumerate(utterances, start=1)
+        resolve_live_tutor_turn(
+            utterance,
+            surface=surface,
+            pointer_state=pointer_state,
+            sequence=index,
+        )
+        for index, (utterance, pointer_state) in enumerate(requests, start=1)
     ]
-    return _result_from_turns(turns)
+    return _result_from_turns(turns, require_core_targets=True)
 
 
 def run_live_tutor_server_smoke() -> LiveTutorDemoResult:
@@ -672,6 +775,7 @@ def run_live_tutor_server_smoke() -> LiveTutorDemoResult:
                     {
                         "user_utterance": utterance,
                         "active_page": "color" if sequence > 1 else "edit",
+                        "pointed_target_id": "lut_menu" if "LUT" in utterance else None,
                     }
                 ),
                 headers={
@@ -704,13 +808,14 @@ def build_live_tutor_dashboard_panel(
     result = result or run_live_tutor_demo_smoke()
     return LiveTutorDashboardPanel(
         summary=(
-            "Controlled creative-tool tutor demo: Cortex answers contextual questions "
-            "with a secondary blue cursor and receipt panel, without clicks, capture, "
-            "voice, raw refs, durable memory, or external effects."
+            "Pointer-first tutor demo: Cortex follows the user's pointer, resolves "
+            "the current target behind 'this' or 'that', answers beside the work, "
+            "and keeps memory as a reviewed proposal instead of an automatic write."
         ),
         latest_targets=result.target_ids[-3:],
         turn_count=result.turn_count,
         cue_count=result.cue_count,
+        manual_memory_proposal_count=result.manual_memory_proposal_count,
         display_only=result.display_only,
         controlled_surface=result.controlled_surface,
         memory_write_allowed=result.memory_write_count > 0,
@@ -746,21 +851,35 @@ def live_tutor_payload_is_safe(payload: Mapping[str, Any] | str) -> bool:
     return not any(marker in text for marker in _PROHIBITED_MARKERS)
 
 
-def _result_from_turns(turns: list[LiveTutorTurn]) -> LiveTutorDemoResult:
+def _result_from_turns(
+    turns: list[LiveTutorTurn],
+    *,
+    require_core_targets: bool,
+) -> LiveTutorDemoResult:
     payload = "\n".join(turn.model_dump_json() for turn in turns)
     prohibited_marker_count = sum(1 for marker in _PROHIBITED_MARKERS if marker in payload)
     checks = {
         "turn_count": len(turns) >= 3,
         "controlled_surface": bool(turns),
         "display_only": all(turn.display_only and turn.target_coordinates.display_only for turn in turns),
-        "known_targets": {turn.target_id for turn in turns}
-        >= {"color_page_button", "node_graph", "lut_menu"},
+        "known_targets": (
+            {turn.target_id for turn in turns} >= {"color_page_button", "node_graph", "lut_menu"}
+            if require_core_targets
+            else all(turn.target_id for turn in turns)
+        ),
+        "pointer_referents": any(turn.pointer_referent in {"this", "that", "these"} for turn in turns),
         "no_memory_writes": all(not turn.memory_write_allowed for turn in turns),
         "no_raw_refs": all(not turn.raw_ref_retained for turn in turns),
         "no_external_effects": all(not turn.external_effect_executed for turn in turns),
         "no_live_capture": all(
             not turn.real_screen_capture_started and not turn.voice_capture_enabled
             for turn in turns
+        ),
+        "manual_memory_review": all(
+            proposal.durable_write_performed is False
+            and proposal.user_confirmation_required is True
+            for turn in turns
+            for proposal in ([turn.manual_memory_proposal] if turn.manual_memory_proposal else [])
         ),
         "no_prohibited_markers": prohibited_marker_count == 0,
     }
@@ -774,6 +893,7 @@ def _result_from_turns(turns: list[LiveTutorTurn]) -> LiveTutorDemoResult:
         controlled_surface=checks["controlled_surface"],
         display_only=checks["display_only"],
         memory_write_count=sum(int(turn.memory_write_allowed) for turn in turns),
+        manual_memory_proposal_count=sum(int(bool(turn.manual_memory_proposal)) for turn in turns),
         raw_ref_retained_count=sum(int(turn.raw_ref_retained) for turn in turns),
         external_effect_count=sum(int(turn.external_effect_executed) for turn in turns),
         real_screen_capture_started=any(turn.real_screen_capture_started for turn in turns),
@@ -787,8 +907,55 @@ def _resolve_intent(
     user_utterance: str,
     *,
     surface: SafeCreativeDemoSurface,
-) -> tuple[str, str, str, str, float]:
+    pointer_state: LiveTutorPointerState,
+) -> tuple[str, str, str, str, float, Literal["this", "that", "these", "none"], list[str]]:
     normalized = user_utterance.lower()
+    pointer_target_id = _resolve_pointer_target(normalized, pointer_state=pointer_state)
+    pointer_target = surface.target_by_id(pointer_target_id) if pointer_target_id else None
+    referent = _referent_from_utterance(normalized, pointer_state)
+    referenced_ids = _referenced_target_ids(pointer_state, pointer_target_id)
+
+    if "remember" in normalized and pointer_target:
+        return (
+            pointer_target.target_id,
+            "propose_manual_memory",
+            (
+                f"I can prepare a Memory Book card for {pointer_target.label}. "
+                "Nothing is saved until you confirm it."
+            ),
+            "Review the memory proposal before saving.",
+            0.86,
+            referent,
+            referenced_ids,
+        )
+    if "these" in normalized and referenced_ids:
+        primary = referenced_ids[-1]
+        labels = [surface.target_by_id(target_id).label for target_id in referenced_ids]
+        return (
+            primary,
+            "multi_target_reference",
+            (
+                f"I understand these as: {', '.join(labels)}. "
+                "For now I can explain the relationship, not perform a combined action."
+            ),
+            "Confirm any combined workflow before Cortex turns it into a skill.",
+            0.78,
+            "these",
+            referenced_ids,
+        )
+    if ("explain" in normalized or "what is" in normalized or "what's" in normalized) and pointer_target:
+        return (
+            pointer_target.target_id,
+            "explain_pointed_target",
+            (
+                f"{pointer_target.label}: {pointer_target.plain_description} "
+                "I am only explaining it; I did not click or change anything."
+            ),
+            "Use the explanation, then decide the next step yourself.",
+            0.88,
+            referent,
+            referenced_ids,
+        )
     if "lut" in normalized:
         return (
             "lut_menu",
@@ -796,6 +963,8 @@ def _resolve_intent(
             "Use the LUT menu on the right inspector. I can point to it, but you stay in control of the click.",
             "Open the LUT menu yourself if that matches your footage.",
             0.9,
+            referent,
+            ["lut_menu"],
         )
     if "node" in normalized:
         return (
@@ -804,6 +973,8 @@ def _resolve_intent(
             "The node graph is in the upper-right part of the color workspace.",
             "Look at the highlighted node graph area before changing grades.",
             0.88,
+            referent,
+            ["node_graph"],
         )
     if "color" in normalized or "grade" in normalized:
         return (
@@ -812,15 +983,24 @@ def _resolve_intent(
             "Start by switching to the Color Page. I am pointing at the workspace switcher.",
             "Click the Color Page button yourself to enter the color workspace.",
             0.92,
+            referent,
+            ["color_page_button"],
         )
     if "next" in normalized:
         if surface.active_page == "color":
+            target_id = pointer_target.target_id if pointer_target else "node_graph"
+            target = surface.target_by_id(target_id)
             return (
-                "node_graph",
+                target_id,
                 "next_step_color_workspace",
-                "You are already in the color workspace; the node graph is the safest next anchor.",
-                "Select or inspect the first correction node yourself.",
+                (
+                    f"Because you are in Color, use {target.label} as the next anchor. "
+                    "I will keep pointing, not acting."
+                ),
+                "Inspect the highlighted area yourself before changing grades.",
                 0.82,
+                referent,
+                referenced_ids if pointer_target else ["node_graph"],
             )
         return (
             "color_page_button",
@@ -828,13 +1008,104 @@ def _resolve_intent(
             "The next safe step is to switch to the Color Page before touching LUT controls.",
             "Click the Color Page button yourself.",
             0.8,
+            referent,
+            ["color_page_button"],
         )
     return (
-        "inspector",
+        pointer_target.target_id if pointer_target else "inspector",
         "general_orientation",
-        "I found the inspector, which is a safe place to inspect settings before acting.",
+        (
+            f"I am oriented on {pointer_target.label}. {pointer_target.plain_description}"
+            if pointer_target
+            else "I found the inspector, which is a safe place to inspect settings before acting."
+        ),
         "Review the highlighted setting area; no action was taken for you.",
         0.62,
+        referent,
+        referenced_ids if pointer_target else ["inspector"],
+    )
+
+
+def _pointer_state_from_question(
+    question: LiveTutorQuestionInput,
+    *,
+    surface: SafeCreativeDemoSurface,
+) -> LiveTutorPointerState:
+    known_target_ids = {target.target_id for target in surface.targets}
+    selected_ids = [target_id for target_id in question.selected_target_ids if target_id in known_target_ids]
+    current_target = question.pointed_target_id if question.pointed_target_id in known_target_ids else None
+    previous_target = question.previous_target_id if question.previous_target_id in known_target_ids else None
+    return LiveTutorPointerState(
+        current_target_id=current_target,
+        previous_target_id=previous_target,
+        selected_target_ids=selected_ids,
+        pointer_x=question.pointer_x,
+        pointer_y=question.pointer_y,
+        referent_phrase="this" if current_target else "none",
+    )
+
+
+def _resolve_pointer_target(
+    normalized_utterance: str,
+    *,
+    pointer_state: LiveTutorPointerState,
+) -> str | None:
+    if "that" in normalized_utterance and pointer_state.previous_target_id:
+        return pointer_state.previous_target_id
+    if "these" in normalized_utterance and pointer_state.selected_target_ids:
+        return pointer_state.selected_target_ids[-1]
+    if "this" in normalized_utterance and pointer_state.current_target_id:
+        return pointer_state.current_target_id
+    if pointer_state.current_target_id and (
+        "explain" in normalized_utterance
+        or "remember" in normalized_utterance
+        or "next" in normalized_utterance
+    ):
+        return pointer_state.current_target_id
+    return None
+
+
+def _referent_from_utterance(
+    normalized_utterance: str,
+    pointer_state: LiveTutorPointerState,
+) -> Literal["this", "that", "these", "none"]:
+    if "these" in normalized_utterance and pointer_state.selected_target_ids:
+        return "these"
+    if "that" in normalized_utterance and pointer_state.previous_target_id:
+        return "that"
+    if ("this" in normalized_utterance or pointer_state.current_target_id) and pointer_state.current_target_id:
+        return "this"
+    return "none"
+
+
+def _referenced_target_ids(
+    pointer_state: LiveTutorPointerState,
+    primary_target_id: str | None,
+) -> list[str]:
+    ids: list[str] = []
+    for target_id in [
+        *pointer_state.selected_target_ids,
+        pointer_state.previous_target_id,
+        pointer_state.current_target_id,
+        primary_target_id,
+    ]:
+        if target_id and target_id not in ids:
+            ids.append(target_id)
+    return ids or ([primary_target_id] if primary_target_id else [])
+
+
+def _build_manual_memory_proposal(
+    target: DemoTarget,
+    *,
+    sequence: int,
+) -> ManualMemoryProposal:
+    return ManualMemoryProposal(
+        proposal_id=f"manual_memory_proposal_{sequence:03d}",
+        target_id=target.target_id,
+        target_label=target.label,
+        content_preview=(
+            f"Remember that {target.label} is {target.plain_description.lower()}"
+        ),
     )
 
 

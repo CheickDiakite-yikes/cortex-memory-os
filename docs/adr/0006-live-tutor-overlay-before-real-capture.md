@@ -25,6 +25,10 @@ demo:
 - render a blue secondary cursor that continuously tracks beside the user's
   pointer inside the controlled frame;
 - leave a fading cursor trace and cursor-adjacent ask affordance;
+- resolve `this`, `that`, and `these` from a short pointer target history;
+- show a tiny cursor-adjacent action chip as the primary live surface;
+- create reviewed manual-memory proposals from `Remember this`, without durable
+  writes;
 - render target highlights and instruction bubbles when answering;
 - persist only safe turn receipts in memory for the running demo process;
 - expose dashboard-safe aggregate state;
