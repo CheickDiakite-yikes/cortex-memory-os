@@ -493,7 +493,7 @@ button {
 
 .cursor-action-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 5px;
 }
 
@@ -512,6 +512,13 @@ button {
 .cursor-action-row button:hover {
   border-color: rgba(22, 99, 215, 0.58);
   background: #d9eaff;
+}
+
+body.ai-draft-mode .cursor-action-row button[data-pointer-ai],
+.model-mode button.active {
+  border-color: rgba(22, 99, 215, 0.72);
+  background: var(--blue);
+  color: #fff;
 }
 
 .companion-dock {
@@ -719,6 +726,29 @@ p {
   color: var(--muted);
   font-size: 0.8rem;
   font-weight: 800;
+}
+
+.model-mode {
+  display: grid;
+  grid-template-columns: 72px 92px 1fr;
+  gap: 7px;
+  align-items: center;
+}
+
+.model-mode button {
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.model-mode span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.3;
 }
 
 textarea {

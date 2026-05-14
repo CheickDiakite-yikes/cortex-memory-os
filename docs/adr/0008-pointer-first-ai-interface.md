@@ -31,6 +31,8 @@ The first pointer-first spine remains safe-local:
 - pointer-local commands render beside the cursor, not in a distant dashboard;
 - responses, micro-steps, and reviewed memory proposals render beside the
   pointer or target;
+- a cheap model draft may be shown only as an explicit `AI draft` mode using
+  controlled target facts, `gpt-5-nano`, minimal reasoning, and `store:false`;
 - target pinning makes "these" visible before it becomes an agent reference;
 - memory writes require an explicit user command and remain manual-memory-bound;
 - click, type, real capture, microphone, Accessibility observation, export, and

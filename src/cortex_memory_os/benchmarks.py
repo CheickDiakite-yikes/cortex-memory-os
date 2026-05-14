@@ -13492,6 +13492,9 @@ def case_live_tutor_overlay_contract() -> BenchmarkCaseResult:
         "pointer-local commands",
         "micro-steps",
         "manual-memory proposal",
+        "OpenAI dry-run",
+        "store:false",
+        "controlled target facts",
         "no screen capture",
         "no microphone capture",
         "no raw refs",
@@ -13507,8 +13510,15 @@ def case_live_tutor_overlay_contract() -> BenchmarkCaseResult:
         "companion-dock",
         "pinned-targets",
         "memory-proposal-card",
+        "model-mode",
+        "ai-mode-chip",
         "receipt-summary",
+        "receipt-ai-mode",
+        "openai_dry_run",
+        "AI draft",
+        "store:false",
         'data-pointer-command="Explain this"',
+        'data-pointer-ai="openai_dry_run"',
         'data-pointer-local="pin-target"',
         "pointed_target_id",
         "selected_target_ids",
@@ -13549,6 +13559,8 @@ def case_live_tutor_overlay_contract() -> BenchmarkCaseResult:
         and server_smoke.memory_write_count == 0
         and server_smoke.raw_ref_retained_count == 0
         and server_smoke.external_effect_count == 0
+        and server_smoke.openai_draft_turn_count == 1
+        and server_smoke.openai_store_false
         and prohibited_marker_count == 0
         and not missing_doc_terms
         and not missing_ui_terms
@@ -13571,6 +13583,7 @@ def case_live_tutor_overlay_contract() -> BenchmarkCaseResult:
             "missing_ui_terms": len(missing_ui_terms),
             "prohibited_marker_count": prohibited_marker_count,
             "manual_memory_proposal_count": smoke.manual_memory_proposal_count,
+            "openai_draft_turn_count": server_smoke.openai_draft_turn_count,
         },
         evidence={
             "policy_ref": LIVE_TUTOR_OVERLAY_POLICY_REF,

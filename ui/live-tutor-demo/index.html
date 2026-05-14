@@ -18,6 +18,7 @@
           </div>
           <div class="topbar-actions" aria-label="Demo state">
             <span id="active-page-chip">Edit page</span>
+            <span id="ai-mode-chip">Local answers</span>
             <span>Screen capture off</span>
             <span>Memory writes off</span>
           </div>
@@ -100,6 +101,7 @@
             <div class="cursor-action-row">
               <button type="button" data-pointer-command="Explain this">Explain</button>
               <button type="button" data-pointer-command="What next?">Next</button>
+              <button type="button" data-pointer-ai="openai_dry_run" title="Ask the cheap model using controlled demo facts only">AI</button>
               <button type="button" data-pointer-local="pin-target">Pin</button>
               <button type="button" data-pointer-command="Remember this">Remember</button>
             </div>
@@ -137,6 +139,11 @@
         <form id="question-form" class="question-form">
           <label for="question-input">Ask about the thing under your pointer</label>
           <textarea id="question-input" rows="3">How do I start color grading?</textarea>
+          <div class="model-mode" aria-label="Tutor answer mode">
+            <button type="button" class="active" data-ai-mode="local">Local</button>
+            <button type="button" data-ai-mode="openai_dry_run">AI draft</button>
+            <span id="ai-mode-note">No network from the UI. Live OpenAI smoke stays in CLI.</span>
+          </div>
           <button type="submit">Ask Cortex</button>
         </form>
 
@@ -158,6 +165,7 @@
               <div><dt>Intent</dt><dd id="receipt-intent">waiting</dd></div>
               <div><dt>Referent</dt><dd id="receipt-referent">none</dd></div>
               <div><dt>Confidence</dt><dd id="receipt-confidence">0.00</dd></div>
+              <div><dt>AI mode</dt><dd id="receipt-ai-mode">local</dd></div>
               <div><dt>Effects</dt><dd id="receipt-effects">display-only</dd></div>
               <div><dt>Blocked</dt><dd id="receipt-blocked">clicks, capture, memory</dd></div>
             </dl>

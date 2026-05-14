@@ -275,6 +275,10 @@ class LiveTutorTurn(StrictModel):
     next_user_action: str = Field(min_length=1)
     manual_memory_proposal: ManualMemoryProposal | None = None
     safety_flags: list[str] = Field(default_factory=list)
+    ai_assist_mode: Literal["local", "openai_dry_run"] = "local"
+    ai_model: str | None = None
+    ai_store_false: bool = True
+    ai_prompt_char_count: int | None = Field(default=None, ge=1, le=2400)
     display_only: bool = True
     memory_write_allowed: bool = False
     raw_ref_retained: bool = False
@@ -316,6 +320,11 @@ class LiveTutorTurn(StrictModel):
             raise ValueError("live tutor turn must reference its primary target")
         if self.manual_memory_proposal and self.memory_write_allowed:
             raise ValueError("memory proposal cannot authorize a memory write")
+        if self.ai_assist_mode == "openai_dry_run":
+            if not self.ai_model or not self.ai_prompt_char_count:
+                raise ValueError("OpenAI dry-run tutor turns require model and prompt metadata")
+            if not self.ai_store_false:
+                raise ValueError("OpenAI dry-run tutor turns require store:false")
         if LIVE_TUTOR_OVERLAY_POLICY_REF not in self.policy_refs:
             raise ValueError("live tutor turn requires policy ref")
         return self
@@ -337,6 +346,8 @@ class LiveTutorDemoResult(StrictModel):
     external_effect_count: int = Field(ge=0)
     real_screen_capture_started: bool = False
     voice_capture_enabled: bool = False
+    openai_draft_turn_count: int = Field(default=0, ge=0)
+    openai_store_false: bool = True
     prohibited_marker_count: int = Field(ge=0)
     safety_failures: list[str] = Field(default_factory=list)
 
@@ -358,6 +369,9 @@ class LiveTutorDashboardPanel(StrictModel):
     external_effect_enabled: bool = False
     real_screen_capture_started: bool = False
     voice_capture_enabled: bool = False
+    openai_draft_ready: bool = True
+    openai_draft_turn_count: int = Field(default=0, ge=0)
+    openai_store_false: bool = True
     raw_payload_included: bool = False
     blocked_effects: list[str] = Field(default_factory=list)
     policy_refs: list[str] = Field(default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF])
@@ -370,6 +384,8 @@ class LiveTutorDashboardPanel(StrictModel):
             raise ValueError("live tutor dashboard panel cannot enable memory/raw/external effects")
         if self.real_screen_capture_started or self.voice_capture_enabled:
             raise ValueError("live tutor dashboard panel cannot enable screen or voice capture")
+        if not self.openai_draft_ready or not self.openai_store_false:
+            raise ValueError("live tutor OpenAI draft panel must stay safe and store:false")
         if self.raw_payload_included:
             raise ValueError("live tutor dashboard panel cannot include raw payloads")
         if missing := sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS.difference(self.blocked_effects)):
@@ -382,6 +398,7 @@ class LiveTutorDashboardPanel(StrictModel):
 class LiveTutorQuestionInput(StrictModel):
     user_utterance: str = Field(min_length=1, max_length=240)
     active_page: str = Field(default="edit", min_length=1, max_length=40)
+    ai_mode: Literal["local", "openai_dry_run"] = "local"
     pointed_target_id: str | None = None
     previous_target_id: str | None = None
     selected_target_ids: list[str] = Field(default_factory=list, max_length=4)
@@ -423,6 +440,7 @@ class LiveTutorDemoSession:
                 surface=surface,
                 pointer_state=pointer_state,
                 sequence=sequence,
+                ai_mode=question.ai_mode,
             )
             self._turns.append(turn)
             return turn
@@ -701,6 +719,7 @@ def resolve_live_tutor_turn(
     pointer_state: LiveTutorPointerState | None = None,
     session_id: str = "live_tutor_demo_session",
     sequence: int = 1,
+    ai_mode: Literal["local", "openai_dry_run"] = "local",
 ) -> LiveTutorTurn:
     surface = surface or build_safe_creative_demo_surface()
     pointer_state = pointer_state or LiveTutorPointerState()
@@ -733,7 +752,7 @@ def resolve_live_tutor_turn(
         blocked_effects=sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS),
     )
     companion_state = _companion_state_for_intent(intent_label, target=target)
-    return LiveTutorTurn(
+    turn = LiveTutorTurn(
         turn_id=f"live_tutor_turn_{sequence:03d}",
         session_id=session_id,
         user_utterance=user_utterance,
@@ -766,6 +785,65 @@ def resolve_live_tutor_turn(
             "no_external_effects",
         ],
     )
+    if ai_mode == "openai_dry_run":
+        return _apply_openai_dry_run_to_turn(
+            turn,
+            user_utterance=user_utterance,
+            target=target,
+            surface=surface,
+        )
+    return turn
+
+
+def _apply_openai_dry_run_to_turn(
+    turn: LiveTutorTurn,
+    *,
+    user_utterance: str,
+    target: DemoTarget,
+    surface: SafeCreativeDemoSurface,
+) -> LiveTutorTurn:
+    from cortex_memory_os.live_openai_tutor import (
+        dry_run_openai_tutor_draft,
+        openai_tutor_request_from_target,
+    )
+
+    request = openai_tutor_request_from_target(
+        user_utterance=user_utterance,
+        target=target,
+        active_page=surface.active_page,
+    )
+    draft = dry_run_openai_tutor_draft(request)
+    payload = turn.model_dump(mode="python")
+    payload.update(
+        {
+            "assistant_response": draft.assistant_response,
+            "micro_steps": draft.micro_steps,
+            "confidence": min(max(draft.confidence, turn.confidence - 0.04), 0.92),
+            "user_readable_receipt": (
+                "AI draft used controlled target facts only; no click, capture, raw ref, "
+                "or memory write happened."
+            ),
+            "companion_state": LiveTutorCompanionState(
+                mode=turn.companion_state.mode,
+                label=f"AI draft for {target.label}",
+                safety_caption="OpenAI dry-run: store:false, controlled facts only.",
+            ),
+            "next_user_action": "Review the AI draft, then click the real app yourself.",
+            "safety_flags": [
+                *turn.safety_flags,
+                "openai_dry_run",
+                "store_false",
+                "controlled_target_facts_only",
+                "no_screenshots_sent",
+                "no_microphone_sent",
+            ],
+            "ai_assist_mode": "openai_dry_run",
+            "ai_model": draft.model,
+            "ai_store_false": draft.store_false,
+            "ai_prompt_char_count": draft.prompt_char_count,
+        }
+    )
+    return LiveTutorTurn.model_validate(payload)
 
 
 def run_live_tutor_demo_smoke() -> LiveTutorDemoResult:
@@ -819,6 +897,7 @@ def run_live_tutor_server_smoke() -> LiveTutorDemoResult:
                         "user_utterance": utterance,
                         "active_page": "color" if sequence > 1 else "edit",
                         "pointed_target_id": "lut_menu" if "LUT" in utterance else None,
+                        "ai_mode": "openai_dry_run" if sequence == 3 else "local",
                     }
                 ),
                 headers={
@@ -859,6 +938,8 @@ def build_live_tutor_dashboard_panel(
         turn_count=result.turn_count,
         cue_count=result.cue_count,
         manual_memory_proposal_count=result.manual_memory_proposal_count,
+        openai_draft_turn_count=result.openai_draft_turn_count,
+        openai_store_false=result.openai_store_false,
         display_only=result.display_only,
         controlled_surface=result.controlled_surface,
         memory_write_allowed=result.memory_write_count > 0,
@@ -918,6 +999,7 @@ def _result_from_turns(
             not turn.real_screen_capture_started and not turn.voice_capture_enabled
             for turn in turns
         ),
+        "openai_store_false": all(turn.ai_store_false for turn in turns),
         "manual_memory_review": all(
             proposal.durable_write_performed is False
             and proposal.user_confirmation_required is True
@@ -941,6 +1023,10 @@ def _result_from_turns(
         external_effect_count=sum(int(turn.external_effect_executed) for turn in turns),
         real_screen_capture_started=any(turn.real_screen_capture_started for turn in turns),
         voice_capture_enabled=any(turn.voice_capture_enabled for turn in turns),
+        openai_draft_turn_count=sum(
+            int(turn.ai_assist_mode == "openai_dry_run") for turn in turns
+        ),
+        openai_store_false=all(turn.ai_store_false for turn in turns),
         prohibited_marker_count=prohibited_marker_count,
         safety_failures=failures,
     )

@@ -61,10 +61,18 @@ pointer-local commands:
 - `Explain this`
 - `What next?`
 - `Pin`
+- `AI draft`
 - `Remember this`
 
 `Pin` builds a small target stack so "these" has visible meaning. The stack is
 local state only and is not a memory write.
+
+`AI draft` is a safe model-assist mode. The UI sends only the controlled target
+ID, label, description, active demo page, and user utterance through the
+OpenAI tutor dry-run contract. The receipt shows `OpenAI dry-run`,
+`gpt-5-nano`, and `store:false`. It does not send screenshots, microphone
+audio, raw refs, Accessibility trees, clipboard contents, files, or durable
+memory content.
 
 `Remember this` creates a reviewed manual-memory proposal only. It does not
 write durable memory. The in-canvas memory proposal card must say plainly that

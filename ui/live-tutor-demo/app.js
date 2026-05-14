@@ -21,20 +21,25 @@ const form = document.querySelector("#question-form");
 const input = document.querySelector("#question-input");
 const token = document.querySelector('meta[name="cortex-live-tutor-token"]')?.content || "";
 const activePageChip = document.querySelector("#active-page-chip");
+const aiModeChip = document.querySelector("#ai-mode-chip");
+const aiModeNote = document.querySelector("#ai-mode-note");
 const turnList = document.querySelector("#turn-list");
 const receiptSummary = document.querySelector("#receipt-summary");
 const receiptsToggle = document.querySelector("#receipts-toggle");
 const receiptStack = document.querySelector("#receipt-stack");
+const aiModeButtons = document.querySelectorAll("[data-ai-mode]");
 const fields = {
   target: document.querySelector("#receipt-target"),
   intent: document.querySelector("#receipt-intent"),
   referent: document.querySelector("#receipt-referent"),
   confidence: document.querySelector("#receipt-confidence"),
+  aiMode: document.querySelector("#receipt-ai-mode"),
   effects: document.querySelector("#receipt-effects"),
   blocked: document.querySelector("#receipt-blocked"),
 };
 
 let activePage = "edit";
+let aiMode = "local";
 let lastTraceAt = 0;
 let followerVisible = false;
 let helperActive = false;
@@ -66,7 +71,12 @@ async function askTutor(question) {
   if (!helperActive) {
     setHelperActive(true);
   }
-  fields.intent.textContent = "thinking";
+  fields.intent.textContent = aiMode === "openai_dry_run" ? "thinking safely" : "thinking";
+  fields.aiMode.textContent = aiMode === "openai_dry_run" ? "AI draft" : "local";
+  pointerSafetyLabel.textContent =
+    aiMode === "openai_dry_run"
+      ? "AI draft uses controlled facts only."
+      : "Display only. You stay in control.";
   const response = await fetch("/tutor/turn", {
     method: "POST",
     headers: {
@@ -76,6 +86,7 @@ async function askTutor(question) {
     body: JSON.stringify({
       user_utterance: question,
       active_page: activePage,
+      ai_mode: aiMode,
       pointed_target_id: currentTargetId,
       previous_target_id: previousTargetId,
       selected_target_ids: pinnedTargetIds.length ? pinnedTargetIds : selectedTargetIds,
@@ -96,6 +107,7 @@ function renderError(payload) {
   fields.intent.textContent = payload.error || "rejected";
   fields.referent.textContent = "none";
   fields.confidence.textContent = "0.00";
+  fields.aiMode.textContent = "blocked";
   fields.effects.textContent = "none";
   fields.blocked.textContent = "request rejected before receipt";
   receiptSummary.textContent = "Request blocked before Cortex produced a pointer receipt.";
@@ -114,6 +126,24 @@ function targetLabel(targetId) {
     element.textContent ||
     targetId.replaceAll("_", " ")
   ).trim();
+}
+
+function setAiMode(mode) {
+  aiMode = mode === "openai_dry_run" ? "openai_dry_run" : "local";
+  document.body.classList.toggle("ai-draft-mode", aiMode === "openai_dry_run");
+  aiModeButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.aiMode === aiMode);
+  });
+  aiModeChip.textContent = aiMode === "openai_dry_run" ? "AI draft safe" : "Local answers";
+  aiModeNote.textContent =
+    aiMode === "openai_dry_run"
+      ? "Uses controlled target facts only with store:false receipts."
+      : "No network from the UI. Live OpenAI smoke stays in CLI.";
+  pointerSafetyLabel.textContent =
+    aiMode === "openai_dry_run"
+      ? "AI draft: store:false, controlled facts only."
+      : "Display only. You stay in control.";
+  fields.aiMode.textContent = aiMode === "openai_dry_run" ? "AI draft" : "local";
 }
 
 function updatePointerTarget(targetId) {
@@ -274,10 +304,16 @@ function renderTurn(turn) {
   fields.intent.textContent = formatToken(turn.intent_label);
   fields.referent.textContent = turn.pointer_referent || "none";
   fields.confidence.textContent = Number(turn.confidence).toFixed(2);
-  fields.effects.textContent = turn.target_coordinates.allowed_effects
+  fields.aiMode.textContent =
+    turn.ai_assist_mode === "openai_dry_run" && turn.ai_model
+      ? `${turn.ai_model} store:false`
+      : "local";
+  const effectText = turn.target_coordinates.allowed_effects
     .map(formatToken)
     .slice(1, 4)
     .join(", ");
+  fields.effects.textContent =
+    turn.ai_assist_mode === "openai_dry_run" ? `${effectText}, AI draft` : effectText;
   fields.blocked.textContent = "click, type, capture, memory, export";
   receiptSummary.textContent =
     turn.user_readable_receipt || "Cortex answered safely beside the pointer.";
@@ -287,7 +323,11 @@ function renderTurn(turn) {
 
   const item = document.createElement("li");
   const proposalText = turn.manual_memory_proposal ? " · memory proposal needs review" : "";
-  item.innerHTML = `<strong>${escapeHtml(turn.target_label)}</strong><span>${escapeHtml(turn.user_readable_receipt || formatToken(turn.intent_label))} · ${escapeHtml(turn.pointer_referent || "none")} · confidence ${Number(turn.confidence).toFixed(2)} · raw refs ${turn.raw_ref_retained ? "retained" : "none"}${proposalText}</span>`;
+  const aiText =
+    turn.ai_assist_mode === "openai_dry_run" && turn.ai_model
+      ? ` · AI ${escapeHtml(turn.ai_model)} store:false`
+      : "";
+  item.innerHTML = `<strong>${escapeHtml(turn.target_label)}</strong><span>${escapeHtml(turn.user_readable_receipt || formatToken(turn.intent_label))} · ${escapeHtml(turn.pointer_referent || "none")} · confidence ${Number(turn.confidence).toFixed(2)} · raw refs ${turn.raw_ref_retained ? "retained" : "none"}${aiText}${proposalText}</span>`;
   turnList.prepend(item);
 }
 
@@ -336,12 +376,27 @@ document.querySelectorAll("[data-pointer-command]").forEach((button) => {
   });
 });
 
+document.querySelectorAll("[data-pointer-ai]").forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setAiMode(button.dataset.pointerAi || "openai_dry_run");
+    input.value = currentTargetId ? "Explain this" : "What should I click next?";
+    askTutor(input.value);
+  });
+});
+
 document.querySelectorAll("[data-pointer-local]").forEach((button) => {
   button.addEventListener("click", (event) => {
     event.stopPropagation();
     if (button.dataset.pointerLocal === "pin-target") {
       pinCurrentTarget();
     }
+  });
+});
+
+aiModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setAiMode(button.dataset.aiMode || "local");
   });
 });
 
@@ -376,3 +431,5 @@ receiptsToggle.addEventListener("click", () => {
   const collapsed = receiptStack.classList.toggle("collapsed");
   receiptsToggle.textContent = collapsed ? "Show safety receipts" : "Hide safety receipts";
 });
+
+setAiMode("local");

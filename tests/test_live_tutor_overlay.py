@@ -141,6 +141,27 @@ def test_live_tutor_remember_this_proposes_memory_without_write():
     assert "Nothing is saved until you confirm it." in turn.assistant_response
 
 
+def test_live_tutor_openai_dry_run_returns_store_false_receipt():
+    turn = resolve_live_tutor_turn(
+        "Explain this",
+        surface=build_safe_creative_demo_surface(active_page="color"),
+        pointer_state=LiveTutorPointerState(current_target_id="node_graph", referent_phrase="this"),
+        ai_mode="openai_dry_run",
+    )
+
+    assert turn.ai_assist_mode == "openai_dry_run"
+    assert turn.ai_model == "gpt-5-nano"
+    assert turn.ai_store_false is True
+    assert turn.ai_prompt_char_count
+    assert "OpenAI dry-run" in turn.companion_state.safety_caption
+    assert "AI draft used controlled target facts only" in turn.user_readable_receipt
+    assert "openai_dry_run" in turn.safety_flags
+    assert "no_screenshots_sent" in turn.safety_flags
+    assert turn.memory_write_allowed is False
+    assert turn.raw_ref_retained is False
+    assert turn.external_effect_executed is False
+
+
 def test_live_tutor_blocks_broad_allowed_effects_and_out_of_bounds_cues():
     with pytest.raises(ValidationError, match="allowed effects are too broad"):
         SpatialTutorCue(
@@ -182,6 +203,8 @@ def test_live_tutor_server_smoke_answers_with_safe_receipts():
     assert result.memory_write_count == 0
     assert result.raw_ref_retained_count == 0
     assert result.external_effect_count == 0
+    assert result.openai_draft_turn_count == 1
+    assert result.openai_store_false is True
 
 
 def test_live_tutor_demo_session_keeps_turns_memory_free():
@@ -232,6 +255,11 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert 'fetch("/tutor/turn"' in js
     assert LIVE_TUTOR_TOKEN_HEADER in js
     assert "active_page" in js
+    assert "ai_mode" in js
+    assert "openai_dry_run" in js
+    assert "data-ai-mode" in html
+    assert "AI draft" in html
+    assert "store:false" in html + js
     assert "pointed_target_id" in js
     assert "selected_target_ids" in js
     assert "pinnedTargetIds" in js
@@ -254,6 +282,8 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert ".cursor-trace-dot" in css
     assert ".cursor-talk-card.visible" in css
     assert ".cursor-action-row" in css
+    assert ".model-mode" in css
+    assert "ai-draft-mode" in css
     assert ".wake-card" in css
     assert ".companion-dock" in css
     assert ".pinned-targets" in css
@@ -279,5 +309,7 @@ def test_live_tutor_dashboard_panel_is_safe_and_command_ready():
     assert panel.real_screen_capture_started is False
     assert panel.voice_capture_enabled is False
     assert panel.raw_payload_included is False
+    assert panel.openai_draft_ready is True
+    assert panel.openai_store_false is True
     assert set(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS).issubset(set(panel.blocked_effects))
     assert LIVE_TUTOR_OVERLAY_POLICY_REF in panel.policy_refs
