@@ -96,6 +96,13 @@ from cortex_memory_os.live_openai_smoke import (
     load_live_openai_config,
     run_smoke,
 )
+from cortex_memory_os.live_openai_tutor import (
+    OPENAI_TUTOR_POLICY_REF,
+    OPENAI_TUTOR_SMOKE_ID,
+    build_default_tutor_request,
+    build_openai_tutor_payload,
+    run_openai_tutor_smoke,
+)
 from cortex_memory_os.live_readiness import (
     LIVE_READINESS_HARDENING_ID,
     LIVE_READINESS_POLICY_REF,
@@ -809,6 +816,7 @@ def run_all() -> BenchmarkRunResult:
         case_local_adapter_endpoint_contract,
         case_manual_adapter_proof_contract,
         case_live_openai_smoke_contract,
+        case_openai_tutor_safe_draft_contract,
         case_live_readiness_hardening_contract,
         case_capture_budget_queue_contract,
         case_gateway_self_lesson_proposal_tool,
@@ -3999,6 +4007,95 @@ def case_live_openai_smoke_contract() -> BenchmarkCaseResult:
             "default_model": config.model,
             "command": "uv run cortex-openai-smoke --dry-run",
             "env_example_tracked": True,
+        },
+    )
+
+
+def case_openai_tutor_safe_draft_contract() -> BenchmarkCaseResult:
+    request = build_default_tutor_request()
+    payload = build_openai_tutor_payload(request)
+    smoke = run_openai_tutor_smoke(live=False)
+    pyproject_text = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    docs_text = "\n".join(
+        [
+            (REPO_ROOT / "docs" / "ops" / "openai-tutor-live-smoke.md").read_text(
+                encoding="utf-8"
+            ),
+            (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+                encoding="utf-8"
+            ),
+            (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+                encoding="utf-8"
+            ),
+            (REPO_ROOT / "docs" / "ops" / "research-safety.md").read_text(
+                encoding="utf-8"
+            ),
+        ]
+    )
+    serialized = "\n".join(
+        [
+            request.model_dump_json(),
+            json.dumps(payload, sort_keys=True),
+            smoke.model_dump_json(),
+        ]
+    )
+    missing_terms = _missing_terms(
+        docs_text,
+        [
+            OPENAI_TUTOR_SMOKE_ID,
+            OPENAI_TUTOR_POLICY_REF,
+            "gpt-5-nano",
+            "Responses API",
+            "store:false",
+            "controlled target facts",
+            "no screenshots",
+            "no microphone",
+            "no durable memory",
+            "no raw refs",
+        ],
+    )
+    prohibited_marker_count = sum(
+        1
+        for marker in ["OPENAI_API_KEY=", "CORTEX_FAKE_TOKEN", "sk-", "raw://", "encrypted_blob://"]
+        if marker in serialized
+    )
+    passed = (
+        smoke.passed
+        and smoke.live is False
+        and smoke.model == DEFAULT_OPENAI_MODEL
+        and smoke.store_false
+        and smoke.memory_write_count == 0
+        and smoke.raw_ref_retained_count == 0
+        and smoke.external_effect_count == 0
+        and smoke.real_screen_capture_started is False
+        and smoke.prohibited_marker_count == 0
+        and prohibited_marker_count == 0
+        and payload.get("store") is False
+        and payload.get("reasoning") == {"effort": "minimal"}
+        and payload.get("max_output_tokens") == 180
+        and "controlled localhost demo surface" in str(payload.get("input"))
+        and "cortex-openai-tutor-smoke" in pyproject_text
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="OPENAI-TUTOR-SAFE-DRAFT-001/synthetic_pointer_draft",
+        suite=OPENAI_TUTOR_SMOKE_ID,
+        passed=passed,
+        summary=(
+            "OpenAI tutor draft smoke keeps the model path cheap, synthetic, "
+            "store:false, and free of memory, capture, raw-ref, or external effects."
+        ),
+        metrics={
+            "store_false": int(payload.get("store") is False),
+            "max_output_tokens": int(payload.get("max_output_tokens", 0)),
+            "prohibited_marker_count": prohibited_marker_count,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": OPENAI_TUTOR_POLICY_REF,
+            "model": smoke.model,
+            "command": "uv run cortex-openai-tutor-smoke --json",
+            "missing_doc_terms": missing_terms,
         },
     )
 
