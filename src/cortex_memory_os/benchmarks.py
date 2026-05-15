@@ -564,6 +564,8 @@ from cortex_memory_os.capture_control_server import (
     CAPTURE_SESSION_WATCHDOG_ID,
     CaptureControlProcessManager,
     FakePopen,
+    USER_TEST_READINESS_ID,
+    USER_TEST_READINESS_POLICY_REF,
     run_capture_control_server_smoke,
 )
 from cortex_memory_os.capture_preflight_diagnostics import (
@@ -797,6 +799,7 @@ def run_all() -> BenchmarkRunResult:
         case_real_capture_ephemeral_raw_ref_contract,
         case_real_capture_observation_sampler_contract,
         case_dashboard_capture_control_contract,
+        case_user_test_readiness_contract,
         case_capture_readiness_ladder_contract,
         case_capture_control_token_contract,
         case_capture_control_origin_csrf_contract,
@@ -14755,6 +14758,58 @@ def case_dashboard_capture_control_contract() -> BenchmarkCaseResult:
         ),
         metrics={"missing_doc_terms": len(missing_terms)},
         evidence={"policy_ref": DASHBOARD_CAPTURE_CONTROL_POLICY_REF, "missing_doc_terms": missing_terms},
+    )
+
+
+def case_user_test_readiness_contract() -> BenchmarkCaseResult:
+    smoke = run_capture_control_server_smoke()
+    receipt = smoke.user_test_receipt
+    app_js = (REPO_ROOT / "ui" / "cortex-dashboard" / "app.js").read_text(encoding="utf-8")
+    missing_terms = _missing_terms(
+        _real_capture_docs_text() + "\n" + app_js,
+        [
+            USER_TEST_READINESS_ID,
+            USER_TEST_READINESS_POLICY_REF,
+            "Test Cortex Cursor",
+            "Start helper cursor",
+            "Stop helper cursor",
+        ],
+    )
+    passed = (
+        smoke.passed
+        and smoke.user_test_status_code == 200
+        and receipt.ready_for_user_test
+        and receipt.helper_cursor_available
+        and receipt.one_button_label == "Start helper cursor"
+        and receipt.stop_button_label == "Stop helper cursor"
+        and not receipt.screen_capture_required
+        and not receipt.voice_required
+        and not receipt.memory_write_required
+        and not receipt.raw_ref_required
+        and not receipt.external_effect_required
+        and "start_screen_capture" in receipt.blocked_effects
+        and "write_memory" in receipt.blocked_effects
+        and "capture-user-test" in app_js
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="USER-TEST-READINESS-001/simple_cursor_test_path",
+        suite=USER_TEST_READINESS_ID,
+        passed=passed,
+        summary=(
+            "Dashboard exposes a simple user-test path: start helper cursor, "
+            "move pointer, verify display-only safety, then stop."
+        ),
+        metrics={
+            "user_step_count": len(receipt.user_steps),
+            "success_check_count": len(receipt.success_checks),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": USER_TEST_READINESS_POLICY_REF,
+            "status_code": smoke.user_test_status_code,
+            "missing_doc_terms": missing_terms,
+        },
     )
 
 

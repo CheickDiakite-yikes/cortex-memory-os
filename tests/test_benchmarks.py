@@ -7,7 +7,7 @@ def test_synthetic_benchmarks_pass():
     result = run_all()
 
     assert result.passed
-    assert len(result.case_results) == 225
+    assert len(result.case_results) == 226
     assert {case.suite for case in result.case_results} >= {
         "MEM-RECALL-001",
         "RETRIEVAL-SCORE-001",
@@ -146,6 +146,7 @@ def test_synthetic_benchmarks_pass():
         "REAL-CAPTURE-EPHEMERAL-RAW-REF-001",
         "REAL-CAPTURE-OBSERVATION-SAMPLER-001",
         "DASHBOARD-CAPTURE-CONTROL-001",
+        "USER-TEST-READINESS-001",
         "CAPTURE-READINESS-LADDER-001",
         "CAPTURE-CONTROL-TOKEN-001",
         "CAPTURE-CONTROL-ORIGIN-CSRF-001",

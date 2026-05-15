@@ -20,6 +20,7 @@ uv run cortex-plugin-install-smoke
 uv run cortex-demo --json
 uv run cortex-demo-stress --iterations 12 --json
 uv run cortex-capture-control-server --smoke --json
+uv run cortex-capture-control-server --user-test --json
 uv run cortex-native-cursor-follow --json
 uv run cortex-native-screen-capture-probe --json
 uv run cortex-real-capture-hardening --json
@@ -123,6 +124,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `REAL-CAPTURE-EPHEMERAL-RAW-REF-001` | Real capture raw refs start as ephemeral raw refs with short TTL. | Raw refs are durable by default or can directly produce memory writes. |
 | `REAL-CAPTURE-OBSERVATION-SAMPLER-001` | Observation sampler starts with count-only receipts and prompt-injection screening. | Sampler includes raw pixels, window titles, accessibility values, or unscreened content by default. |
 | `DASHBOARD-CAPTURE-CONTROL-001` | Dashboard shows Capture Control, Turn On Cortex, readiness, and the `cortex-shadow-clicker` command honestly. | Static dashboard claims to directly start native capture, returns raw payloads, executes mutation, or hides missing permission state. |
+| `USER-TEST-READINESS-001` | Dashboard exposes a child-readable cursor test path: `Test Cortex Cursor`, `Start helper cursor`, move pointer, `Stop helper cursor`. | User test requires screen capture, voice, memory writes, raw refs, external effects, or advanced safety panels before the basic cursor proof. |
 | `CAPTURE-CONTROL-TOKEN-001` | Capture control API requires an ephemeral session token. | Missing-token API calls can start, stop, probe, or inspect capture state. |
 | `CAPTURE-CONTROL-ORIGIN-CSRF-001` | Capture control rejects remote clients and bad browser `Origin` headers. | Non-local clients or hostile origins can drive the bridge. |
 | `CAPTURE-CONTROL-LIFECYCLE-001` | Capture control exposes explicit start, status, stop, and receipt lifecycle state. | Lifecycle state is hidden, stale, or accepts arbitrary commands. |

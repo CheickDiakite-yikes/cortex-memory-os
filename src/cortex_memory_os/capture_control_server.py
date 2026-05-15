@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -64,6 +64,7 @@ CAPTURE_CONTROL_PERMISSIONS_PATH = "/api/capture/permissions"
 CAPTURE_CONTROL_PREFLIGHT_PATH = "/api/capture/preflight"
 CAPTURE_CONTROL_SCREEN_PROBE_PATH = "/api/capture/screen-probe"
 CAPTURE_CONTROL_RECEIPTS_PATH = "/api/capture/receipts"
+CAPTURE_CONTROL_USER_TEST_PATH = "/api/capture/user-test"
 CAPTURE_CONTROL_CONFIG_PATH = "/capture-control-config.js"
 MEMORY_BOOK_SAVE_PATH = "/api/memory/save"
 MEMORY_BOOK_VALIDATE_PATH = "/api/memory/validate"
@@ -80,6 +81,8 @@ MEMORY_BOOK_STATUS_PATH = "/api/memory/status"
 MEMORY_BOOK_SNAPSHOT_PATH = "/api/memory/snapshot"
 CAPTURE_CONTROL_PREFLIGHT_BRIDGE_ID = "CAPTURE-CONTROL-PREFLIGHT-BRIDGE-001"
 CAPTURE_SESSION_WATCHDOG_ID = "CAPTURE-SESSION-WATCHDOG-001"
+USER_TEST_READINESS_ID = "USER-TEST-READINESS-001"
+USER_TEST_READINESS_POLICY_REF = "policy_user_test_readiness_v1"
 UI_ROOT = REPO_ROOT / "ui" / "cortex-dashboard"
 
 
@@ -142,6 +145,32 @@ class CaptureControlReceiptSummary(StrictModel):
     memory_write_allowed: bool = False
 
 
+class UserTestReadinessReceipt(StrictModel):
+    readiness_id: str = USER_TEST_READINESS_ID
+    policy_ref: str = USER_TEST_READINESS_POLICY_REF
+    bridge_policy_ref: str = CAPTURE_CONTROL_SERVER_POLICY_REF
+    action: Literal["user_test_readiness"] = "user_test_readiness"
+    title: str = "Test Cortex Cursor"
+    status: Literal["ready", "running", "blocked"]
+    ready_for_user_test: bool
+    bridge_connected: bool = True
+    helper_cursor_available: bool
+    helper_cursor_running: bool
+    pid: int | None = None
+    command: list[str] = Field(default_factory=list)
+    one_button_label: str = "Start helper cursor"
+    stop_button_label: str = "Stop helper cursor"
+    user_message: str
+    user_steps: list[str] = Field(default_factory=list)
+    success_checks: list[str] = Field(default_factory=list)
+    screen_capture_required: bool = False
+    voice_required: bool = False
+    memory_write_required: bool = False
+    raw_ref_required: bool = False
+    external_effect_required: bool = False
+    blocked_effects: list[str] = Field(default_factory=list)
+
+
 class CaptureControlServerSmokeResult(StrictModel):
     policy_ref: str = CAPTURE_CONTROL_SERVER_POLICY_REF
     passed: bool
@@ -153,6 +182,8 @@ class CaptureControlServerSmokeResult(StrictModel):
     served_dashboard: bool
     start_receipt: CaptureControlBridgeReceipt
     stop_receipt: CaptureControlBridgeReceipt
+    user_test_status_code: int
+    user_test_receipt: UserTestReadinessReceipt
     receipts_status_code: int
     receipt_summary: CaptureControlReceiptSummary
     permission_status_code: int
@@ -304,6 +335,77 @@ class CaptureControlProcessManager:
             memory_write_allowed=any(receipt.memory_write_allowed for receipt in receipts),
         )
 
+    def user_test_readiness(self) -> UserTestReadinessReceipt:
+        status = self.status()
+        package_path = self.package_path or REPO_ROOT / "native" / "macos-shadow-pointer"
+        helper_available = (package_path / "Package.swift").exists()
+        running = status.running
+        command = status.command or native_cursor_follow_command(
+            smoke=False,
+            json_output=True,
+            duration_seconds=30,
+            package_path=package_path,
+        )
+        state: Literal["ready", "running", "blocked"]
+        if running:
+            state = "running"
+        elif helper_available:
+            state = "ready"
+        else:
+            state = "blocked"
+        receipt = UserTestReadinessReceipt(
+            status=state,
+            ready_for_user_test=helper_available,
+            helper_cursor_available=helper_available,
+            helper_cursor_running=running,
+            pid=status.pid,
+            command=command,
+            user_message=(
+                "Ready: click Start helper cursor, move your pointer, then stop it."
+                if helper_available
+                else "Not ready: native Shadow Clicker package is missing."
+            ),
+            user_steps=[
+                "Click Start helper cursor.",
+                "Move your Mac pointer around any safe area of the screen.",
+                "Confirm the blue Cortex helper follows beside your pointer.",
+                "Click Stop helper cursor when done.",
+            ],
+            success_checks=[
+                "Blue helper cursor is visible.",
+                "Glass bubble stays beside the real pointer.",
+                "The real cursor still belongs to you.",
+                "Receipt says no screen capture, no memory write, and no raw refs.",
+            ],
+            blocked_effects=[
+                "start_screen_capture",
+                "start_microphone_capture",
+                "start_accessibility_observer",
+                "execute_click",
+                "type_text",
+                "move_system_cursor",
+                "steal_focus",
+                "write_memory",
+                "store_raw_evidence",
+                "export_payload",
+            ],
+        )
+        self._record(
+            CaptureControlBridgeReceipt(
+                action="user_test_readiness",
+                state=state,
+                running=running,
+                pid=status.pid,
+                command=command if running else [],
+                capture_started=False,
+                accessibility_observer_started=False,
+                memory_write_allowed=False,
+                raw_ref_retained=False,
+                raw_screen_storage_enabled=False,
+            )
+        )
+        return receipt
+
     def _is_running(self) -> bool:
         return self._process is not None and self._process.poll() is None
 
@@ -392,6 +494,7 @@ def build_capture_control_handler(
                         "preflightPath": CAPTURE_CONTROL_PREFLIGHT_PATH,
                         "screenProbePath": CAPTURE_CONTROL_SCREEN_PROBE_PATH,
                         "receiptsPath": CAPTURE_CONTROL_RECEIPTS_PATH,
+                        "userTestPath": CAPTURE_CONTROL_USER_TEST_PATH,
                         "memorySavePath": MEMORY_BOOK_SAVE_PATH,
                         "memoryValidatePath": MEMORY_BOOK_VALIDATE_PATH,
                         "memoryListPath": MEMORY_BOOK_LIST_PATH,
@@ -438,6 +541,11 @@ def build_capture_control_handler(
                 if not self._authorized():
                     return
                 self._write_json(200, manager.receipt_summary().model_dump(mode="json"))
+                return
+            if route == CAPTURE_CONTROL_USER_TEST_PATH:
+                if not self._authorized():
+                    return
+                self._write_json(200, manager.user_test_readiness().model_dump(mode="json"))
                 return
             if route == MEMORY_BOOK_LIST_PATH:
                 if not self._authorized():
@@ -818,6 +926,10 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
             endpoint.base_url + CAPTURE_CONTROL_STATUS_PATH,
             headers=headers,
         )
+        user_test_code, user_test_payload = _request_json(
+            endpoint.base_url + CAPTURE_CONTROL_USER_TEST_PATH,
+            headers=headers,
+        )
         dashboard_code, dashboard_body = _request_text(endpoint.base_url + "/index.html")
         permission_code, permission_payload = _request_json(
             endpoint.base_url + CAPTURE_CONTROL_PERMISSIONS_PATH,
@@ -960,6 +1072,7 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
 
     start_receipt = CaptureControlBridgeReceipt.model_validate(start_payload)
     stop_receipt = CaptureControlBridgeReceipt.model_validate(stop_payload)
+    user_test_receipt = UserTestReadinessReceipt.model_validate(user_test_payload)
     permission_receipt = NativePermissionSmokeResult.model_validate(permission_payload)
     preflight_receipt = CapturePreflightDiagnostics.model_validate(preflight_payload)
     screen_probe_receipt = NativeScreenCaptureProbeResult.model_validate(screen_probe_payload)
@@ -972,8 +1085,15 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         and missing_token_code == 403
         and bad_origin_code == 403
         and status_code == 200
+        and user_test_code == 200
         and dashboard_code == 200
         and "capture-control" in dashboard_body
+        and user_test_receipt.ready_for_user_test
+        and user_test_receipt.status == "ready"
+        and user_test_receipt.helper_cursor_available
+        and not user_test_receipt.screen_capture_required
+        and not user_test_receipt.memory_write_required
+        and "start_screen_capture" in user_test_receipt.blocked_effects
         and permission_code == 200
         and start_code == 200
         and screen_probe_code == 200
@@ -1036,6 +1156,8 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         served_dashboard=dashboard_code == 200 and "capture-control" in dashboard_body,
         start_receipt=start_receipt,
         stop_receipt=stop_receipt,
+        user_test_status_code=user_test_code,
+        user_test_receipt=user_test_receipt,
         receipts_status_code=receipts_code,
         receipt_summary=receipt_summary,
         permission_status_code=permission_code,
@@ -1210,12 +1332,21 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--host", default=DEFAULT_CAPTURE_CONTROL_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_CAPTURE_CONTROL_PORT)
     parser.add_argument("--smoke", action="store_true")
+    parser.add_argument("--user-test", action="store_true")
     parser.add_argument("--json", action="store_true")
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv)
+    if args.user_test:
+        result = CaptureControlProcessManager().user_test_readiness()
+        if args.json:
+            print(result.model_dump_json(indent=2))
+        else:
+            print(f"{result.title}: {result.status}; {result.user_message}")
+        return 0 if result.ready_for_user_test else 1
+
     if args.smoke:
         result = run_capture_control_server_smoke()
         if args.json:

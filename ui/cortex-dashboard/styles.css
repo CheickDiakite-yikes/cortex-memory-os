@@ -1431,6 +1431,23 @@ body[data-active-view="memory_palace"] #memory-list {
   justify-content: flex-end;
 }
 
+.advanced-safety-checks {
+  border: 0;
+}
+
+.advanced-safety-checks summary {
+  width: fit-content;
+  margin-left: auto;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.advanced-safety-checks .shadow-live-actions {
+  margin-top: 8px;
+}
+
 .demo-path-inner {
   display: grid;
   grid-template-columns: minmax(220px, 0.8fr) minmax(360px, 1.5fr) auto;
@@ -1978,6 +1995,13 @@ body[data-active-view="memory_palace"] #memory-list {
   cursor: pointer;
   font-size: 12px;
   font-weight: 800;
+}
+
+.text-command.primary-command {
+  border-color: #145ec6;
+  background: #0a63d8;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgb(10 99 216 / 18%);
 }
 
 .text-command.danger {

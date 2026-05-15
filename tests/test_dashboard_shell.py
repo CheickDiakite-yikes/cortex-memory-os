@@ -253,6 +253,23 @@ def test_dashboard_static_app_refreshes_stale_capture_token():
     assert "missing_or_invalid_capture_token" in app_js
     assert "Capture bridge token refreshed. Retrying local command once." in app_js
     assert "callCaptureControlWithConfig(action, payload, { refreshed: true })" in app_js
+    assert "userTestPath" in app_js
+    assert 'action === "userTest"' in app_js
+
+
+def test_dashboard_static_app_renders_simple_user_test_flow():
+    app_js = Path("ui/cortex-dashboard/app.js").read_text()
+    css = Path("ui/cortex-dashboard/styles.css").read_text()
+
+    assert "Test Cortex Cursor" in app_js
+    assert "Start helper cursor" in app_js
+    assert "Stop helper cursor" in app_js
+    assert "capture-user-test" in app_js
+    assert "screen_capture_required" in app_js
+    assert "memory_write_required" in app_js
+    assert "advanced-safety-checks" in app_js
+    assert ".text-command.primary-command" in css
+    assert ".advanced-safety-checks summary" in css
 
 
 def test_dashboard_static_app_renders_capture_readiness_ladder():
