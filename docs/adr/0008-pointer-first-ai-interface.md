@@ -31,6 +31,11 @@ The first pointer-first spine remains safe-local:
 - pointer-local commands render beside the cursor, not in a distant dashboard;
 - responses, micro-steps, and reviewed memory proposals render beside the
   pointer or target;
+- each pointer turn must compile into an `AgenticTurn`: pointer intent, route
+  decision, approval state, pointer card, redacted receipt, and optional
+  reviewed memory proposal;
+- the first router lanes are `answer_only`, `draft_only`,
+  `assistive_with_approval`, and `blocked`;
 - a cheap model draft may be shown only as an explicit `AI draft` mode using
   controlled target facts, `gpt-5-nano`, minimal reasoning, and `store:false`;
 - target pinning makes "these" visible before it becomes an agent reference;
@@ -47,3 +52,7 @@ promotion, and simple receipts before adding broader real capture.
 The live tutor demo becomes the product proving ground. A dashboard card is only
 acceptable when it explains what happened in plain language after the pointer
 interaction.
+
+The current proving spine is benchmarked by `AGENTIC-TURN-ROUTER-001`,
+`AGENTIC-LIVE-TUTOR-BRIDGE-001`, `AGENTIC-POINTER-CARD-001`, and
+`AGENTIC-RUNTIME-TRACE-001`.

@@ -293,6 +293,19 @@ The dashboard panel stays deliberately conservative. It is display-only,
 content-redacted, source-ref-redacted, and blocks autonomous clicks, typing,
 exports, raw evidence storage, and unreviewed memory writes.
 
+The panel now includes a current-run card rather than only static capability
+counts. That card shows the pointed target, selected route, gateway tool,
+confidence, approval state, and memory-write state in plain language. The
+pointer-side copy remains the product surface; the dashboard is the receipt and
+review surface.
+
+The current safe run is covered by:
+
+- `AGENTIC-TURN-ROUTER-001`
+- `AGENTIC-LIVE-TUTOR-BRIDGE-001`
+- `AGENTIC-POINTER-CARD-001`
+- `AGENTIC-RUNTIME-TRACE-001`
+
 The required receipt class is a local preview receipt, such as:
 
 ```text

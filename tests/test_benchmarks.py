@@ -7,7 +7,7 @@ def test_synthetic_benchmarks_pass():
     result = run_all()
 
     assert result.passed
-    assert len(result.case_results) == 227
+    assert len(result.case_results) == 231
     assert {case.suite for case in result.case_results} >= {
         "MEM-RECALL-001",
         "RETRIEVAL-SCORE-001",
@@ -177,6 +177,10 @@ def test_synthetic_benchmarks_pass():
         "SKILL-METRICS-DASHBOARD-SURFACE-001",
         "MEMORY-PALACE-SKILL-FORGE-UI-001",
         "AGENTIC-OS-PLANNER-001",
+        "AGENTIC-TURN-ROUTER-001",
+        "AGENTIC-LIVE-TUTOR-BRIDGE-001",
+        "AGENTIC-POINTER-CARD-001",
+        "AGENTIC-RUNTIME-TRACE-001",
         "DASHBOARD-FOCUS-INSPECTOR-001",
         "SKILL-GATE-001",
         "SKILL-ROLLBACK-001",

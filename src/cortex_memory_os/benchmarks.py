@@ -198,14 +198,27 @@ from cortex_memory_os.live_tutor_overlay import (
     LIVE_TUTOR_OVERLAY_ID,
     LIVE_TUTOR_OVERLAY_POLICY_REF,
     build_live_tutor_dashboard_panel,
+    build_safe_creative_demo_surface,
+    LiveTutorPointerState,
+    resolve_live_tutor_turn,
     run_live_tutor_browser_replay_smoke,
     run_live_tutor_demo_smoke,
     run_live_tutor_server_smoke,
 )
 from cortex_memory_os.agentic_os import (
+    AGENTIC_LIVE_TUTOR_BRIDGE_ID,
     AGENTIC_OS_PLANNER_ID,
     AGENTIC_OS_POLICY_REF,
+    AGENTIC_POINTER_CARD_ID,
+    AGENTIC_RUNTIME_TRACE_ID,
+    AGENTIC_TURN_POLICY_REF,
+    AGENTIC_TURN_ROUTER_ID,
+    AgenticRouteKind,
+    agentic_turn_from_live_tutor_turn,
     build_agentic_os_dashboard_panel,
+    build_agentic_turn,
+    build_pointer_intent_event,
+    run_agentic_turn_smoke,
     run_agentic_os_smoke,
 )
 from cortex_memory_os.realtime_voice_pointer import (
@@ -777,6 +790,10 @@ def run_all() -> BenchmarkRunResult:
         case_skill_metrics_dashboard_surface_contract,
         case_dashboard_shell_contract,
         case_agentic_os_planner_contract,
+        case_agentic_turn_router_contract,
+        case_agentic_live_tutor_bridge_contract,
+        case_agentic_pointer_card_contract,
+        case_agentic_runtime_trace_receipt_contract,
         case_manual_memory_book_loop_contract,
         case_manual_memory_gateway_contract,
         case_dashboard_focus_inspector_contract,
@@ -12856,6 +12873,184 @@ def case_agentic_os_planner_contract() -> BenchmarkCaseResult:
             "policy_ref": AGENTIC_OS_POLICY_REF,
             "missing_ui_terms": missing_ui_terms,
             "missing_doc_terms": missing_doc_terms,
+        },
+    )
+
+
+def case_agentic_turn_router_contract() -> BenchmarkCaseResult:
+    smoke = run_agentic_turn_smoke()
+    turn = smoke.turn
+    payload = smoke.model_dump_json()
+    passed = (
+        smoke.passed
+        and smoke.policy_ref == AGENTIC_TURN_POLICY_REF
+        and turn.route_decision.route_kind == AgenticRouteKind.DRAFT_ONLY
+        and turn.route_decision.gateway_tool == "skill.execute_draft"
+        and turn.route_decision.requires_confirmation
+        and turn.approval_request is not None
+        and turn.receipt.runtime_trace_recorded
+        and not turn.receipt.durable_memory_write_performed
+        and not turn.receipt.raw_payload_included
+        and not turn.receipt.contains_user_phrase
+        and not turn.receipt.contains_assistant_response
+        and "execute_click" in turn.receipt.blocked_effects
+        and "write_memory_without_review" in turn.receipt.blocked_effects
+        and "raw://" not in payload
+        and "encrypted_blob://" not in payload
+    )
+    return BenchmarkCaseResult(
+        case_id="AGENTIC-TURN-ROUTER-001/pointer_intent_to_safe_route",
+        suite=AGENTIC_TURN_ROUTER_ID,
+        passed=passed,
+        summary=(
+            "Agentic turn router converts one pointer intent into a safe route, "
+            "approval state, pointer card, and redacted receipt."
+        ),
+        metrics={
+            "approval_required": int(turn.route_decision.requires_confirmation),
+            "blocked_effect_count": len(turn.receipt.blocked_effects),
+            "confidence_percent": round(turn.pointer_event.confidence * 100),
+        },
+        evidence={
+            "policy_ref": AGENTIC_TURN_POLICY_REF,
+            "route_kind": turn.route_decision.route_kind.value,
+            "gateway_tool": turn.route_decision.gateway_tool,
+        },
+    )
+
+
+def case_agentic_live_tutor_bridge_contract() -> BenchmarkCaseResult:
+    live_turn = resolve_live_tutor_turn(
+        "Remember this",
+        surface=build_safe_creative_demo_surface(active_page="color"),
+        pointer_state=LiveTutorPointerState(
+            current_target_id="node_graph",
+            referent_phrase="this",
+        ),
+    )
+    agentic_turn = agentic_turn_from_live_tutor_turn(live_turn)
+    payload = agentic_turn.model_dump_json()
+    passed = (
+        agentic_turn.pointer_event.target_id == live_turn.target_id
+        and agentic_turn.pointer_event.target_label == live_turn.target_label
+        and agentic_turn.pointer_event.screen_state_ref.startswith("controlled_dom://")
+        and agentic_turn.route_decision.gateway_tool == "memory.propose"
+        and agentic_turn.memory_proposal_review_required
+        and agentic_turn.receipt.memory_proposal_created
+        and not agentic_turn.receipt.durable_memory_write_performed
+        and not agentic_turn.receipt.raw_payload_included
+        and "write_memory_without_review" in agentic_turn.receipt.blocked_effects
+        and "raw://" not in payload
+        and "encrypted_blob://" not in payload
+    )
+    return BenchmarkCaseResult(
+        case_id="AGENTIC-LIVE-TUTOR-BRIDGE-001/live_tutor_turn_to_agentic_turn",
+        suite=AGENTIC_LIVE_TUTOR_BRIDGE_ID,
+        passed=passed,
+        summary=(
+            "Controlled Live Tutor turns can enter the Agentic OS router while "
+            "staying display-only and review-only."
+        ),
+        metrics={
+            "memory_proposal_created": int(agentic_turn.receipt.memory_proposal_created),
+            "durable_memory_write_performed": int(
+                agentic_turn.receipt.durable_memory_write_performed
+            ),
+        },
+        evidence={
+            "policy_ref": AGENTIC_TURN_POLICY_REF,
+            "source_target": live_turn.target_id,
+            "gateway_tool": agentic_turn.route_decision.gateway_tool,
+        },
+    )
+
+
+def case_agentic_pointer_card_contract() -> BenchmarkCaseResult:
+    turn = build_agentic_turn(
+        pointer_event=build_pointer_intent_event(
+            user_phrase="What is this?",
+            target_id="lut_menu",
+            target_label="LUT Menu",
+            pointer_x=1096,
+            pointer_y=226,
+            confidence=0.91,
+        )
+    )
+    passed = (
+        turn.route_decision.route_kind == AgenticRouteKind.ANSWER_ONLY
+        and turn.pointer_card_title == "Explain LUT Menu"
+        and "without touching your system" in turn.pointer_card_body
+        and turn.pointer_card_primary_action == "Explain this"
+        and not turn.route_decision.requires_confirmation
+        and not turn.route_decision.real_cursor_movement_allowed
+        and not turn.route_decision.external_effect_allowed
+        and not turn.route_decision.raw_ref_allowed
+        and "execute_click" in turn.route_decision.blocked_effects
+    )
+    return BenchmarkCaseResult(
+        case_id="AGENTIC-POINTER-CARD-001/answer_only_pointer_card",
+        suite=AGENTIC_POINTER_CARD_ID,
+        passed=passed,
+        summary=(
+            "Pointer card copy stays short, local, answer-only, and anchored to "
+            "a controlled target without enabling effects."
+        ),
+        metrics={
+            "title_chars": len(turn.pointer_card_title),
+            "body_chars": len(turn.pointer_card_body),
+            "confidence_percent": round(turn.pointer_event.confidence * 100),
+        },
+        evidence={
+            "policy_ref": AGENTIC_TURN_POLICY_REF,
+            "route_kind": turn.route_decision.route_kind.value,
+            "primary_action": turn.pointer_card_primary_action,
+        },
+    )
+
+
+def case_agentic_runtime_trace_receipt_contract() -> BenchmarkCaseResult:
+    turn = build_agentic_turn(
+        pointer_event=build_pointer_intent_event(
+            user_phrase="Fix this locally",
+            target_id="inspector_panel",
+            target_label="Inspector",
+            pointer_x=1308,
+            pointer_y=184,
+            confidence=0.82,
+        )
+    )
+    payload = turn.receipt.model_dump_json()
+    passed = (
+        turn.route_decision.route_kind == AgenticRouteKind.ASSISTIVE_WITH_APPROVAL
+        and turn.receipt.runtime_trace_recorded
+        and turn.receipt.approval_required
+        and turn.approval_request is not None
+        and not turn.approval_request.approved
+        and not turn.receipt.raw_payload_included
+        and not turn.receipt.contains_user_phrase
+        and not turn.receipt.contains_assistant_response
+        and not turn.receipt.durable_memory_write_performed
+        and "execute_click" in turn.receipt.blocked_effects
+        and "raw://" not in payload
+        and "encrypted_blob://" not in payload
+    )
+    return BenchmarkCaseResult(
+        case_id="AGENTIC-RUNTIME-TRACE-001/redacted_agentic_run_receipt",
+        suite=AGENTIC_RUNTIME_TRACE_ID,
+        passed=passed,
+        summary=(
+            "Agentic turns record a redacted trace receipt before learning or "
+            "effects, with approval visible and unapproved."
+        ),
+        metrics={
+            "approval_required": int(turn.receipt.approval_required),
+            "blocked_effect_count": len(turn.receipt.blocked_effects),
+            "raw_payload_included": int(turn.receipt.raw_payload_included),
+        },
+        evidence={
+            "policy_ref": AGENTIC_TURN_POLICY_REF,
+            "route_kind": turn.route_decision.route_kind.value,
+            "gateway_tool": turn.route_decision.gateway_tool,
         },
     )
 
