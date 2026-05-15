@@ -361,10 +361,12 @@ async function triggerControlledAgenticTurn() {
   try {
     const turn = await callAgenticTurnBridge("turn", controlledAgenticTurnPayload());
     const receipts = await callAgenticTurnBridge("receipts");
+    const helperStatus = await callCaptureControl("status");
     agenticRunState.latest = turn;
     agenticRunState.receipts = receipts.receipts || [];
     agenticRunState.loading = false;
     renderAgenticOSPanel();
+    updateCaptureRuntime(helperStatus);
     writeReceipt(turn.receipt.user_visible_summary);
   } catch (error) {
     agenticRunState.loading = false;
@@ -767,6 +769,8 @@ function renderCaptureControl() {
       <div><span>Bridge</span><strong id="capture-runtime-status">checking</strong></div>
       <div><span>Missing</span><strong>${escapeHtml(missing)}</strong></div>
       <div><span>PID</span><strong id="capture-runtime-pid">none</strong></div>
+      <div><span>Pointer card</span><strong id="capture-runtime-card">ready</strong></div>
+      <div><span>Live card</span><strong id="capture-runtime-card-state">off</strong></div>
     </div>
     <div class="shadow-live-actions">
       <button class="text-command primary-command" type="button" id="capture-turn-on">
@@ -985,8 +989,12 @@ async function refreshCaptureRuntimeStatus(panel) {
 function updateCaptureRuntime(receipt) {
   const status = document.querySelector("#capture-runtime-status");
   const pid = document.querySelector("#capture-runtime-pid");
+  const card = document.querySelector("#capture-runtime-card");
+  const cardState = document.querySelector("#capture-runtime-card-state");
   if (status) status.textContent = receipt.running ? "running" : receipt.state === "exited" ? "exited" : "ready";
   if (pid) pid.textContent = receipt.pid ? String(receipt.pid) : "none";
+  if (card) card.textContent = receipt.agentic_card_title || "ready";
+  if (cardState) cardState.textContent = receipt.agentic_card_live_state_active ? "live" : "off";
 }
 
 function renderShadowPointerLiveReceipt() {

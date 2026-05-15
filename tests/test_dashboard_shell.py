@@ -317,6 +317,11 @@ def test_dashboard_static_app_renders_simple_user_test_flow():
     assert "screen_capture_required" in app_js
     assert "memory_write_required" in app_js
     assert "advanced-safety-checks" in app_js
+    assert "capture-runtime-card" in app_js
+    assert "capture-runtime-card-state" in app_js
+    assert "agentic_card_title" in app_js
+    assert "agentic_card_live_state_active" in app_js
+    assert 'const helperStatus = await callCaptureControl("status");' in app_js
     assert ".text-command.primary-command" in css
     assert ".advanced-safety-checks summary" in css
 
