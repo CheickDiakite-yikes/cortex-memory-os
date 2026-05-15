@@ -549,6 +549,8 @@ from cortex_memory_os.native_cursor_follow import (
     NATIVE_CURSOR_FOLLOW_ID,
     NATIVE_CURSOR_FOLLOW_POLICY_REF,
     NATIVE_CURSOR_RESPONSIVENESS_ID,
+    NATIVE_OVERLAY_VISUAL_POLISH_ID,
+    NATIVE_OVERLAY_VISUAL_POLISH_POLICY_REF,
     build_fixture_native_cursor_follow_smoke_result,
 )
 from cortex_memory_os.native_screen_capture_probe import (
@@ -739,6 +741,7 @@ def run_all() -> BenchmarkRunResult:
         case_native_overlay_stream_smoke_contract,
         case_native_cursor_follow_contract,
         case_native_cursor_responsiveness_contract,
+        case_native_overlay_visual_polish_contract,
         case_clicky_ux_companion_contract,
         case_shadow_pointer_native_overlay_contract,
         case_native_capture_permission_smoke_contract,
@@ -10744,6 +10747,67 @@ def case_native_cursor_responsiveness_contract() -> BenchmarkCaseResult:
             "surface_scope": result.config.surface_scope,
             "coordinate_space": result.config.coordinate_space,
             "bubble_anchor_strategy": result.config.bubble_anchor_strategy,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_native_overlay_visual_polish_contract() -> BenchmarkCaseResult:
+    result = build_fixture_native_cursor_follow_smoke_result(
+        checked_at=datetime(2026, 5, 15, 13, 0, tzinfo=UTC)
+    )
+    visual = result.visual_spec
+    docs_text = _real_capture_docs_text()
+    missing_terms = _missing_terms(
+        docs_text,
+        [
+            NATIVE_OVERLAY_VISUAL_POLISH_ID,
+            NATIVE_OVERLAY_VISUAL_POLISH_POLICY_REF,
+            "Apple-like",
+            "system material",
+            "vibrancy",
+            "three-dot",
+            "reduced motion",
+        ],
+    )
+    passed = (
+        result.passed
+        and visual.visual_style == "apple_liquid_glass_companion"
+        and visual.material == "hud_window_vibrant_material"
+        and visual.vibrancy_enabled
+        and visual.tint_semantic_only
+        and visual.cursor_shape == "secondary_arrow"
+        and visual.cursor_hotspot_visible
+        and visual.loading_animation == "three_dot_breathing"
+        and visual.loading_dot_count == 3
+        and visual.animation_respects_reduced_motion
+        and visual.max_text_lines <= 2
+        and visual.avoids_opaque_scrim
+        and visual.glass_elements_grouped
+        and visual.display_only
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="NATIVE-OVERLAY-VISUAL-POLISH-001/liquid_glass_pointer_companion",
+        suite=NATIVE_OVERLAY_VISUAL_POLISH_ID,
+        passed=passed,
+        summary=(
+            "Native Shadow Clicker uses an Apple-like glass companion treatment "
+            "with system material, vibrancy, semantic tint, loading animation, "
+            "and compact display-only text."
+        ),
+        metrics={
+            "loading_dot_count": visual.loading_dot_count,
+            "loading_frame_rate_hz": visual.loading_frame_rate_hz,
+            "max_text_lines": visual.max_text_lines,
+            "bubble_corner_radius": visual.bubble_corner_radius,
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": NATIVE_OVERLAY_VISUAL_POLISH_POLICY_REF,
+            "material": visual.material,
+            "visual_style": visual.visual_style,
+            "loading_animation": visual.loading_animation,
             "missing_doc_terms": missing_terms,
         },
     )

@@ -16,6 +16,8 @@ public let nativeCapturePermissionSmokePolicyRef = "policy_native_capture_permis
 public let nativeCursorFollowBenchmarkID = "NATIVE-CURSOR-FOLLOW-001"
 public let nativeCursorFollowPolicyRef = "policy_native_cursor_follow_v1"
 public let nativeCursorResponsivenessBenchmarkID = "NATIVE-CURSOR-RESPONSIVENESS-001"
+public let nativeOverlayVisualPolishBenchmarkID = "NATIVE-OVERLAY-VISUAL-POLISH-001"
+public let nativeOverlayVisualPolishPolicyRef = "policy_native_overlay_visual_polish_v1"
 public let nativeScreenCaptureProbeBenchmarkID = "NATIVE-SCREEN-CAPTURE-PROBE-001"
 public let nativeScreenCaptureProbePolicyRef = "policy_native_screen_capture_probe_v1"
 
@@ -760,6 +762,147 @@ public struct NativeBubbleSize: Codable, Equatable, Sendable {
     public static let compactInstruction = NativeBubbleSize(width: 240, height: 72)
 }
 
+public struct NativeOverlayVisualSpec: Codable, Equatable, Sendable {
+    public var benchmarkID: String
+    public var policyRef: String
+    public var visualStyle: String
+    public var material: String
+    public var vibrancyEnabled: Bool
+    public var tintSemanticOnly: Bool
+    public var cursorShape: String
+    public var cursorStrokeColor: String
+    public var cursorFillColor: String
+    public var cursorHotspotVisible: Bool
+    public var bubbleCornerRadius: Double
+    public var bubbleShadowRadius: Double
+    public var bubbleMaxWidth: Double
+    public var loadingAnimation: String
+    public var loadingDotCount: Int
+    public var loadingFrameRateHz: Int
+    public var motionCurve: String
+    public var animationRespectsReducedMotion: Bool
+    public var maxTextLines: Int
+    public var foregroundStyle: String
+    public var avoidsOpaqueScrim: Bool
+    public var glassElementsGrouped: Bool
+    public var displayOnly: Bool
+    public var blockedEffects: [String]
+
+    public init(
+        benchmarkID: String = nativeOverlayVisualPolishBenchmarkID,
+        policyRef: String = nativeOverlayVisualPolishPolicyRef,
+        visualStyle: String = "apple_liquid_glass_companion",
+        material: String = "hud_window_vibrant_material",
+        vibrancyEnabled: Bool = true,
+        tintSemanticOnly: Bool = true,
+        cursorShape: String = "secondary_arrow",
+        cursorStrokeColor: String = "system_blue",
+        cursorFillColor: String = "vibrant_white",
+        cursorHotspotVisible: Bool = true,
+        bubbleCornerRadius: Double = 18,
+        bubbleShadowRadius: Double = 24,
+        bubbleMaxWidth: Double = 260,
+        loadingAnimation: String = "three_dot_breathing",
+        loadingDotCount: Int = 3,
+        loadingFrameRateHz: Int = 30,
+        motionCurve: String = "low_latency_linear_follow_soft_opacity",
+        animationRespectsReducedMotion: Bool = true,
+        maxTextLines: Int = 2,
+        foregroundStyle: String = "vibrant_label_and_secondary_label",
+        avoidsOpaqueScrim: Bool = true,
+        glassElementsGrouped: Bool = true,
+        displayOnly: Bool = true,
+        blockedEffects: [String] = [
+            "start_screen_capture",
+            "start_accessibility_observer",
+            "execute_click",
+            "type_text",
+            "move_system_cursor",
+            "steal_focus",
+            "write_memory",
+            "store_raw_evidence",
+            "export_payload",
+        ]
+    ) {
+        self.benchmarkID = benchmarkID
+        self.policyRef = policyRef
+        self.visualStyle = visualStyle
+        self.material = material
+        self.vibrancyEnabled = vibrancyEnabled
+        self.tintSemanticOnly = tintSemanticOnly
+        self.cursorShape = cursorShape
+        self.cursorStrokeColor = cursorStrokeColor
+        self.cursorFillColor = cursorFillColor
+        self.cursorHotspotVisible = cursorHotspotVisible
+        self.bubbleCornerRadius = bubbleCornerRadius
+        self.bubbleShadowRadius = bubbleShadowRadius
+        self.bubbleMaxWidth = bubbleMaxWidth
+        self.loadingAnimation = loadingAnimation
+        self.loadingDotCount = loadingDotCount
+        self.loadingFrameRateHz = loadingFrameRateHz
+        self.motionCurve = motionCurve
+        self.animationRespectsReducedMotion = animationRespectsReducedMotion
+        self.maxTextLines = maxTextLines
+        self.foregroundStyle = foregroundStyle
+        self.avoidsOpaqueScrim = avoidsOpaqueScrim
+        self.glassElementsGrouped = glassElementsGrouped
+        self.displayOnly = displayOnly
+        self.blockedEffects = blockedEffects
+    }
+
+    public func validated() throws -> NativeOverlayVisualSpec {
+        guard benchmarkID == nativeOverlayVisualPolishBenchmarkID else {
+            throw ShadowPointerNativeError.invalidControl("native overlay visual benchmark mismatch")
+        }
+        guard policyRef == nativeOverlayVisualPolishPolicyRef else {
+            throw ShadowPointerNativeError.invalidControl("native overlay visual policy mismatch")
+        }
+        guard visualStyle == "apple_liquid_glass_companion" else {
+            throw ShadowPointerNativeError.invalidControl("native overlay visual style mismatch")
+        }
+        guard material == "hud_window_vibrant_material" && vibrancyEnabled else {
+            throw ShadowPointerNativeError.invalidControl("native overlay must use system material and vibrancy")
+        }
+        guard tintSemanticOnly && avoidsOpaqueScrim && glassElementsGrouped else {
+            throw ShadowPointerNativeError.invalidControl("native overlay glass treatment is too custom or heavy")
+        }
+        guard cursorShape == "secondary_arrow" && cursorHotspotVisible else {
+            throw ShadowPointerNativeError.invalidControl("native overlay cursor affordance is unclear")
+        }
+        guard bubbleCornerRadius >= 14 && bubbleCornerRadius <= 24 else {
+            throw ShadowPointerNativeError.invalidControl("native overlay bubble radius outside desktop glass range")
+        }
+        guard loadingAnimation == "three_dot_breathing"
+            && loadingDotCount == 3
+            && loadingFrameRateHz >= 24
+            && animationRespectsReducedMotion
+        else {
+            throw ShadowPointerNativeError.invalidControl("native overlay loading animation is not product-ready")
+        }
+        guard maxTextLines <= 2 && foregroundStyle == "vibrant_label_and_secondary_label" else {
+            throw ShadowPointerNativeError.invalidControl("native overlay text treatment is too dense")
+        }
+        guard displayOnly else {
+            throw ShadowPointerNativeError.invalidControl("native overlay visual layer must be display-only")
+        }
+        let requiredBlocked = Set([
+            "start_screen_capture",
+            "start_accessibility_observer",
+            "execute_click",
+            "type_text",
+            "move_system_cursor",
+            "steal_focus",
+            "write_memory",
+            "store_raw_evidence",
+            "export_payload",
+        ])
+        guard requiredBlocked.isSubset(of: Set(blockedEffects)) else {
+            throw ShadowPointerNativeError.invalidControl("native overlay visual spec missing blocked effects")
+        }
+        return self
+    }
+}
+
 public struct NativeOverlayPlacement: Codable, Equatable, Sendable {
     public var overlayOriginX: Double
     public var overlayOriginY: Double
@@ -846,6 +989,7 @@ public struct NativeCursorFollowSmokeResult: Codable, Equatable, Sendable {
     public var checkedAt: Date
     public var config: NativeCursorFollowConfig
     public var overlaySpec: NativeOverlayWindowSpec
+    public var visualSpec: NativeOverlayVisualSpec
     public var cursorSamples: [NativeCursorSample]
     public var displayOnly: Bool
     public var captureStarted: Bool
@@ -872,6 +1016,7 @@ public struct NativeCursorFollowSmokeResult: Codable, Equatable, Sendable {
     ) throws -> NativeCursorFollowSmokeResult {
         let config = try NativeCursorFollowConfig().validated()
         let overlaySpec = NativeOverlayWindowSpec.shadowPointerDefault
+        let visualSpec = try NativeOverlayVisualSpec().validated()
         let placementSamples = try samples.map {
             try NativeCursorPlacementEngine.place(sample: $0, config: config)
         }
@@ -896,12 +1041,16 @@ public struct NativeCursorFollowSmokeResult: Codable, Equatable, Sendable {
             && systemWideReady
             && bubbleAnchorReady
             && maxDrift <= config.maxPointerDriftPx
+            && visualSpec.displayOnly
+            && visualSpec.material == "hud_window_vibrant_material"
+            && visualSpec.loadingAnimation == "three_dot_breathing"
         return NativeCursorFollowSmokeResult(
             benchmarkID: nativeCursorFollowBenchmarkID,
             policyRef: nativeCursorFollowPolicyRef,
             checkedAt: checkedAt,
             config: config,
             overlaySpec: overlaySpec,
+            visualSpec: visualSpec,
             cursorSamples: samples,
             displayOnly: true,
             captureStarted: false,

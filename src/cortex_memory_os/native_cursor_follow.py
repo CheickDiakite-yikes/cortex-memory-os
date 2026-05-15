@@ -20,6 +20,8 @@ NATIVE_CURSOR_FOLLOW_ID = "NATIVE-CURSOR-FOLLOW-001"
 NATIVE_CURSOR_FOLLOW_POLICY_REF = "policy_native_cursor_follow_v1"
 NATIVE_CURSOR_FOLLOW_COMMAND = "cortex-shadow-clicker"
 NATIVE_CURSOR_RESPONSIVENESS_ID = "NATIVE-CURSOR-RESPONSIVENESS-001"
+NATIVE_OVERLAY_VISUAL_POLISH_ID = "NATIVE-OVERLAY-VISUAL-POLISH-001"
+NATIVE_OVERLAY_VISUAL_POLISH_POLICY_REF = "policy_native_overlay_visual_polish_v1"
 
 
 class RunnerCompleted(Protocol):
@@ -145,12 +147,80 @@ class NativeOverlayWindowSpec(StrictModel):
     accessibility_label: str
 
 
+class NativeOverlayVisualSpec(StrictModel):
+    benchmark_id: str = NATIVE_OVERLAY_VISUAL_POLISH_ID
+    policy_ref: str = NATIVE_OVERLAY_VISUAL_POLISH_POLICY_REF
+    visual_style: str
+    material: str
+    vibrancy_enabled: bool
+    tint_semantic_only: bool
+    cursor_shape: str
+    cursor_stroke_color: str
+    cursor_fill_color: str
+    cursor_hotspot_visible: bool
+    bubble_corner_radius: float = Field(ge=14, le=24)
+    bubble_shadow_radius: float = Field(ge=12, le=36)
+    bubble_max_width: float = Field(ge=220, le=320)
+    loading_animation: str
+    loading_dot_count: int = Field(ge=3, le=3)
+    loading_frame_rate_hz: int = Field(ge=24, le=60)
+    motion_curve: str
+    animation_respects_reduced_motion: bool
+    max_text_lines: int = Field(ge=1, le=2)
+    foreground_style: str
+    avoids_opaque_scrim: bool
+    glass_elements_grouped: bool
+    display_only: bool
+    blocked_effects: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def enforce_native_visual_polish(self) -> "NativeOverlayVisualSpec":
+        if self.benchmark_id != NATIVE_OVERLAY_VISUAL_POLISH_ID:
+            raise ValueError("native overlay visual benchmark mismatch")
+        if self.policy_ref != NATIVE_OVERLAY_VISUAL_POLISH_POLICY_REF:
+            raise ValueError("native overlay visual policy mismatch")
+        if self.visual_style != "apple_liquid_glass_companion":
+            raise ValueError("native overlay visual style mismatch")
+        if self.material != "hud_window_vibrant_material" or not self.vibrancy_enabled:
+            raise ValueError("native overlay must use system material and vibrancy")
+        if not self.tint_semantic_only or not self.avoids_opaque_scrim:
+            raise ValueError("native overlay glass treatment is too decorative or heavy")
+        if not self.glass_elements_grouped:
+            raise ValueError("native overlay glass elements must be grouped")
+        if self.cursor_shape != "secondary_arrow" or not self.cursor_hotspot_visible:
+            raise ValueError("native overlay cursor affordance is unclear")
+        if (
+            self.loading_animation != "three_dot_breathing"
+            or not self.animation_respects_reduced_motion
+        ):
+            raise ValueError("native overlay loading animation is not product-ready")
+        if self.foreground_style != "vibrant_label_and_secondary_label":
+            raise ValueError("native overlay foreground style is not system-vibrant")
+        if not self.display_only:
+            raise ValueError("native overlay visual layer must be display-only")
+        required_blocked = {
+            "start_screen_capture",
+            "start_accessibility_observer",
+            "execute_click",
+            "type_text",
+            "move_system_cursor",
+            "steal_focus",
+            "write_memory",
+            "store_raw_evidence",
+            "export_payload",
+        }
+        if missing := sorted(required_blocked.difference(self.blocked_effects)):
+            raise ValueError(f"native overlay visual spec missing blocked effects: {missing}")
+        return self
+
+
 class NativeCursorFollowSmokeResult(StrictModel):
     benchmark_id: str = Field(min_length=1)
     policy_ref: str = Field(min_length=1)
     checked_at: datetime
     config: NativeCursorFollowConfig
     overlay_spec: NativeOverlayWindowSpec | None = None
+    visual_spec: NativeOverlayVisualSpec
     cursor_samples: list[NativeCursorSample] = Field(min_length=1)
     display_only: bool
     capture_started: bool
@@ -191,6 +261,10 @@ class NativeCursorFollowSmokeResult(StrictModel):
             raise ValueError("native cursor follower sample interval exceeds render latency budget")
         if self.max_pointer_drift_px_measured > self.config.max_pointer_drift_px:
             raise ValueError("native cursor follower drift exceeds budget")
+        if not self.visual_spec.display_only:
+            raise ValueError("native overlay visual layer must remain display-only")
+        if self.visual_spec.material != "hud_window_vibrant_material":
+            raise ValueError("native overlay must use system material")
         return self
 
 
@@ -281,6 +355,40 @@ def build_fixture_native_cursor_follow_smoke_result(
                 "steal_focus",
                 "browser_only_tracking",
                 "unanchored_response_bubble",
+                "write_memory",
+                "store_raw_evidence",
+                "export_payload",
+            ],
+        ),
+        visual_spec=NativeOverlayVisualSpec(
+            visual_style="apple_liquid_glass_companion",
+            material="hud_window_vibrant_material",
+            vibrancy_enabled=True,
+            tint_semantic_only=True,
+            cursor_shape="secondary_arrow",
+            cursor_stroke_color="system_blue",
+            cursor_fill_color="vibrant_white",
+            cursor_hotspot_visible=True,
+            bubble_corner_radius=18,
+            bubble_shadow_radius=24,
+            bubble_max_width=260,
+            loading_animation="three_dot_breathing",
+            loading_dot_count=3,
+            loading_frame_rate_hz=30,
+            motion_curve="low_latency_linear_follow_soft_opacity",
+            animation_respects_reduced_motion=True,
+            max_text_lines=2,
+            foreground_style="vibrant_label_and_secondary_label",
+            avoids_opaque_scrim=True,
+            glass_elements_grouped=True,
+            display_only=True,
+            blocked_effects=[
+                "start_screen_capture",
+                "start_accessibility_observer",
+                "execute_click",
+                "type_text",
+                "move_system_cursor",
+                "steal_focus",
                 "write_memory",
                 "store_raw_evidence",
                 "export_payload",

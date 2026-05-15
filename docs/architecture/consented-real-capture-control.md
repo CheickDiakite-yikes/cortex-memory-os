@@ -26,6 +26,7 @@ The first implementation was intentionally split into ten governed slices:
 | `REAL-CAPTURE-OBSERVATION-SAMPLER-001` | `policy_real_capture_observation_sampler_v1` | Starts sampling as count-only receipts. | No raw pixels, private accessibility values, or window titles by default. |
 | `NATIVE-CURSOR-FOLLOW-001` | `policy_native_cursor_follow_v1` | Adds `cortex-shadow-clicker`, a native Shadow Clicker overlay that can follow the global cursor. | Uses `read_global_cursor_position`; display-only; no screen capture, Accessibility observer, click, type, export, raw ref, or memory write. |
 | `NATIVE-CURSOR-RESPONSIVENESS-001` | `policy_native_cursor_follow_v1` | Tightens the product feel: system-wide macOS scope, browser-independent global display coordinates, 60 Hz sampling, hotspot-aligned overlay placement, and cursor-adjacent edge-aware response bubbles. | Tracking cannot depend on Chrome/browser coordinates, move the real cursor, steal focus, or place response bubbles away from the active pointer context. |
+| `NATIVE-OVERLAY-VISUAL-POLISH-001` | `policy_native_overlay_visual_polish_v1` | Gives the Shadow Clicker an Apple-like glass companion treatment: system material, vibrancy, semantic tint only, compact text, and a three-dot loading animation that respects reduced motion. | Visual polish cannot add capture, Accessibility observers, click/type authority, focus stealing, cursor movement, memory writes, raw evidence, exports, opaque scrims, or distracting custom chrome. |
 | `DASHBOARD-CAPTURE-CONTROL-001` | `policy_dashboard_capture_control_v1` | Exposes Capture Control and Turn On Cortex state in the dashboard. | Static dashboard HTML does not claim to launch native processes directly; when served by the localhost bridge it can call fixed start/status/stop endpoints for the display-only overlay. |
 
 The next ten slices harden the bridge and add the first metadata-only real screen probe:
@@ -85,6 +86,14 @@ system cursor, the placement contract flips it to the left instead of floating
 somewhere unrelated. The wrapper reports `system_wide_macos`,
 `global_display_pixels`, `browser_dependency=false`, bounded pointer drift, and
 the `NATIVE-CURSOR-RESPONSIVENESS-001` benchmark verifies that contract.
+
+The visual layer uses an Apple-like glass treatment without becoming decorative
+noise. The native bubble is a system material surface with vibrancy, a compact
+two-line text budget, semantic blue cursor tint, soft glass shadow, and a
+three-dot loading indicator. Motion is intentionally small and must respect
+reduced motion. The `NATIVE-OVERLAY-VISUAL-POLISH-001` benchmark keeps this
+design honest by checking for `policy_native_overlay_visual_polish_v1`, system
+material, vibrancy, reduced motion handling, and display-only blocked effects.
 
 Dashboard bridge:
 

@@ -1,6 +1,6 @@
 # Benchmark Plan
 
-Last updated: 2026-05-02
+Last updated: 2026-05-15
 
 This plan defines the minimum quality gates for Cortex Memory OS slices. The
 benchmark runner is intentionally synthetic-first so it can run locally without
@@ -80,6 +80,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `NATIVE-SHADOW-POINTER-LIVE-FEED-001` | Native overlay consumes redacted live receipts as display-only frames. | Native feed starts capture/observers, writes memory, retains raw refs, or gains click/type/export authority. |
 | `NATIVE-CURSOR-FOLLOW-001` | Native Shadow Clicker follows global cursor samples as a display-only overlay. | Cursor follower starts screen capture, starts Accessibility observers, clicks, types, writes memory, stores raw evidence, exports payloads, or stops ignoring mouse events. |
 | `NATIVE-CURSOR-RESPONSIVENESS-001` | Native Shadow Clicker is system-wide, browser-independent, 60 Hz, hotspot-aligned, and response bubbles are cursor-adjacent and edge-aware. | Pointer tracking lags, drifts from the system cursor, depends on Chrome/browser coordinates, steals focus, moves the real cursor, or places bubbles away from the current pointer context. |
+| `NATIVE-OVERLAY-VISUAL-POLISH-001` | Native Shadow Clicker renders an Apple-like glass companion bubble with system material, vibrancy, compact text, and reduced-motion-aware loading animation. | Visual polish adds opaque chrome, noisy decoration, unanchored bubbles, capture/observer authority, click/type authority, focus stealing, cursor movement, memory writes, raw evidence, or exports. |
 | `CLICKY-UX-COMPANION-001` | Clicky-inspired `Cursor Companion` keeps live UX cursor-adjacent, compact, and display-only. | UX adaptation executes external repo code, enables capture/actions, hides trust state, or reintroduces dashboard crowding. |
 | `SHADOW-POINTER-NATIVE-001` | SwiftPM native macOS proof exposes a transparent non-activating overlay boundary plus pause, delete-recent, and app-ignore receipts. | Native overlay can become key/main, accepts mouse input by default, starts capture, writes memory, or lacks tested control receipts. |
 | `NATIVE-CAPTURE-PERMISSION-SMOKE-001` | Native macOS permission smoke reports Screen Recording and Accessibility status without prompting or starting capture. | Smoke requests permissions, starts capture or Accessibility observers, writes memory, emits evidence refs, or treats denied permissions as a benchmark failure. |

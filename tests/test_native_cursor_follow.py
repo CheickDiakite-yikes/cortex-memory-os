@@ -41,6 +41,15 @@ def test_fixture_native_cursor_follow_is_cursor_only_and_display_only():
     assert result.sample_interval_ms <= result.config.max_render_latency_ms
     assert result.max_pointer_drift_px_measured <= result.config.max_pointer_drift_px
     assert result.bubble_anchor_ready
+    assert result.visual_spec.visual_style == "apple_liquid_glass_companion"
+    assert result.visual_spec.material == "hud_window_vibrant_material"
+    assert result.visual_spec.vibrancy_enabled
+    assert result.visual_spec.loading_animation == "three_dot_breathing"
+    assert result.visual_spec.loading_dot_count == 3
+    assert result.visual_spec.animation_respects_reduced_motion
+    assert result.visual_spec.max_text_lines == 2
+    assert result.visual_spec.avoids_opaque_scrim
+    assert result.visual_spec.display_only
     assert {placement.bubble_anchored_to for placement in result.placement_samples} == {
         "system_cursor"
     }
@@ -80,6 +89,11 @@ def test_parse_native_cursor_follow_output_rejects_capture_memory_and_browser_on
     payload = build_fixture_native_cursor_follow_smoke_result().model_dump(mode="json")
     payload["max_pointer_drift_px_measured"] = 30
     with pytest.raises(ValueError, match="less than or equal to 18"):
+        parse_native_cursor_follow_output(json.dumps(payload))
+
+    payload = build_fixture_native_cursor_follow_smoke_result().model_dump(mode="json")
+    payload["visual_spec"]["material"] = "opaque_custom_card"
+    with pytest.raises(ValueError, match="system material"):
         parse_native_cursor_follow_output(json.dumps(payload))
 
 

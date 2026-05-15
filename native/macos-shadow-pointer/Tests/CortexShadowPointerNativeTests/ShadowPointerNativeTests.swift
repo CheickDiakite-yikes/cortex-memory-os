@@ -143,6 +143,30 @@ final class ShadowPointerNativeTests: XCTestCase {
         XCTAssertTrue(config.blockedEffects.contains("write_memory"))
     }
 
+    func testNativeOverlayVisualSpecUsesSystemGlassAndLoadingStates() throws {
+        let visual = try NativeOverlayVisualSpec().validated()
+
+        XCTAssertEqual(visual.benchmarkID, nativeOverlayVisualPolishBenchmarkID)
+        XCTAssertEqual(visual.policyRef, nativeOverlayVisualPolishPolicyRef)
+        XCTAssertEqual(visual.visualStyle, "apple_liquid_glass_companion")
+        XCTAssertEqual(visual.material, "hud_window_vibrant_material")
+        XCTAssertTrue(visual.vibrancyEnabled)
+        XCTAssertTrue(visual.tintSemanticOnly)
+        XCTAssertEqual(visual.cursorShape, "secondary_arrow")
+        XCTAssertTrue(visual.cursorHotspotVisible)
+        XCTAssertEqual(visual.loadingAnimation, "three_dot_breathing")
+        XCTAssertEqual(visual.loadingDotCount, 3)
+        XCTAssertGreaterThanOrEqual(visual.loadingFrameRateHz, 24)
+        XCTAssertTrue(visual.animationRespectsReducedMotion)
+        XCTAssertLessThanOrEqual(visual.maxTextLines, 2)
+        XCTAssertEqual(visual.foregroundStyle, "vibrant_label_and_secondary_label")
+        XCTAssertTrue(visual.avoidsOpaqueScrim)
+        XCTAssertTrue(visual.glassElementsGrouped)
+        XCTAssertTrue(visual.displayOnly)
+        XCTAssertTrue(visual.blockedEffects.contains("execute_click"))
+        XCTAssertTrue(visual.blockedEffects.contains("start_screen_capture"))
+    }
+
     func testNativeCursorFollowSmokeUsesOnlyCursorSamples() throws {
         let result = try NativeCursorFollowSmokeResult.run(
             samples: [
@@ -162,6 +186,10 @@ final class ShadowPointerNativeTests: XCTestCase {
         XCTAssertFalse(result.rawRefRetained)
         XCTAssertTrue(result.externalEffects.isEmpty)
         XCTAssertTrue(result.overlaySpec.ignoresMouseEventsByDefault)
+        XCTAssertEqual(result.visualSpec.visualStyle, "apple_liquid_glass_companion")
+        XCTAssertEqual(result.visualSpec.material, "hud_window_vibrant_material")
+        XCTAssertEqual(result.visualSpec.loadingAnimation, "three_dot_breathing")
+        XCTAssertTrue(result.visualSpec.avoidsOpaqueScrim)
         XCTAssertTrue(result.systemWideReady)
         XCTAssertFalse(result.browserDependency)
         XCTAssertLessThanOrEqual(result.sampleIntervalMs, result.config.maxRenderLatencyMs)

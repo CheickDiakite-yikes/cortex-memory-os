@@ -32,6 +32,10 @@ permission prompts.
   `browser_dependency=false`, budgets 60 Hz tracking, aligns the drawn cursor
   hotspot to the pointer, and keeps response bubbles cursor-adjacent with
   edge-aware flipping.
+- `cortex-shadow-clicker` now carries a Liquid Glass-inspired native companion
+  surface: `hudWindow` system material, vibrancy, semantic blue tint, soft
+  shadow, compact two-line copy, and a three-dot loading animation that freezes
+  when macOS reduced motion is enabled.
 
 ## Permission Smoke Safety
 

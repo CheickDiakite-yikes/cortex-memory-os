@@ -147,26 +147,154 @@ final class ShadowClickerView: NSView {
 
 @available(macOS 13.0, *)
 @MainActor
+final class LoadingDotsView: NSView {
+    var phase: Double = 0 {
+        didSet { needsDisplay = true }
+    }
+
+    override var isFlipped: Bool { true }
+
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor.clear.setFill()
+        dirtyRect.fill()
+
+        for index in 0..<3 {
+            let progress = (sin(phase + Double(index) * 0.85) + 1) / 2
+            let alpha = 0.32 + 0.52 * progress
+            let diameter = 5.0 + 1.6 * progress
+            let x = 4.0 + Double(index) * 11.0
+            let y = 9.0 - diameter / 2
+            let dot = NSBezierPath(
+                ovalIn: NSRect(x: x, y: y, width: diameter, height: diameter)
+            )
+            NSColor.systemBlue.withAlphaComponent(alpha).setFill()
+            dot.fill()
+        }
+    }
+}
+
+@available(macOS 13.0, *)
+@MainActor
+final class ShadowClickerBubbleView: NSVisualEffectView {
+    private let visualSpec: NativeOverlayVisualSpec
+    private let titleField = NSTextField(labelWithString: "Cortex")
+    private let messageField = NSTextField(labelWithString: "Ready beside your pointer")
+    private let statusField = NSTextField(labelWithString: "display-only")
+    private let dotsView = LoadingDotsView(frame: NSRect(x: 0, y: 0, width: 44, height: 20))
+
+    init(frame: NSRect, visualSpec: NativeOverlayVisualSpec) {
+        self.visualSpec = visualSpec
+        super.init(frame: frame)
+        material = .hudWindow
+        blendingMode = .behindWindow
+        state = .active
+        wantsLayer = true
+        layer?.cornerRadius = visualSpec.bubbleCornerRadius
+        layer?.cornerCurve = .continuous
+        layer?.masksToBounds = false
+        layer?.borderWidth = 0.75
+        layer?.borderColor = NSColor.white.withAlphaComponent(0.30).cgColor
+        layer?.shadowColor = NSColor.black.withAlphaComponent(0.22).cgColor
+        layer?.shadowOpacity = 1
+        layer?.shadowRadius = visualSpec.bubbleShadowRadius
+        layer?.shadowOffset = NSSize(width: 0, height: -10)
+
+        titleField.font = .systemFont(ofSize: 12, weight: .semibold)
+        titleField.textColor = .labelColor
+        titleField.lineBreakMode = .byTruncatingTail
+
+        messageField.font = .systemFont(ofSize: 13, weight: .medium)
+        messageField.textColor = .labelColor
+        messageField.lineBreakMode = .byTruncatingTail
+        messageField.maximumNumberOfLines = visualSpec.maxTextLines
+
+        statusField.font = .systemFont(ofSize: 10, weight: .medium)
+        statusField.textColor = .secondaryLabelColor
+        statusField.lineBreakMode = .byTruncatingTail
+
+        for view in [titleField, messageField, statusField, dotsView] {
+            addSubview(view)
+        }
+    }
+
+    required init?(coder: NSCoder) {
+        nil
+    }
+
+    override var allowsVibrancy: Bool { visualSpec.vibrancyEnabled }
+
+    override func layout() {
+        super.layout()
+        let inset: CGFloat = 14
+        let titleHeight: CGFloat = 16
+        let statusHeight: CGFloat = 14
+        titleField.frame = NSRect(
+            x: inset,
+            y: bounds.height - inset - titleHeight,
+            width: bounds.width - inset * 2 - 44,
+            height: titleHeight
+        )
+        dotsView.frame = NSRect(
+            x: bounds.width - inset - 40,
+            y: bounds.height - inset - 18,
+            width: 40,
+            height: 18
+        )
+        messageField.frame = NSRect(
+            x: inset,
+            y: inset + statusHeight + 4,
+            width: bounds.width - inset * 2,
+            height: 22
+        )
+        statusField.frame = NSRect(
+            x: inset,
+            y: inset,
+            width: bounds.width - inset * 2,
+            height: statusHeight
+        )
+    }
+
+    func update(phase: Double, bubbleSide: String) {
+        dotsView.phase = phase
+        messageField.stringValue = bubbleSide == "left"
+            ? "I moved left to stay out of your way"
+            : "Ready beside your pointer"
+        statusField.stringValue = "system-wide · display-only · no capture"
+    }
+}
+
+@available(macOS 13.0, *)
+@MainActor
 final class ShadowClickerController {
     private let app: NSApplication
     private let panel: ShadowPointerOverlayPanel
+    private let bubblePanel: ShadowPointerOverlayPanel
+    private let bubbleView: ShadowClickerBubbleView
     private let config: NativeCursorFollowConfig
+    private let visualSpec: NativeOverlayVisualSpec
     private let encoder: JSONEncoder
     private let emitJSON: Bool
     private var samples: [NativeCursorSample] = []
     private var followTimer: Timer?
     private var stopTimer: Timer?
+    private var animationPhase: Double = 0
 
     init(
         app: NSApplication,
         panel: ShadowPointerOverlayPanel,
+        bubblePanel: ShadowPointerOverlayPanel,
+        bubbleView: ShadowClickerBubbleView,
         config: NativeCursorFollowConfig,
+        visualSpec: NativeOverlayVisualSpec,
         encoder: JSONEncoder,
         emitJSON: Bool
     ) {
         self.app = app
         self.panel = panel
+        self.bubblePanel = bubblePanel
+        self.bubbleView = bubbleView
         self.config = config
+        self.visualSpec = visualSpec
         self.encoder = encoder
         self.emitJSON = emitJSON
     }
@@ -195,18 +323,29 @@ final class ShadowClickerController {
         samples.append(sample)
         let displayFrame = NativeDisplayFrame.containing(sample)
         let overlaySize = NativeOverlaySize(width: panel.frame.width, height: panel.frame.height)
+        let bubbleSize = NativeBubbleSize(width: bubblePanel.frame.width, height: bubblePanel.frame.height)
         let placement = try? NativeCursorPlacementEngine.place(
             sample: sample,
             config: config,
             displayFrame: displayFrame,
-            overlaySize: overlaySize
+            overlaySize: overlaySize,
+            bubbleSize: bubbleSize
         )
         let nextOrigin = NSPoint(
             x: placement?.overlayOriginX ?? sample.x,
             y: placement?.overlayOriginY ?? sample.y
         )
         panel.setFrameOrigin(nextOrigin)
+        if let placement {
+            bubblePanel.setFrameOrigin(NSPoint(x: placement.bubbleX, y: placement.bubbleY))
+            let phaseStep = (2.0 * Double.pi) / Double(visualSpec.loadingFrameRateHz)
+            animationPhase += NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+                ? 0
+                : phaseStep
+            bubbleView.update(phase: animationPhase, bubbleSide: placement.bubbleSide)
+        }
         panel.contentView?.needsDisplay = true
+        bubblePanel.contentView?.needsLayout = true
     }
 
     private func finish() {
@@ -215,6 +354,7 @@ final class ShadowClickerController {
         let smokeSamples = samples.isEmpty ? [NativeCursorProbe.sampleNow()] : Array(samples.suffix(5))
         let result = try? NativeCursorFollowSmokeResult.run(samples: smokeSamples)
         panel.orderOut(nil)
+        bubblePanel.orderOut(nil)
         if emitJSON, let result, let data = try? encoder.encode(result) {
             print(String(decoding: data, as: UTF8.self))
         }
@@ -229,6 +369,7 @@ enum ShadowClickerApp {
 
     static func run(duration: TimeInterval, encoder: JSONEncoder, emitJSON: Bool) throws {
         let config = try NativeCursorFollowConfig().validated()
+        let visualSpec = try NativeOverlayVisualSpec().validated()
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
 
@@ -238,10 +379,19 @@ enum ShadowClickerApp {
         panel.contentView = ShadowClickerView(diameter: CGFloat(config.overlayDiameter))
         panel.orderFrontRegardless()
 
+        let bubbleFrame = NSRect(x: 0, y: 0, width: CGFloat(visualSpec.bubbleMaxWidth), height: 86)
+        let bubblePanel = ShadowPointerOverlayPanel(contentRect: bubbleFrame)
+        let bubbleView = ShadowClickerBubbleView(frame: bubbleFrame, visualSpec: visualSpec)
+        bubblePanel.contentView = bubbleView
+        bubblePanel.orderFrontRegardless()
+
         controller = ShadowClickerController(
             app: app,
             panel: panel,
+            bubblePanel: bubblePanel,
+            bubbleView: bubbleView,
             config: config,
+            visualSpec: visualSpec,
             encoder: encoder,
             emitJSON: emitJSON
         )
