@@ -1371,6 +1371,22 @@ body[data-active-view="memory_palace"] #memory-list {
   line-height: 1.35;
 }
 
+.agentic-run-status {
+  margin: 0;
+  color: #526475;
+  font-size: 11px;
+  font-weight: 760;
+  line-height: 1.3;
+}
+
+.agentic-run-status[data-state="live"] {
+  color: #0c7b5f;
+}
+
+.agentic-run-status[data-state="warning"] {
+  color: #9b4d12;
+}
+
 .agentic-run-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

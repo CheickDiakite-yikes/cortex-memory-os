@@ -20,6 +20,12 @@ const memoryBookState = {
   error: null,
   searched: false,
 };
+const agenticRunState = {
+  latest: null,
+  receipts: [],
+  loading: false,
+  error: null,
+};
 
 const icons = {
   overview: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10.5V21h14V10.5"/><path d="M9 21v-6h6v6"/>',
@@ -162,6 +168,11 @@ async function callCaptureControlWithConfig(action, payload = {}, options = {}) 
     throw new Error("capture control bridge is not available from file://");
   }
   if (!captureControlConfig?.token) {
+    if (!options.refreshed) {
+      writeReceipt("Capture bridge token unavailable. Refreshing local config once.");
+      await refreshCaptureControlConfig();
+      return callCaptureControlWithConfig(action, payload, { refreshed: true });
+    }
     throw new Error("capture control token is unavailable");
   }
   const configKeys = {
@@ -209,6 +220,11 @@ async function callMemoryBook(action, payload = {}, options = {}) {
     throw new Error("Memory Book needs the local Cortex server.");
   }
   if (!captureControlConfig?.token) {
+    if (!options.refreshed) {
+      writeReceipt("Memory Book token unavailable. Refreshing local config once.");
+      await refreshCaptureControlConfig();
+      return callMemoryBook(action, payload, { refreshed: true });
+    }
     throw new Error("Memory Book token is unavailable.");
   }
   const configKeys = {
@@ -249,6 +265,113 @@ async function callMemoryBook(action, payload = {}, options = {}) {
     throw new Error(result.user_message || result.error_code || `Memory Book ${action} failed.`);
   }
   return result;
+}
+
+async function callAgenticTurnBridge(action, payload = {}, options = {}) {
+  if (window.location.protocol === "file:") {
+    throw new Error("Agentic run needs the local Cortex server.");
+  }
+  if (!captureControlConfig?.token) {
+    if (!options.refreshed) {
+      writeReceipt("Agentic bridge token unavailable. Refreshing local config once.");
+      await refreshCaptureControlConfig();
+      return callAgenticTurnBridge(action, payload, { refreshed: true });
+    }
+    throw new Error("Agentic bridge token is unavailable.");
+  }
+  const configKeys = {
+    turn: "agenticTurnPath",
+    latest: "agenticLatestPath",
+    receipts: "agenticReceiptsPath",
+  };
+  const path = captureControlConfig[configKeys[action]] || `/api/agentic/${action}`;
+  const readOnly = action === "latest" || action === "receipts";
+  const response = await fetch(path, {
+    method: readOnly ? "GET" : "POST",
+    headers: {
+      "X-Cortex-Capture-Token": captureControlConfig.token,
+      ...(readOnly ? {} : { "Content-Type": "application/json" }),
+    },
+    body: readOnly ? undefined : JSON.stringify(payload),
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    if (
+      !options.refreshed &&
+      result.error_code === "missing_or_invalid_capture_token"
+    ) {
+      writeReceipt("Agentic bridge token refreshed. Retrying local run once.");
+      await refreshCaptureControlConfig();
+      return callAgenticTurnBridge(action, payload, { refreshed: true });
+    }
+    throw new Error(result.user_message || result.error_code || `Agentic bridge ${action} failed.`);
+  }
+  return result;
+}
+
+function controlledAgenticTurnPayload() {
+  return {
+    user_phrase: "What should I click next?",
+    target_id: "color_page_button",
+    target_label: "Color Page",
+    target_role: "controlled_demo_target",
+    app_surface: "Cortex Resolve Studio",
+    screen_state_ref: "controlled_dom://safe_creative_tool_demo_surface_v1",
+    pointer_referent: "this",
+    referenced_target_ids: ["color_page_button"],
+    pointer_x: 1260,
+    pointer_y: 884,
+    confidence: 0.88,
+  };
+}
+
+async function refreshAgenticRun({ silent = false } = {}) {
+  if (window.location.protocol === "file:") {
+    agenticRunState.error = "Open the local Cortex server to use live agentic runs.";
+    renderAgenticOSPanel();
+    return;
+  }
+  agenticRunState.loading = true;
+  agenticRunState.error = null;
+  renderAgenticOSPanel();
+  try {
+    const [latest, receipts] = await Promise.all([
+      callAgenticTurnBridge("latest"),
+      callAgenticTurnBridge("receipts"),
+    ]);
+    agenticRunState.latest = latest;
+    agenticRunState.receipts = receipts.receipts || [];
+    agenticRunState.loading = false;
+    renderAgenticOSPanel();
+    if (!silent) {
+      writeReceipt(`Live agentic run loaded: ${latest.receipt.target_label}, ${latest.receipt.route_kind}, ${latest.receipt.gateway_tool}.`);
+    }
+  } catch (error) {
+    agenticRunState.loading = false;
+    agenticRunState.error = error.message;
+    renderAgenticOSPanel();
+    if (!silent) writeReceipt(`Agentic run stayed local but could not load: ${error.message}`);
+  }
+}
+
+async function triggerControlledAgenticTurn() {
+  agenticRunState.loading = true;
+  agenticRunState.error = null;
+  renderAgenticOSPanel();
+  try {
+    const turn = await callAgenticTurnBridge("turn", controlledAgenticTurnPayload());
+    const receipts = await callAgenticTurnBridge("receipts");
+    agenticRunState.latest = turn;
+    agenticRunState.receipts = receipts.receipts || [];
+    agenticRunState.loading = false;
+    renderAgenticOSPanel();
+    writeReceipt(turn.receipt.user_visible_summary);
+  } catch (error) {
+    agenticRunState.loading = false;
+    agenticRunState.error = error.message;
+    renderAgenticOSPanel();
+    writeReceipt(`Controlled agentic turn was blocked locally: ${error.message}`);
+  }
 }
 
 async function refreshMemoryBook({ silent = false } = {}) {
@@ -986,7 +1109,24 @@ function renderAgenticOSPanel() {
   const target = document.querySelector("#agentic-os-panel");
   const panel = data.agentic_os_panel;
   if (!target || !panel) return;
-  const confidence = Math.round((panel.latest_turn_confidence || 0) * 100);
+  const liveTurn = agenticRunState.latest;
+  const liveReceipt = liveTurn?.receipt || null;
+  const liveRoute = liveTurn?.route_decision || null;
+  const targetLabel = liveReceipt?.target_label || panel.latest_turn_target_label || "None";
+  const routeKind = liveReceipt?.route_kind || liveRoute?.route_kind || panel.latest_turn_route_kind || "answer_only";
+  const gatewayTool = liveReceipt?.gateway_tool || liveRoute?.gateway_tool || panel.latest_turn_gateway_tool || "pointer.resolve_display_context";
+  const confidence = Math.round(((liveReceipt?.confidence ?? panel.latest_turn_confidence) || 0) * 100);
+  const approvalRequired = liveReceipt?.approval_required ?? panel.latest_turn_approval_required;
+  const memoryProposalCreated = liveReceipt?.memory_proposal_created ?? panel.latest_turn_memory_proposal_created;
+  const pointerCardTitle = liveTurn?.pointer_card_title || panel.pointer_card_title || "Ready beside the pointer";
+  const pointerCardBody = liveTurn?.pointer_card_body || panel.pointer_card_body || "Cortex can explain or draft without touching your system.";
+  const liveStatus = agenticRunState.loading
+    ? "checking local bridge"
+    : agenticRunState.error
+      ? `local bridge issue: ${agenticRunState.error}`
+      : liveTurn
+        ? `live localhost receipt · ${agenticRunState.receipts.length} run receipt${agenticRunState.receipts.length === 1 ? "" : "s"}`
+        : "generated safe demo";
   target.innerHTML = `
     <div class="agentic-os-copy">
       <span class="agentic-os-icon">${svgIcon("route")}</span>
@@ -999,17 +1139,18 @@ function renderAgenticOSPanel() {
       <div class="agentic-pointer-card">
         <span class="agentic-pointer-dot" aria-hidden="true"></span>
         <span>
-          <strong>${escapeHtml(panel.pointer_card_title || "Ready beside the pointer")}</strong>
-          <span>${escapeHtml(panel.pointer_card_body || "Cortex can explain or draft without touching your system.")}</span>
+          <strong>${escapeHtml(pointerCardTitle)}</strong>
+          <span>${escapeHtml(pointerCardBody)}</span>
         </span>
       </div>
+      <p class="agentic-run-status" data-state="${agenticRunState.error ? "warning" : liveTurn ? "live" : "demo"}">${escapeHtml(liveStatus)}</p>
       <div class="agentic-run-summary">
-        <div><span>Target</span><strong>${escapeHtml(panel.latest_turn_target_label || "None")}</strong></div>
-        <div><span>Route</span><strong>${formatToken(panel.latest_turn_route_kind || "answer_only")}</strong></div>
-        <div><span>Tool</span><strong>${escapeHtml(panel.latest_turn_gateway_tool || "pointer.resolve_display_context")}</strong></div>
+        <div><span>Target</span><strong>${escapeHtml(targetLabel)}</strong></div>
+        <div><span>Route</span><strong>${formatToken(routeKind)}</strong></div>
+        <div><span>Tool</span><strong>${escapeHtml(gatewayTool)}</strong></div>
         <div><span>Trust</span><strong>${confidence}%</strong></div>
-        <div><span>Approval</span><strong>${panel.latest_turn_approval_required ? "asks first" : "not needed"}</strong></div>
-        <div><span>Memory</span><strong>${panel.latest_turn_memory_proposal_created ? "review card" : "no write"}</strong></div>
+        <div><span>Approval</span><strong>${approvalRequired ? "asks first" : "not needed"}</strong></div>
+        <div><span>Memory</span><strong>${memoryProposalCreated ? "review card" : "no write"}</strong></div>
       </div>
     </div>
     <div class="agentic-os-grid">
@@ -1029,7 +1170,8 @@ function renderAgenticOSPanel() {
     </div>
     <div class="shadow-live-actions">
       <button class="text-command" type="button" id="agentic-os-smoke">cortex-agentic-os</button>
-      <button class="text-command" type="button" id="agentic-turn-smoke">Current run</button>
+      <button class="text-command primary-command" type="button" id="agentic-turn-smoke" ${agenticRunState.loading ? "disabled" : ""}>Run local turn</button>
+      <button class="text-command" type="button" id="agentic-turn-refresh" ${agenticRunState.loading ? "disabled" : ""}>Refresh run</button>
       <button class="text-command" type="button" id="agentic-os-routes">Tool routes</button>
       <button class="text-command" type="button" id="agentic-os-gates">Review gates</button>
     </div>
@@ -1038,7 +1180,10 @@ function renderAgenticOSPanel() {
     writeReceipt(`${panel.panel_id}: ${panel.smoke_command}. Goal becomes pointer context, memory context, tool route, approval, outcome trace, then reviewed learning.`);
   });
   document.querySelector("#agentic-turn-smoke").addEventListener("click", () => {
-    writeReceipt(`Current agentic run: target ${panel.latest_turn_target_label}, route ${panel.latest_turn_route_kind}, tool ${panel.latest_turn_gateway_tool}, approval ${panel.latest_turn_approval_required ? "required" : "not required"}.`);
+    triggerControlledAgenticTurn();
+  });
+  document.querySelector("#agentic-turn-refresh").addEventListener("click", () => {
+    refreshAgenticRun();
   });
   document.querySelector("#agentic-os-routes").addEventListener("click", () => {
     writeReceipt(`Agentic routes ready: ${(panel.ready_routes || []).join(", ")}. Click, type, export, raw storage, and unreviewed memory writes stay blocked.`);
@@ -2021,6 +2166,7 @@ if (!data) {
   renderInsights();
   renderReceipts();
   renderDashboard();
+  refreshAgenticRun({ silent: true });
   refreshMemoryBook({ silent: true });
   ensureFocusForActiveView();
   renderFocusInspector();

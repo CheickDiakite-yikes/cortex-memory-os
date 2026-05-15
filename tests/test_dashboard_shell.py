@@ -275,12 +275,35 @@ def test_dashboard_static_app_refreshes_stale_capture_token():
 
     assert "let captureControlConfig = window.CORTEX_CAPTURE_CONTROL || null;" in app_js
     assert "async function refreshCaptureControlConfig()" in app_js
+    assert "async function callAgenticTurnBridge(action, payload = {}, options = {})" in app_js
     assert "capture-control-config.js?ts=" in app_js
     assert "missing_or_invalid_capture_token" in app_js
     assert "Capture bridge token refreshed. Retrying local command once." in app_js
+    assert "Capture bridge token unavailable. Refreshing local config once." in app_js
+    assert "Memory Book token unavailable. Refreshing local config once." in app_js
+    assert "Agentic bridge token unavailable. Refreshing local config once." in app_js
+    assert "Agentic bridge token refreshed. Retrying local run once." in app_js
     assert "callCaptureControlWithConfig(action, payload, { refreshed: true })" in app_js
     assert "userTestPath" in app_js
+    assert "agenticTurnPath" in app_js
+    assert "agenticLatestPath" in app_js
+    assert "agenticReceiptsPath" in app_js
     assert 'action === "userTest"' in app_js
+    assert 'action === "latest" || action === "receipts"' in app_js
+
+
+def test_dashboard_static_app_can_run_live_agentic_turn():
+    app_js = Path("ui/cortex-dashboard/app.js").read_text()
+    css = Path("ui/cortex-dashboard/styles.css").read_text()
+
+    assert "controlledAgenticTurnPayload()" in app_js
+    assert "triggerControlledAgenticTurn()" in app_js
+    assert "refreshAgenticRun({ silent: true })" in app_js
+    assert "live localhost receipt" in app_js
+    assert "Run local turn" in app_js
+    assert "agentic-turn-refresh" in app_js
+    assert ".agentic-run-status" in css
+    assert '.agentic-run-status[data-state="live"]' in css
 
 
 def test_dashboard_static_app_renders_simple_user_test_flow():

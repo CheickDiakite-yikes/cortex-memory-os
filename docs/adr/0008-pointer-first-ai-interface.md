@@ -56,3 +56,10 @@ interaction.
 The current proving spine is benchmarked by `AGENTIC-TURN-ROUTER-001`,
 `AGENTIC-LIVE-TUTOR-BRIDGE-001`, `AGENTIC-POINTER-CARD-001`, and
 `AGENTIC-RUNTIME-TRACE-001`.
+
+The localhost dashboard bridge may expose `/api/agentic/turn`,
+`/api/agentic/latest`, and `/api/agentic/receipts` as a review surface for the
+same turn loop. These endpoints are token-protected, localhost-only, controlled
+demo-state-only, and receipt-redacted. They are not a permission to start real
+screen capture, microphone capture, Accessibility observation, real cursor
+movement, clicking, typing, export, raw-ref retention, or silent memory writes.

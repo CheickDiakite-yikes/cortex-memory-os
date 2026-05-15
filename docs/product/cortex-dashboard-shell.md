@@ -1,6 +1,6 @@
 # Cortex Dashboard Shell
 
-Last updated: 2026-05-02
+Last updated: 2026-05-15
 
 Benchmark: `MEMORY-PALACE-SKILL-FORGE-UI-001`
 
@@ -104,6 +104,14 @@ display-only and controlled-state-only: no screen capture, microphone capture,
 Accessibility observer, clicks, typing, raw refs, memory writes, exports, or
 external effects.
 
+The 2026-05-15 agentic run refinement makes the Agentic OS panel consume the
+token-protected localhost bridge instead of only generated dashboard data. The
+visible `Run local turn` action posts a controlled pointer intent, refreshes
+latest run receipts, and redraws the card from redacted local receipt state.
+The dashboard remains the review surface: the product moment is the
+pointer-side card, while the dashboard answers what happened and what stayed
+blocked.
+
 The 2026-05-04 child-readable home refinement makes the Overview a plain
 control pad instead of an ops wall. The first screen uses words a new user can
 understand quickly: Cortex is ready, ask the helper, start cursor, memory book,
@@ -160,6 +168,8 @@ safe view models:
 - `DashboardLiveDataAdapterSnapshot`
 - `LiveDashboardReceiptsPanel`
 - `LiveTutorDashboardPanel`
+- `AgenticOSDashboardPanel`, with optional live localhost receipts from
+  `/api/agentic/turn`, `/api/agentic/latest`, and `/api/agentic/receipts`
 
 The generated `ui/cortex-dashboard/dashboard-data.js` contains synthetic,
 redacted, deterministic view-model data. It must contain no raw private memory,
@@ -208,6 +218,9 @@ The static app in `ui/cortex-dashboard/` must render:
 - `Live Tutor Overlay` for `LIVE-TUTOR-OVERLAY-001`, linking to
   `uv run cortex-live-tutor-demo` and showing display-only cue, controlled
   surface, memory-off, raw-ref-free, and blocked-effect state;
+- an Agentic OS current-run card that can call the local bridge, show a live
+  localhost receipt, and keep click, type, raw ref, external effect, and
+  unreviewed memory writes blocked;
 - `DASHBOARD-LIVE-DATA-ADAPTER-001`, proving that dashboard panels can refresh
   from local read-only adapters while write paths and raw payloads stay off;
 - Consent-first Onboarding for `CONSENT-FIRST-ONBOARDING-001`, showing the
