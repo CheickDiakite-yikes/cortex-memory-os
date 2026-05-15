@@ -32,6 +32,8 @@ from cortex_memory_os.realtime_voice_pointer import (
 
 LIVE_TUTOR_OVERLAY_ID = "LIVE-TUTOR-OVERLAY-001"
 LIVE_TUTOR_OVERLAY_POLICY_REF = "policy_live_tutor_overlay_v1"
+LIVE_TUTOR_BROWSER_PROOF_ID = "LIVE-TUTOR-BROWSER-PROOF-001"
+LIVE_TUTOR_BROWSER_PROOF_POLICY_REF = "policy_live_tutor_browser_proof_v1"
 DEFAULT_LIVE_TUTOR_HOST = "127.0.0.1"
 DEFAULT_LIVE_TUTOR_PORT = 8797
 LIVE_TUTOR_TOKEN_HEADER = "X-Cortex-Live-Tutor-Token"
@@ -215,6 +217,31 @@ class LiveTutorPointerState(StrictModel):
         return value
 
 
+class LiveTutorNormalizedPointer(StrictModel):
+    source_coordinate_space: Literal["canonical_surface", "client_surface_css"]
+    pointer_x: float = Field(ge=0, le=1440)
+    pointer_y: float = Field(ge=0, le=960)
+    client_surface_width: float | None = Field(default=None, ge=1, le=10000)
+    client_surface_height: float | None = Field(default=None, ge=1, le=10000)
+    canonical_surface_width: int = Field(default=1440, ge=320, le=3840)
+    canonical_surface_height: int = Field(default=960, ge=320, le=2160)
+    client_pointer_was_clamped: bool = False
+    display_only: bool = True
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF, LIVE_TUTOR_BROWSER_PROOF_POLICY_REF]
+    )
+
+    @model_validator(mode="after")
+    def keep_pointer_display_only(self) -> LiveTutorNormalizedPointer:
+        if not self.display_only:
+            raise ValueError("normalized pointer must remain display-only")
+        if LIVE_TUTOR_OVERLAY_POLICY_REF not in self.policy_refs:
+            raise ValueError("normalized pointer requires live tutor policy ref")
+        if LIVE_TUTOR_BROWSER_PROOF_POLICY_REF not in self.policy_refs:
+            raise ValueError("normalized pointer requires browser proof policy ref")
+        return self
+
+
 class ManualMemoryProposal(StrictModel):
     proposal_id: str = Field(min_length=1)
     target_id: str = Field(min_length=1)
@@ -377,6 +404,100 @@ class LiveTutorTurn(StrictModel):
         return self
 
 
+class LiveTutorTurnReceipt(StrictModel):
+    receipt_id: str = Field(min_length=1)
+    turn_id: str = Field(min_length=1)
+    target_id: str = Field(min_length=1)
+    target_label: str = Field(min_length=1)
+    intent_label: str = Field(min_length=1)
+    pointer_referent: Literal["this", "that", "these", "none"]
+    confidence: float = Field(ge=0, le=1)
+    voice_gesture_type: VoiceGestureType
+    voice_output_mode: VoiceOutputMode
+    ai_assist_mode: Literal["local", "openai_dry_run"]
+    user_visible_summary: str = Field(min_length=1, max_length=260)
+    display_only: bool = True
+    memory_write_allowed: bool = False
+    raw_ref_retained: bool = False
+    external_effect_executed: bool = False
+    real_screen_capture_started: bool = False
+    voice_capture_enabled: bool = False
+    raw_payload_included: bool = False
+    contains_user_utterance: bool = False
+    contains_assistant_response: bool = False
+    blocked_effects: list[str] = Field(default_factory=list)
+    safety_flags: list[str] = Field(default_factory=list)
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [
+            LIVE_TUTOR_OVERLAY_POLICY_REF,
+            REALTIME_VOICE_POLICY_REF,
+            LIVE_TUTOR_BROWSER_PROOF_POLICY_REF,
+        ]
+    )
+
+    @field_validator("user_visible_summary")
+    @classmethod
+    def reject_prohibited_summary(cls, value: str) -> str:
+        if any(marker in value for marker in _PROHIBITED_MARKERS):
+            raise ValueError("live tutor receipt cannot carry secret/raw markers")
+        return value
+
+    @model_validator(mode="after")
+    def keep_receipt_redacted_and_non_mutating(self) -> LiveTutorTurnReceipt:
+        if not self.display_only:
+            raise ValueError("live tutor receipt must stay display-only")
+        if self.memory_write_allowed or self.raw_ref_retained or self.external_effect_executed:
+            raise ValueError("live tutor receipt cannot authorize writes, raw refs, or effects")
+        if self.real_screen_capture_started or self.voice_capture_enabled:
+            raise ValueError("live tutor receipt cannot start capture")
+        if self.raw_payload_included or self.contains_user_utterance or self.contains_assistant_response:
+            raise ValueError("live tutor receipt must be redacted")
+        if missing := sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS.difference(self.blocked_effects)):
+            raise ValueError(f"live tutor receipt missing blocked effects: {missing}")
+        if LIVE_TUTOR_OVERLAY_POLICY_REF not in self.policy_refs:
+            raise ValueError("live tutor receipt requires live tutor policy ref")
+        if REALTIME_VOICE_POLICY_REF not in self.policy_refs:
+            raise ValueError("live tutor receipt requires realtime voice policy ref")
+        if LIVE_TUTOR_BROWSER_PROOF_POLICY_REF not in self.policy_refs:
+            raise ValueError("live tutor receipt requires browser proof policy ref")
+        return self
+
+
+class LiveTutorReceiptReport(StrictModel):
+    proof_id: str = LIVE_TUTOR_BROWSER_PROOF_ID
+    policy_ref: str = LIVE_TUTOR_BROWSER_PROOF_POLICY_REF
+    passed: bool
+    generated_at: datetime
+    turn_count: int = Field(ge=0)
+    receipt_count: int = Field(ge=0)
+    latest_target_label: str | None = None
+    receipts: list[LiveTutorTurnReceipt] = Field(default_factory=list)
+    memory_write_count: int = Field(ge=0)
+    raw_ref_retained_count: int = Field(ge=0)
+    external_effect_count: int = Field(ge=0)
+    real_screen_capture_started: bool = False
+    voice_capture_enabled: bool = False
+    raw_payload_included: bool = False
+    contains_user_utterances: bool = False
+    contains_assistant_responses: bool = False
+    blocked_effects: list[str] = Field(default_factory=list)
+    safety_failures: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def keep_report_safe(self) -> LiveTutorReceiptReport:
+        if self.receipt_count != len(self.receipts):
+            raise ValueError("receipt_count must match receipts")
+        if self.memory_write_count or self.raw_ref_retained_count or self.external_effect_count:
+            raise ValueError("live tutor receipt report cannot include mutating effects")
+        if self.real_screen_capture_started or self.voice_capture_enabled:
+            raise ValueError("live tutor receipt report cannot include live capture")
+        if self.raw_payload_included or self.contains_user_utterances or self.contains_assistant_responses:
+            raise ValueError("live tutor receipt report must stay redacted")
+        if missing := sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS.difference(self.blocked_effects)):
+            raise ValueError(f"live tutor receipt report missing blocked effects: {missing}")
+        return self
+
+
 class LiveTutorDemoResult(StrictModel):
     proof_id: str = LIVE_TUTOR_OVERLAY_ID
     policy_ref: str = LIVE_TUTOR_OVERLAY_POLICY_REF
@@ -411,6 +532,10 @@ class LiveTutorDashboardPanel(StrictModel):
     summary: str = Field(min_length=1)
     demo_url: str = "http://127.0.0.1:8797/"
     smoke_command: str = "uv run cortex-live-tutor-demo --server-smoke --json"
+    browser_replay_smoke_command: str = (
+        "uv run cortex-live-tutor-demo --browser-replay-smoke --json"
+    )
+    receipt_endpoint: str = "/tutor/receipts"
     latest_targets: list[str] = Field(default_factory=list)
     turn_count: int = Field(ge=0)
     cue_count: int = Field(ge=0)
@@ -466,8 +591,13 @@ class LiveTutorQuestionInput(StrictModel):
     pointed_target_id: str | None = None
     previous_target_id: str | None = None
     selected_target_ids: list[str] = Field(default_factory=list, max_length=4)
-    pointer_x: float | None = Field(default=None, ge=0, le=1440)
-    pointer_y: float | None = Field(default=None, ge=0, le=960)
+    pointer_coordinate_space: Literal["canonical_surface", "client_surface_css"] = (
+        "canonical_surface"
+    )
+    pointer_x: float | None = Field(default=None, ge=0, le=10000)
+    pointer_y: float | None = Field(default=None, ge=0, le=10000)
+    client_surface_width: float | None = Field(default=None, ge=1, le=10000)
+    client_surface_height: float | None = Field(default=None, ge=1, le=10000)
 
     @field_validator("user_utterance")
     @classmethod
@@ -475,6 +605,15 @@ class LiveTutorQuestionInput(StrictModel):
         if any(marker in value for marker in _PROHIBITED_MARKERS):
             raise ValueError("live tutor question cannot carry secret/raw/prompt-injection markers")
         return value
+
+    @model_validator(mode="after")
+    def keep_pointer_coordinate_space_complete(self) -> LiveTutorQuestionInput:
+        if self.pointer_coordinate_space == "client_surface_css" and (
+            self.pointer_x is not None or self.pointer_y is not None
+        ):
+            if self.client_surface_width is None or self.client_surface_height is None:
+                raise ValueError("client pointer coordinates require client surface dimensions")
+        return self
 
 
 class LiveTutorDemoRejected(ValueError):
@@ -496,7 +635,7 @@ class LiveTutorDemoSession:
     def answer(self, payload: Mapping[str, Any]) -> LiveTutorTurn:
         question = LiveTutorQuestionInput.model_validate(payload)
         surface = build_safe_creative_demo_surface(active_page=question.active_page)
-        pointer_state = _pointer_state_from_question(question, surface=surface)
+        pointer_state, normalized_pointer = _pointer_state_from_question(question, surface=surface)
         with self._lock:
             sequence = len(self._turns) + 1
             turn = resolve_live_tutor_turn(
@@ -507,6 +646,8 @@ class LiveTutorDemoSession:
                 ai_mode=question.ai_mode,
                 voice_gesture_type=question.voice_gesture_type,
             )
+            if normalized_pointer is not None:
+                turn = _append_pointer_normalization_flags(turn, normalized_pointer)
             self._turns.append(turn)
             return turn
 
@@ -518,6 +659,11 @@ class LiveTutorDemoSession:
         with self._lock:
             turns = list(self._turns)
         return _result_from_turns(turns, require_core_targets=False)
+
+    def receipts(self) -> LiveTutorReceiptReport:
+        with self._lock:
+            turns = list(self._turns)
+        return _receipt_report_from_turns(turns)
 
 
 class LiveTutorDemoHandler(BaseHTTPRequestHandler):
@@ -536,6 +682,14 @@ class LiveTutorDemoHandler(BaseHTTPRequestHandler):
             path = "/index.html"
         if path == "/results":
             self._write_json(self._session().result().model_dump(mode="json"))
+            return
+        if path == "/tutor/receipts":
+            error = self._receipt_request_error()
+            if error is not None:
+                code, status, message = error
+                self._write_error(code, status, message)
+                return
+            self._write_json(self._session().receipts().model_dump(mode="json"))
             return
         static_path = (UI_ROOT / path.removeprefix("/")).resolve()
         if not static_path.is_file() or UI_ROOT.resolve() not in static_path.parents:
@@ -634,6 +788,22 @@ class LiveTutorDemoHandler(BaseHTTPRequestHandler):
                 "invalid_demo_token",
                 HTTPStatus.FORBIDDEN,
                 "live tutor token is missing or invalid",
+            )
+        return None
+
+    def _receipt_request_error(self) -> tuple[str, HTTPStatus, str] | None:
+        if not self._request_is_loopback():
+            return (
+                "non_loopback_request",
+                HTTPStatus.FORBIDDEN,
+                "live tutor receipts accept localhost requests only",
+            )
+        token = self.headers.get(LIVE_TUTOR_TOKEN_HEADER, "")
+        if not secrets.compare_digest(token, self._server().demo_token):
+            return (
+                "invalid_demo_token",
+                HTTPStatus.FORBIDDEN,
+                "live tutor receipt token is missing or invalid",
             )
         return None
 
@@ -774,6 +944,45 @@ def build_safe_creative_demo_surface(
         active_page=active_page,
         target_count=len(targets),
         targets=targets,
+    )
+
+
+def normalize_client_pointer_to_surface(
+    *,
+    pointer_x: float | None,
+    pointer_y: float | None,
+    surface: SafeCreativeDemoSurface | None = None,
+    coordinate_space: Literal["canonical_surface", "client_surface_css"] = "canonical_surface",
+    client_surface_width: float | None = None,
+    client_surface_height: float | None = None,
+) -> LiveTutorNormalizedPointer | None:
+    if pointer_x is None or pointer_y is None:
+        return None
+    surface = surface or build_safe_creative_demo_surface()
+    if coordinate_space == "client_surface_css":
+        if client_surface_width is None or client_surface_height is None:
+            raise ValueError("client pointer coordinates require client surface dimensions")
+        clamped_source_x = min(max(pointer_x, 0), client_surface_width)
+        clamped_source_y = min(max(pointer_y, 0), client_surface_height)
+        canonical_x = (clamped_source_x / client_surface_width) * surface.viewport_width
+        canonical_y = (clamped_source_y / client_surface_height) * surface.viewport_height
+        was_clamped = clamped_source_x != pointer_x or clamped_source_y != pointer_y
+    else:
+        canonical_x = min(max(pointer_x, 0), surface.viewport_width)
+        canonical_y = min(max(pointer_y, 0), surface.viewport_height)
+        was_clamped = canonical_x != pointer_x or canonical_y != pointer_y
+
+    canonical_x = min(max(canonical_x, 0), surface.viewport_width)
+    canonical_y = min(max(canonical_y, 0), surface.viewport_height)
+    return LiveTutorNormalizedPointer(
+        source_coordinate_space=coordinate_space,
+        pointer_x=round(canonical_x, 2),
+        pointer_y=round(canonical_y, 2),
+        client_surface_width=client_surface_width,
+        client_surface_height=client_surface_height,
+        canonical_surface_width=surface.viewport_width,
+        canonical_surface_height=surface.viewport_height,
+        client_pointer_was_clamped=was_clamped,
     )
 
 
@@ -1113,6 +1322,88 @@ def run_live_tutor_server_smoke() -> LiveTutorDemoResult:
         demo.stop()
 
 
+def run_live_tutor_browser_replay_smoke() -> LiveTutorReceiptReport:
+    demo = start_live_tutor_demo(port=0)
+    try:
+        index_status, _, index_body = _http_demo_request(demo.base_url, "GET", "/")
+        token = _extract_demo_token(index_body)
+        if index_status != HTTPStatus.OK:
+            raise LiveTutorDemoRejected(
+                error="browser_replay_smoke_failed",
+                status=HTTPStatus.INTERNAL_SERVER_ERROR,
+                message="live tutor browser replay smoke failed to load index",
+            )
+        requests = [
+            {
+                "user_utterance": "How do I start color grading?",
+                "active_page": "edit",
+                "voice_gesture_type": "triple_click_voice_dialogue",
+                "pointer_coordinate_space": "client_surface_css",
+                "pointer_x": 406,
+                "pointer_y": 1120,
+                "client_surface_width": 1100,
+                "client_surface_height": 1200,
+            },
+            {
+                "user_utterance": "Tell me what this does, but text only.",
+                "active_page": "color",
+                "pointed_target_id": "node_graph",
+                "previous_target_id": "color_page_button",
+                "voice_gesture_type": "press_hold_text_reply",
+                "pointer_coordinate_space": "client_surface_css",
+                "pointer_x": 1016,
+                "pointer_y": 318,
+                "client_surface_width": 1100,
+                "client_surface_height": 1200,
+            },
+            {
+                "user_utterance": "Show me the next action, no voice back.",
+                "active_page": "color",
+                "pointed_target_id": "lut_menu",
+                "previous_target_id": "node_graph",
+                "voice_gesture_type": "press_hold_action_only",
+                "pointer_coordinate_space": "client_surface_css",
+                "pointer_x": 9999,
+                "pointer_y": 9999,
+                "client_surface_width": 1100,
+                "client_surface_height": 1200,
+            },
+        ]
+        for payload in requests:
+            status, _, body = _http_demo_request(
+                demo.base_url,
+                "POST",
+                "/tutor/turn",
+                body=json.dumps(payload),
+                headers={
+                    "Content-Type": "application/json",
+                    "Origin": demo.base_url,
+                    LIVE_TUTOR_TOKEN_HEADER: token,
+                },
+            )
+            if status != HTTPStatus.OK:
+                raise LiveTutorDemoRejected(
+                    error="browser_replay_smoke_failed",
+                    status=HTTPStatus(status),
+                    message=f"live tutor browser replay smoke failed: {body}",
+                )
+        receipt_status, _, receipt_body = _http_demo_request(
+            demo.base_url,
+            "GET",
+            "/tutor/receipts",
+            headers={LIVE_TUTOR_TOKEN_HEADER: token},
+        )
+        if receipt_status != HTTPStatus.OK:
+            raise LiveTutorDemoRejected(
+                error="browser_replay_smoke_failed",
+                status=HTTPStatus(receipt_status),
+                message=f"live tutor receipt endpoint failed: {receipt_body}",
+            )
+        return LiveTutorReceiptReport.model_validate_json(receipt_body)
+    finally:
+        demo.stop()
+
+
 def build_live_tutor_dashboard_panel(
     result: LiveTutorDemoResult | None = None,
 ) -> LiveTutorDashboardPanel:
@@ -1254,6 +1545,85 @@ def _result_from_turns(
     )
 
 
+def _receipt_from_turn(turn: LiveTutorTurn) -> LiveTutorTurnReceipt:
+    return LiveTutorTurnReceipt(
+        receipt_id=f"receipt_{turn.turn_id}",
+        turn_id=turn.turn_id,
+        target_id=turn.target_id,
+        target_label=turn.target_label,
+        intent_label=turn.intent_label,
+        pointer_referent=turn.pointer_referent,
+        confidence=turn.confidence,
+        voice_gesture_type=turn.voice_gesture_type,
+        voice_output_mode=turn.voice_output_mode,
+        ai_assist_mode=turn.ai_assist_mode,
+        user_visible_summary=turn.user_readable_receipt,
+        display_only=turn.display_only and turn.target_coordinates.display_only,
+        memory_write_allowed=turn.memory_write_allowed,
+        raw_ref_retained=turn.raw_ref_retained,
+        external_effect_executed=turn.external_effect_executed,
+        real_screen_capture_started=turn.real_screen_capture_started,
+        voice_capture_enabled=turn.voice_capture_enabled,
+        blocked_effects=sorted(set(turn.target_coordinates.blocked_effects)),
+        safety_flags=sorted(set(turn.safety_flags)),
+    )
+
+
+def _receipt_report_from_turns(turns: list[LiveTutorTurn]) -> LiveTutorReceiptReport:
+    receipts = [_receipt_from_turn(turn) for turn in turns]
+    failures: list[str] = []
+    if len(receipts) != len(turns):
+        failures.append("missing_receipts")
+    if any(receipt.memory_write_allowed for receipt in receipts):
+        failures.append("memory_write_allowed")
+    if any(receipt.raw_ref_retained for receipt in receipts):
+        failures.append("raw_ref_retained")
+    if any(receipt.external_effect_executed for receipt in receipts):
+        failures.append("external_effect_executed")
+    if any(receipt.real_screen_capture_started or receipt.voice_capture_enabled for receipt in receipts):
+        failures.append("live_capture_started")
+    if any(
+        receipt.raw_payload_included
+        or receipt.contains_user_utterance
+        or receipt.contains_assistant_response
+        for receipt in receipts
+    ):
+        failures.append("unredacted_receipt")
+    return LiveTutorReceiptReport(
+        passed=not failures,
+        generated_at=datetime.now(UTC),
+        turn_count=len(turns),
+        receipt_count=len(receipts),
+        latest_target_label=receipts[-1].target_label if receipts else None,
+        receipts=receipts,
+        memory_write_count=sum(int(receipt.memory_write_allowed) for receipt in receipts),
+        raw_ref_retained_count=sum(int(receipt.raw_ref_retained) for receipt in receipts),
+        external_effect_count=sum(int(receipt.external_effect_executed) for receipt in receipts),
+        real_screen_capture_started=any(
+            receipt.real_screen_capture_started for receipt in receipts
+        ),
+        voice_capture_enabled=any(receipt.voice_capture_enabled for receipt in receipts),
+        blocked_effects=sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS),
+        safety_failures=failures,
+    )
+
+
+def _append_pointer_normalization_flags(
+    turn: LiveTutorTurn,
+    normalized_pointer: LiveTutorNormalizedPointer,
+) -> LiveTutorTurn:
+    flags = [
+        *turn.safety_flags,
+        f"pointer_coordinate_space:{normalized_pointer.source_coordinate_space}",
+        "client_pointer_normalized",
+    ]
+    if normalized_pointer.client_pointer_was_clamped:
+        flags.append("client_pointer_clamped")
+    payload = turn.model_dump(mode="python")
+    payload["safety_flags"] = flags
+    return LiveTutorTurn.model_validate(payload)
+
+
 def _resolve_intent(
     user_utterance: str,
     *,
@@ -1381,18 +1751,29 @@ def _pointer_state_from_question(
     question: LiveTutorQuestionInput,
     *,
     surface: SafeCreativeDemoSurface,
-) -> LiveTutorPointerState:
+) -> tuple[LiveTutorPointerState, LiveTutorNormalizedPointer | None]:
     known_target_ids = {target.target_id for target in surface.targets}
     selected_ids = [target_id for target_id in question.selected_target_ids if target_id in known_target_ids]
     current_target = question.pointed_target_id if question.pointed_target_id in known_target_ids else None
     previous_target = question.previous_target_id if question.previous_target_id in known_target_ids else None
-    return LiveTutorPointerState(
-        current_target_id=current_target,
-        previous_target_id=previous_target,
-        selected_target_ids=selected_ids,
+    normalized_pointer = normalize_client_pointer_to_surface(
         pointer_x=question.pointer_x,
         pointer_y=question.pointer_y,
-        referent_phrase="this" if current_target else "none",
+        surface=surface,
+        coordinate_space=question.pointer_coordinate_space,
+        client_surface_width=question.client_surface_width,
+        client_surface_height=question.client_surface_height,
+    )
+    return (
+        LiveTutorPointerState(
+            current_target_id=current_target,
+            previous_target_id=previous_target,
+            selected_target_ids=selected_ids,
+            pointer_x=normalized_pointer.pointer_x if normalized_pointer else None,
+            pointer_y=normalized_pointer.pointer_y if normalized_pointer else None,
+            referent_phrase="this" if current_target else "none",
+        ),
+        normalized_pointer,
     )
 
 
@@ -1598,6 +1979,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--server-smoke", action="store_true")
+    parser.add_argument("--browser-replay-smoke", action="store_true")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--ask", default=None)
     parser.add_argument("--host", default=DEFAULT_LIVE_TUTOR_HOST)
@@ -1627,6 +2009,19 @@ def main(argv: list[str] | None = None) -> int:
                 "live tutor server "
                 f"{'passed' if result.passed else 'failed'}: "
                 f"{result.turn_count} turns, {result.cue_count} cues"
+            )
+        return 0 if result.passed else 1
+
+    if args.browser_replay_smoke:
+        result = run_live_tutor_browser_replay_smoke()
+        payload = result.model_dump(mode="json")
+        if args.json:
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            print(
+                "live tutor browser replay "
+                f"{'passed' if result.passed else 'failed'}: "
+                f"{result.receipt_count} redacted receipts"
             )
         return 0 if result.passed else 1
 

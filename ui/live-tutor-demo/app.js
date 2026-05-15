@@ -76,15 +76,19 @@ function formatToken(value) {
 }
 
 function safePointerForRequest() {
+  const frameRect = frame.getBoundingClientRect();
   return {
     x:
       lastPointer.x === null
         ? null
-        : Math.round(clamp(lastPointer.x, 0, DEMO_VIEWPORT_WIDTH)),
+        : Math.round(clamp(lastPointer.x, 0, frameRect.width)),
     y:
       lastPointer.y === null
         ? null
-        : Math.round(clamp(lastPointer.y, 0, DEMO_VIEWPORT_HEIGHT)),
+        : Math.round(clamp(lastPointer.y, 0, frameRect.height)),
+    width: Math.round(frameRect.width),
+    height: Math.round(frameRect.height),
+    coordinateSpace: "client_surface_css",
   };
 }
 
@@ -148,8 +152,11 @@ async function askTutor(question, options = {}) {
       pointed_target_id: currentTargetId,
       previous_target_id: previousTargetId,
       selected_target_ids: pinnedTargetIds.length ? pinnedTargetIds : selectedTargetIds,
+      pointer_coordinate_space: pointerForRequest.coordinateSpace,
       pointer_x: pointerForRequest.x,
       pointer_y: pointerForRequest.y,
+      client_surface_width: pointerForRequest.width,
+      client_surface_height: pointerForRequest.height,
     }),
   });
   const payload = await response.json();

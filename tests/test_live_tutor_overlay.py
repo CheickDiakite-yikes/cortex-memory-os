@@ -2,6 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from cortex_memory_os.live_tutor_overlay import (
+    LIVE_TUTOR_BROWSER_PROOF_ID,
     LIVE_TUTOR_OVERLAY_ID,
     LIVE_TUTOR_OVERLAY_POLICY_REF,
     LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS,
@@ -13,7 +14,9 @@ from cortex_memory_os.live_tutor_overlay import (
     build_live_tutor_dashboard_panel,
     build_safe_creative_demo_surface,
     live_tutor_payload_is_safe,
+    normalize_client_pointer_to_surface,
     resolve_live_tutor_turn,
+    run_live_tutor_browser_replay_smoke,
     run_live_tutor_server_smoke,
     run_live_tutor_demo_smoke,
 )
@@ -257,6 +260,57 @@ def test_live_tutor_server_smoke_answers_with_safe_receipts():
     assert result.action_only_voice_turn_count == 1
 
 
+def test_live_tutor_normalizes_browser_client_coordinates():
+    surface = build_safe_creative_demo_surface()
+    normalized = normalize_client_pointer_to_surface(
+        pointer_x=1016,
+        pointer_y=318,
+        surface=surface,
+        coordinate_space="client_surface_css",
+        client_surface_width=1100,
+        client_surface_height=1200,
+    )
+    clamped = normalize_client_pointer_to_surface(
+        pointer_x=9999,
+        pointer_y=9999,
+        surface=surface,
+        coordinate_space="client_surface_css",
+        client_surface_width=1100,
+        client_surface_height=1200,
+    )
+
+    assert normalized is not None
+    assert normalized.source_coordinate_space == "client_surface_css"
+    assert normalized.pointer_x == pytest.approx(1330.04, abs=0.01)
+    assert normalized.pointer_y == pytest.approx(254.4, abs=0.01)
+    assert normalized.client_pointer_was_clamped is False
+    assert clamped is not None
+    assert clamped.pointer_x == surface.viewport_width
+    assert clamped.pointer_y == surface.viewport_height
+    assert clamped.client_pointer_was_clamped is True
+
+
+def test_live_tutor_browser_replay_smoke_returns_redacted_receipts():
+    report = run_live_tutor_browser_replay_smoke()
+    serialized = report.model_dump_json()
+
+    assert report.passed
+    assert report.proof_id == LIVE_TUTOR_BROWSER_PROOF_ID
+    assert report.turn_count == 3
+    assert report.receipt_count == 3
+    assert report.latest_target_label == "LUT Menu"
+    assert report.memory_write_count == 0
+    assert report.raw_ref_retained_count == 0
+    assert report.external_effect_count == 0
+    assert report.raw_payload_included is False
+    assert report.contains_user_utterances is False
+    assert report.contains_assistant_responses is False
+    assert any("client_pointer_normalized" in receipt.safety_flags for receipt in report.receipts)
+    assert any("client_pointer_clamped" in receipt.safety_flags for receipt in report.receipts)
+    assert "Tell me what this does" not in serialized
+    assert "The node graph is" not in serialized
+
+
 def test_live_tutor_demo_session_keeps_turns_memory_free():
     session = LiveTutorDemoSession()
     turn = session.answer(
@@ -313,6 +367,10 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "press_hold_action_only" in js
     assert "DEMO_VIEWPORT_HEIGHT = 960" in js
     assert "safePointerForRequest" in js
+    assert "pointer_coordinate_space" in js
+    assert "client_surface_width" in js
+    assert "client_surface_height" in js
+    assert 'coordinateSpace: "client_surface_css"' in js
     assert 'voiceGestureType = "single_click_context";' in js
     assert 'turnList.prepend(item);\n  setVoiceGesture("single_click_context");' not in js
     assert "voice-status-chip" in html
@@ -360,6 +418,11 @@ def test_live_tutor_dashboard_panel_is_safe_and_command_ready():
 
     assert panel.panel_id == LIVE_TUTOR_OVERLAY_ID
     assert panel.smoke_command == "uv run cortex-live-tutor-demo --server-smoke --json"
+    assert (
+        panel.browser_replay_smoke_command
+        == "uv run cortex-live-tutor-demo --browser-replay-smoke --json"
+    )
+    assert panel.receipt_endpoint == "/tutor/receipts"
     assert panel.demo_url == "http://127.0.0.1:8797/"
     assert panel.turn_count == 5
     assert panel.cue_count == 5
