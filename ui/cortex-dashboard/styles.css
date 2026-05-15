@@ -1310,6 +1310,99 @@ body[data-active-view="memory_palace"] #memory-list {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.agentic-run-card {
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid rgba(85, 156, 230, 0.22);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(244, 250, 255, 0.76)),
+    rgba(255, 255, 255, 0.72);
+  box-shadow: 0 12px 28px rgba(38, 94, 152, 0.11);
+  backdrop-filter: blur(18px) saturate(1.25);
+}
+
+.agentic-pointer-card {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.agentic-pointer-dot {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 34% 30%, #ffffff 0 16%, #78c7ff 18% 42%, #176de8 70%);
+  box-shadow: 0 0 0 5px rgba(63, 150, 255, 0.12), 0 6px 18px rgba(20, 99, 221, 0.24);
+}
+
+.agentic-pointer-dot::after {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #1dd39c;
+  content: "";
+}
+
+.agentic-pointer-card strong,
+.agentic-pointer-card span span {
+  display: block;
+  min-width: 0;
+}
+
+.agentic-pointer-card strong {
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.agentic-pointer-card span span {
+  margin-top: 3px;
+  color: #435363;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.agentic-run-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.agentic-run-summary div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid rgba(207, 224, 238, 0.8);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.agentic-run-summary span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.agentic-run-summary strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .shadow-live-grid div,
 .encrypted-index-grid div,
 .agentic-os-grid div,
@@ -2210,6 +2303,7 @@ body[data-active-view="memory_palace"] #memory-list {
   .shadow-live-grid,
   .encrypted-index-grid,
   .agentic-os-grid,
+  .agentic-run-summary,
   .live-receipts-grid,
   .capture-control-grid,
   .capture-ladder-grid,

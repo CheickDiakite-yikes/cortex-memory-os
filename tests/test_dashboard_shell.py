@@ -131,6 +131,15 @@ def test_dashboard_shell_composes_safe_view_models():
     assert shell.agentic_os_panel.raw_ref_retained is False
     assert "memory.get_context_pack" in shell.agentic_os_panel.ready_routes
     assert "write_memory_without_review" in shell.agentic_os_panel.blocked_effects
+    assert shell.agentic_os_panel.latest_turn_target_label == "Color Page"
+    assert shell.agentic_os_panel.latest_turn_route_kind.value == "draft_only"
+    assert shell.agentic_os_panel.latest_turn_gateway_tool == "skill.execute_draft"
+    assert shell.agentic_os_panel.latest_turn_approval_required is True
+    assert shell.agentic_os_panel.pointer_card_primary_action == "Show steps"
+    assert (
+        shell.agentic_os_panel.turn_smoke_command
+        == "uv run cortex-agentic-os --turn-smoke --json"
+    )
     assert shell.live_tutor_panel.external_effect_enabled is False
     assert shell.live_tutor_panel.real_screen_capture_started is False
     assert shell.live_tutor_panel.voice_capture_enabled is False
@@ -236,6 +245,9 @@ def test_dashboard_data_js_is_redacted_and_static_app_ready():
     assert LIVE_TUTOR_OVERLAY_ID in data_js
     assert "Agentic OS Kernel" in data_js
     assert AGENTIC_OS_PLANNER_ID in data_js
+    assert "Current Agentic Run" not in data_js
+    assert "latest_turn_gateway_tool" in data_js
+    assert "turn_smoke_command" in data_js
     assert "Encrypted Index Receipts" in data_js
     assert "Live Receipt Backbone" in data_js
     assert "Live Safe Receipts" in data_js

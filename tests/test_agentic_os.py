@@ -121,6 +121,14 @@ def test_agentic_os_dashboard_panel_is_simple_and_safe():
     assert "memory.get_context_pack" in panel.ready_routes
     assert "runtime_trace.record" in panel.ready_routes
     assert "Ask before doing anything with effects" in panel.review_steps
+    assert panel.latest_turn_target_label == "Color Page"
+    assert panel.latest_turn_route_kind == AgenticRouteKind.DRAFT_ONLY
+    assert panel.latest_turn_gateway_tool == "skill.execute_draft"
+    assert panel.latest_turn_approval_required is True
+    assert panel.latest_turn_memory_proposal_created is False
+    assert panel.pointer_card_title == "Draft the next steps"
+    assert panel.pointer_card_primary_action == "Show steps"
+    assert panel.turn_smoke_command == "uv run cortex-agentic-os --turn-smoke --json"
     assert panel.display_only_pointer is True
     assert panel.memory_write_allowed is False
     assert panel.external_effect_enabled is False

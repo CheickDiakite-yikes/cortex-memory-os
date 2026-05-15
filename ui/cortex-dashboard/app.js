@@ -986,6 +986,7 @@ function renderAgenticOSPanel() {
   const target = document.querySelector("#agentic-os-panel");
   const panel = data.agentic_os_panel;
   if (!target || !panel) return;
+  const confidence = Math.round((panel.latest_turn_confidence || 0) * 100);
   target.innerHTML = `
     <div class="agentic-os-copy">
       <span class="agentic-os-icon">${svgIcon("route")}</span>
@@ -993,6 +994,23 @@ function renderAgenticOSPanel() {
         <strong>${escapeHtml(panel.title)}</strong>
         <span>${escapeHtml(panel.summary)}</span>
       </span>
+    </div>
+    <div class="agentic-run-card" aria-label="Current Agentic Run">
+      <div class="agentic-pointer-card">
+        <span class="agentic-pointer-dot" aria-hidden="true"></span>
+        <span>
+          <strong>${escapeHtml(panel.pointer_card_title || "Ready beside the pointer")}</strong>
+          <span>${escapeHtml(panel.pointer_card_body || "Cortex can explain or draft without touching your system.")}</span>
+        </span>
+      </div>
+      <div class="agentic-run-summary">
+        <div><span>Target</span><strong>${escapeHtml(panel.latest_turn_target_label || "None")}</strong></div>
+        <div><span>Route</span><strong>${formatToken(panel.latest_turn_route_kind || "answer_only")}</strong></div>
+        <div><span>Tool</span><strong>${escapeHtml(panel.latest_turn_gateway_tool || "pointer.resolve_display_context")}</strong></div>
+        <div><span>Trust</span><strong>${confidence}%</strong></div>
+        <div><span>Approval</span><strong>${panel.latest_turn_approval_required ? "asks first" : "not needed"}</strong></div>
+        <div><span>Memory</span><strong>${panel.latest_turn_memory_proposal_created ? "review card" : "no write"}</strong></div>
+      </div>
     </div>
     <div class="agentic-os-grid">
       <div><span>Routes</span><strong>${panel.route_count}</strong></div>
@@ -1011,12 +1029,16 @@ function renderAgenticOSPanel() {
     </div>
     <div class="shadow-live-actions">
       <button class="text-command" type="button" id="agentic-os-smoke">cortex-agentic-os</button>
+      <button class="text-command" type="button" id="agentic-turn-smoke">Current run</button>
       <button class="text-command" type="button" id="agentic-os-routes">Tool routes</button>
       <button class="text-command" type="button" id="agentic-os-gates">Review gates</button>
     </div>
   `;
   document.querySelector("#agentic-os-smoke").addEventListener("click", () => {
     writeReceipt(`${panel.panel_id}: ${panel.smoke_command}. Goal becomes pointer context, memory context, tool route, approval, outcome trace, then reviewed learning.`);
+  });
+  document.querySelector("#agentic-turn-smoke").addEventListener("click", () => {
+    writeReceipt(`Current agentic run: target ${panel.latest_turn_target_label}, route ${panel.latest_turn_route_kind}, tool ${panel.latest_turn_gateway_tool}, approval ${panel.latest_turn_approval_required ? "required" : "not required"}.`);
   });
   document.querySelector("#agentic-os-routes").addEventListener("click", () => {
     writeReceipt(`Agentic routes ready: ${(panel.ready_routes || []).join(", ")}. Click, type, export, raw storage, and unreviewed memory writes stay blocked.`);

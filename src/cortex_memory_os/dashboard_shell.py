@@ -747,6 +747,12 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "Agentic OS Kernel",
         "renderAgenticOSPanel",
         AGENTIC_OS_PLANNER_ID,
+        "Current Agentic Run",
+        "agentic-run-card",
+        "agentic-pointer-card",
+        "agentic-turn-smoke",
+        "latest_turn_gateway_tool",
+        "turn_smoke_command",
         "cortex-agentic-os",
         "Goal -> pointer context",
     ]

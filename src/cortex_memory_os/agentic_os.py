@@ -438,7 +438,20 @@ class AgenticOSDashboardPanel(StrictModel):
     capabilities: list[str] = Field(default_factory=list)
     ready_routes: list[str] = Field(default_factory=list)
     review_steps: list[str] = Field(default_factory=list)
+    latest_turn_target_label: str = Field(default="Color Page", min_length=1)
+    latest_turn_route_kind: AgenticRouteKind = AgenticRouteKind.DRAFT_ONLY
+    latest_turn_gateway_tool: str = Field(default="skill.execute_draft", min_length=1)
+    latest_turn_confidence: float = Field(default=0.88, ge=0, le=1)
+    latest_turn_approval_required: bool = True
+    latest_turn_memory_proposal_created: bool = False
+    pointer_card_title: str = Field(default="Draft the next steps", min_length=1)
+    pointer_card_body: str = Field(
+        default="I see Color Page. I can draft the next safe steps.",
+        min_length=1,
+    )
+    pointer_card_primary_action: str = Field(default="Show steps", min_length=1)
     smoke_command: str = "uv run cortex-agentic-os --smoke --json"
+    turn_smoke_command: str = "uv run cortex-agentic-os --turn-smoke --json"
     display_only_pointer: bool = True
     memory_write_allowed: bool = False
     external_effect_enabled: bool = False
@@ -451,6 +464,12 @@ class AgenticOSDashboardPanel(StrictModel):
     def enforce_dashboard_boundary(self) -> AgenticOSDashboardPanel:
         if not self.display_only_pointer:
             raise ValueError("agentic dashboard panel requires display-only pointer")
+        if self.latest_turn_route_kind in {
+            AgenticRouteKind.DRAFT_ONLY,
+            AgenticRouteKind.ASSISTIVE_WITH_APPROVAL,
+            AgenticRouteKind.BLOCKED,
+        } and not self.latest_turn_approval_required:
+            raise ValueError("reviewable agentic dashboard turns require approval state")
         if self.memory_write_allowed or self.external_effect_enabled or self.raw_ref_retained:
             raise ValueError("agentic dashboard panel cannot enable writes/effects/raw refs")
         if not self.content_redacted or not self.source_refs_redacted:
@@ -597,8 +616,14 @@ def build_agentic_os_plan(
     )
 
 
-def build_agentic_os_dashboard_panel(plan: AgenticOSPlan | None = None) -> AgenticOSDashboardPanel:
+def build_agentic_os_dashboard_panel(
+    plan: AgenticOSPlan | None = None,
+    turn: AgenticTurn | None = None,
+) -> AgenticOSDashboardPanel:
     plan = plan or build_agentic_os_plan()
+    turn = turn or build_agentic_turn(
+        pointer_event=build_pointer_intent_event(user_phrase="What should I click next?")
+    )
     return AgenticOSDashboardPanel(
         summary="Goal -> pointer context -> memory context -> tool route -> approval -> outcome -> reviewed learning.",
         route_count=len(plan.routes),
@@ -609,6 +634,15 @@ def build_agentic_os_dashboard_panel(plan: AgenticOSPlan | None = None) -> Agent
         capabilities=[capability.value for capability in plan.capabilities],
         ready_routes=[route.gateway_tool for route in plan.routes[:4]],
         review_steps=[step.label for step in plan.steps if step.requires_confirmation],
+        latest_turn_target_label=turn.receipt.target_label,
+        latest_turn_route_kind=turn.route_decision.route_kind,
+        latest_turn_gateway_tool=turn.route_decision.gateway_tool,
+        latest_turn_confidence=turn.pointer_event.confidence,
+        latest_turn_approval_required=turn.route_decision.requires_confirmation,
+        latest_turn_memory_proposal_created=turn.receipt.memory_proposal_created,
+        pointer_card_title=turn.pointer_card_title,
+        pointer_card_body=turn.pointer_card_body,
+        pointer_card_primary_action=turn.pointer_card_primary_action,
         display_only_pointer=plan.display_only_pointer,
         memory_write_allowed=plan.memory_write_allowed,
         external_effect_enabled=plan.external_effect_enabled,
