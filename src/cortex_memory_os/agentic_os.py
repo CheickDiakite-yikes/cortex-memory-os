@@ -185,6 +185,42 @@ class AgenticOSSmokeResult(StrictModel):
     blocked_effect_count: int = Field(ge=0)
 
 
+class AgenticOSDashboardPanel(StrictModel):
+    panel_id: str = AGENTIC_OS_PLANNER_ID
+    policy_ref: str = AGENTIC_OS_POLICY_REF
+    title: str = "Agentic OS Kernel"
+    summary: str = Field(min_length=1)
+    route_count: int = Field(ge=0)
+    step_count: int = Field(ge=0)
+    confirmation_gate_count: int = Field(ge=0)
+    next_best_action: str = Field(min_length=1)
+    principles: list[str] = Field(default_factory=list)
+    capabilities: list[str] = Field(default_factory=list)
+    ready_routes: list[str] = Field(default_factory=list)
+    review_steps: list[str] = Field(default_factory=list)
+    smoke_command: str = "uv run cortex-agentic-os --smoke --json"
+    display_only_pointer: bool = True
+    memory_write_allowed: bool = False
+    external_effect_enabled: bool = False
+    raw_ref_retained: bool = False
+    blocked_effects: list[str] = Field(default_factory=list)
+    content_redacted: bool = True
+    source_refs_redacted: bool = True
+
+    @model_validator(mode="after")
+    def enforce_dashboard_boundary(self) -> AgenticOSDashboardPanel:
+        if not self.display_only_pointer:
+            raise ValueError("agentic dashboard panel requires display-only pointer")
+        if self.memory_write_allowed or self.external_effect_enabled or self.raw_ref_retained:
+            raise ValueError("agentic dashboard panel cannot enable writes/effects/raw refs")
+        if not self.content_redacted or not self.source_refs_redacted:
+            raise ValueError("agentic dashboard panel must stay redacted")
+        for required in ("execute_click", "write_memory_without_review", "store_raw_evidence"):
+            if required not in self.blocked_effects:
+                raise ValueError(f"agentic dashboard panel missing blocked effect {required}")
+        return self
+
+
 def build_agentic_os_plan(
     *,
     goal: str = "Help me understand this and decide the next safe action.",
@@ -318,6 +354,26 @@ def build_agentic_os_plan(
         routes=routes,
         steps=steps,
         next_best_action="Run the pointer-first plan in controlled demo mode, then promote only reviewed routes.",
+    )
+
+
+def build_agentic_os_dashboard_panel(plan: AgenticOSPlan | None = None) -> AgenticOSDashboardPanel:
+    plan = plan or build_agentic_os_plan()
+    return AgenticOSDashboardPanel(
+        summary="Goal -> pointer context -> memory context -> tool route -> approval -> outcome -> reviewed learning.",
+        route_count=len(plan.routes),
+        step_count=len(plan.steps),
+        confirmation_gate_count=sum(1 for step in plan.steps if step.requires_confirmation),
+        next_best_action=plan.next_best_action,
+        principles=plan.principles,
+        capabilities=[capability.value for capability in plan.capabilities],
+        ready_routes=[route.gateway_tool for route in plan.routes[:4]],
+        review_steps=[step.label for step in plan.steps if step.requires_confirmation],
+        display_only_pointer=plan.display_only_pointer,
+        memory_write_allowed=plan.memory_write_allowed,
+        external_effect_enabled=plan.external_effect_enabled,
+        raw_ref_retained=plan.raw_ref_retained,
+        blocked_effects=plan.blocked_effects,
     )
 
 

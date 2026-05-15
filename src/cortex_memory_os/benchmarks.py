@@ -202,6 +202,12 @@ from cortex_memory_os.live_tutor_overlay import (
     run_live_tutor_demo_smoke,
     run_live_tutor_server_smoke,
 )
+from cortex_memory_os.agentic_os import (
+    AGENTIC_OS_PLANNER_ID,
+    AGENTIC_OS_POLICY_REF,
+    build_agentic_os_dashboard_panel,
+    run_agentic_os_smoke,
+)
 from cortex_memory_os.realtime_voice_pointer import (
     DASHBOARD_VOICE_POINTER_PANEL_ID,
     DEFAULT_REALTIME_MODEL,
@@ -770,6 +776,7 @@ def run_all() -> BenchmarkRunResult:
         case_skill_success_metrics_contract,
         case_skill_metrics_dashboard_surface_contract,
         case_dashboard_shell_contract,
+        case_agentic_os_planner_contract,
         case_manual_memory_book_loop_contract,
         case_manual_memory_gateway_contract,
         case_dashboard_focus_inspector_contract,
@@ -12766,6 +12773,89 @@ def case_dashboard_shell_contract() -> BenchmarkCaseResult:
             "ui_root": "ui/cortex-dashboard",
             "missing_ui_terms": missing_ui_terms,
             "missing_doc_terms": smoke.missing_doc_terms,
+        },
+    )
+
+
+def case_agentic_os_planner_contract() -> BenchmarkCaseResult:
+    smoke = run_agentic_os_smoke()
+    panel = build_agentic_os_dashboard_panel(smoke.plan)
+    plan_text = (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+        encoding="utf-8"
+    )
+    registry_text = (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+        encoding="utf-8"
+    )
+    dashboard_doc = (
+        REPO_ROOT / "docs" / "product" / "cortex-dashboard-shell.md"
+    ).read_text(encoding="utf-8")
+    ui_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [
+            REPO_ROOT / "ui" / "cortex-dashboard" / "index.html",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "styles.css",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "app.js",
+            REPO_ROOT / "ui" / "cortex-dashboard" / "dashboard-data.js",
+        ]
+        if path.exists()
+    )
+    required_terms = [
+        AGENTIC_OS_PLANNER_ID,
+        AGENTIC_OS_POLICY_REF,
+        "Agentic OS Kernel",
+        "Goal -> pointer context",
+        "memory.get_context_pack",
+        "runtime_trace.record",
+        "skill.execute_draft",
+        "write_memory_without_review",
+        "execute_click",
+        "store_raw_evidence",
+    ]
+    missing_doc_terms = _missing_terms(plan_text + "\n" + registry_text + "\n" + dashboard_doc, required_terms[:3])
+    missing_ui_terms = _missing_terms(ui_text, required_terms)
+    payload = smoke.model_dump_json() + panel.model_dump_json()
+    passed = (
+        smoke.passed
+        and smoke.policy_ref == AGENTIC_OS_POLICY_REF
+        and panel.panel_id == AGENTIC_OS_PLANNER_ID
+        and panel.display_only_pointer
+        and panel.route_count >= 5
+        and panel.step_count >= 6
+        and panel.confirmation_gate_count >= 2
+        and not panel.memory_write_allowed
+        and not panel.external_effect_enabled
+        and not panel.raw_ref_retained
+        and panel.content_redacted
+        and panel.source_refs_redacted
+        and "execute_click" in panel.blocked_effects
+        and "write_memory_without_review" in panel.blocked_effects
+        and "store_raw_evidence" in panel.blocked_effects
+        and "raw://" not in payload
+        and "encrypted_blob://" not in payload
+        and not missing_ui_terms
+        and not missing_doc_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="AGENTIC-OS-PLANNER-001/pointer_goal_tool_route_approval_spine",
+        suite=AGENTIC_OS_PLANNER_ID,
+        passed=passed,
+        summary=(
+            "Agentic OS planner maps pointer-first goals into capabilities, "
+            "tool routes, approval gates, traces, and reviewed learning without "
+            "autonomous effects."
+        ),
+        metrics={
+            "route_count": panel.route_count,
+            "step_count": panel.step_count,
+            "confirmation_gate_count": panel.confirmation_gate_count,
+            "blocked_effect_count": len(panel.blocked_effects),
+            "missing_ui_terms": len(missing_ui_terms),
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": AGENTIC_OS_POLICY_REF,
+            "missing_ui_terms": missing_ui_terms,
+            "missing_doc_terms": missing_doc_terms,
         },
     )
 

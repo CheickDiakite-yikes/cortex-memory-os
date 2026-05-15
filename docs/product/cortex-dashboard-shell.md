@@ -279,6 +279,20 @@ raw screenshot, raw accessibility tree, tab titles, private browser text,
 secrets, raw refs, durable memory writes, gateway mutations, or external
 effects.
 
+## Agentic OS Kernel
+
+`AGENTIC-OS-PLANNER-001` adds the first OS-level planning spine behind the
+dashboard. It maps a pointer-first user goal into capability lanes, safe tool
+routes, approval gates, redacted runtime tracing, and reviewed memory
+proposals. This is the bridge between the AI Pointer product direction and a
+proper Cortex agentic OS: maintain flow, show and tell at the pointer, resolve
+“this” and “that”, and turn pixels into structured entities before any tool
+action is allowed.
+
+The dashboard panel stays deliberately conservative. It is display-only,
+content-redacted, source-ref-redacted, and blocks autonomous clicks, typing,
+exports, raw evidence storage, and unreviewed memory writes.
+
 The required receipt class is a local preview receipt, such as:
 
 ```text
@@ -323,6 +337,8 @@ Observation pause previewed locally. Confirmation and audit receipt required.
   `policy_capture_readiness_ladder_v1`;
 - the visible shell includes `Live Tutor Overlay` for
   `LIVE-TUTOR-OVERLAY-001`, tied to `policy_live_tutor_overlay_v1`;
+- the visible shell includes `Agentic OS Kernel` for
+  `AGENTIC-OS-PLANNER-001`, tied to `policy_agentic_os_planner_v1`;
 - dashboard docs, task board, benchmark plan, and benchmark registry name the
   slice;
 - local browser proof confirms the first viewport renders without overlapping

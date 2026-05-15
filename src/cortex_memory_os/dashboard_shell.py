@@ -59,6 +59,12 @@ from cortex_memory_os.live_tutor_overlay import (
     LiveTutorDashboardPanel,
     build_live_tutor_dashboard_panel,
 )
+from cortex_memory_os.agentic_os import (
+    AGENTIC_OS_PLANNER_ID,
+    AGENTIC_OS_POLICY_REF,
+    AgenticOSDashboardPanel,
+    build_agentic_os_dashboard_panel,
+)
 from cortex_memory_os.realtime_voice_pointer import REALTIME_VOICE_POLICY_REF
 from cortex_memory_os.dashboard_encrypted_index import (
     DASHBOARD_LIVE_BACKBONE_POLICY_REF,
@@ -326,6 +332,7 @@ class CortexDashboardShell(StrictModel):
     durable_synthetic_memory_receipt: DurableSyntheticMemoryReceipt
     live_backbone_panel: DashboardLiveBackbonePanel
     clicky_ux_companion: ClickyUxCompanionPanel
+    agentic_os_panel: AgenticOSDashboardPanel
     live_tutor_panel: LiveTutorDashboardPanel
     policy_refs: list[str] = Field(default_factory=list)
     design_notes: list[str] = Field(default_factory=list)
@@ -368,6 +375,7 @@ class DashboardShellSmokeResult(StrictModel):
     dashboard_live_backbone_present: bool
     clicky_ux_companion_present: bool
     live_tutor_panel_present: bool
+    agentic_os_panel_present: bool
     dashboard_live_data_adapter_present: bool
     live_dashboard_receipts_present: bool
     capture_control_present: bool
@@ -408,6 +416,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
         operational_backbone.native_live_feed
     )
     live_tutor_panel = build_live_tutor_dashboard_panel()
+    agentic_os_panel = build_agentic_os_dashboard_panel()
     gateway_action_receipts = build_dashboard_gateway_action_receipts(
         memory_dashboard,
         skill_list,
@@ -564,6 +573,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             CLICKY_UX_LESSONS_POLICY_REF,
             CLICKY_UX_COMPANION_POLICY_REF,
             LIVE_TUTOR_OVERLAY_POLICY_REF,
+            AGENTIC_OS_POLICY_REF,
             REALTIME_VOICE_POLICY_REF,
             DASHBOARD_LIVE_DATA_ADAPTER_POLICY_REF,
             LIVE_DASHBOARD_RECEIPTS_POLICY_REF,
@@ -591,6 +601,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Live Shadow Pointer receipt is compact and sits above deeper review queues.",
             "Clicky-inspired UX keeps live presence cursor-adjacent and makes the dashboard a review space.",
             "Live Tutor Overlay turns the Clicky-inspired interaction into a controlled creative-tool demo.",
+            "Agentic OS Kernel turns pointer intent into capabilities, routes, approval gates, traces, and reviewed learning.",
             "Realtime voice UX starts pointer-first: triple click may speak briefly, hold can answer as text, and silent holds avoid voice output.",
             "Encrypted index receipts show counts and policy state instead of raw memory or query text.",
             "Live dashboard panels refresh from local read-only adapter receipts, not embedded raw payloads.",
@@ -607,6 +618,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Shadow Pointer receipts do not include raw page payloads or raw refs.",
             "Clicky UX lessons were treated as untrusted external evidence and no repo code was executed.",
             "Live Tutor Overlay is display-only and controlled-state-only; it starts no screen, voice, memory, raw-ref, click, type, export, or external-effect path.",
+            "Agentic OS Kernel is a planning spine only: no autonomous click, type, export, raw storage, or unreviewed memory write.",
             "Realtime voice routes require gpt-realtime-2, ephemeral client secrets, low reasoning effort, and explicit cost guards before any live microphone path.",
             "Encrypted index dashboard panels never expose key material, token text, queries, or source refs.",
             "Live adapters expose aggregate counts only and keep write paths disabled.",
@@ -622,6 +634,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
         ),
         live_backbone_panel=operational_backbone.live_backbone_panel,
         clicky_ux_companion=clicky_ux_companion,
+        agentic_os_panel=agentic_os_panel,
         live_tutor_panel=live_tutor_panel,
     )
 
@@ -731,6 +744,11 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "renderLiveTutorPanel",
         LIVE_TUTOR_OVERLAY_ID,
         "cortex-live-tutor-demo",
+        "Agentic OS Kernel",
+        "renderAgenticOSPanel",
+        AGENTIC_OS_PLANNER_ID,
+        "cortex-agentic-os",
+        "Goal -> pointer context",
     ]
     missing_ui_terms = _missing_terms(ui_text + "\n" + data_js, required_ui_terms)
     doc_text = (
@@ -760,6 +778,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         CAPTURE_READINESS_LADDER_ID,
         "Live Tutor Overlay",
         LIVE_TUTOR_OVERLAY_ID,
+        "Agentic OS Kernel",
+        AGENTIC_OS_PLANNER_ID,
         "child-readable home",
     ]
     missing_doc_terms = _missing_terms(doc_text, required_doc_terms)
@@ -950,6 +970,26 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and "raw://" not in live_tutor_payload
         and "encrypted_blob://" not in live_tutor_payload
     )
+    agentic_os_payload = shell.agentic_os_panel.model_dump_json()
+    agentic_os_panel_present = (
+        "Agentic OS Kernel" in ui_text + "\n" + data_js
+        and AGENTIC_OS_PLANNER_ID in ui_text + "\n" + data_js
+        and shell.agentic_os_panel.display_only_pointer
+        and shell.agentic_os_panel.route_count >= 5
+        and shell.agentic_os_panel.step_count >= 6
+        and shell.agentic_os_panel.confirmation_gate_count >= 2
+        and not shell.agentic_os_panel.memory_write_allowed
+        and not shell.agentic_os_panel.external_effect_enabled
+        and not shell.agentic_os_panel.raw_ref_retained
+        and shell.agentic_os_panel.content_redacted
+        and shell.agentic_os_panel.source_refs_redacted
+        and AGENTIC_OS_POLICY_REF in shell.policy_refs
+        and "execute_click" in shell.agentic_os_panel.blocked_effects
+        and "write_memory_without_review" in shell.agentic_os_panel.blocked_effects
+        and "store_raw_evidence" in shell.agentic_os_panel.blocked_effects
+        and "raw://" not in agentic_os_payload
+        and "encrypted_blob://" not in agentic_os_payload
+    )
     adapter_payload = shell.dashboard_live_data_adapter.model_dump_json()
     dashboard_live_data_adapter_present = (
         shell.dashboard_live_data_adapter.read_only
@@ -1040,6 +1080,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         and durable_synthetic_memory_receipt_present
         and dashboard_live_backbone_present
         and clicky_ux_companion_present
+        and agentic_os_panel_present
         and live_tutor_panel_present
         and dashboard_live_data_adapter_present
         and live_dashboard_receipts_present
@@ -1091,6 +1132,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         durable_synthetic_memory_receipt_present=durable_synthetic_memory_receipt_present,
         dashboard_live_backbone_present=dashboard_live_backbone_present,
         clicky_ux_companion_present=clicky_ux_companion_present,
+        agentic_os_panel_present=agentic_os_panel_present,
         live_tutor_panel_present=live_tutor_panel_present,
         dashboard_live_data_adapter_present=dashboard_live_data_adapter_present,
         live_dashboard_receipts_present=live_dashboard_receipts_present,

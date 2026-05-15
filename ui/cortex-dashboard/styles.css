@@ -1098,6 +1098,9 @@ body[data-active-view="memory_palace"] #memory-list {
 }
 
 .live-tutor-rail {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.95fr) minmax(320px, 1.05fr);
+  gap: 12px;
   min-width: 0;
 }
 
@@ -1110,6 +1113,7 @@ body[data-active-view="memory_palace"] #memory-list {
 
 .shadow-live-inner,
 .encrypted-index-inner,
+.agentic-os-inner,
 .live-tutor-inner,
 .live-receipts-inner,
 .capture-control-inner,
@@ -1129,6 +1133,12 @@ body[data-active-view="memory_palace"] #memory-list {
 .encrypted-index-inner {
   border-color: var(--line);
   background: var(--surface);
+}
+
+.agentic-os-inner {
+  min-height: 104px;
+  border-color: #d8e6dc;
+  background: #fcfffd;
 }
 
 .live-receipts-inner {
@@ -1157,6 +1167,7 @@ body[data-active-view="memory_palace"] #memory-list {
 
 .shadow-live-copy,
 .encrypted-index-copy,
+.agentic-os-copy,
 .live-tutor-copy,
 .live-receipts-copy,
 .capture-control-copy,
@@ -1170,6 +1181,7 @@ body[data-active-view="memory_palace"] #memory-list {
 
 .shadow-live-icon,
 .encrypted-index-icon,
+.agentic-os-icon,
 .live-tutor-icon,
 .live-receipts-icon,
 .capture-control-icon,
@@ -1186,6 +1198,11 @@ body[data-active-view="memory_palace"] #memory-list {
 .encrypted-index-icon {
   background: #eef8f2;
   color: var(--green);
+}
+
+.agentic-os-icon {
+  background: #eef8f2;
+  color: #2c7458;
 }
 
 .live-tutor-icon {
@@ -1210,6 +1227,7 @@ body[data-active-view="memory_palace"] #memory-list {
 
 .shadow-live-icon svg,
 .encrypted-index-icon svg,
+.agentic-os-icon svg,
 .live-tutor-icon svg,
 .live-receipts-icon svg,
 .capture-control-icon svg,
@@ -1223,6 +1241,8 @@ body[data-active-view="memory_palace"] #memory-list {
 .shadow-live-copy span span,
 .encrypted-index-copy strong,
 .encrypted-index-copy span span,
+.agentic-os-copy strong,
+.agentic-os-copy span span,
 .live-tutor-copy strong,
 .live-tutor-copy span span,
 .live-receipts-copy strong,
@@ -1237,6 +1257,7 @@ body[data-active-view="memory_palace"] #memory-list {
 
 .shadow-live-copy strong,
 .encrypted-index-copy strong,
+.agentic-os-copy strong,
 .live-tutor-copy strong,
 .live-receipts-copy strong,
 .capture-control-copy strong,
@@ -1247,6 +1268,7 @@ body[data-active-view="memory_palace"] #memory-list {
 
 .shadow-live-copy span span,
 .encrypted-index-copy span span,
+.agentic-os-copy span span,
 .live-tutor-copy span span,
 .live-receipts-copy span span,
 .capture-control-copy span span,
@@ -1266,6 +1288,7 @@ body[data-active-view="memory_palace"] #memory-list {
 
 .shadow-live-grid,
 .encrypted-index-grid,
+.agentic-os-grid,
 .live-tutor-grid,
 .live-receipts-grid,
 .capture-control-grid,
@@ -1283,8 +1306,13 @@ body[data-active-view="memory_palace"] #memory-list {
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
+.agentic-os-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .shadow-live-grid div,
 .encrypted-index-grid div,
+.agentic-os-grid div,
 .live-tutor-grid div,
 .live-receipts-grid div,
 .capture-control-grid div,
@@ -1300,6 +1328,7 @@ body[data-active-view="memory_palace"] #memory-list {
 
 .shadow-live-grid span,
 .encrypted-index-grid span,
+.agentic-os-grid span,
 .live-tutor-grid span,
 .live-receipts-grid span,
 .capture-control-grid span,
@@ -1312,6 +1341,7 @@ body[data-active-view="memory_palace"] #memory-list {
 
 .shadow-live-grid strong,
 .encrypted-index-grid strong,
+.agentic-os-grid strong,
 .live-tutor-grid strong,
 .live-receipts-grid strong,
 .capture-control-grid strong,
@@ -1323,12 +1353,14 @@ body[data-active-view="memory_palace"] #memory-list {
   white-space: nowrap;
 }
 
+.agentic-os-targets,
 .live-tutor-targets {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
 }
 
+.agentic-os-targets span,
 .live-tutor-targets span {
   min-height: 26px;
   padding: 5px 8px;
@@ -1340,6 +1372,7 @@ body[data-active-view="memory_palace"] #memory-list {
   font-weight: 800;
 }
 
+.agentic-os-note,
 .live-tutor-receipt {
   margin: 0;
   color: #435363;
@@ -2167,13 +2200,16 @@ body[data-active-view="memory_palace"] #memory-list {
   .insight-list,
   .focus-inspector-inner,
   .live-backbone-rail,
+  .live-tutor-rail,
   .capture-control-rail,
   .shadow-live-inner,
+  .agentic-os-inner,
   .live-receipts-inner,
   .capture-control-inner,
   .capture-ladder-inner,
   .shadow-live-grid,
   .encrypted-index-grid,
+  .agentic-os-grid,
   .live-receipts-grid,
   .capture-control-grid,
   .capture-ladder-grid,

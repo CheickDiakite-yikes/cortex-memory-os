@@ -5,6 +5,7 @@ from cortex_memory_os.agentic_os import (
     AGENTIC_OS_POLICY_REF,
     AI_POINTER_PRINCIPLES,
     AgenticOSPlan,
+    build_agentic_os_dashboard_panel,
     build_agentic_os_plan,
     main,
     run_agentic_os_smoke,
@@ -93,6 +94,27 @@ def test_agentic_os_smoke_and_cli(capsys):
     assert AGENTIC_OS_PLANNER_ID in output
     assert AGENTIC_OS_POLICY_REF in output
     assert "write_memory_without_review" in output
+
+
+def test_agentic_os_dashboard_panel_is_simple_and_safe():
+    panel = build_agentic_os_dashboard_panel()
+
+    assert panel.panel_id == AGENTIC_OS_PLANNER_ID
+    assert panel.route_count >= 5
+    assert panel.step_count >= 6
+    assert panel.confirmation_gate_count >= 2
+    assert "Goal -> pointer context" in panel.summary
+    assert "memory.get_context_pack" in panel.ready_routes
+    assert "runtime_trace.record" in panel.ready_routes
+    assert "Ask before doing anything with effects" in panel.review_steps
+    assert panel.display_only_pointer is True
+    assert panel.memory_write_allowed is False
+    assert panel.external_effect_enabled is False
+    assert panel.raw_ref_retained is False
+    assert panel.content_redacted is True
+    assert panel.source_refs_redacted is True
+    assert "execute_click" in panel.blocked_effects
+    assert panel.smoke_command == "uv run cortex-agentic-os --smoke --json"
 
 
 def test_agentic_os_plan_rejects_high_risk_routes():

@@ -22,6 +22,7 @@ from cortex_memory_os.live_tutor_overlay import (
     LIVE_TUTOR_OVERLAY_ID,
     LIVE_TUTOR_OVERLAY_POLICY_REF,
 )
+from cortex_memory_os.agentic_os import AGENTIC_OS_PLANNER_ID, AGENTIC_OS_POLICY_REF
 from cortex_memory_os.dashboard_encrypted_index import (
     DASHBOARD_LIVE_BACKBONE_POLICY_REF,
     ENCRYPTED_INDEX_DASHBOARD_LIVE_POLICY_REF,
@@ -77,6 +78,7 @@ def test_dashboard_shell_composes_safe_view_models():
     assert DASHBOARD_LIVE_BACKBONE_POLICY_REF in shell.policy_refs
     assert CLICKY_UX_LESSONS_POLICY_REF in shell.policy_refs
     assert CLICKY_UX_COMPANION_POLICY_REF in shell.policy_refs
+    assert AGENTIC_OS_POLICY_REF in shell.policy_refs
     assert DASHBOARD_LIVE_DATA_ADAPTER_POLICY_REF in shell.policy_refs
     assert LIVE_DASHBOARD_RECEIPTS_POLICY_REF in shell.policy_refs
     assert CAPTURE_READINESS_LADDER_POLICY_REF in shell.policy_refs
@@ -119,6 +121,16 @@ def test_dashboard_shell_composes_safe_view_models():
     assert shell.live_tutor_panel.controlled_surface is True
     assert shell.live_tutor_panel.memory_write_allowed is False
     assert shell.live_tutor_panel.raw_ref_retained is False
+    assert shell.agentic_os_panel.panel_id == AGENTIC_OS_PLANNER_ID
+    assert shell.agentic_os_panel.route_count >= 5
+    assert shell.agentic_os_panel.step_count >= 6
+    assert shell.agentic_os_panel.confirmation_gate_count >= 2
+    assert shell.agentic_os_panel.display_only_pointer is True
+    assert shell.agentic_os_panel.memory_write_allowed is False
+    assert shell.agentic_os_panel.external_effect_enabled is False
+    assert shell.agentic_os_panel.raw_ref_retained is False
+    assert "memory.get_context_pack" in shell.agentic_os_panel.ready_routes
+    assert "write_memory_without_review" in shell.agentic_os_panel.blocked_effects
     assert shell.live_tutor_panel.external_effect_enabled is False
     assert shell.live_tutor_panel.real_screen_capture_started is False
     assert shell.live_tutor_panel.voice_capture_enabled is False
@@ -222,6 +234,8 @@ def test_dashboard_data_js_is_redacted_and_static_app_ready():
     assert "Cursor Companion" in data_js
     assert "Live Tutor Overlay" in data_js
     assert LIVE_TUTOR_OVERLAY_ID in data_js
+    assert "Agentic OS Kernel" in data_js
+    assert AGENTIC_OS_PLANNER_ID in data_js
     assert "Encrypted Index Receipts" in data_js
     assert "Live Receipt Backbone" in data_js
     assert "Live Safe Receipts" in data_js

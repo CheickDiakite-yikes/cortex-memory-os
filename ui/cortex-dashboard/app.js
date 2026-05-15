@@ -982,6 +982,50 @@ function renderLiveDashboardReceipts() {
   });
 }
 
+function renderAgenticOSPanel() {
+  const target = document.querySelector("#agentic-os-panel");
+  const panel = data.agentic_os_panel;
+  if (!target || !panel) return;
+  target.innerHTML = `
+    <div class="agentic-os-copy">
+      <span class="agentic-os-icon">${svgIcon("route")}</span>
+      <span>
+        <strong>${escapeHtml(panel.title)}</strong>
+        <span>${escapeHtml(panel.summary)}</span>
+      </span>
+    </div>
+    <div class="agentic-os-grid">
+      <div><span>Routes</span><strong>${panel.route_count}</strong></div>
+      <div><span>Steps</span><strong>${panel.step_count}</strong></div>
+      <div><span>Review gates</span><strong>${panel.confirmation_gate_count}</strong></div>
+      <div><span>Pointer</span><strong>${panel.display_only_pointer ? "display-only" : "blocked"}</strong></div>
+      <div><span>Memory</span><strong>${panel.memory_write_allowed ? "write" : "review only"}</strong></div>
+      <div><span>Effects</span><strong>${panel.external_effect_enabled ? "enabled" : "blocked"}</strong></div>
+    </div>
+    <p class="agentic-os-note">${escapeHtml(panel.next_best_action)}</p>
+    <div class="agentic-os-targets">
+      ${(panel.principles || []).map((item) => `<span>${formatToken(item)}</span>`).join("")}
+    </div>
+    <div class="agentic-os-targets">
+      ${(panel.ready_routes || []).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}
+    </div>
+    <div class="shadow-live-actions">
+      <button class="text-command" type="button" id="agentic-os-smoke">cortex-agentic-os</button>
+      <button class="text-command" type="button" id="agentic-os-routes">Tool routes</button>
+      <button class="text-command" type="button" id="agentic-os-gates">Review gates</button>
+    </div>
+  `;
+  document.querySelector("#agentic-os-smoke").addEventListener("click", () => {
+    writeReceipt(`${panel.panel_id}: ${panel.smoke_command}. Goal becomes pointer context, memory context, tool route, approval, outcome trace, then reviewed learning.`);
+  });
+  document.querySelector("#agentic-os-routes").addEventListener("click", () => {
+    writeReceipt(`Agentic routes ready: ${(panel.ready_routes || []).join(", ")}. Click, type, export, raw storage, and unreviewed memory writes stay blocked.`);
+  });
+  document.querySelector("#agentic-os-gates").addEventListener("click", () => {
+    writeReceipt(`Review gates: ${(panel.review_steps || []).join("; ")}. Cortex asks before effectful work or learning.`);
+  });
+}
+
 function renderLiveTutorPanel() {
   const target = document.querySelector("#live-tutor-panel");
   const panel = data.live_tutor_panel;
@@ -1946,6 +1990,7 @@ if (!data) {
   renderHomeCommandCenter();
   renderShadowPointerLiveReceipt();
   renderEncryptedIndexPanel();
+  renderAgenticOSPanel();
   renderLiveTutorPanel();
   renderLiveDashboardReceipts();
   renderDemoPath();
