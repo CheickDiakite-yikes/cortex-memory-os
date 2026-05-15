@@ -7,7 +7,7 @@ def test_synthetic_benchmarks_pass():
     result = run_all()
 
     assert result.passed
-    assert len(result.case_results) == 222
+    assert len(result.case_results) == 223
     assert {case.suite for case in result.case_results} >= {
         "MEM-RECALL-001",
         "RETRIEVAL-SCORE-001",
@@ -212,6 +212,7 @@ def test_synthetic_benchmarks_pass():
         "SYNTHETIC-VOICE-TURN-LOOP-001",
         "REALTIME-CLIENT-SECRET-CONTRACT-001",
         "LIVE-TUTOR-VOICE-UX-001",
+        "LIVE-TUTOR-BROWSER-PROOF-001",
         "SELECTION-UX-CONTRACT-001",
         "DASHBOARD-VOICE-POINTER-PANEL-001",
         "REALTIME-VOICE-BENCH-DOCS-001",

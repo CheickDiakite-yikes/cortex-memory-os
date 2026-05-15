@@ -983,6 +983,7 @@ function renderLiveTutorPanel() {
     <div class="shadow-live-actions">
       <button class="text-command" type="button" id="live-tutor-open">Open demo</button>
       <button class="text-command" type="button" id="live-tutor-smoke">cortex-live-tutor-demo</button>
+      <button class="text-command" type="button" id="live-tutor-browser-proof">Browser proof</button>
     </div>
   `;
   document.querySelector("#live-tutor-open").addEventListener("click", () => {
@@ -990,6 +991,9 @@ function renderLiveTutorPanel() {
   });
   document.querySelector("#live-tutor-smoke").addEventListener("click", () => {
     writeReceipt(`${panel.panel_id}: ${panel.smoke_command}. Pointer-first, display-only, controlled surface, Realtime voice ${panel.realtime_voice_model}, default ${panel.voice_default_output}, AI draft ${panel.openai_store_false ? "store:false" : "blocked"}, ${panel.manual_memory_proposal_count || 0} reviewed memory proposal, no capture, no memory write, no raw refs.`);
+  });
+  document.querySelector("#live-tutor-browser-proof").addEventListener("click", () => {
+    writeReceipt(`${panel.browser_replay_smoke_command || "uv run cortex-live-tutor-demo --browser-replay-smoke --json"}; receipts: ${panel.receipt_endpoint || "/tutor/receipts"}. Browser CSS pixels normalize to the safe 1440x960 tutor surface.`);
   });
 }
 

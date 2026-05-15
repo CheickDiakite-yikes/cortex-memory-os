@@ -1664,7 +1664,14 @@ def _resolve_intent(
             "these",
             referenced_ids,
         )
-    if ("explain" in normalized or "what is" in normalized or "what's" in normalized) and pointer_target:
+    if (
+        "explain" in normalized
+        or "what is" in normalized
+        or "what's" in normalized
+        or "what this" in normalized
+        or "what does" in normalized
+        or "what it does" in normalized
+    ) and pointer_target:
         return (
             pointer_target.target_id,
             "explain_pointed_target",

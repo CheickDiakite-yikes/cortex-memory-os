@@ -142,6 +142,7 @@ Use `uv run cortex-bench --no-write` for quick local checks. Use
 | `REAL-CAPTURE-NEXT-GATE-001` | Next ScreenCaptureKit gate is tokenized, permission-gated, metadata-only, and still blocks continuous capture. | Continuous capture, raw pixel return, sensitive app capture, or durable memory writes become default. |
 | `SCREEN-METADATA-STREAM-PLAN-001` | Future ScreenCaptureKit stream starts as metadata_count_receipts. | Continuous capture, raw pixel return, raw refs, or memory writes become enabled. |
 | `LIVE-TUTOR-OVERLAY-001` | Controlled creative-tool tutor demo maps contextual questions to display-only spatial cues and dashboard receipts. | Tutor executes clicks, types, starts capture/voice/Accessibility, writes memory, retains raw refs, exports, or reads uncontrolled screen content. |
+| `LIVE-TUTOR-BROWSER-PROOF-001` | Browser CSS pixels from the local tutor UI normalize into the canonical 1440x960 surface and produce redacted receipts. | Browser replay breaks on resize, leaks utterances or assistant text, starts capture, writes memory, stores raw refs, or executes clicks. |
 | `AUDIT-001` | Memory mutations persist human-visible audits. | Mutation lacks a redacted audit event. |
 | `EXPORT-001` | User memory export is scoped, redacted, and deletion-aware. | Deleted/revoked content appears in export output. |
 | `EXPORT-AUDIT-001` | Memory exports persist redacted audit receipts. | Export audit copies memory content or secret-like text. |

@@ -41,6 +41,30 @@ The smoke gate is:
 uv run cortex-live-tutor-demo --server-smoke --json
 ```
 
+The browser replay gate is:
+
+```bash
+uv run cortex-live-tutor-demo --browser-replay-smoke --json
+```
+
+`LIVE-TUTOR-BROWSER-PROOF-001` covers the gap between CLI-only proof and the
+actual browser surface. The UI now sends pointer samples as browser CSS pixels
+with `pointer_coordinate_space=client_surface_css`, plus the visible client
+surface width and height. The server normalizes those samples into the
+canonical 1440x960 controlled demo surface before any pointer/voice routing
+uses them. Out-of-bounds client samples are clamped and marked in safety flags.
+
+The local receipt endpoint is:
+
+```text
+/tutor/receipts
+```
+
+It returns redacted receipt objects only when called from localhost with the
+per-session demo token. These receipts intentionally omit raw utterances and
+full assistant responses while keeping target, intent, voice route, confidence,
+blocked effects, and safety flags visible to engineers.
+
 ## Product Learning
 
 The key lesson from Clicky is not "move the user's mouse." It is: keep the

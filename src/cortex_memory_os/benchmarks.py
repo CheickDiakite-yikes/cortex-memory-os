@@ -193,9 +193,12 @@ from cortex_memory_os.live_clicker_demo import (
     run_live_clicker_hardening_smoke,
 )
 from cortex_memory_os.live_tutor_overlay import (
+    LIVE_TUTOR_BROWSER_PROOF_ID,
+    LIVE_TUTOR_BROWSER_PROOF_POLICY_REF,
     LIVE_TUTOR_OVERLAY_ID,
     LIVE_TUTOR_OVERLAY_POLICY_REF,
     build_live_tutor_dashboard_panel,
+    run_live_tutor_browser_replay_smoke,
     run_live_tutor_demo_smoke,
     run_live_tutor_server_smoke,
 )
@@ -776,6 +779,7 @@ def run_all() -> BenchmarkRunResult:
         case_live_clicker_hardening_contract,
         case_live_clicker_allowlisted_origin_contract,
         case_live_tutor_overlay_contract,
+        case_live_tutor_browser_proof_contract,
         case_synthetic_capture_ladder_contract,
         case_demo_readiness_contract,
         case_demo_stress_contract,
@@ -13969,6 +13973,102 @@ def case_live_tutor_overlay_contract() -> BenchmarkCaseResult:
             "server_target_ids": server_smoke.target_ids,
             "panel_targets": panel.latest_targets,
             "blocked_effects": panel.blocked_effects,
+            "missing_doc_terms": missing_doc_terms,
+            "missing_ui_terms": missing_ui_terms,
+        },
+    )
+
+
+def case_live_tutor_browser_proof_contract() -> BenchmarkCaseResult:
+    report = run_live_tutor_browser_replay_smoke()
+    panel = build_live_tutor_dashboard_panel()
+    docs_text = "\n".join(
+        [
+            (REPO_ROOT / "docs" / "architecture" / "live-tutor-overlay.md").read_text(
+                encoding="utf-8"
+            ),
+            (REPO_ROOT / "docs" / "ops" / "live-tutor-engineer-runbook.md").read_text(
+                encoding="utf-8"
+            ),
+            (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+                encoding="utf-8"
+            ),
+            (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+                encoding="utf-8"
+            ),
+        ]
+    )
+    ui_text = (REPO_ROOT / "ui" / "live-tutor-demo" / "app.js").read_text(
+        encoding="utf-8"
+    )
+    pyproject_text = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    serialized = report.model_dump_json()
+    required_doc_terms = [
+        LIVE_TUTOR_BROWSER_PROOF_ID,
+        LIVE_TUTOR_BROWSER_PROOF_POLICY_REF,
+        "browser CSS pixels",
+        "canonical 1440x960",
+        "client_surface_css",
+        "redacted receipt",
+        "uv run cortex-live-tutor-demo --browser-replay-smoke --json",
+        "/tutor/receipts",
+        "Browser plugin proof",
+    ]
+    required_ui_terms = [
+        "pointer_coordinate_space",
+        "client_surface_width",
+        "client_surface_height",
+        'coordinateSpace: "client_surface_css"',
+        "safePointerForRequest",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    missing_ui_terms = _missing_terms(ui_text, required_ui_terms)
+    prohibited_marker_count = sum(
+        1
+        for marker in ["OPENAI_API_KEY=", "CORTEX_FAKE_TOKEN", "sk-", "raw://", "encrypted_blob://"]
+        if marker in serialized
+    )
+    passed = (
+        report.passed
+        and report.proof_id == LIVE_TUTOR_BROWSER_PROOF_ID
+        and report.policy_ref == LIVE_TUTOR_BROWSER_PROOF_POLICY_REF
+        and report.receipt_count == 3
+        and report.memory_write_count == 0
+        and report.raw_ref_retained_count == 0
+        and report.external_effect_count == 0
+        and report.real_screen_capture_started is False
+        and report.voice_capture_enabled is False
+        and report.raw_payload_included is False
+        and report.contains_user_utterances is False
+        and report.contains_assistant_responses is False
+        and any("client_pointer_normalized" in receipt.safety_flags for receipt in report.receipts)
+        and any("client_pointer_clamped" in receipt.safety_flags for receipt in report.receipts)
+        and panel.browser_replay_smoke_command
+        == "uv run cortex-live-tutor-demo --browser-replay-smoke --json"
+        and panel.receipt_endpoint == "/tutor/receipts"
+        and not missing_doc_terms
+        and not missing_ui_terms
+        and prohibited_marker_count == 0
+        and "cortex-live-tutor-demo" in pyproject_text
+    )
+    return BenchmarkCaseResult(
+        case_id="LIVE-TUTOR-BROWSER-PROOF-001/client_coordinate_receipts",
+        suite=LIVE_TUTOR_BROWSER_PROOF_ID,
+        passed=passed,
+        summary=(
+            "Live Tutor browser proof normalizes client CSS-pixel pointer traces "
+            "into canonical spatial cues and exposes token-protected redacted receipts."
+        ),
+        metrics={
+            "receipt_count": report.receipt_count,
+            "missing_doc_terms": len(missing_doc_terms),
+            "missing_ui_terms": len(missing_ui_terms),
+            "prohibited_marker_count": prohibited_marker_count,
+        },
+        evidence={
+            "policy_ref": LIVE_TUTOR_BROWSER_PROOF_POLICY_REF,
+            "latest_target_label": report.latest_target_label,
+            "blocked_effects": report.blocked_effects,
             "missing_doc_terms": missing_doc_terms,
             "missing_ui_terms": missing_ui_terms,
         },

@@ -299,6 +299,7 @@ def test_live_tutor_browser_replay_smoke_returns_redacted_receipts():
     assert report.turn_count == 3
     assert report.receipt_count == 3
     assert report.latest_target_label == "LUT Menu"
+    assert report.receipts[1].intent_label == "explain_pointed_target"
     assert report.memory_write_count == 0
     assert report.raw_ref_retained_count == 0
     assert report.external_effect_count == 0
