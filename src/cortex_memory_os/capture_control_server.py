@@ -26,6 +26,7 @@ from cortex_memory_os.live_adapters import REPO_ROOT
 from cortex_memory_os.native_cursor_follow import (
     NATIVE_CURSOR_FOLLOW_ID,
     NATIVE_CURSOR_FOLLOW_POLICY_REF,
+    NativeAgenticPointerCardCommand,
     native_cursor_follow_command,
 )
 from cortex_memory_os.native_permission_smoke import (
@@ -131,6 +132,11 @@ class CaptureControlBridgeReceipt(StrictModel):
     raw_screen_storage_enabled: bool = False
     screen_recording_preflight: bool | None = None
     accessibility_trusted: bool | None = None
+    agentic_card_title: str | None = None
+    agentic_card_message: str | None = None
+    agentic_card_status: str | None = None
+    agentic_route_kind: str | None = None
+    agentic_target_label: str | None = None
     skip_reason: str | None = None
     next_user_actions: list[str] = Field(default_factory=list)
     error_code: str | None = None
@@ -252,6 +258,9 @@ class CaptureControlProcessManager:
         self._duration_seconds: float | None = None
         self._started_at: datetime | None = None
         self._stopped_at: datetime | None = None
+        self._agentic_card: NativeAgenticPointerCardCommand | None = None
+        self._agentic_route_kind: str | None = None
+        self._agentic_target_label: str | None = None
         self._receipts: list[CaptureControlBridgeReceipt] = []
 
     def status(self) -> CaptureControlBridgeReceipt:
@@ -268,11 +277,19 @@ class CaptureControlProcessManager:
             duration_seconds=self._duration_seconds if running else None,
             started_at=self._started_at if running else None,
             stopped_at=None if running else self._stopped_at,
+            **(self._agentic_receipt_fields() if running else {}),
         )
         self._record(receipt)
         return receipt
 
-    def start(self, *, duration_seconds: float = 30) -> CaptureControlBridgeReceipt:
+    def start(
+        self,
+        *,
+        duration_seconds: float = 30,
+        agentic_card: NativeAgenticPointerCardCommand | None = None,
+        agentic_route_kind: str | None = None,
+        agentic_target_label: str | None = None,
+    ) -> CaptureControlBridgeReceipt:
         self._consume_exited_process()
         if self._is_running():
             receipt = self.status()
@@ -280,10 +297,12 @@ class CaptureControlProcessManager:
             return receipt
 
         bounded_duration = max(1.0, min(float(duration_seconds), MAX_CAPTURE_CONTROL_DURATION_SECONDS))
+        safe_agentic_card = agentic_card or NativeAgenticPointerCardCommand()
         command = native_cursor_follow_command(
             smoke=False,
             json_output=True,
             duration_seconds=bounded_duration,
+            agentic_card=safe_agentic_card,
             **({"package_path": self.package_path} if self.package_path else {}),
         )
         process = self.popen_factory(
@@ -297,6 +316,9 @@ class CaptureControlProcessManager:
         self._duration_seconds = bounded_duration
         self._started_at = self.now()
         self._stopped_at = None
+        self._agentic_card = safe_agentic_card
+        self._agentic_route_kind = agentic_route_kind
+        self._agentic_target_label = agentic_target_label
         receipt = CaptureControlBridgeReceipt(
             action="start",
             state="running",
@@ -305,6 +327,7 @@ class CaptureControlProcessManager:
             command=command,
             duration_seconds=bounded_duration,
             started_at=self._started_at,
+            **self._agentic_receipt_fields(),
         )
         self._record(receipt)
         return receipt
@@ -316,13 +339,18 @@ class CaptureControlProcessManager:
         self._process = None
         self._duration_seconds = None
         self._command = []
+        agentic_fields = self._agentic_receipt_fields()
         receipt = CaptureControlBridgeReceipt(
             action="stop",
             state="stopped",
             running=False,
             stopped_at=self._stopped_at,
+            **agentic_fields,
         )
         self._record(receipt)
+        self._agentic_card = None
+        self._agentic_route_kind = None
+        self._agentic_target_label = None
         return receipt
 
     def record_bridge_receipt(self, receipt: CaptureControlBridgeReceipt) -> None:
@@ -359,6 +387,7 @@ class CaptureControlProcessManager:
             smoke=False,
             json_output=True,
             duration_seconds=30,
+            agentic_card=NativeAgenticPointerCardCommand(),
             package_path=package_path,
         )
         state: Literal["ready", "running", "blocked"]
@@ -417,6 +446,7 @@ class CaptureControlProcessManager:
                 memory_write_allowed=False,
                 raw_ref_retained=False,
                 raw_screen_storage_enabled=False,
+                **(self._agentic_receipt_fields() if running else {}),
             )
         )
         return receipt
@@ -437,6 +467,7 @@ class CaptureControlProcessManager:
         self._command = []
         self._duration_seconds = None
         self._stopped_at = stopped_at
+        agentic_fields = self._agentic_receipt_fields()
         receipt = CaptureControlBridgeReceipt(
             action="watchdog",
             state="exited",
@@ -445,17 +476,30 @@ class CaptureControlProcessManager:
             command=command,
             exit_code=exit_code,
             stopped_at=stopped_at,
+            **agentic_fields,
             next_user_actions=[
                 "Restart Shadow Clicker from the dashboard if observation should continue."
             ],
         )
         self._record(receipt)
+        self._agentic_card = None
+        self._agentic_route_kind = None
+        self._agentic_target_label = None
         return receipt
 
     def _record(self, receipt: CaptureControlBridgeReceipt) -> None:
         self._receipts.append(receipt)
         if len(self._receipts) > 50:
             self._receipts = self._receipts[-50:]
+
+    def _agentic_receipt_fields(self) -> dict[str, str | None]:
+        return {
+            "agentic_card_title": self._agentic_card.title if self._agentic_card else None,
+            "agentic_card_message": self._agentic_card.message if self._agentic_card else None,
+            "agentic_card_status": self._agentic_card.status if self._agentic_card else None,
+            "agentic_route_kind": self._agentic_route_kind,
+            "agentic_target_label": self._agentic_target_label,
+        }
 
 
 @dataclass(frozen=True)
@@ -620,7 +664,16 @@ def build_capture_control_handler(
             if route == CAPTURE_CONTROL_START_PATH:
                 payload = self._read_json()
                 duration = float(payload.get("duration_seconds", 30)) if isinstance(payload, dict) else 30
-                self._write_json(200, manager.start(duration_seconds=duration).model_dump(mode="json"))
+                latest_turn = self._latest_agentic_turn()
+                self._write_json(
+                    200,
+                    manager.start(
+                        duration_seconds=duration,
+                        agentic_card=_native_agentic_card_from_turn(latest_turn),
+                        agentic_route_kind=latest_turn.receipt.route_kind.value,
+                        agentic_target_label=latest_turn.receipt.target_label,
+                    ).model_dump(mode="json"),
+                )
                 return
             if route == CAPTURE_CONTROL_STOP_PATH:
                 self._write_json(200, manager.stop().model_dump(mode="json"))
@@ -879,13 +932,15 @@ def build_capture_control_handler(
             with agentic_lock:
                 if agentic_turns:
                     return agentic_turns[-1]
-            return build_agentic_turn()
+            return build_agentic_turn(
+                pointer_event=build_pointer_intent_event(user_phrase="What should I click next?")
+            )
 
         def _agentic_receipts(self) -> dict[str, Any]:
             with agentic_lock:
                 turns = list(agentic_turns)
             if not turns:
-                turns = [build_agentic_turn()]
+                turns = [self._latest_agentic_turn()]
             receipts = [turn.receipt.model_dump(mode="json") for turn in turns]
             return {
                 "policy_ref": AGENTIC_TURN_POLICY_REF,
@@ -1237,6 +1292,12 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         and remote_code == 403
         and start_receipt.running
         and "cortex-shadow-clicker" in start_receipt.command
+        and "--agentic-title" in start_receipt.command
+        and start_receipt.agentic_card_title == "Draft the next steps"
+        and start_receipt.agentic_card_message == "I see Color Page. I can draft the next safe steps."
+        and start_receipt.agentic_card_status == "draft only | asks first | no write"
+        and start_receipt.agentic_route_kind == "draft_only"
+        and start_receipt.agentic_target_label == "Color Page"
         and permission_receipt.passed
         and preflight_receipt.passed
         and preflight_receipt.diagnostic_id == CAPTURE_PREFLIGHT_DIAGNOSTICS_ID
@@ -1345,6 +1406,24 @@ class FakePopen:
 
     def terminate(self) -> None:
         self._terminated = True
+
+
+def _native_agentic_card_from_turn(turn: AgenticTurn) -> NativeAgenticPointerCardCommand:
+    route = turn.receipt.route_kind.value.replace("_", " ")
+    review_state = "review memory" if turn.receipt.memory_proposal_created else "no write"
+    approval_state = "asks first" if turn.receipt.approval_required else "display-only"
+    return NativeAgenticPointerCardCommand(
+        title=_fit_card_text(turn.pointer_card_title, limit=44),
+        message=_fit_card_text(turn.pointer_card_body, limit=82),
+        status=_fit_card_text(f"{route} | {approval_state} | {review_state}", limit=54),
+    )
+
+
+def _fit_card_text(value: str, *, limit: int) -> str:
+    clean = " ".join(value.split())
+    if len(clean) <= limit:
+        return clean
+    return clean[: limit - 3].rstrip() + "..."
 
 
 def _error_receipt(error_code: str) -> CaptureControlBridgeReceipt:

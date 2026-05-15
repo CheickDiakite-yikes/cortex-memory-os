@@ -22,6 +22,31 @@ NATIVE_CURSOR_FOLLOW_COMMAND = "cortex-shadow-clicker"
 NATIVE_CURSOR_RESPONSIVENESS_ID = "NATIVE-CURSOR-RESPONSIVENESS-001"
 NATIVE_OVERLAY_VISUAL_POLISH_ID = "NATIVE-OVERLAY-VISUAL-POLISH-001"
 NATIVE_OVERLAY_VISUAL_POLISH_POLICY_REF = "policy_native_overlay_visual_polish_v1"
+NATIVE_AGENTIC_POINTER_CARD_ID = "NATIVE-AGENTIC-POINTER-CARD-001"
+NATIVE_AGENTIC_POINTER_CARD_POLICY_REF = "policy_native_agentic_pointer_card_v1"
+NATIVE_AGENTIC_POINTER_CARD_BLOCKED_EFFECTS = [
+    "start_screen_capture",
+    "start_microphone_capture",
+    "start_accessibility_observer",
+    "execute_click",
+    "type_text",
+    "move_system_cursor",
+    "steal_focus",
+    "write_memory",
+    "store_raw_evidence",
+    "export_payload",
+]
+_PROHIBITED_AGENTIC_CARD_MARKERS = [
+    "ignore previous instructions",
+    "openai_api_key",
+    "sk-",
+    "raw://",
+    "encrypted_blob://",
+    "password",
+    "secret",
+    "token=",
+    "curl | sh",
+]
 
 
 class RunnerCompleted(Protocol):
@@ -31,6 +56,57 @@ class RunnerCompleted(Protocol):
 
 
 Runner = Callable[..., RunnerCompleted]
+
+
+class NativeAgenticPointerCardCommand(StrictModel):
+    benchmark_id: str = NATIVE_AGENTIC_POINTER_CARD_ID
+    policy_ref: str = NATIVE_AGENTIC_POINTER_CARD_POLICY_REF
+    title: str = Field(default="Draft the next steps", min_length=1, max_length=44)
+    message: str = Field(
+        default="I see Color Page. I can draft the next safe steps.",
+        min_length=1,
+        max_length=82,
+    )
+    status: str = Field(default="draft only | display-only | no write", min_length=1, max_length=54)
+    display_only: bool = True
+    capture_started: bool = False
+    microphone_started: bool = False
+    accessibility_observer_started: bool = False
+    memory_write_allowed: bool = False
+    raw_ref_retained: bool = False
+    external_effects: bool = False
+    blocked_effects: list[str] = Field(
+        default_factory=lambda: list(NATIVE_AGENTIC_POINTER_CARD_BLOCKED_EFFECTS)
+    )
+
+    @model_validator(mode="after")
+    def enforce_safe_display_card(self) -> "NativeAgenticPointerCardCommand":
+        if self.benchmark_id != NATIVE_AGENTIC_POINTER_CARD_ID:
+            raise ValueError("native agentic pointer card benchmark mismatch")
+        if self.policy_ref != NATIVE_AGENTIC_POINTER_CARD_POLICY_REF:
+            raise ValueError("native agentic pointer card policy mismatch")
+        if not self.display_only:
+            raise ValueError("native agentic pointer card must be display-only")
+        if self.capture_started or self.microphone_started or self.accessibility_observer_started:
+            raise ValueError("native agentic pointer card cannot start capture or observers")
+        if self.memory_write_allowed or self.raw_ref_retained or self.external_effects:
+            raise ValueError("native agentic pointer card cannot write, retain raw refs, or export")
+        if missing := sorted(set(NATIVE_AGENTIC_POINTER_CARD_BLOCKED_EFFECTS).difference(self.blocked_effects)):
+            raise ValueError(f"native agentic pointer card missing blocked effects: {missing}")
+        serialized = self.model_dump_json().lower()
+        if any(marker in serialized for marker in _PROHIBITED_AGENTIC_CARD_MARKERS):
+            raise ValueError("native agentic pointer card cannot contain unsafe markers")
+        return self
+
+    def command_args(self) -> list[str]:
+        return [
+            "--agentic-title",
+            self.title,
+            "--agentic-message",
+            self.message,
+            "--agentic-status",
+            self.status,
+        ]
 
 
 class NativeCursorFollowConfig(StrictModel):
@@ -274,6 +350,7 @@ def native_cursor_follow_command(
     smoke: bool = True,
     json_output: bool = True,
     duration_seconds: float | None = None,
+    agentic_card: NativeAgenticPointerCardCommand | None = None,
 ) -> list[str]:
     command = [
         "swift",
@@ -288,6 +365,8 @@ def native_cursor_follow_command(
         command.append("--json")
     if duration_seconds is not None:
         command.extend(["--duration", str(duration_seconds)])
+    if agentic_card is not None:
+        command.extend(agentic_card.command_args())
     return command
 
 

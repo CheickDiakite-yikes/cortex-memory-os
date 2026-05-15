@@ -8,12 +8,22 @@ from cortex_memory_os.capture_control_server import (
     main,
     run_capture_control_server_smoke,
 )
+from cortex_memory_os.native_cursor_follow import NativeAgenticPointerCardCommand
 
 
 def test_capture_control_manager_launches_fixed_shadow_clicker_command() -> None:
     manager = CaptureControlProcessManager(popen_factory=FakePopen)
 
-    start = manager.start(duration_seconds=2)
+    start = manager.start(
+        duration_seconds=2,
+        agentic_card=NativeAgenticPointerCardCommand(
+            title="Draft timeline steps",
+            message="I see Timeline. I can draft the next safe steps.",
+            status="draft only | asks first | no write",
+        ),
+        agentic_route_kind="draft_only",
+        agentic_target_label="Timeline",
+    )
     status = manager.status()
     stop = manager.stop()
 
@@ -22,6 +32,12 @@ def test_capture_control_manager_launches_fixed_shadow_clicker_command() -> None
     assert start.pid == 4242
     assert "cortex-shadow-clicker" in start.command
     assert "--duration" in start.command
+    assert "--agentic-title" in start.command
+    assert start.agentic_card_title == "Draft timeline steps"
+    assert start.agentic_card_message == "I see Timeline. I can draft the next safe steps."
+    assert start.agentic_card_status == "draft only | asks first | no write"
+    assert start.agentic_route_kind == "draft_only"
+    assert start.agentic_target_label == "Timeline"
     assert start.duration_seconds == 2
     assert not start.capture_started
     assert not start.accessibility_observer_started
@@ -29,7 +45,9 @@ def test_capture_control_manager_launches_fixed_shadow_clicker_command() -> None
     assert not start.raw_ref_retained
     assert not start.raw_screen_storage_enabled
     assert status.running
+    assert status.agentic_card_title == "Draft timeline steps"
     assert stop.state == "stopped"
+    assert stop.agentic_target_label == "Timeline"
     assert not stop.running
 
 
@@ -48,6 +66,8 @@ def test_capture_control_manager_reports_user_test_readiness() -> None:
     assert not ready.helper_cursor_running
     assert ready.one_button_label == "Start helper cursor"
     assert ready.stop_button_label == "Stop helper cursor"
+    assert "--agentic-title" in ready.command
+    assert "Draft the next steps" in ready.command
     assert "Start helper cursor" in ready.user_steps[0]
     assert not ready.screen_capture_required
     assert not ready.voice_required
@@ -59,6 +79,7 @@ def test_capture_control_manager_reports_user_test_readiness() -> None:
     assert running.status == "running"
     assert running.helper_cursor_running
     assert running.pid == 4242
+    assert running.command == start.command
 
 
 def test_capture_control_user_test_cli_outputs_readiness(capsys) -> None:
@@ -147,6 +168,14 @@ def test_capture_control_server_smoke_serves_dashboard_and_blocks_remote_probe()
     assert smoke.start_receipt.fixed_command_only
     assert smoke.start_receipt.localhost_only
     assert "cortex-shadow-clicker" in smoke.start_receipt.command
+    assert "--agentic-title" in smoke.start_receipt.command
+    assert smoke.start_receipt.agentic_card_title == "Draft the next steps"
+    assert smoke.start_receipt.agentic_card_message == (
+        "I see Color Page. I can draft the next safe steps."
+    )
+    assert smoke.start_receipt.agentic_card_status == "draft only | asks first | no write"
+    assert smoke.start_receipt.agentic_route_kind == "draft_only"
+    assert smoke.start_receipt.agentic_target_label == "Color Page"
     assert smoke.permission_receipt.passed
     assert smoke.preflight_receipt.passed
     assert smoke.preflight_receipt.safe_to_start_real_capture_session
