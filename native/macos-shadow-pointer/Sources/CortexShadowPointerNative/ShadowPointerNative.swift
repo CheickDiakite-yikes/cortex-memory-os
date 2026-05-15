@@ -18,6 +18,8 @@ public let nativeCursorFollowPolicyRef = "policy_native_cursor_follow_v1"
 public let nativeCursorResponsivenessBenchmarkID = "NATIVE-CURSOR-RESPONSIVENESS-001"
 public let nativeOverlayVisualPolishBenchmarkID = "NATIVE-OVERLAY-VISUAL-POLISH-001"
 public let nativeOverlayVisualPolishPolicyRef = "policy_native_overlay_visual_polish_v1"
+public let nativeAgenticPointerCardBenchmarkID = "NATIVE-AGENTIC-POINTER-CARD-001"
+public let nativeAgenticPointerCardPolicyRef = "policy_native_agentic_pointer_card_v1"
 public let nativeScreenCaptureProbeBenchmarkID = "NATIVE-SCREEN-CAPTURE-PROBE-001"
 public let nativeScreenCaptureProbePolicyRef = "policy_native_screen_capture_probe_v1"
 
@@ -760,6 +762,104 @@ public struct NativeBubbleSize: Codable, Equatable, Sendable {
     }
 
     public static let compactInstruction = NativeBubbleSize(width: 240, height: 72)
+}
+
+public struct NativeAgenticPointerCard: Codable, Equatable, Sendable {
+    public var benchmarkID: String
+    public var policyRef: String
+    public var title: String
+    public var message: String
+    public var status: String
+    public var targetLabel: String
+    public var routeKind: String
+    public var displayOnly: Bool
+    public var memoryWriteAllowed: Bool
+    public var rawRefRetained: Bool
+    public var externalEffectEnabled: Bool
+    public var blockedEffects: [String]
+
+    public init(
+        benchmarkID: String = nativeAgenticPointerCardBenchmarkID,
+        policyRef: String = nativeAgenticPointerCardPolicyRef,
+        title: String = "Draft the next steps",
+        message: String = "I see Color Page. I can draft the next safe steps.",
+        status: String = "draft only | display-only | no write",
+        targetLabel: String = "Color Page",
+        routeKind: String = "draft_only",
+        displayOnly: Bool = true,
+        memoryWriteAllowed: Bool = false,
+        rawRefRetained: Bool = false,
+        externalEffectEnabled: Bool = false,
+        blockedEffects: [String] = [
+            "start_screen_capture",
+            "start_microphone_capture",
+            "start_accessibility_observer",
+            "move_system_cursor",
+            "execute_click",
+            "type_text",
+            "write_memory_without_review",
+            "store_raw_evidence",
+            "export_payload",
+        ]
+    ) {
+        self.benchmarkID = benchmarkID
+        self.policyRef = policyRef
+        self.title = title
+        self.message = message
+        self.status = status
+        self.targetLabel = targetLabel
+        self.routeKind = routeKind
+        self.displayOnly = displayOnly
+        self.memoryWriteAllowed = memoryWriteAllowed
+        self.rawRefRetained = rawRefRetained
+        self.externalEffectEnabled = externalEffectEnabled
+        self.blockedEffects = blockedEffects
+    }
+
+    public func validated() throws -> NativeAgenticPointerCard {
+        guard benchmarkID == nativeAgenticPointerCardBenchmarkID,
+              policyRef == nativeAgenticPointerCardPolicyRef
+        else {
+            throw ShadowPointerNativeError.invalidControl("native agentic pointer card policy mismatch")
+        }
+        guard displayOnly && !memoryWriteAllowed && !rawRefRetained && !externalEffectEnabled else {
+            throw ShadowPointerNativeError.invalidControl("native agentic pointer card must stay display-only")
+        }
+        guard title.count <= 44 && message.count <= 82 && status.count <= 54 else {
+            throw ShadowPointerNativeError.invalidControl("native agentic pointer copy is too long")
+        }
+        guard !containsUnsafeMarker([title, message, status, targetLabel, routeKind]) else {
+            throw ShadowPointerNativeError.invalidControl("native agentic pointer card contains unsafe marker")
+        }
+        let requiredBlocked = Set([
+            "start_screen_capture",
+            "start_microphone_capture",
+            "start_accessibility_observer",
+            "move_system_cursor",
+            "execute_click",
+            "type_text",
+            "write_memory_without_review",
+            "store_raw_evidence",
+            "export_payload",
+        ])
+        guard requiredBlocked.isSubset(of: Set(blockedEffects)) else {
+            throw ShadowPointerNativeError.invalidControl("native agentic pointer card missing blocked effects")
+        }
+        return self
+    }
+
+    private func containsUnsafeMarker(_ values: [String]) -> Bool {
+        let haystack = values.joined(separator: " ").lowercased()
+        return [
+            "ignore previous instructions",
+            "openai_api_key",
+            "sk-",
+            "raw://",
+            "encrypted_blob://",
+            "password",
+            "secret",
+        ].contains { haystack.contains($0) }
+    }
 }
 
 public struct NativeOverlayVisualSpec: Codable, Equatable, Sendable {

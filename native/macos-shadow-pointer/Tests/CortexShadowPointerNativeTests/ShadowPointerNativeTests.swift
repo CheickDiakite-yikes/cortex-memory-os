@@ -167,6 +167,37 @@ final class ShadowPointerNativeTests: XCTestCase {
         XCTAssertTrue(visual.blockedEffects.contains("start_screen_capture"))
     }
 
+    func testNativeAgenticPointerCardIsSafeAndBounded() throws {
+        let card = try NativeAgenticPointerCard().validated()
+
+        XCTAssertEqual(card.benchmarkID, nativeAgenticPointerCardBenchmarkID)
+        XCTAssertEqual(card.policyRef, nativeAgenticPointerCardPolicyRef)
+        XCTAssertEqual(card.title, "Draft the next steps")
+        XCTAssertEqual(card.targetLabel, "Color Page")
+        XCTAssertEqual(card.routeKind, "draft_only")
+        XCTAssertTrue(card.displayOnly)
+        XCTAssertFalse(card.memoryWriteAllowed)
+        XCTAssertFalse(card.rawRefRetained)
+        XCTAssertFalse(card.externalEffectEnabled)
+        XCTAssertLessThanOrEqual(card.title.count, 44)
+        XCTAssertLessThanOrEqual(card.message.count, 82)
+        XCTAssertTrue(card.blockedEffects.contains("execute_click"))
+        XCTAssertTrue(card.blockedEffects.contains("type_text"))
+        XCTAssertTrue(card.blockedEffects.contains("write_memory_without_review"))
+    }
+
+    func testNativeAgenticPointerCardRejectsSecretsAndEffects() {
+        XCTAssertThrowsError(
+            try NativeAgenticPointerCard(message: "OPENAI_API_KEY should never show").validated()
+        )
+        XCTAssertThrowsError(
+            try NativeAgenticPointerCard(displayOnly: false).validated()
+        )
+        XCTAssertThrowsError(
+            try NativeAgenticPointerCard(blockedEffects: ["execute_click"]).validated()
+        )
+    }
+
     func testNativeCursorFollowSmokeUsesOnlyCursorSamples() throws {
         let result = try NativeCursorFollowSmokeResult.run(
             samples: [

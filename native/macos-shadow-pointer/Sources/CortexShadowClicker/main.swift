@@ -9,6 +9,9 @@ struct ShadowClickerArgs {
     var smoke = false
     var json = false
     var duration: TimeInterval = 15
+    var agenticTitle = "Draft the next steps"
+    var agenticMessage = "I see Color Page. I can draft the next safe steps."
+    var agenticStatus = "draft only | display-only | no write"
 
     init(_ arguments: [String]) throws {
         var iterator = arguments.dropFirst().makeIterator()
@@ -23,6 +26,21 @@ struct ShadowClickerArgs {
                     throw ShadowPointerNativeError.invalidControl("--duration requires a positive number")
                 }
                 duration = min(parsed, 300)
+            case "--agentic-title":
+                guard let value = iterator.next(), !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    throw ShadowPointerNativeError.invalidControl("--agentic-title requires text")
+                }
+                agenticTitle = value
+            case "--agentic-message":
+                guard let value = iterator.next(), !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    throw ShadowPointerNativeError.invalidControl("--agentic-message requires text")
+                }
+                agenticMessage = value
+            case "--agentic-status":
+                guard let value = iterator.next(), !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    throw ShadowPointerNativeError.invalidControl("--agentic-status requires text")
+                }
+                agenticStatus = value
             default:
                 throw ShadowPointerNativeError.invalidControl("unknown argument \(argument)")
             }
@@ -53,7 +71,17 @@ do {
     #if canImport(AppKit)
     if #available(macOS 13.0, *) {
         try MainActor.assumeIsolated {
-            try ShadowClickerApp.run(duration: args.duration, encoder: encoder, emitJSON: args.json)
+            let card = try NativeAgenticPointerCard(
+                title: args.agenticTitle,
+                message: args.agenticMessage,
+                status: args.agenticStatus
+            ).validated()
+            try ShadowClickerApp.run(
+                duration: args.duration,
+                encoder: encoder,
+                emitJSON: args.json,
+                card: card
+            )
         }
     } else {
         throw ShadowPointerNativeError.invalidControl("cortex-shadow-clicker requires macOS 13+")
@@ -177,13 +205,18 @@ final class LoadingDotsView: NSView {
 @MainActor
 final class ShadowClickerBubbleView: NSVisualEffectView {
     private let visualSpec: NativeOverlayVisualSpec
-    private let titleField = NSTextField(labelWithString: "Cortex")
-    private let messageField = NSTextField(labelWithString: "Ready beside your pointer")
-    private let statusField = NSTextField(labelWithString: "display-only")
+    private let card: NativeAgenticPointerCard
+    private let titleField: NSTextField
+    private let messageField: NSTextField
+    private let statusField: NSTextField
     private let dotsView = LoadingDotsView(frame: NSRect(x: 0, y: 0, width: 44, height: 20))
 
-    init(frame: NSRect, visualSpec: NativeOverlayVisualSpec) {
+    init(frame: NSRect, visualSpec: NativeOverlayVisualSpec, card: NativeAgenticPointerCard) {
         self.visualSpec = visualSpec
+        self.card = card
+        self.titleField = NSTextField(labelWithString: card.title)
+        self.messageField = NSTextField(labelWithString: card.message)
+        self.statusField = NSTextField(labelWithString: card.status)
         super.init(frame: frame)
         material = .hudWindow
         blendingMode = .behindWindow
@@ -256,10 +289,10 @@ final class ShadowClickerBubbleView: NSVisualEffectView {
 
     func update(phase: Double, bubbleSide: String) {
         dotsView.phase = phase
-        messageField.stringValue = bubbleSide == "left"
-            ? "I moved left to stay out of your way"
-            : "Ready beside your pointer"
-        statusField.stringValue = "system-wide · display-only · no capture"
+        messageField.stringValue = card.message
+        statusField.stringValue = bubbleSide == "left"
+            ? "\(card.status) | shifted left"
+            : card.status
     }
 }
 
@@ -367,7 +400,12 @@ final class ShadowClickerController {
 enum ShadowClickerApp {
     private static var controller: ShadowClickerController?
 
-    static func run(duration: TimeInterval, encoder: JSONEncoder, emitJSON: Bool) throws {
+    static func run(
+        duration: TimeInterval,
+        encoder: JSONEncoder,
+        emitJSON: Bool,
+        card: NativeAgenticPointerCard
+    ) throws {
         let config = try NativeCursorFollowConfig().validated()
         let visualSpec = try NativeOverlayVisualSpec().validated()
         let app = NSApplication.shared
@@ -381,7 +419,11 @@ enum ShadowClickerApp {
 
         let bubbleFrame = NSRect(x: 0, y: 0, width: CGFloat(visualSpec.bubbleMaxWidth), height: 86)
         let bubblePanel = ShadowPointerOverlayPanel(contentRect: bubbleFrame)
-        let bubbleView = ShadowClickerBubbleView(frame: bubbleFrame, visualSpec: visualSpec)
+        let bubbleView = ShadowClickerBubbleView(
+            frame: bubbleFrame,
+            visualSpec: visualSpec,
+            card: card
+        )
         bubblePanel.contentView = bubbleView
         bubblePanel.orderFrontRegardless()
 
