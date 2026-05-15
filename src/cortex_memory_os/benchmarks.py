@@ -199,6 +199,29 @@ from cortex_memory_os.live_tutor_overlay import (
     run_live_tutor_demo_smoke,
     run_live_tutor_server_smoke,
 )
+from cortex_memory_os.realtime_voice_pointer import (
+    DASHBOARD_VOICE_POINTER_PANEL_ID,
+    DEFAULT_REALTIME_MODEL,
+    LIVE_TUTOR_VOICE_UX_ID,
+    POINTER_GESTURE_GRAMMAR_ID,
+    REALTIME_CLIENT_SECRET_CONTRACT_ID,
+    REALTIME_CLIENT_SECRET_ENDPOINT,
+    REALTIME_COST_GUARD_ID,
+    REALTIME_VOICE_BENCH_DOCS_ID,
+    REALTIME_VOICE_CONTRACT_ID,
+    REALTIME_VOICE_POLICY_REF,
+    SELECTION_UX_CONTRACT_ID,
+    SYNTHETIC_VOICE_TURN_LOOP_ID,
+    VOICE_OUTPUT_ROUTER_ID,
+    RealtimeVoiceBudget,
+    build_pointer_gesture,
+    build_realtime_client_secret_plan,
+    build_realtime_voice_contract,
+    build_voice_pointer_dashboard_panel,
+    resolve_synthetic_voice_turn,
+    route_voice_output,
+    run_realtime_voice_pointer_smoke,
+)
 from cortex_memory_os.synthetic_capture_ladder import (
     SYNTHETIC_CAPTURE_LADDER_ID,
     SYNTHETIC_CAPTURE_LADDER_POLICY_REF,
@@ -817,6 +840,16 @@ def run_all() -> BenchmarkRunResult:
         case_manual_adapter_proof_contract,
         case_live_openai_smoke_contract,
         case_openai_tutor_safe_draft_contract,
+        case_realtime_voice_contract,
+        case_pointer_gesture_grammar_contract,
+        case_voice_output_router_contract,
+        case_realtime_cost_guard_contract,
+        case_synthetic_voice_turn_loop_contract,
+        case_realtime_client_secret_contract,
+        case_live_tutor_voice_ux_contract,
+        case_selection_ux_contract,
+        case_dashboard_voice_pointer_panel_contract,
+        case_realtime_voice_bench_docs_contract,
         case_live_readiness_hardening_contract,
         case_capture_budget_queue_contract,
         case_gateway_self_lesson_proposal_tool,
@@ -4097,6 +4130,351 @@ def case_openai_tutor_safe_draft_contract() -> BenchmarkCaseResult:
             "command": "uv run cortex-openai-tutor-smoke --json",
             "missing_doc_terms": missing_terms,
         },
+    )
+
+
+def case_realtime_voice_contract() -> BenchmarkCaseResult:
+    contract = build_realtime_voice_contract()
+    passed = (
+        contract.contract_id == REALTIME_VOICE_CONTRACT_ID
+        and contract.model == DEFAULT_REALTIME_MODEL
+        and contract.transport == "webrtc"
+        and contract.default_output_modalities == ["text"]
+        and contract.requires_ephemeral_client_secret
+        and contract.requires_explicit_mic_consent
+        and not contract.mic_opens_by_default
+        and not contract.screen_capture_enabled
+        and not contract.raw_audio_retained
+        and not contract.memory_write_allowed
+        and contract.budget.reasoning_effort == "low"
+        and REALTIME_VOICE_POLICY_REF in contract.policy_refs
+    )
+    return BenchmarkCaseResult(
+        case_id="REALTIME-VOICE-CONTRACT-001/gpt_realtime_2_safe_session",
+        suite=REALTIME_VOICE_CONTRACT_ID,
+        passed=passed,
+        summary=(
+            "Realtime voice pointer contract uses gpt-realtime-2, WebRTC, "
+            "ephemeral client secrets, text-first output, and no default mic."
+        ),
+        metrics={
+            "requires_ephemeral_client_secret": int(contract.requires_ephemeral_client_secret),
+            "mic_opens_by_default": int(contract.mic_opens_by_default),
+            "memory_write_allowed": int(contract.memory_write_allowed),
+        },
+        evidence={"policy_ref": REALTIME_VOICE_POLICY_REF, "model": contract.model},
+    )
+
+
+def case_pointer_gesture_grammar_contract() -> BenchmarkCaseResult:
+    gestures = [
+        build_pointer_gesture(
+            gesture_type="triple_click_voice_dialogue",
+            target_id="node_graph",
+            target_label="Node Graph",
+        ),
+        build_pointer_gesture(
+            gesture_type="press_hold_text_reply",
+            target_id="lut_menu",
+            target_label="LUT Menu",
+        ),
+        build_pointer_gesture(
+            gesture_type="press_hold_action_only",
+            target_id="color_page_button",
+            target_label="Color Page",
+        ),
+        build_pointer_gesture(
+            gesture_type="drag_select_targets",
+            target_id="lut_menu",
+            target_label="LUT Menu",
+            selected_target_ids=["node_graph", "lut_menu"],
+        ),
+    ]
+    passed = (
+        gestures[0].click_count == 3
+        and gestures[1].hold_ms >= 450
+        and gestures[2].hold_ms >= 450
+        and len(gestures[3].selected_target_ids) >= 2
+        and all(not gesture.starts_microphone for gesture in gestures)
+        and all(not gesture.starts_screen_capture for gesture in gestures)
+        and all(not gesture.executes_click for gesture in gestures)
+    )
+    return BenchmarkCaseResult(
+        case_id="POINTER-GESTURE-GRAMMAR-001/triple_click_hold_selection",
+        suite=POINTER_GESTURE_GRAMMAR_ID,
+        passed=passed,
+        summary="Pointer gestures distinguish voice dialogue, text reply, silent cue, and selection.",
+        metrics={
+            "gesture_count": len(gestures),
+            "selection_target_count": len(gestures[3].selected_target_ids),
+        },
+        evidence={"policy_ref": REALTIME_VOICE_POLICY_REF},
+    )
+
+
+def case_voice_output_router_contract() -> BenchmarkCaseResult:
+    triple = route_voice_output(
+        build_pointer_gesture(
+            gesture_type="triple_click_voice_dialogue",
+            target_id="node_graph",
+            target_label="Node Graph",
+        )
+    )
+    text = route_voice_output(
+        build_pointer_gesture(
+            gesture_type="press_hold_text_reply",
+            target_id="lut_menu",
+            target_label="LUT Menu",
+        )
+    )
+    silent = route_voice_output(
+        build_pointer_gesture(
+            gesture_type="press_hold_action_only",
+            target_id="color_page_button",
+            target_label="Color Page",
+        )
+    )
+    memory = route_voice_output(
+        build_pointer_gesture(
+            gesture_type="single_click_context",
+            target_id="inspector",
+            target_label="Inspector",
+            transcript_preview="Remember this after review.",
+        )
+    )
+    passed = (
+        triple.output_mode == "spoken_brief"
+        and triple.spoken_output_seconds_budgeted > 0
+        and text.output_mode == "text_chip"
+        and text.no_voice_back
+        and silent.output_mode == "silent_visual"
+        and silent.no_voice_back
+        and memory.output_mode == "memory_review"
+        and memory.requires_user_confirmation
+    )
+    return BenchmarkCaseResult(
+        case_id="VOICE-OUTPUT-ROUTER-001/output_modes_from_gestures",
+        suite=VOICE_OUTPUT_ROUTER_ID,
+        passed=passed,
+        summary="Voice output router keeps voice-back optional and gesture-driven.",
+        metrics={
+            "spoken_seconds": triple.spoken_output_seconds_budgeted,
+            "text_no_voice_back": int(text.no_voice_back),
+            "memory_requires_confirmation": int(memory.requires_user_confirmation),
+        },
+        evidence={"policy_ref": REALTIME_VOICE_POLICY_REF},
+    )
+
+
+def case_realtime_cost_guard_contract() -> BenchmarkCaseResult:
+    budget = RealtimeVoiceBudget(max_output_audio_seconds=0, max_estimated_cost_usd=0.04)
+    decision = route_voice_output(
+        build_pointer_gesture(
+            gesture_type="triple_click_voice_dialogue",
+            target_id="node_graph",
+            target_label="Node Graph",
+        ),
+        budget=budget,
+    )
+    passed = (
+        budget.max_session_seconds <= 45
+        and budget.max_input_audio_seconds <= 18
+        and budget.max_response_count <= 6
+        and budget.reasoning_effort == "low"
+        and budget.raw_audio_retention == "none"
+        and decision.output_mode == "text_chip"
+        and decision.no_voice_back
+        and decision.spoken_output_seconds_budgeted == 0
+    )
+    return BenchmarkCaseResult(
+        case_id="REALTIME-COST-GUARD-001/audio_output_budget_gate",
+        suite=REALTIME_COST_GUARD_ID,
+        passed=passed,
+        summary="Cost guard can disable spoken output while preserving text guidance.",
+        metrics={
+            "max_session_seconds": budget.max_session_seconds,
+            "max_estimated_cost_usd": budget.max_estimated_cost_usd,
+            "spoken_output_seconds": decision.spoken_output_seconds_budgeted,
+        },
+        evidence={"policy_ref": REALTIME_VOICE_POLICY_REF},
+    )
+
+
+def case_synthetic_voice_turn_loop_contract() -> BenchmarkCaseResult:
+    result = run_realtime_voice_pointer_smoke()
+    passed = (
+        result.passed
+        and result.turn_count == 5
+        and "spoken_brief" in result.output_modes
+        and "text_chip" in result.output_modes
+        and "silent_visual" in result.output_modes
+        and "memory_review" in result.output_modes
+        and result.memory_write_count == 0
+        and result.raw_audio_retained_count == 0
+        and result.prohibited_marker_count == 0
+    )
+    return BenchmarkCaseResult(
+        case_id="SYNTHETIC-VOICE-TURN-LOOP-001/gesture_to_receipt_loop",
+        suite=SYNTHETIC_VOICE_TURN_LOOP_ID,
+        passed=passed,
+        summary="Synthetic voice turns exercise gesture, output routing, selection, and receipts.",
+        metrics={
+            "turn_count": result.turn_count,
+            "selected_target_count": result.selected_target_count,
+        },
+        evidence={"policy_ref": REALTIME_VOICE_POLICY_REF, "model": result.realtime_model},
+    )
+
+
+def case_realtime_client_secret_contract() -> BenchmarkCaseResult:
+    plan = build_realtime_client_secret_plan()
+    payload = json.dumps(plan.model_dump(mode="json"), sort_keys=True)
+    passed = (
+        plan.endpoint == REALTIME_CLIENT_SECRET_ENDPOINT
+        and plan.method == "POST"
+        and plan.model == DEFAULT_REALTIME_MODEL
+        and plan.server_side_only
+        and plan.returns_ephemeral_secret_to_browser
+        and not plan.raw_api_key_exposed
+        and not plan.client_secret_value_included
+        and plan.safety_identifier_required
+        and "sk-" not in payload
+        and "OPENAI_API_KEY=" not in payload
+    )
+    return BenchmarkCaseResult(
+        case_id="REALTIME-CLIENT-SECRET-CONTRACT-001/sanitized_session_plan",
+        suite=REALTIME_CLIENT_SECRET_CONTRACT_ID,
+        passed=passed,
+        summary="Realtime client secret plan is server-side and sanitized.",
+        metrics={
+            "server_side_only": int(plan.server_side_only),
+            "raw_api_key_exposed": int(plan.raw_api_key_exposed),
+        },
+        evidence={"endpoint": plan.endpoint, "policy_ref": REALTIME_VOICE_POLICY_REF},
+    )
+
+
+def case_live_tutor_voice_ux_contract() -> BenchmarkCaseResult:
+    result = run_live_tutor_demo_smoke()
+    passed = (
+        result.passed
+        and result.realtime_voice_turn_count == result.turn_count
+        and result.spoken_output_turn_count == 1
+        and result.action_only_voice_turn_count == 1
+        and result.selection_voice_turn_count == 1
+        and result.no_voice_back_count >= 3
+        and not result.voice_capture_enabled
+        and result.memory_write_count == 0
+    )
+    return BenchmarkCaseResult(
+        case_id="LIVE-TUTOR-VOICE-UX-001/triple_hold_silent_routes",
+        suite=LIVE_TUTOR_VOICE_UX_ID,
+        passed=passed,
+        summary="Live tutor safe demo exposes triple-click voice, hold-for-text, and silent cue routes.",
+        metrics={
+            "spoken_output_turn_count": result.spoken_output_turn_count,
+            "action_only_voice_turn_count": result.action_only_voice_turn_count,
+            "no_voice_back_count": result.no_voice_back_count,
+        },
+        evidence={"policy_ref": REALTIME_VOICE_POLICY_REF},
+    )
+
+
+def case_selection_ux_contract() -> BenchmarkCaseResult:
+    gesture = build_pointer_gesture(
+        gesture_type="drag_select_targets",
+        target_id="lut_menu",
+        target_label="LUT Menu",
+        selected_target_ids=["node_graph", "lut_menu", "inspector"],
+        transcript_preview="Explain these together.",
+    )
+    turn = resolve_synthetic_voice_turn(gesture=gesture)
+    passed = (
+        len(turn.selected_target_ids) == 3
+        and turn.output_decision.output_mode == "text_chip"
+        and turn.output_decision.no_voice_back
+        and not turn.memory_write_allowed
+        and not turn.external_effect_executed
+    )
+    return BenchmarkCaseResult(
+        case_id="SELECTION-UX-CONTRACT-001/grouped_pointer_targets",
+        suite=SELECTION_UX_CONTRACT_ID,
+        passed=passed,
+        summary="Selection UX groups targets for explanation without creating a skill or memory write.",
+        metrics={"selected_target_count": len(turn.selected_target_ids)},
+        evidence={"policy_ref": REALTIME_VOICE_POLICY_REF},
+    )
+
+
+def case_dashboard_voice_pointer_panel_contract() -> BenchmarkCaseResult:
+    panel = build_voice_pointer_dashboard_panel()
+    passed = (
+        panel.panel_id == DASHBOARD_VOICE_POINTER_PANEL_ID
+        and panel.model == DEFAULT_REALTIME_MODEL
+        and "triple" in panel.summary.lower()
+        and "press_hold_text_reply" in panel.gestures
+        and "spoken_brief" in panel.output_modes
+        and panel.cost_guard["reasoning_effort"] == "low"
+        and not panel.mic_capture_enabled
+        and not panel.raw_audio_retained
+        and not panel.memory_write_allowed
+    )
+    return BenchmarkCaseResult(
+        case_id="DASHBOARD-VOICE-POINTER-PANEL-001/simple_voice_pointer_status",
+        suite=DASHBOARD_VOICE_POINTER_PANEL_ID,
+        passed=passed,
+        summary="Dashboard voice pointer panel stays simple, safe, and cost-aware.",
+        metrics={
+            "gesture_count": len(panel.gestures),
+            "max_session_seconds": panel.cost_guard["max_session_seconds"],
+        },
+        evidence={"policy_ref": REALTIME_VOICE_POLICY_REF, "model": panel.model},
+    )
+
+
+def case_realtime_voice_bench_docs_contract() -> BenchmarkCaseResult:
+    docs_text = "\n".join(
+        [
+            (REPO_ROOT / "docs" / "architecture" / "realtime-voice-pointer.md").read_text(
+                encoding="utf-8"
+            ),
+            (REPO_ROOT / "docs" / "adr" / "0009-realtime-voice-pointer-orchestrator.md").read_text(
+                encoding="utf-8"
+            ),
+            (REPO_ROOT / "docs" / "ops" / "benchmark-plan.md").read_text(
+                encoding="utf-8"
+            ),
+            (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+                encoding="utf-8"
+            ),
+            (REPO_ROOT / "docs" / "ops" / "research-safety.md").read_text(
+                encoding="utf-8"
+            ),
+        ]
+    )
+    required_terms = [
+        REALTIME_VOICE_BENCH_DOCS_ID,
+        REALTIME_VOICE_POLICY_REF,
+        "gpt-realtime-2",
+        "triple click",
+        "click and hold",
+        "voice-in, text-out",
+        "silent visual",
+        "ephemeral client secret",
+        "low reasoning effort",
+        "cost guard",
+        "no raw audio",
+        "no live microphone",
+    ]
+    missing_terms = _missing_terms(docs_text, required_terms)
+    passed = not missing_terms
+    return BenchmarkCaseResult(
+        case_id="REALTIME-VOICE-BENCH-DOCS-001/docs_and_ops_trace",
+        suite=REALTIME_VOICE_BENCH_DOCS_ID,
+        passed=passed,
+        summary="Realtime voice pointer docs capture official-source model, UX, and cost constraints.",
+        metrics={"missing_doc_terms": len(missing_terms)},
+        evidence={"policy_ref": REALTIME_VOICE_POLICY_REF, "missing_doc_terms": missing_terms},
     )
 
 

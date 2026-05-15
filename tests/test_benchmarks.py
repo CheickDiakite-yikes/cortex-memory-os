@@ -7,7 +7,7 @@ def test_synthetic_benchmarks_pass():
     result = run_all()
 
     assert result.passed
-    assert len(result.case_results) == 212
+    assert len(result.case_results) == 222
     assert {case.suite for case in result.case_results} >= {
         "MEM-RECALL-001",
         "RETRIEVAL-SCORE-001",
@@ -205,6 +205,16 @@ def test_synthetic_benchmarks_pass():
         "MANUAL-ADAPTER-PROOF-001",
         "LIVE-OPENAI-SMOKE-001",
         "OPENAI-TUTOR-SAFE-DRAFT-001",
+        "REALTIME-VOICE-CONTRACT-001",
+        "POINTER-GESTURE-GRAMMAR-001",
+        "VOICE-OUTPUT-ROUTER-001",
+        "REALTIME-COST-GUARD-001",
+        "SYNTHETIC-VOICE-TURN-LOOP-001",
+        "REALTIME-CLIENT-SECRET-CONTRACT-001",
+        "LIVE-TUTOR-VOICE-UX-001",
+        "SELECTION-UX-CONTRACT-001",
+        "DASHBOARD-VOICE-POINTER-PANEL-001",
+        "REALTIME-VOICE-BENCH-DOCS-001",
         "LIVE-READINESS-HARDENING-001",
         "CAPTURE-BUDGET-QUEUE-001",
         "GATEWAY-SELF-LESSON-001",

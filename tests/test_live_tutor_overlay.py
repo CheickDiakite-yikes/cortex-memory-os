@@ -36,6 +36,12 @@ def test_live_tutor_smoke_resolves_core_spatial_flows():
     assert result.external_effect_count == 0
     assert result.real_screen_capture_started is False
     assert result.voice_capture_enabled is False
+    assert result.realtime_voice_turn_count == 5
+    assert result.spoken_output_turn_count == 1
+    assert result.text_only_voice_turn_count >= 1
+    assert result.action_only_voice_turn_count == 1
+    assert result.selection_voice_turn_count == 1
+    assert result.no_voice_back_count >= 3
     assert result.prohibited_marker_count == 0
     assert result.safety_failures == []
 
@@ -66,7 +72,47 @@ def test_live_tutor_turn_is_display_only_and_bounded():
     assert turn.external_effect_executed is False
     assert turn.real_screen_capture_started is False
     assert turn.voice_capture_enabled is False
+    assert turn.realtime_voice_model == "gpt-realtime-2"
+    assert turn.realtime_voice_ready is True
+    assert turn.voice_gesture_type == "single_click_context"
+    assert turn.voice_output_mode == "text_chip"
+    assert turn.no_voice_back is True
+    assert "gpt_realtime_2_ready" in turn.safety_flags
     assert LIVE_TUTOR_OVERLAY_POLICY_REF in turn.policy_refs
+
+
+def test_live_tutor_triple_click_and_hold_voice_routes():
+    triple = resolve_live_tutor_turn(
+        "Talk me through this.",
+        surface=build_safe_creative_demo_surface(active_page="color"),
+        pointer_state=LiveTutorPointerState(current_target_id="node_graph", referent_phrase="this"),
+        voice_gesture_type="triple_click_voice_dialogue",
+    )
+    text_hold = resolve_live_tutor_turn(
+        "Tell me what this does, but text only.",
+        surface=build_safe_creative_demo_surface(active_page="color"),
+        pointer_state=LiveTutorPointerState(current_target_id="lut_menu", referent_phrase="this"),
+        voice_gesture_type="press_hold_text_reply",
+    )
+    action_hold = resolve_live_tutor_turn(
+        "Show me the next action, no voice back.",
+        surface=build_safe_creative_demo_surface(),
+        pointer_state=LiveTutorPointerState(
+            current_target_id="color_page_button",
+            referent_phrase="this",
+        ),
+        voice_gesture_type="press_hold_action_only",
+    )
+
+    assert triple.voice_output_mode == "spoken_brief"
+    assert triple.spoken_output_seconds_budgeted > 0
+    assert triple.no_voice_back is False
+    assert triple.voice_capture_enabled is False
+    assert text_hold.voice_output_mode == "text_chip"
+    assert text_hold.no_voice_back is True
+    assert action_hold.voice_output_mode == "silent_visual"
+    assert action_hold.no_voice_back is True
+    assert "Action-only route" in action_hold.companion_state.safety_caption
 
 
 def test_live_tutor_adapts_next_step_to_controlled_state():
@@ -205,6 +251,10 @@ def test_live_tutor_server_smoke_answers_with_safe_receipts():
     assert result.external_effect_count == 0
     assert result.openai_draft_turn_count == 1
     assert result.openai_store_false is True
+    assert result.realtime_voice_turn_count == 3
+    assert result.spoken_output_turn_count == 1
+    assert result.text_only_voice_turn_count == 1
+    assert result.action_only_voice_turn_count == 1
 
 
 def test_live_tutor_demo_session_keeps_turns_memory_free():
@@ -257,6 +307,18 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "active_page" in js
     assert "ai_mode" in js
     assert "openai_dry_run" in js
+    assert "voice_gesture_type" in js
+    assert "triple_click_voice_dialogue" in js
+    assert "press_hold_text_reply" in js
+    assert "press_hold_action_only" in js
+    assert "DEMO_VIEWPORT_HEIGHT = 960" in js
+    assert "safePointerForRequest" in js
+    assert 'voiceGestureType = "single_click_context";' in js
+    assert 'turnList.prepend(item);\n  setVoiceGesture("single_click_context");' not in js
+    assert "voice-status-chip" in html
+    assert "voice-output-chip" in html
+    assert "voice-gesture-hint" in html
+    assert "voice-mode-panel" in html
     assert "data-ai-mode" in html
     assert "AI draft" in html
     assert "store:false" in html + js

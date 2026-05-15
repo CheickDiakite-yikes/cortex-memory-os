@@ -969,9 +969,14 @@ function renderLiveTutorPanel() {
       <div><span>Surface</span><strong>${panel.controlled_surface ? "controlled" : "blocked"}</strong></div>
       <div><span>Memory</span><strong>${panel.manual_memory_proposal_count ? "review" : "off"}</strong></div>
       <div><span>AI draft</span><strong>${panel.openai_draft_ready && panel.openai_store_false ? "safe" : "blocked"}</strong></div>
+      <div><span>Voice</span><strong>${panel.realtime_voice_ready ? panel.realtime_voice_model : "blocked"}</strong></div>
+      <div><span>No voice back</span><strong>${panel.no_voice_back_count || 0}</strong></div>
       <div><span>Raw refs</span><strong>${panel.raw_ref_retained ? "retained" : "none"}</strong></div>
     </div>
-    <p class="live-tutor-receipt">Pointer-first: hover target -> this/that -> answer chip -> optional AI draft store:false -> reviewed memory proposal.</p>
+    <p class="live-tutor-receipt">Pointer-first: hover target -> this/that -> triple-click voice, hold-for-text, or silent action cue -> reviewed memory proposal.</p>
+    <div class="live-tutor-targets">
+      ${(panel.voice_gestures || []).map((item) => `<span>${formatToken(item)}</span>`).join("")}
+    </div>
     <div class="live-tutor-targets">
       ${(panel.latest_targets || []).map((item) => `<span>${formatToken(item)}</span>`).join("")}
     </div>
@@ -984,7 +989,7 @@ function renderLiveTutorPanel() {
     writeReceipt(`Live Tutor Overlay demo: ${panel.demo_url}. Start it with ${panel.smoke_command.replace(" --server-smoke --json", "")}.`);
   });
   document.querySelector("#live-tutor-smoke").addEventListener("click", () => {
-    writeReceipt(`${panel.panel_id}: ${panel.smoke_command}. Pointer-first, display-only, controlled surface, AI draft ${panel.openai_store_false ? "store:false" : "blocked"}, ${panel.manual_memory_proposal_count || 0} reviewed memory proposal, no capture, no memory write, no raw refs.`);
+    writeReceipt(`${panel.panel_id}: ${panel.smoke_command}. Pointer-first, display-only, controlled surface, Realtime voice ${panel.realtime_voice_model}, default ${panel.voice_default_output}, AI draft ${panel.openai_store_false ? "store:false" : "blocked"}, ${panel.manual_memory_proposal_count || 0} reviewed memory proposal, no capture, no memory write, no raw refs.`);
   });
 }
 

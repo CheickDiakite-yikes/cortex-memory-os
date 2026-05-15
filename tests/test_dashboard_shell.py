@@ -122,6 +122,10 @@ def test_dashboard_shell_composes_safe_view_models():
     assert shell.live_tutor_panel.external_effect_enabled is False
     assert shell.live_tutor_panel.real_screen_capture_started is False
     assert shell.live_tutor_panel.voice_capture_enabled is False
+    assert shell.live_tutor_panel.realtime_voice_ready is True
+    assert shell.live_tutor_panel.realtime_voice_model == "gpt-realtime-2"
+    assert "triple_click_voice_dialogue" in shell.live_tutor_panel.voice_gestures
+    assert "text unless gesture asks for voice" in shell.live_tutor_panel.voice_default_output
     assert shell.dashboard_live_data_adapter.read_only is True
     assert shell.dashboard_live_data_adapter.local_only is True
     assert shell.dashboard_live_data_adapter.gateway_executed_count > 0
@@ -267,6 +271,8 @@ def test_dashboard_static_app_renders_live_tutor_panel():
     assert "live-tutor-panel" in index_html
     assert LIVE_TUTOR_OVERLAY_ID in index_html
     assert "cortex-live-tutor-demo" in app_js
+    assert "Realtime voice" in app_js
+    assert "hold-for-text" in app_js
     assert ".live-tutor-inner" in css
     assert ".live-tutor-targets" in css
 

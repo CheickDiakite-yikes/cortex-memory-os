@@ -20,6 +20,15 @@ from urllib.parse import urlparse
 from pydantic import Field, ValidationError, field_validator, model_validator
 
 from cortex_memory_os.contracts import StrictModel
+from cortex_memory_os.realtime_voice_pointer import (
+    DEFAULT_REALTIME_MODEL,
+    REALTIME_COST_GUARD_ID,
+    REALTIME_VOICE_POLICY_REF,
+    VoiceGestureType,
+    VoiceOutputMode,
+    build_pointer_gesture,
+    route_voice_output,
+)
 
 LIVE_TUTOR_OVERLAY_ID = "LIVE-TUTOR-OVERLAY-001"
 LIVE_TUTOR_OVERLAY_POLICY_REF = "policy_live_tutor_overlay_v1"
@@ -118,7 +127,9 @@ class SafeCreativeDemoSurface(StrictModel):
     raw_payload_included: bool = False
     raw_ref_retained: bool = False
     external_content_loaded: bool = False
-    policy_refs: list[str] = Field(default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF])
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF, REALTIME_VOICE_POLICY_REF]
+    )
 
     @model_validator(mode="after")
     def keep_surface_controlled_and_safe(self) -> SafeCreativeDemoSurface:
@@ -161,7 +172,9 @@ class SpatialTutorCue(StrictModel):
     display_only: bool = True
     allowed_effects: list[str] = Field(default_factory=list)
     blocked_effects: list[str] = Field(default_factory=list)
-    policy_refs: list[str] = Field(default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF])
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF, REALTIME_VOICE_POLICY_REF]
+    )
 
     @model_validator(mode="after")
     def keep_cue_display_only(self) -> SpatialTutorCue:
@@ -211,7 +224,9 @@ class ManualMemoryProposal(StrictModel):
     scope: Literal["manual_memory_book"] = "manual_memory_book"
     durable_write_performed: bool = False
     user_confirmation_required: bool = True
-    policy_refs: list[str] = Field(default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF])
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF, REALTIME_VOICE_POLICY_REF]
+    )
 
     @field_validator("content_preview")
     @classmethod
@@ -237,7 +252,9 @@ class LiveTutorCompanionState(StrictModel):
     safety_caption: str = Field(min_length=1, max_length=140)
     display_only: bool = True
     answer_anchor: Literal["beside_pointer"] = "beside_pointer"
-    policy_refs: list[str] = Field(default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF])
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF, REALTIME_VOICE_POLICY_REF]
+    )
 
     @field_validator("label", "safety_caption")
     @classmethod
@@ -279,19 +296,37 @@ class LiveTutorTurn(StrictModel):
     ai_model: str | None = None
     ai_store_false: bool = True
     ai_prompt_char_count: int | None = Field(default=None, ge=1, le=2400)
+    voice_gesture_type: VoiceGestureType = "single_click_context"
+    voice_output_mode: VoiceOutputMode = "text_chip"
+    voice_route_reason: str = Field(default="Typed question uses text beside the pointer.", max_length=220)
+    realtime_voice_model: str = DEFAULT_REALTIME_MODEL
+    realtime_voice_ready: bool = True
+    voice_cost_guard_id: str = REALTIME_COST_GUARD_ID
+    voice_transcript_source: Literal["typed_or_synthetic", "synthetic_voice"] = "typed_or_synthetic"
+    spoken_output_seconds_budgeted: int = Field(default=0, ge=0, le=60)
+    no_voice_back: bool = True
     display_only: bool = True
     memory_write_allowed: bool = False
     raw_ref_retained: bool = False
     external_effect_executed: bool = False
     real_screen_capture_started: bool = False
     voice_capture_enabled: bool = False
-    policy_refs: list[str] = Field(default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF])
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF, REALTIME_VOICE_POLICY_REF]
+    )
 
     @field_validator("user_utterance", "assistant_response", "next_user_action")
     @classmethod
     def reject_prohibited_markers(cls, value: str) -> str:
         if any(marker in value for marker in _PROHIBITED_MARKERS):
             raise ValueError("live tutor turn cannot carry secret/raw/prompt-injection markers")
+        return value
+
+    @field_validator("voice_route_reason")
+    @classmethod
+    def reject_prohibited_voice_reason(cls, value: str) -> str:
+        if any(marker in value for marker in _PROHIBITED_MARKERS):
+            raise ValueError("live tutor voice reason cannot carry secret/raw markers")
         return value
 
     @field_validator("micro_steps")
@@ -325,6 +360,18 @@ class LiveTutorTurn(StrictModel):
                 raise ValueError("OpenAI dry-run tutor turns require model and prompt metadata")
             if not self.ai_store_false:
                 raise ValueError("OpenAI dry-run tutor turns require store:false")
+        if self.realtime_voice_model != DEFAULT_REALTIME_MODEL:
+            raise ValueError("live tutor realtime voice route must use gpt-realtime-2")
+        if self.voice_output_mode in {"silent_visual", "text_chip", "memory_review"}:
+            if not self.no_voice_back:
+                raise ValueError("non-spoken voice routes must mark no_voice_back")
+            if self.spoken_output_seconds_budgeted != 0:
+                raise ValueError("non-spoken voice routes cannot budget spoken output")
+        if self.voice_output_mode in {"spoken_brief", "spoken_detail"}:
+            if self.no_voice_back or self.spoken_output_seconds_budgeted <= 0:
+                raise ValueError("spoken voice routes require an audio-output budget")
+        if REALTIME_VOICE_POLICY_REF not in self.policy_refs:
+            raise ValueError("live tutor turn requires realtime voice policy ref")
         if LIVE_TUTOR_OVERLAY_POLICY_REF not in self.policy_refs:
             raise ValueError("live tutor turn requires policy ref")
         return self
@@ -348,6 +395,12 @@ class LiveTutorDemoResult(StrictModel):
     voice_capture_enabled: bool = False
     openai_draft_turn_count: int = Field(default=0, ge=0)
     openai_store_false: bool = True
+    realtime_voice_turn_count: int = Field(default=0, ge=0)
+    spoken_output_turn_count: int = Field(default=0, ge=0)
+    text_only_voice_turn_count: int = Field(default=0, ge=0)
+    action_only_voice_turn_count: int = Field(default=0, ge=0)
+    selection_voice_turn_count: int = Field(default=0, ge=0)
+    no_voice_back_count: int = Field(default=0, ge=0)
     prohibited_marker_count: int = Field(ge=0)
     safety_failures: list[str] = Field(default_factory=list)
 
@@ -372,9 +425,17 @@ class LiveTutorDashboardPanel(StrictModel):
     openai_draft_ready: bool = True
     openai_draft_turn_count: int = Field(default=0, ge=0)
     openai_store_false: bool = True
+    realtime_voice_ready: bool = True
+    realtime_voice_model: str = DEFAULT_REALTIME_MODEL
+    voice_default_output: str = "text unless gesture asks for voice"
+    voice_gestures: list[str] = Field(default_factory=list)
+    voice_output_modes: list[str] = Field(default_factory=list)
+    no_voice_back_count: int = Field(default=0, ge=0)
     raw_payload_included: bool = False
     blocked_effects: list[str] = Field(default_factory=list)
-    policy_refs: list[str] = Field(default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF])
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF, REALTIME_VOICE_POLICY_REF]
+    )
 
     @model_validator(mode="after")
     def keep_dashboard_panel_safe(self) -> LiveTutorDashboardPanel:
@@ -386,6 +447,8 @@ class LiveTutorDashboardPanel(StrictModel):
             raise ValueError("live tutor dashboard panel cannot enable screen or voice capture")
         if not self.openai_draft_ready or not self.openai_store_false:
             raise ValueError("live tutor OpenAI draft panel must stay safe and store:false")
+        if not self.realtime_voice_ready or self.realtime_voice_model != DEFAULT_REALTIME_MODEL:
+            raise ValueError("live tutor realtime voice panel must stay on gpt-realtime-2")
         if self.raw_payload_included:
             raise ValueError("live tutor dashboard panel cannot include raw payloads")
         if missing := sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS.difference(self.blocked_effects)):
@@ -399,6 +462,7 @@ class LiveTutorQuestionInput(StrictModel):
     user_utterance: str = Field(min_length=1, max_length=240)
     active_page: str = Field(default="edit", min_length=1, max_length=40)
     ai_mode: Literal["local", "openai_dry_run"] = "local"
+    voice_gesture_type: VoiceGestureType = "single_click_context"
     pointed_target_id: str | None = None
     previous_target_id: str | None = None
     selected_target_ids: list[str] = Field(default_factory=list, max_length=4)
@@ -441,6 +505,7 @@ class LiveTutorDemoSession:
                 pointer_state=pointer_state,
                 sequence=sequence,
                 ai_mode=question.ai_mode,
+                voice_gesture_type=question.voice_gesture_type,
             )
             self._turns.append(turn)
             return turn
@@ -720,6 +785,7 @@ def resolve_live_tutor_turn(
     session_id: str = "live_tutor_demo_session",
     sequence: int = 1,
     ai_mode: Literal["local", "openai_dry_run"] = "local",
+    voice_gesture_type: VoiceGestureType = "single_click_context",
 ) -> LiveTutorTurn:
     surface = surface or build_safe_creative_demo_surface()
     pointer_state = pointer_state or LiveTutorPointerState()
@@ -785,6 +851,14 @@ def resolve_live_tutor_turn(
             "no_external_effects",
         ],
     )
+    turn = _apply_voice_pointer_route_to_turn(
+        turn,
+        user_utterance=user_utterance,
+        target=target,
+        pointer_state=pointer_state,
+        referenced_ids=referenced_ids,
+        voice_gesture_type=voice_gesture_type,
+    )
     if ai_mode == "openai_dry_run":
         return _apply_openai_dry_run_to_turn(
             turn,
@@ -793,6 +867,108 @@ def resolve_live_tutor_turn(
             surface=surface,
         )
     return turn
+
+
+def _apply_voice_pointer_route_to_turn(
+    turn: LiveTutorTurn,
+    *,
+    user_utterance: str,
+    target: DemoTarget,
+    pointer_state: LiveTutorPointerState,
+    referenced_ids: list[str],
+    voice_gesture_type: VoiceGestureType,
+) -> LiveTutorTurn:
+    gesture = build_pointer_gesture(
+        gesture_type=voice_gesture_type,
+        target_id=target.target_id,
+        target_label=target.label,
+        pointer_x=pointer_state.pointer_x if pointer_state.pointer_x is not None else target.center_x,
+        pointer_y=pointer_state.pointer_y if pointer_state.pointer_y is not None else target.center_y,
+        transcript_preview=user_utterance,
+        selected_target_ids=referenced_ids,
+    )
+    decision = route_voice_output(gesture)
+    payload = turn.model_dump(mode="python")
+    payload.update(
+        {
+            "voice_gesture_type": gesture.gesture_type,
+            "voice_output_mode": decision.output_mode,
+            "voice_route_reason": decision.reason,
+            "realtime_voice_model": DEFAULT_REALTIME_MODEL,
+            "realtime_voice_ready": True,
+            "voice_cost_guard_id": REALTIME_COST_GUARD_ID,
+            "voice_transcript_source": (
+                "synthetic_voice"
+                if gesture.gesture_type
+                in {
+                    "triple_click_voice_dialogue",
+                    "press_hold_text_reply",
+                    "press_hold_action_only",
+                }
+                else "typed_or_synthetic"
+            ),
+            "spoken_output_seconds_budgeted": decision.spoken_output_seconds_budgeted,
+            "no_voice_back": decision.no_voice_back,
+            "safety_flags": [
+                *turn.safety_flags,
+                "gpt_realtime_2_ready",
+                "ephemeral_client_secret_required",
+                f"voice_gesture:{gesture.gesture_type}",
+                f"voice_output:{decision.output_mode}",
+                "voice_default_text_unless_gesture_requests_speech",
+                "cost_guard_active",
+                "no_live_mic_in_safe_demo",
+            ],
+        }
+    )
+    if decision.output_mode == "spoken_brief":
+        payload.update(
+            {
+                "companion_state": LiveTutorCompanionState(
+                    mode=turn.companion_state.mode,
+                    label=f"Voice ready for {target.label}",
+                    safety_caption="Triple-click route: brief spoken answer, gated by cost guard.",
+                ),
+                "user_readable_receipt": (
+                    f"Saw {target.label}, routed triple-click voice to a brief spoken answer, "
+                    "and opened no mic in this safe demo."
+                ),
+            }
+        )
+    elif decision.output_mode == "text_chip":
+        payload.update(
+            {
+                "companion_state": LiveTutorCompanionState(
+                    mode=turn.companion_state.mode,
+                    label=f"Text reply for {target.label}",
+                    safety_caption="Voice-in, text-out route. No voice back.",
+                ),
+            }
+        )
+    elif decision.output_mode == "silent_visual":
+        payload.update(
+            {
+                "companion_state": LiveTutorCompanionState(
+                    mode=turn.companion_state.mode,
+                    label=f"Silent cue for {target.label}",
+                    safety_caption="Action-only route: visual pointer cue, no voice back.",
+                ),
+                "user_readable_receipt": (
+                    f"Saw {target.label}, showed the pointer cue, and stayed silent."
+                ),
+            }
+        )
+    elif decision.output_mode == "memory_review":
+        payload.update(
+            {
+                "companion_state": LiveTutorCompanionState(
+                    mode="review_required",
+                    label=f"Review memory for {target.label}",
+                    safety_caption="Memory route stays review-only; nothing is saved.",
+                ),
+            }
+        )
+    return LiveTutorTurn.model_validate(payload)
 
 
 def _apply_openai_dry_run_to_turn(
@@ -848,11 +1024,15 @@ def _apply_openai_dry_run_to_turn(
 
 def run_live_tutor_demo_smoke() -> LiveTutorDemoResult:
     surface = build_safe_creative_demo_surface()
-    requests = [
-        ("How do I start color grading?", None),
-        ("Where is the node graph?", None),
-        ("How do I add a LUT?", None),
-        ("Explain this", LiveTutorPointerState(current_target_id="lut_menu", referent_phrase="this")),
+    requests: list[tuple[str, LiveTutorPointerState | None, VoiceGestureType]] = [
+        ("How do I start color grading?", None, "triple_click_voice_dialogue"),
+        ("Where is the node graph?", None, "press_hold_text_reply"),
+        ("How do I add a LUT?", None, "press_hold_action_only"),
+        (
+            "Explain this",
+            LiveTutorPointerState(current_target_id="lut_menu", referent_phrase="this"),
+            "single_click_context",
+        ),
         (
             "Remember this",
             LiveTutorPointerState(
@@ -861,6 +1041,7 @@ def run_live_tutor_demo_smoke() -> LiveTutorDemoResult:
                 selected_target_ids=["lut_menu", "node_graph"],
                 referent_phrase="this",
             ),
+            "drag_select_targets",
         ),
     ]
     turns = [
@@ -869,8 +1050,9 @@ def run_live_tutor_demo_smoke() -> LiveTutorDemoResult:
             surface=surface,
             pointer_state=pointer_state,
             sequence=index,
+            voice_gesture_type=voice_gesture_type,
         )
-        for index, (utterance, pointer_state) in enumerate(requests, start=1)
+        for index, (utterance, pointer_state, voice_gesture_type) in enumerate(requests, start=1)
     ]
     return _result_from_turns(turns, require_core_targets=True)
 
@@ -898,6 +1080,13 @@ def run_live_tutor_server_smoke() -> LiveTutorDemoResult:
                         "active_page": "color" if sequence > 1 else "edit",
                         "pointed_target_id": "lut_menu" if "LUT" in utterance else None,
                         "ai_mode": "openai_dry_run" if sequence == 3 else "local",
+                        "voice_gesture_type": (
+                            "triple_click_voice_dialogue"
+                            if sequence == 1
+                            else "press_hold_text_reply"
+                            if sequence == 2
+                            else "press_hold_action_only"
+                        ),
                     }
                 ),
                 headers={
@@ -940,6 +1129,16 @@ def build_live_tutor_dashboard_panel(
         manual_memory_proposal_count=result.manual_memory_proposal_count,
         openai_draft_turn_count=result.openai_draft_turn_count,
         openai_store_false=result.openai_store_false,
+        realtime_voice_ready=result.realtime_voice_turn_count == result.turn_count,
+        realtime_voice_model=DEFAULT_REALTIME_MODEL,
+        voice_gestures=[
+            "triple_click_voice_dialogue",
+            "press_hold_text_reply",
+            "press_hold_action_only",
+            "drag_select_targets",
+        ],
+        voice_output_modes=["spoken_brief", "text_chip", "silent_visual", "memory_review"],
+        no_voice_back_count=result.no_voice_back_count,
         display_only=result.display_only,
         controlled_surface=result.controlled_surface,
         memory_write_allowed=result.memory_write_count > 0,
@@ -1000,6 +1199,17 @@ def _result_from_turns(
             for turn in turns
         ),
         "openai_store_false": all(turn.ai_store_false for turn in turns),
+        "realtime_voice_ready": all(
+            turn.realtime_voice_ready
+            and turn.realtime_voice_model == DEFAULT_REALTIME_MODEL
+            and turn.voice_cost_guard_id == REALTIME_COST_GUARD_ID
+            for turn in turns
+        ),
+        "voice_output_routes": (
+            {"text_chip", "memory_review"}.issubset({turn.voice_output_mode for turn in turns})
+            if require_core_targets
+            else all(turn.voice_output_mode for turn in turns)
+        ),
         "manual_memory_review": all(
             proposal.durable_write_performed is False
             and proposal.user_confirmation_required is True
@@ -1027,6 +1237,18 @@ def _result_from_turns(
             int(turn.ai_assist_mode == "openai_dry_run") for turn in turns
         ),
         openai_store_false=all(turn.ai_store_false for turn in turns),
+        realtime_voice_turn_count=sum(int(turn.realtime_voice_ready) for turn in turns),
+        spoken_output_turn_count=sum(
+            int(turn.voice_output_mode in {"spoken_brief", "spoken_detail"}) for turn in turns
+        ),
+        text_only_voice_turn_count=sum(int(turn.voice_output_mode == "text_chip") for turn in turns),
+        action_only_voice_turn_count=sum(
+            int(turn.voice_output_mode == "silent_visual") for turn in turns
+        ),
+        selection_voice_turn_count=sum(
+            int(turn.voice_gesture_type == "drag_select_targets") for turn in turns
+        ),
+        no_voice_back_count=sum(int(turn.no_voice_back) for turn in turns),
         prohibited_marker_count=prohibited_marker_count,
         safety_failures=failures,
     )

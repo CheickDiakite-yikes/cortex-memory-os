@@ -493,7 +493,7 @@ button {
 
 .cursor-action-row {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 5px;
 }
 
@@ -515,6 +515,7 @@ button {
 }
 
 body.ai-draft-mode .cursor-action-row button[data-pointer-ai],
+.cursor-action-row button[data-pointer-voice]:hover,
 .model-mode button.active {
   border-color: rgba(22, 99, 215, 0.72);
   background: var(--blue);
@@ -635,6 +636,32 @@ body.ai-draft-mode .cursor-action-row button[data-pointer-ai],
   color: var(--green);
   font-size: 0.74rem;
   font-weight: 850;
+}
+
+.voice-mode-panel {
+  position: absolute;
+  z-index: 6;
+  right: 18px;
+  bottom: 74px;
+  display: grid;
+  width: min(330px, calc(100% - 36px));
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid rgba(22, 99, 215, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 14px 36px rgba(21, 31, 47, 0.12);
+}
+
+.voice-mode-panel strong {
+  color: var(--blue);
+  font-size: 0.82rem;
+}
+
+.voice-mode-panel span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.32;
 }
 
 .cursor-tag {
@@ -922,6 +949,7 @@ dd {
   }
 
   .companion-dock,
+  .voice-mode-panel,
   .memory-proposal-card {
     position: relative;
     left: auto;

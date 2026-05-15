@@ -59,6 +59,7 @@ from cortex_memory_os.live_tutor_overlay import (
     LiveTutorDashboardPanel,
     build_live_tutor_dashboard_panel,
 )
+from cortex_memory_os.realtime_voice_pointer import REALTIME_VOICE_POLICY_REF
 from cortex_memory_os.dashboard_encrypted_index import (
     DASHBOARD_LIVE_BACKBONE_POLICY_REF,
     ENCRYPTED_INDEX_DASHBOARD_LIVE_POLICY_REF,
@@ -563,6 +564,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             CLICKY_UX_LESSONS_POLICY_REF,
             CLICKY_UX_COMPANION_POLICY_REF,
             LIVE_TUTOR_OVERLAY_POLICY_REF,
+            REALTIME_VOICE_POLICY_REF,
             DASHBOARD_LIVE_DATA_ADAPTER_POLICY_REF,
             LIVE_DASHBOARD_RECEIPTS_POLICY_REF,
             DASHBOARD_CAPTURE_CONTROL_POLICY_REF,
@@ -589,6 +591,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Live Shadow Pointer receipt is compact and sits above deeper review queues.",
             "Clicky-inspired UX keeps live presence cursor-adjacent and makes the dashboard a review space.",
             "Live Tutor Overlay turns the Clicky-inspired interaction into a controlled creative-tool demo.",
+            "Realtime voice UX starts pointer-first: triple click may speak briefly, hold can answer as text, and silent holds avoid voice output.",
             "Encrypted index receipts show counts and policy state instead of raw memory or query text.",
             "Live dashboard panels refresh from local read-only adapter receipts, not embedded raw payloads.",
             "Capture control shows an honest button path for the native Shadow Clicker without claiming static HTML can launch it.",
@@ -604,6 +607,7 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             "Shadow Pointer receipts do not include raw page payloads or raw refs.",
             "Clicky UX lessons were treated as untrusted external evidence and no repo code was executed.",
             "Live Tutor Overlay is display-only and controlled-state-only; it starts no screen, voice, memory, raw-ref, click, type, export, or external-effect path.",
+            "Realtime voice routes require gpt-realtime-2, ephemeral client secrets, low reasoning effort, and explicit cost guards before any live microphone path.",
             "Encrypted index dashboard panels never expose key material, token text, queries, or source refs.",
             "Live adapters expose aggregate counts only and keep write paths disabled.",
             "Real capture control starts with cursor overlay readiness and keeps raw storage and memory writes disabled.",

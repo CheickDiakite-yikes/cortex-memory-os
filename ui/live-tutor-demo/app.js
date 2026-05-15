@@ -23,11 +23,16 @@ const token = document.querySelector('meta[name="cortex-live-tutor-token"]')?.co
 const activePageChip = document.querySelector("#active-page-chip");
 const aiModeChip = document.querySelector("#ai-mode-chip");
 const aiModeNote = document.querySelector("#ai-mode-note");
+const voiceStatusChip = document.querySelector("#voice-status-chip");
+const voiceOutputChip = document.querySelector("#voice-output-chip");
+const voiceGestureHint = document.querySelector("#voice-gesture-hint");
 const turnList = document.querySelector("#turn-list");
 const receiptSummary = document.querySelector("#receipt-summary");
 const receiptsToggle = document.querySelector("#receipts-toggle");
 const receiptStack = document.querySelector("#receipt-stack");
 const aiModeButtons = document.querySelectorAll("[data-ai-mode]");
+const DEMO_VIEWPORT_WIDTH = 1440;
+const DEMO_VIEWPORT_HEIGHT = 960;
 const fields = {
   target: document.querySelector("#receipt-target"),
   intent: document.querySelector("#receipt-intent"),
@@ -40,7 +45,10 @@ const fields = {
 
 let activePage = "edit";
 let aiMode = "local";
+let voiceGestureType = "single_click_context";
 let lastTraceAt = 0;
+let holdTimer = null;
+let holdStartedAt = 0;
 let followerVisible = false;
 let helperActive = false;
 let currentTargetId = null;
@@ -67,10 +75,59 @@ function formatToken(value) {
   return String(value || "").replaceAll("_", " ");
 }
 
-async function askTutor(question) {
+function safePointerForRequest() {
+  return {
+    x:
+      lastPointer.x === null
+        ? null
+        : Math.round(clamp(lastPointer.x, 0, DEMO_VIEWPORT_WIDTH)),
+    y:
+      lastPointer.y === null
+        ? null
+        : Math.round(clamp(lastPointer.y, 0, DEMO_VIEWPORT_HEIGHT)),
+  };
+}
+
+function setVoiceGesture(type) {
+  const known = {
+    triple_click_voice_dialogue: {
+      status: "Voice dialogue",
+      output: "Brief voice",
+      hint: "Triple click routes to a short spoken answer, gated by the cost guard.",
+    },
+    press_hold_text_reply: {
+      status: "Hold to ask",
+      output: "Text reply",
+      hint: "Click and hold asks with voice intent but answers as text beside the pointer.",
+    },
+    press_hold_action_only: {
+      status: "Silent action",
+      output: "No voice back",
+      hint: "Action-only mode moves the guide cue and stays silent.",
+    },
+    drag_select_targets: {
+      status: "Selection",
+      output: "Text reply",
+      hint: "Selected targets can be explained together before any workflow is saved.",
+    },
+    single_click_context: {
+      status: "Voice safe demo",
+      output: "Text first",
+      hint: "Triple click for voice. Hold for text. Hold with silent mode for action-only.",
+    },
+  };
+  voiceGestureType = known[type] ? type : "single_click_context";
+  voiceStatusChip.textContent = known[voiceGestureType].status;
+  voiceOutputChip.textContent = known[voiceGestureType].output;
+  voiceGestureHint.textContent = known[voiceGestureType].hint;
+}
+
+async function askTutor(question, options = {}) {
   if (!helperActive) {
     setHelperActive(true);
   }
+  const gestureForRequest = options.voiceGestureType || voiceGestureType;
+  const pointerForRequest = safePointerForRequest();
   fields.intent.textContent = aiMode === "openai_dry_run" ? "thinking safely" : "thinking";
   fields.aiMode.textContent = aiMode === "openai_dry_run" ? "AI draft" : "local";
   pointerSafetyLabel.textContent =
@@ -87,11 +144,12 @@ async function askTutor(question) {
       user_utterance: question,
       active_page: activePage,
       ai_mode: aiMode,
+      voice_gesture_type: gestureForRequest,
       pointed_target_id: currentTargetId,
       previous_target_id: previousTargetId,
       selected_target_ids: pinnedTargetIds.length ? pinnedTargetIds : selectedTargetIds,
-      pointer_x: lastPointer.x,
-      pointer_y: lastPointer.y,
+      pointer_x: pointerForRequest.x,
+      pointer_y: pointerForRequest.y,
     }),
   });
   const payload = await response.json();
@@ -252,6 +310,22 @@ function pinCurrentTarget() {
   renderPinnedTargets();
 }
 
+function selectCurrentTarget() {
+  if (!currentTargetId) {
+    dockSummary.textContent = "Point at a target before selecting it.";
+    return;
+  }
+  if (selectedTargetIds.includes(currentTargetId)) {
+    selectedTargetIds = selectedTargetIds.filter((targetId) => targetId !== currentTargetId);
+    dockSummary.textContent = `${currentTargetLabel} removed from the selection.`;
+  } else {
+    selectedTargetIds = [...selectedTargetIds, currentTargetId].slice(-4);
+    dockSummary.textContent = `${currentTargetLabel} selected. Ask about "these" for a grouped answer.`;
+  }
+  setVoiceGesture(selectedTargetIds.length > 1 ? "drag_select_targets" : "single_click_context");
+  renderPinnedTargets();
+}
+
 function showMemoryProposal(proposal) {
   if (!proposal) {
     memoryProposalCard.classList.remove("visible");
@@ -308,6 +382,8 @@ function renderTurn(turn) {
     turn.ai_assist_mode === "openai_dry_run" && turn.ai_model
       ? `${turn.ai_model} store:false`
       : "local";
+  setVoiceGesture(turn.voice_gesture_type || "single_click_context");
+  voiceOutputChip.textContent = formatToken(turn.voice_output_mode || "text_chip");
   const effectText = turn.target_coordinates.allowed_effects
     .map(formatToken)
     .slice(1, 4)
@@ -327,8 +403,10 @@ function renderTurn(turn) {
     turn.ai_assist_mode === "openai_dry_run" && turn.ai_model
       ? ` · AI ${escapeHtml(turn.ai_model)} store:false`
       : "";
-  item.innerHTML = `<strong>${escapeHtml(turn.target_label)}</strong><span>${escapeHtml(turn.user_readable_receipt || formatToken(turn.intent_label))} · ${escapeHtml(turn.pointer_referent || "none")} · confidence ${Number(turn.confidence).toFixed(2)} · raw refs ${turn.raw_ref_retained ? "retained" : "none"}${aiText}${proposalText}</span>`;
+  const voiceText = ` · voice ${escapeHtml(formatToken(turn.voice_output_mode || "text_chip"))}`;
+  item.innerHTML = `<strong>${escapeHtml(turn.target_label)}</strong><span>${escapeHtml(turn.user_readable_receipt || formatToken(turn.intent_label))} · ${escapeHtml(turn.pointer_referent || "none")} · confidence ${Number(turn.confidence).toFixed(2)} · raw refs ${turn.raw_ref_retained ? "retained" : "none"}${voiceText}${aiText}${proposalText}</span>`;
   turnList.prepend(item);
+  voiceGestureType = "single_click_context";
 }
 
 form.addEventListener("submit", (event) => {
@@ -361,6 +439,41 @@ frame.addEventListener("pointerenter", (event) => {
 
 frame.addEventListener("pointermove", handlePointerMove);
 
+frame.addEventListener("click", (event) => {
+  if (!helperActive || event.target?.closest?.("button, input, textarea")) return;
+  if (event.detail >= 3) {
+    event.preventDefault();
+    setVoiceGesture("triple_click_voice_dialogue");
+    input.value = currentTargetId ? "Voice: explain this" : "Voice: what should I click next?";
+    askTutor(input.value, { voiceGestureType: "triple_click_voice_dialogue" });
+  }
+});
+
+frame.addEventListener("pointerdown", (event) => {
+  if (!helperActive || event.target?.closest?.("button, input, textarea")) return;
+  holdStartedAt = Date.now();
+  window.clearTimeout(holdTimer);
+  holdTimer = window.setTimeout(() => {
+    const gesture = event.altKey ? "press_hold_action_only" : "press_hold_text_reply";
+    setVoiceGesture(gesture);
+    input.value =
+      gesture === "press_hold_action_only"
+        ? "Show me the next action, no voice back."
+        : "Tell me what this does, but text only.";
+    askTutor(input.value, { voiceGestureType: gesture });
+  }, 680);
+});
+
+frame.addEventListener("pointerup", () => {
+  if (Date.now() - holdStartedAt < 650) {
+    window.clearTimeout(holdTimer);
+  }
+});
+
+frame.addEventListener("pointercancel", () => {
+  window.clearTimeout(holdTimer);
+});
+
 frame.addEventListener("pointerleave", () => {
   dockSummary.textContent = helperActive
     ? "Pointer helper is still awake inside the safe demo surface."
@@ -371,8 +484,24 @@ document.querySelectorAll("[data-pointer-command]").forEach((button) => {
   button.addEventListener("click", (event) => {
     event.stopPropagation();
     const command = button.dataset.pointerCommand || "Explain this";
+    setVoiceGesture("single_click_context");
     input.value = command;
     askTutor(command);
+  });
+});
+
+document.querySelectorAll("[data-pointer-voice]").forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const gesture = button.dataset.pointerVoice || "single_click_context";
+    setVoiceGesture(gesture);
+    input.value =
+      gesture === "press_hold_action_only"
+        ? "Show me the next action, no voice back."
+        : gesture === "press_hold_text_reply"
+          ? "Tell me what this does, but text only."
+          : "Voice: explain this";
+    askTutor(input.value, { voiceGestureType: gesture });
   });
 });
 
@@ -390,6 +519,9 @@ document.querySelectorAll("[data-pointer-local]").forEach((button) => {
     event.stopPropagation();
     if (button.dataset.pointerLocal === "pin-target") {
       pinCurrentTarget();
+    }
+    if (button.dataset.pointerLocal === "select-target") {
+      selectCurrentTarget();
     }
   });
 });
@@ -433,3 +565,4 @@ receiptsToggle.addEventListener("click", () => {
 });
 
 setAiMode("local");
+setVoiceGesture("single_click_context");

@@ -19,6 +19,8 @@
           <div class="topbar-actions" aria-label="Demo state">
             <span id="active-page-chip">Edit page</span>
             <span id="ai-mode-chip">Local answers</span>
+            <span id="voice-status-chip">Voice safe demo</span>
+            <span id="voice-output-chip">Text first</span>
             <span>Screen capture off</span>
             <span>Memory writes off</span>
           </div>
@@ -101,8 +103,12 @@
             <div class="cursor-action-row">
               <button type="button" data-pointer-command="Explain this">Explain</button>
               <button type="button" data-pointer-command="What next?">Next</button>
-              <button type="button" data-pointer-ai="openai_dry_run" title="Ask the cheap model using controlled demo facts only">AI</button>
+              <button type="button" data-pointer-voice="triple_click_voice_dialogue" title="Triple click starts a short voice back-and-forth">Voice</button>
+              <button type="button" data-pointer-voice="press_hold_text_reply" title="Ask by voice, answer as text">Hold</button>
+              <button type="button" data-pointer-voice="press_hold_action_only" title="Show the next cue without voice back">Silent</button>
+              <button type="button" data-pointer-ai="openai_dry_run" title="Ask the text fallback using controlled demo facts only">AI</button>
               <button type="button" data-pointer-local="pin-target">Pin</button>
+              <button type="button" data-pointer-local="select-target">Select</button>
               <button type="button" data-pointer-command="Remember this">Remember</button>
             </div>
           </div>
@@ -119,6 +125,10 @@
               <button type="button" id="review-memory-proposal">Review</button>
               <button type="button" id="dismiss-memory-proposal">Dismiss</button>
             </div>
+          </section>
+          <section class="voice-mode-panel" id="voice-mode-panel" aria-label="Voice pointer modes">
+            <strong>Voice gestures</strong>
+            <span id="voice-gesture-hint">Triple click for voice. Hold for text. Hold with silent mode for action-only.</span>
           </section>
           <p class="instruction-bubble" id="instruction-bubble" aria-live="polite">
             Ask a question and I will point without clicking.
@@ -153,6 +163,7 @@
           <button type="button">How do I add a LUT?</button>
           <button type="button">What should I click next?</button>
           <button type="button">Explain these</button>
+          <button type="button">Voice: explain this</button>
         </div>
 
         <p class="receipt-summary" id="receipt-summary">No pointer receipt yet.</p>
