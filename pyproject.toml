@@ -45,6 +45,7 @@ cortex-capture-preflight = "cortex_memory_os.capture_preflight_diagnostics:main"
 cortex-capture-readiness-ladder = "cortex_memory_os.capture_readiness_ladder:main"
 cortex-live-tutor-demo = "cortex_memory_os.live_tutor_overlay:main"
 cortex-manual-memory-book = "cortex_memory_os.manual_memory_book:main"
+cortex-agentic-os = "cortex_memory_os.agentic_os:main"
 
 [build-system]
 requires = ["setuptools>=69"]
