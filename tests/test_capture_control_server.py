@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from cortex_memory_os.capture_control_server import (
     CAPTURE_CONTROL_SERVER_POLICY_REF,
     CaptureControlProcessManager,
@@ -25,6 +27,8 @@ def test_capture_control_manager_launches_fixed_shadow_clicker_command() -> None
         agentic_target_label="Timeline",
     )
     status = manager.status()
+    card_file = Path(start.command[start.command.index("--agentic-card-file") + 1])
+    assert card_file.exists()
     stop = manager.stop()
 
     assert start.policy_ref == CAPTURE_CONTROL_SERVER_POLICY_REF
@@ -33,11 +37,13 @@ def test_capture_control_manager_launches_fixed_shadow_clicker_command() -> None
     assert "cortex-shadow-clicker" in start.command
     assert "--duration" in start.command
     assert "--agentic-title" in start.command
+    assert "--agentic-card-file" in start.command
     assert start.agentic_card_title == "Draft timeline steps"
     assert start.agentic_card_message == "I see Timeline. I can draft the next safe steps."
     assert start.agentic_card_status == "draft only | asks first | no write"
     assert start.agentic_route_kind == "draft_only"
     assert start.agentic_target_label == "Timeline"
+    assert start.agentic_card_live_state_active
     assert start.duration_seconds == 2
     assert not start.capture_started
     assert not start.accessibility_observer_started
@@ -48,7 +54,41 @@ def test_capture_control_manager_launches_fixed_shadow_clicker_command() -> None
     assert status.agentic_card_title == "Draft timeline steps"
     assert stop.state == "stopped"
     assert stop.agentic_target_label == "Timeline"
+    assert stop.agentic_card_live_state_active
+    assert not card_file.exists()
     assert not stop.running
+
+
+def test_capture_control_manager_updates_running_agentic_card_file() -> None:
+    manager = CaptureControlProcessManager(popen_factory=FakePopen)
+
+    start = manager.start(duration_seconds=2)
+    card_file = Path(start.command[start.command.index("--agentic-card-file") + 1])
+    update = manager.update_agentic_card(
+        agentic_card=NativeAgenticPointerCardCommand(
+            title="Explain node graph",
+            message="I see Node Graph. I can explain it without touching your system.",
+            status="answer only | display-only | no write",
+        ),
+        agentic_route_kind="answer_only",
+        agentic_target_label="Node Graph",
+    )
+    payload = card_file.read_text(encoding="utf-8")
+    stop = manager.stop()
+
+    assert update.action == "agentic_card_update"
+    assert update.agentic_card_title == "Explain node graph"
+    assert update.agentic_card_message == (
+        "I see Node Graph. I can explain it without touching your system."
+    )
+    assert update.agentic_route_kind == "answer_only"
+    assert update.agentic_target_label == "Node Graph"
+    assert update.agentic_card_live_state_active
+    assert "Node Graph" in payload
+    assert "OPENAI_API_KEY" not in payload
+    assert "raw://" not in payload
+    assert not stop.memory_write_allowed
+    assert not card_file.exists()
 
 
 def test_capture_control_manager_reports_user_test_readiness() -> None:
@@ -176,6 +216,13 @@ def test_capture_control_server_smoke_serves_dashboard_and_blocks_remote_probe()
     assert smoke.start_receipt.agentic_card_status == "draft only | asks first | no write"
     assert smoke.start_receipt.agentic_route_kind == "draft_only"
     assert smoke.start_receipt.agentic_target_label == "Color Page"
+    assert smoke.start_receipt.agentic_card_live_state_active
+    assert smoke.stop_receipt.agentic_card_title == "Draft the next steps"
+    assert smoke.stop_receipt.agentic_card_message == (
+        "I see Node Graph. I can draft the next safe steps."
+    )
+    assert smoke.stop_receipt.agentic_target_label == "Node Graph"
+    assert smoke.stop_receipt.agentic_card_live_state_active
     assert smoke.permission_receipt.passed
     assert smoke.preflight_receipt.passed
     assert smoke.preflight_receipt.safe_to_start_real_capture_session

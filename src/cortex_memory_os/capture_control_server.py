@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import Any, Literal, Protocol
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -137,6 +137,7 @@ class CaptureControlBridgeReceipt(StrictModel):
     agentic_card_status: str | None = None
     agentic_route_kind: str | None = None
     agentic_target_label: str | None = None
+    agentic_card_live_state_active: bool = False
     skip_reason: str | None = None
     next_user_actions: list[str] = Field(default_factory=list)
     error_code: str | None = None
@@ -261,6 +262,7 @@ class CaptureControlProcessManager:
         self._agentic_card: NativeAgenticPointerCardCommand | None = None
         self._agentic_route_kind: str | None = None
         self._agentic_target_label: str | None = None
+        self._agentic_card_file: Path | None = None
         self._receipts: list[CaptureControlBridgeReceipt] = []
 
     def status(self) -> CaptureControlBridgeReceipt:
@@ -303,6 +305,7 @@ class CaptureControlProcessManager:
             json_output=True,
             duration_seconds=bounded_duration,
             agentic_card=safe_agentic_card,
+            agentic_card_file=self._write_agentic_card_file(safe_agentic_card),
             **({"package_path": self.package_path} if self.package_path else {}),
         )
         process = self.popen_factory(
@@ -332,6 +335,35 @@ class CaptureControlProcessManager:
         self._record(receipt)
         return receipt
 
+    def update_agentic_card(
+        self,
+        *,
+        agentic_card: NativeAgenticPointerCardCommand,
+        agentic_route_kind: str,
+        agentic_target_label: str,
+    ) -> CaptureControlBridgeReceipt:
+        if not self._is_running():
+            receipt = self.status()
+            receipt.action = "agentic_card_update"
+            return receipt
+
+        self._agentic_card = agentic_card
+        self._agentic_route_kind = agentic_route_kind
+        self._agentic_target_label = agentic_target_label
+        self._write_agentic_card_file(agentic_card)
+        receipt = CaptureControlBridgeReceipt(
+            action="agentic_card_update",
+            state="running",
+            running=True,
+            pid=self._process.pid if self._process else None,
+            command=list(self._command),
+            duration_seconds=self._duration_seconds,
+            started_at=self._started_at,
+            **self._agentic_receipt_fields(),
+        )
+        self._record(receipt)
+        return receipt
+
     def stop(self) -> CaptureControlBridgeReceipt:
         if self._is_running() and self._process is not None:
             self._process.terminate()
@@ -348,6 +380,7 @@ class CaptureControlProcessManager:
             **agentic_fields,
         )
         self._record(receipt)
+        self._clear_agentic_card_file()
         self._agentic_card = None
         self._agentic_route_kind = None
         self._agentic_target_label = None
@@ -482,6 +515,7 @@ class CaptureControlProcessManager:
             ],
         )
         self._record(receipt)
+        self._clear_agentic_card_file()
         self._agentic_card = None
         self._agentic_route_kind = None
         self._agentic_target_label = None
@@ -492,14 +526,41 @@ class CaptureControlProcessManager:
         if len(self._receipts) > 50:
             self._receipts = self._receipts[-50:]
 
-    def _agentic_receipt_fields(self) -> dict[str, str | None]:
+    def _agentic_receipt_fields(self) -> dict[str, Any]:
         return {
             "agentic_card_title": self._agentic_card.title if self._agentic_card else None,
             "agentic_card_message": self._agentic_card.message if self._agentic_card else None,
             "agentic_card_status": self._agentic_card.status if self._agentic_card else None,
             "agentic_route_kind": self._agentic_route_kind,
             "agentic_target_label": self._agentic_target_label,
+            "agentic_card_live_state_active": self._agentic_card_file is not None
+            and self._agentic_card_file.exists(),
         }
+
+    def _write_agentic_card_file(self, card: NativeAgenticPointerCardCommand) -> Path:
+        if self._agentic_card_file is None:
+            handle = NamedTemporaryFile(
+                "w",
+                prefix="cortex-agentic-pointer-card-",
+                suffix=".json",
+                delete=False,
+                encoding="utf-8",
+            )
+            self._agentic_card_file = Path(handle.name)
+            handle.close()
+        self._agentic_card_file.write_text(
+            json.dumps(card.state_file_payload(), sort_keys=True),
+            encoding="utf-8",
+        )
+        return self._agentic_card_file
+
+    def _clear_agentic_card_file(self) -> None:
+        if self._agentic_card_file is None:
+            return
+        try:
+            self._agentic_card_file.unlink(missing_ok=True)
+        finally:
+            self._agentic_card_file = None
 
 
 @dataclass(frozen=True)
@@ -926,6 +987,11 @@ def build_capture_control_handler(
                 return
             with agentic_lock:
                 agentic_turns.append(turn)
+            manager.update_agentic_card(
+                agentic_card=_native_agentic_card_from_turn(turn),
+                agentic_route_kind=turn.receipt.route_kind.value,
+                agentic_target_label=turn.receipt.target_label,
+            )
             self._write_json(200, turn.model_dump(mode="json"))
 
         def _latest_agentic_turn(self) -> AgenticTurn:
@@ -1090,6 +1156,19 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
             payload={"duration_seconds": 2},
             headers=headers,
         )
+        agentic_turn_code, agentic_turn_payload = _request_json(
+            endpoint.base_url + AGENTIC_TURN_PATH,
+            method="POST",
+            payload={
+                "user_phrase": "What should I click next?",
+                "target_id": "node_graph_panel",
+                "target_label": "Node Graph",
+                "pointer_x": 1080,
+                "pointer_y": 312,
+                "confidence": 0.89,
+            },
+            headers=headers,
+        )
         screen_probe_code, screen_probe_payload = _request_json(
             endpoint.base_url + CAPTURE_CONTROL_SCREEN_PROBE_PATH,
             method="POST",
@@ -1197,19 +1276,6 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
             endpoint.base_url + MEMORY_BOOK_SNAPSHOT_PATH,
             headers=headers,
         )
-        agentic_turn_code, agentic_turn_payload = _request_json(
-            endpoint.base_url + AGENTIC_TURN_PATH,
-            method="POST",
-            payload={
-                "user_phrase": "What should I click next?",
-                "target_id": "color_page_button",
-                "target_label": "Color Page",
-                "pointer_x": 1260,
-                "pointer_y": 884,
-                "confidence": 0.88,
-            },
-            headers=headers,
-        )
         agentic_latest_code, agentic_latest_payload = _request_json(
             endpoint.base_url + AGENTIC_LATEST_PATH,
             headers=headers,
@@ -1298,6 +1364,12 @@ def run_capture_control_server_smoke() -> CaptureControlServerSmokeResult:
         and start_receipt.agentic_card_status == "draft only | asks first | no write"
         and start_receipt.agentic_route_kind == "draft_only"
         and start_receipt.agentic_target_label == "Color Page"
+        and start_receipt.agentic_card_live_state_active
+        and stop_receipt.agentic_card_title == "Draft the next steps"
+        and stop_receipt.agentic_card_message == "I see Node Graph. I can draft the next safe steps."
+        and stop_receipt.agentic_route_kind == "draft_only"
+        and stop_receipt.agentic_target_label == "Node Graph"
+        and stop_receipt.agentic_card_live_state_active
         and permission_receipt.passed
         and preflight_receipt.passed
         and preflight_receipt.diagnostic_id == CAPTURE_PREFLIGHT_DIAGNOSTICS_ID

@@ -1,5 +1,6 @@
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
@@ -122,7 +123,10 @@ def test_native_agentic_pointer_card_adds_display_only_command_args() -> None:
         message="I see Color Page. I can explain it without touching your system.",
         status="answer only | display-only | no write",
     )
-    command = native_cursor_follow_command(agentic_card=card)
+    command = native_cursor_follow_command(
+        agentic_card=card,
+        agentic_card_file=Path("/tmp/cortex-agentic-card.json"),
+    )
 
     assert card.display_only
     assert not card.memory_write_allowed
@@ -130,6 +134,10 @@ def test_native_agentic_pointer_card_adds_display_only_command_args() -> None:
     assert command[command.index("--agentic-title") + 1] == "Explain Color Page"
     assert "--agentic-message" in command
     assert "--agentic-status" in command
+    assert "--agentic-card-file" in command
+    assert command[command.index("--agentic-card-file") + 1] == "/tmp/cortex-agentic-card.json"
+    assert card.state_file_payload()["display_only"] is True
+    assert card.state_file_payload()["memory_write_allowed"] is False
     assert "execute_click" in card.blocked_effects
     assert "write_memory" in card.blocked_effects
 

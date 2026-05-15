@@ -12,6 +12,7 @@ struct ShadowClickerArgs {
     var agenticTitle = "Draft the next steps"
     var agenticMessage = "I see Color Page. I can draft the next safe steps."
     var agenticStatus = "draft only | display-only | no write"
+    var agenticCardFile: String?
 
     init(_ arguments: [String]) throws {
         var iterator = arguments.dropFirst().makeIterator()
@@ -41,6 +42,11 @@ struct ShadowClickerArgs {
                     throw ShadowPointerNativeError.invalidControl("--agentic-status requires text")
                 }
                 agenticStatus = value
+            case "--agentic-card-file":
+                guard let value = iterator.next(), !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    throw ShadowPointerNativeError.invalidControl("--agentic-card-file requires a path")
+                }
+                agenticCardFile = value
             default:
                 throw ShadowPointerNativeError.invalidControl("unknown argument \(argument)")
             }
@@ -80,7 +86,8 @@ do {
                 duration: args.duration,
                 encoder: encoder,
                 emitJSON: args.json,
-                card: card
+                card: card,
+                cardFileURL: args.agenticCardFile.map { URL(fileURLWithPath: $0) }
             )
         }
     } else {
@@ -205,7 +212,7 @@ final class LoadingDotsView: NSView {
 @MainActor
 final class ShadowClickerBubbleView: NSVisualEffectView {
     private let visualSpec: NativeOverlayVisualSpec
-    private let card: NativeAgenticPointerCard
+    private var card: NativeAgenticPointerCard
     private let titleField: NSTextField
     private let messageField: NSTextField
     private let statusField: NSTextField
@@ -289,11 +296,24 @@ final class ShadowClickerBubbleView: NSVisualEffectView {
 
     func update(phase: Double, bubbleSide: String) {
         dotsView.phase = phase
+        titleField.stringValue = card.title
         messageField.stringValue = card.message
         statusField.stringValue = bubbleSide == "left"
             ? "\(card.status) | shifted left"
             : card.status
     }
+
+    func apply(card nextCard: NativeAgenticPointerCard) {
+        card = nextCard
+        needsLayout = true
+        needsDisplay = true
+    }
+}
+
+struct AgenticCardFilePayload: Decodable {
+    var title: String
+    var message: String
+    var status: String
 }
 
 @available(macOS 13.0, *)
@@ -307,10 +327,13 @@ final class ShadowClickerController {
     private let visualSpec: NativeOverlayVisualSpec
     private let encoder: JSONEncoder
     private let emitJSON: Bool
+    private let cardFileURL: URL?
     private var samples: [NativeCursorSample] = []
     private var followTimer: Timer?
     private var stopTimer: Timer?
     private var animationPhase: Double = 0
+    private var lastCardPoll: Date?
+    private var lastCardFileModificationDate: Date?
 
     init(
         app: NSApplication,
@@ -320,7 +343,8 @@ final class ShadowClickerController {
         config: NativeCursorFollowConfig,
         visualSpec: NativeOverlayVisualSpec,
         encoder: JSONEncoder,
-        emitJSON: Bool
+        emitJSON: Bool,
+        cardFileURL: URL?
     ) {
         self.app = app
         self.panel = panel
@@ -330,6 +354,7 @@ final class ShadowClickerController {
         self.visualSpec = visualSpec
         self.encoder = encoder
         self.emitJSON = emitJSON
+        self.cardFileURL = cardFileURL
     }
 
     func start(duration: TimeInterval) {
@@ -352,6 +377,7 @@ final class ShadowClickerController {
     }
 
     private func tick() {
+        refreshAgenticCardIfNeeded()
         let sample = NativeCursorProbe.sampleNow()
         samples.append(sample)
         let displayFrame = NativeDisplayFrame.containing(sample)
@@ -381,6 +407,37 @@ final class ShadowClickerController {
         bubblePanel.contentView?.needsLayout = true
     }
 
+    private func refreshAgenticCardIfNeeded() {
+        guard let cardFileURL else {
+            return
+        }
+        let now = Date()
+        if let lastCardPoll, now.timeIntervalSince(lastCardPoll) < 0.25 {
+            return
+        }
+        lastCardPoll = now
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: cardFileURL.path),
+              let modificationDate = attributes[.modificationDate] as? Date
+        else {
+            return
+        }
+        if let lastCardFileModificationDate, modificationDate <= lastCardFileModificationDate {
+            return
+        }
+        guard let data = try? Data(contentsOf: cardFileURL),
+              let payload = try? JSONDecoder().decode(AgenticCardFilePayload.self, from: data),
+              let card = try? NativeAgenticPointerCard(
+                  title: payload.title,
+                  message: payload.message,
+                  status: payload.status
+              ).validated()
+        else {
+            return
+        }
+        lastCardFileModificationDate = modificationDate
+        bubbleView.apply(card: card)
+    }
+
     private func finish() {
         followTimer?.invalidate()
         stopTimer?.invalidate()
@@ -404,7 +461,8 @@ enum ShadowClickerApp {
         duration: TimeInterval,
         encoder: JSONEncoder,
         emitJSON: Bool,
-        card: NativeAgenticPointerCard
+        card: NativeAgenticPointerCard,
+        cardFileURL: URL?
     ) throws {
         let config = try NativeCursorFollowConfig().validated()
         let visualSpec = try NativeOverlayVisualSpec().validated()
@@ -435,7 +493,8 @@ enum ShadowClickerApp {
             config: config,
             visualSpec: visualSpec,
             encoder: encoder,
-            emitJSON: emitJSON
+            emitJSON: emitJSON,
+            cardFileURL: cardFileURL
         )
         controller?.start(duration: duration)
         app.run()

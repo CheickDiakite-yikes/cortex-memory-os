@@ -108,6 +108,19 @@ class NativeAgenticPointerCardCommand(StrictModel):
             self.status,
         ]
 
+    def state_file_payload(self) -> dict[str, str | bool | list[str]]:
+        return {
+            "policy_ref": self.policy_ref,
+            "title": self.title,
+            "message": self.message,
+            "status": self.status,
+            "display_only": True,
+            "memory_write_allowed": False,
+            "raw_ref_retained": False,
+            "external_effects": False,
+            "blocked_effects": list(self.blocked_effects),
+        }
+
 
 class NativeCursorFollowConfig(StrictModel):
     policy_ref: str = NATIVE_CURSOR_FOLLOW_POLICY_REF
@@ -351,6 +364,7 @@ def native_cursor_follow_command(
     json_output: bool = True,
     duration_seconds: float | None = None,
     agentic_card: NativeAgenticPointerCardCommand | None = None,
+    agentic_card_file: Path | None = None,
 ) -> list[str]:
     command = [
         "swift",
@@ -367,6 +381,8 @@ def native_cursor_follow_command(
         command.extend(["--duration", str(duration_seconds)])
     if agentic_card is not None:
         command.extend(agentic_card.command_args())
+    if agentic_card_file is not None:
+        command.extend(["--agentic-card-file", str(agentic_card_file)])
     return command
 
 
