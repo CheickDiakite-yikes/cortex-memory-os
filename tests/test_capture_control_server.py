@@ -125,6 +125,12 @@ def test_capture_control_server_smoke_serves_dashboard_and_blocks_remote_probe()
     assert smoke.memory_audit_status_code == 200
     assert smoke.memory_status_status_code == 200
     assert smoke.memory_snapshot_status_code == 200
+    assert smoke.agentic_turn_status_code == 200
+    assert smoke.agentic_latest_status_code == 200
+    assert smoke.agentic_receipts_status_code == 200
+    assert smoke.agentic_bad_request_status_code == 400
+    assert smoke.agentic_latest_route_kind == "draft_only"
+    assert smoke.agentic_receipt_count == 1
     assert smoke.memory_search_result_count == 1
     assert smoke.memory_ask_result_count == 1
     assert smoke.memory_context_pack_result_count == 1
