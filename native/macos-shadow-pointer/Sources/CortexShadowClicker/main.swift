@@ -173,25 +173,37 @@ final class ShadowClickerController {
 
     func start(duration: TimeInterval) {
         let interval = 1.0 / Double(config.sampleHz)
-        followTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+        let follow = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.tick()
             }
         }
+        followTimer = follow
+        RunLoop.main.add(follow, forMode: .common)
 
-        stopTimer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
+        let stop = Timer(timeInterval: duration, repeats: false) { [weak self] _ in
             Task { @MainActor in
                 self?.finish()
             }
         }
+        stopTimer = stop
+        RunLoop.main.add(stop, forMode: .common)
     }
 
     private func tick() {
         let sample = NativeCursorProbe.sampleNow()
         samples.append(sample)
+        let displayFrame = NativeDisplayFrame.containing(sample)
+        let overlaySize = NativeOverlaySize(width: panel.frame.width, height: panel.frame.height)
+        let placement = try? NativeCursorPlacementEngine.place(
+            sample: sample,
+            config: config,
+            displayFrame: displayFrame,
+            overlaySize: overlaySize
+        )
         let nextOrigin = NSPoint(
-            x: sample.x + config.offsetX,
-            y: sample.y + config.offsetY
+            x: placement?.overlayOriginX ?? sample.x,
+            y: placement?.overlayOriginY ?? sample.y
         )
         panel.setFrameOrigin(nextOrigin)
         panel.contentView?.needsDisplay = true

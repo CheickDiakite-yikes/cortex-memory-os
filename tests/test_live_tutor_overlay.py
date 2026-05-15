@@ -388,6 +388,10 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "wakeHelper" in js
     assert "pinCurrentTarget" in js
     assert "showMemoryProposal" in js
+    assert "placeFloatingElement" in js
+    assert 'anchor: "target"' in js
+    assert 'anchor: "cursor"' in js
+    assert "dataset.anchorSide" in js
     assert "user_readable_receipt" in js
     assert "micro_steps" in js
     assert "renderTurn" in js
@@ -400,6 +404,8 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "raw refs" in js
     assert ".shadow-tutor-cursor" in css
     assert ".shadow-tutor-cursor.tracking" in css
+    assert ".shadow-tutor-cursor.tracking {\n  transition: opacity 80ms ease;\n}" in css
+    assert "will-change: left, top, opacity" in css
     assert ".cursor-trace-dot" in css
     assert ".cursor-talk-card.visible" in css
     assert ".cursor-action-row" in css

@@ -78,6 +78,13 @@ surface, leaves a fading cursor trace, and keeps a compact cursor-adjacent
 "Ask Cortex" affordance available. Target answering is layered on top of that
 continuous companion behavior, not substituted for it.
 
+The browser demo is only a safe surface proof, but its feel still matters. The
+secondary cursor should not ease slowly behind the pointer during tracking; it
+uses direct tracking updates and keeps the command card anchored to the current
+cursor. Response bubbles are now placed by a shared edge-aware anchor routine:
+they attach to the current cursor/target, flip sides near the edge, and stay
+inside the work surface instead of appearing in unrelated parts of the page.
+
 The cursor-adjacent affordance is now the primary UI. A simple wake card starts
 the helper, then the pointer chip shows what Cortex currently sees and exposes
 pointer-local commands:

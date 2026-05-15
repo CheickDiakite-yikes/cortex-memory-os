@@ -15,6 +15,7 @@ public let nativeCapturePermissionSmokeBenchmarkID = "NATIVE-CAPTURE-PERMISSION-
 public let nativeCapturePermissionSmokePolicyRef = "policy_native_capture_permission_smoke_v1"
 public let nativeCursorFollowBenchmarkID = "NATIVE-CURSOR-FOLLOW-001"
 public let nativeCursorFollowPolicyRef = "policy_native_cursor_follow_v1"
+public let nativeCursorResponsivenessBenchmarkID = "NATIVE-CURSOR-RESPONSIVENESS-001"
 public let nativeScreenCaptureProbeBenchmarkID = "NATIVE-SCREEN-CAPTURE-PROBE-001"
 public let nativeScreenCaptureProbePolicyRef = "policy_native_screen_capture_probe_v1"
 
@@ -442,23 +443,44 @@ public struct NativeCursorFollowConfig: Codable, Equatable, Sendable {
     public var overlayDiameter: Double
     public var offsetX: Double
     public var offsetY: Double
+    public var cursorHotspotX: Double
+    public var cursorHotspotY: Double
     public var displayOnly: Bool
     public var ignoresMouseEvents: Bool
+    public var followsSystemWide: Bool
+    public var surfaceScope: String
+    public var coordinateSpace: String
+    public var browserDependency: Bool
+    public var maxRenderLatencyMs: Double
+    public var maxPointerDriftPx: Double
+    public var bubbleAnchorStrategy: String
+    public var bubbleMinClearancePx: Double
     public var allowedEffects: [String]
     public var blockedEffects: [String]
 
     public init(
         policyRef: String = nativeCursorFollowPolicyRef,
-        sampleHz: Int = 30,
+        sampleHz: Int = 60,
         overlayDiameter: Double = 34,
         offsetX: Double = 14,
         offsetY: Double = -14,
+        cursorHotspotX: Double = 7,
+        cursorHotspotY: Double = 58,
         displayOnly: Bool = true,
         ignoresMouseEvents: Bool = true,
+        followsSystemWide: Bool = true,
+        surfaceScope: String = "system_wide_macos",
+        coordinateSpace: String = "global_display_pixels",
+        browserDependency: Bool = false,
+        maxRenderLatencyMs: Double = 24,
+        maxPointerDriftPx: Double = 18,
+        bubbleAnchorStrategy: String = "cursor_adjacent_edge_aware",
+        bubbleMinClearancePx: Double = 12,
         allowedEffects: [String] = [
             "read_global_cursor_position",
             "render_shadow_clicker_overlay",
             "move_overlay_window",
+            "anchor_response_bubble",
         ],
         blockedEffects: [String] = [
             "start_screen_capture",
@@ -466,6 +488,10 @@ public struct NativeCursorFollowConfig: Codable, Equatable, Sendable {
             "execute_click",
             "type_text",
             "read_window_contents",
+            "move_system_cursor",
+            "steal_focus",
+            "browser_only_tracking",
+            "unanchored_response_bubble",
             "write_memory",
             "store_raw_evidence",
             "export_payload",
@@ -476,8 +502,18 @@ public struct NativeCursorFollowConfig: Codable, Equatable, Sendable {
         self.overlayDiameter = overlayDiameter
         self.offsetX = offsetX
         self.offsetY = offsetY
+        self.cursorHotspotX = cursorHotspotX
+        self.cursorHotspotY = cursorHotspotY
         self.displayOnly = displayOnly
         self.ignoresMouseEvents = ignoresMouseEvents
+        self.followsSystemWide = followsSystemWide
+        self.surfaceScope = surfaceScope
+        self.coordinateSpace = coordinateSpace
+        self.browserDependency = browserDependency
+        self.maxRenderLatencyMs = maxRenderLatencyMs
+        self.maxPointerDriftPx = maxPointerDriftPx
+        self.bubbleAnchorStrategy = bubbleAnchorStrategy
+        self.bubbleMinClearancePx = bubbleMinClearancePx
         self.allowedEffects = allowedEffects
         self.blockedEffects = blockedEffects
     }
@@ -486,19 +522,39 @@ public struct NativeCursorFollowConfig: Codable, Equatable, Sendable {
         guard policyRef == nativeCursorFollowPolicyRef else {
             throw ShadowPointerNativeError.invalidControl("native cursor follow policy mismatch")
         }
-        guard sampleHz >= 5 && sampleHz <= 60 else {
+        guard sampleHz >= 30 && sampleHz <= 120 else {
             throw ShadowPointerNativeError.invalidControl("native cursor follow sampleHz out of range")
         }
         guard overlayDiameter >= 16 && overlayDiameter <= 96 else {
             throw ShadowPointerNativeError.invalidControl("native cursor follow overlay diameter out of range")
         }
+        guard cursorHotspotX >= 0 && cursorHotspotY >= 0 else {
+            throw ShadowPointerNativeError.invalidControl("native cursor follow hotspot out of range")
+        }
         guard displayOnly && ignoresMouseEvents else {
             throw ShadowPointerNativeError.invalidControl("native cursor follow must be display-only")
+        }
+        guard followsSystemWide
+            && surfaceScope == "system_wide_macos"
+            && coordinateSpace == "global_display_pixels"
+            && !browserDependency
+        else {
+            throw ShadowPointerNativeError.invalidControl("native cursor follow must be system-wide, not browser-only")
+        }
+        guard maxRenderLatencyMs > 0 && maxRenderLatencyMs <= 24 else {
+            throw ShadowPointerNativeError.invalidControl("native cursor follow latency budget too loose")
+        }
+        guard maxPointerDriftPx >= 0 && maxPointerDriftPx <= 18 else {
+            throw ShadowPointerNativeError.invalidControl("native cursor follow drift budget too loose")
+        }
+        guard bubbleAnchorStrategy == "cursor_adjacent_edge_aware" && bubbleMinClearancePx >= 8 else {
+            throw ShadowPointerNativeError.invalidControl("native response bubble must be cursor-adjacent and edge-aware")
         }
         let requiredAllowed = Set([
             "read_global_cursor_position",
             "render_shadow_clicker_overlay",
             "move_overlay_window",
+            "anchor_response_bubble",
         ])
         guard requiredAllowed.isSubset(of: Set(allowedEffects)) else {
             throw ShadowPointerNativeError.invalidControl("native cursor follow missing allowed effects")
@@ -509,6 +565,10 @@ public struct NativeCursorFollowConfig: Codable, Equatable, Sendable {
             "execute_click",
             "type_text",
             "read_window_contents",
+            "move_system_cursor",
+            "steal_focus",
+            "browser_only_tracking",
+            "unanchored_response_bubble",
             "write_memory",
             "store_raw_evidence",
             "export_payload",
@@ -641,6 +701,133 @@ public struct NativeScreenCaptureProbeResult: Codable, Equatable, Sendable {
     }
 }
 
+public struct NativeDisplayFrame: Codable, Equatable, Sendable {
+    public var minX: Double
+    public var minY: Double
+    public var width: Double
+    public var height: Double
+
+    public init(minX: Double, minY: Double, width: Double, height: Double) {
+        self.minX = minX
+        self.minY = minY
+        self.width = width
+        self.height = height
+    }
+
+    public var maxX: Double { minX + width }
+    public var maxY: Double { minY + height }
+
+    public static let defaultMain = NativeDisplayFrame(minX: 0, minY: 0, width: 1440, height: 900)
+
+    #if canImport(AppKit)
+    public static func containing(_ sample: NativeCursorSample) -> NativeDisplayFrame {
+        let point = NSPoint(x: sample.x, y: sample.y)
+        let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? NSScreen.main
+        guard let frame = screen?.visibleFrame else {
+            return .defaultMain
+        }
+        return NativeDisplayFrame(
+            minX: frame.minX,
+            minY: frame.minY,
+            width: frame.width,
+            height: frame.height
+        )
+    }
+    #endif
+}
+
+public struct NativeOverlaySize: Codable, Equatable, Sendable {
+    public var width: Double
+    public var height: Double
+
+    public init(width: Double, height: Double) {
+        self.width = width
+        self.height = height
+    }
+
+    public static let shadowClickerDefault = NativeOverlaySize(width: 146, height: 68)
+}
+
+public struct NativeBubbleSize: Codable, Equatable, Sendable {
+    public var width: Double
+    public var height: Double
+
+    public init(width: Double, height: Double) {
+        self.width = width
+        self.height = height
+    }
+
+    public static let compactInstruction = NativeBubbleSize(width: 240, height: 72)
+}
+
+public struct NativeOverlayPlacement: Codable, Equatable, Sendable {
+    public var overlayOriginX: Double
+    public var overlayOriginY: Double
+    public var visualCursorX: Double
+    public var visualCursorY: Double
+    public var desiredCursorX: Double
+    public var desiredCursorY: Double
+    public var pointerDriftPx: Double
+    public var bubbleX: Double
+    public var bubbleY: Double
+    public var bubbleSide: String
+    public var bubbleAnchoredTo: String
+    public var displayFrame: NativeDisplayFrame
+}
+
+public enum NativeCursorPlacementEngine {
+    public static func place(
+        sample: NativeCursorSample,
+        config: NativeCursorFollowConfig = NativeCursorFollowConfig(),
+        displayFrame: NativeDisplayFrame = .defaultMain,
+        overlaySize: NativeOverlaySize = .shadowClickerDefault,
+        bubbleSize: NativeBubbleSize = .compactInstruction
+    ) throws -> NativeOverlayPlacement {
+        let config = try config.validated()
+        let desiredCursorX = sample.x + config.offsetX
+        let desiredCursorY = sample.y + config.offsetY
+        let rawOriginX = desiredCursorX - config.cursorHotspotX
+        let rawOriginY = desiredCursorY - config.cursorHotspotY
+        let overlayOriginX = clamp(rawOriginX, displayFrame.minX, displayFrame.maxX - overlaySize.width)
+        let overlayOriginY = clamp(rawOriginY, displayFrame.minY, displayFrame.maxY - overlaySize.height)
+        let visualCursorX = overlayOriginX + config.cursorHotspotX
+        let visualCursorY = overlayOriginY + config.cursorHotspotY
+        let drift = hypot(visualCursorX - desiredCursorX, visualCursorY - desiredCursorY)
+
+        let gap = max(config.bubbleMinClearancePx, 8)
+        let bubbleFitsRight = desiredCursorX + gap + bubbleSize.width <= displayFrame.maxX
+        let bubbleX = bubbleFitsRight
+            ? desiredCursorX + gap
+            : desiredCursorX - gap - bubbleSize.width
+        let bubbleY = clamp(
+            desiredCursorY - bubbleSize.height / 2,
+            displayFrame.minY + gap,
+            displayFrame.maxY - bubbleSize.height - gap
+        )
+
+        return NativeOverlayPlacement(
+            overlayOriginX: bubbleFitsRight
+                ? overlayOriginX
+                : clamp(overlayOriginX, displayFrame.minX, displayFrame.maxX - overlaySize.width),
+            overlayOriginY: overlayOriginY,
+            visualCursorX: visualCursorX,
+            visualCursorY: visualCursorY,
+            desiredCursorX: desiredCursorX,
+            desiredCursorY: desiredCursorY,
+            pointerDriftPx: drift,
+            bubbleX: clamp(bubbleX, displayFrame.minX + gap, displayFrame.maxX - bubbleSize.width - gap),
+            bubbleY: bubbleY,
+            bubbleSide: bubbleFitsRight ? "right" : "left",
+            bubbleAnchoredTo: "system_cursor",
+            displayFrame: displayFrame
+        )
+    }
+
+    private static func clamp(_ value: Double, _ lower: Double, _ upper: Double) -> Double {
+        min(max(value, lower), upper)
+    }
+}
+
 public struct NativeCursorSample: Codable, Equatable, Sendable {
     public var x: Double
     public var y: Double
@@ -666,6 +853,13 @@ public struct NativeCursorFollowSmokeResult: Codable, Equatable, Sendable {
     public var memoryWriteAllowed: Bool
     public var rawRefRetained: Bool
     public var externalEffects: [String]
+    public var placementSamples: [NativeOverlayPlacement]
+    public var sampleIntervalMs: Double
+    public var maxRenderLatencyMsAllowed: Double
+    public var maxPointerDriftPxMeasured: Double
+    public var systemWideReady: Bool
+    public var bubbleAnchorReady: Bool
+    public var browserDependency: Bool
     public var passed: Bool
 
     public static func run(
@@ -678,12 +872,30 @@ public struct NativeCursorFollowSmokeResult: Codable, Equatable, Sendable {
     ) throws -> NativeCursorFollowSmokeResult {
         let config = try NativeCursorFollowConfig().validated()
         let overlaySpec = NativeOverlayWindowSpec.shadowPointerDefault
+        let placementSamples = try samples.map {
+            try NativeCursorPlacementEngine.place(sample: $0, config: config)
+        }
+        let maxDrift = placementSamples.map(\.pointerDriftPx).max() ?? 0
+        let systemWideReady = config.followsSystemWide
+            && config.surfaceScope == "system_wide_macos"
+            && config.coordinateSpace == "global_display_pixels"
+            && !config.browserDependency
+        let bubbleAnchorReady = placementSamples.allSatisfy {
+            $0.bubbleAnchoredTo == "system_cursor"
+                && $0.bubbleX >= $0.displayFrame.minX
+                && $0.bubbleY >= $0.displayFrame.minY
+                && $0.bubbleX <= $0.displayFrame.maxX
+                && $0.bubbleY <= $0.displayFrame.maxY
+        }
         let passed = config.displayOnly
             && config.ignoresMouseEvents
             && overlaySpec.ignoresMouseEventsByDefault
             && !overlaySpec.canBecomeKey
             && !overlaySpec.canBecomeMain
             && samples.count >= 2
+            && systemWideReady
+            && bubbleAnchorReady
+            && maxDrift <= config.maxPointerDriftPx
         return NativeCursorFollowSmokeResult(
             benchmarkID: nativeCursorFollowBenchmarkID,
             policyRef: nativeCursorFollowPolicyRef,
@@ -697,6 +909,13 @@ public struct NativeCursorFollowSmokeResult: Codable, Equatable, Sendable {
             memoryWriteAllowed: false,
             rawRefRetained: false,
             externalEffects: [],
+            placementSamples: placementSamples,
+            sampleIntervalMs: 1000.0 / Double(config.sampleHz),
+            maxRenderLatencyMsAllowed: config.maxRenderLatencyMs,
+            maxPointerDriftPxMeasured: maxDrift,
+            systemWideReady: systemWideReady,
+            bubbleAnchorReady: bubbleAnchorReady,
+            browserDependency: config.browserDependency,
             passed: passed
         )
     }

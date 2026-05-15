@@ -25,6 +25,7 @@ The first implementation was intentionally split into ten governed slices:
 | `REAL-CAPTURE-EPHEMERAL-RAW-REF-001` | `policy_real_capture_ephemeral_raw_ref_v1` | Defines ephemeral raw refs under the system temp directory. | No durable storage and no direct memory writes from raw refs. |
 | `REAL-CAPTURE-OBSERVATION-SAMPLER-001` | `policy_real_capture_observation_sampler_v1` | Starts sampling as count-only receipts. | No raw pixels, private accessibility values, or window titles by default. |
 | `NATIVE-CURSOR-FOLLOW-001` | `policy_native_cursor_follow_v1` | Adds `cortex-shadow-clicker`, a native Shadow Clicker overlay that can follow the global cursor. | Uses `read_global_cursor_position`; display-only; no screen capture, Accessibility observer, click, type, export, raw ref, or memory write. |
+| `NATIVE-CURSOR-RESPONSIVENESS-001` | `policy_native_cursor_follow_v1` | Tightens the product feel: system-wide macOS scope, browser-independent global display coordinates, 60 Hz sampling, hotspot-aligned overlay placement, and cursor-adjacent edge-aware response bubbles. | Tracking cannot depend on Chrome/browser coordinates, move the real cursor, steal focus, or place response bubbles away from the active pointer context. |
 | `DASHBOARD-CAPTURE-CONTROL-001` | `policy_dashboard_capture_control_v1` | Exposes Capture Control and Turn On Cortex state in the dashboard. | Static dashboard HTML does not claim to launch native processes directly; when served by the localhost bridge it can call fixed start/status/stop endpoints for the display-only overlay. |
 
 The next ten slices harden the bridge and add the first metadata-only real screen probe:
@@ -75,6 +76,15 @@ swift run --package-path native/macos-shadow-pointer cortex-shadow-clicker --dur
 ```
 
 The overlay uses a transparent non-activating panel and ignores mouse events. It polls the global cursor location and moves the overlay window; it does not read screen pixels or the accessibility tree.
+
+The pointer feel is part of the safety contract, not polish. The runtime now uses
+a 60 Hz common-mode timer, computes the cursor hotspot before moving the panel,
+and clamps placements to the active display frame. Response bubbles must be
+cursor-adjacent and edge-aware; if a bubble will not fit to the right of the
+system cursor, the placement contract flips it to the left instead of floating
+somewhere unrelated. The wrapper reports `system_wide_macos`,
+`global_display_pixels`, `browser_dependency=false`, bounded pointer drift, and
+the `NATIVE-CURSOR-RESPONSIVENESS-001` benchmark verifies that contract.
 
 Dashboard bridge:
 

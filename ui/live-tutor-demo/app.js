@@ -229,6 +229,32 @@ function targetFromEvent(event) {
   return element?.dataset?.targetId || null;
 }
 
+function floatingSize(element, fallbackWidth, fallbackHeight) {
+  const rect = element.getBoundingClientRect();
+  return {
+    width: rect.width || fallbackWidth,
+    height: rect.height || fallbackHeight,
+  };
+}
+
+function placeFloatingElement(element, anchorX, anchorY, options = {}) {
+  const frameRect = frame.getBoundingClientRect();
+  const margin = options.margin ?? 12;
+  const gap = options.gap ?? 18;
+  const size = floatingSize(
+    element,
+    options.fallbackWidth ?? 240,
+    options.fallbackHeight ?? 72
+  );
+  const fitsRight = anchorX + gap + size.width <= frameRect.width - margin;
+  const x = fitsRight ? anchorX + gap : anchorX - gap - size.width;
+  const y = clamp(anchorY - size.height / 2, margin, frameRect.height - size.height - margin);
+  element.style.left = `${clamp(x, margin, frameRect.width - size.width - margin)}px`;
+  element.style.top = `${y}px`;
+  element.dataset.anchorSide = fitsRight ? "right" : "left";
+  element.dataset.anchor = options.anchor || "cursor";
+}
+
 function placeTutorFollower(x, y, { trace = true } = {}) {
   if (!helperActive) return;
   const frameRect = frame.getBoundingClientRect();
@@ -243,8 +269,12 @@ function placeTutorFollower(x, y, { trace = true } = {}) {
   cursor.style.top = `${followerY}px`;
   cursor.classList.add("visible", "tracking");
 
-  talkCard.style.left = `${clamp(followerX + 42, 8, frameRect.width - 220)}px`;
-  talkCard.style.top = `${clamp(followerY + 22, 8, frameRect.height - 62)}px`;
+  placeFloatingElement(talkCard, followerX + 24, followerY + 20, {
+    fallbackWidth: 232,
+    fallbackHeight: 76,
+    gap: 12,
+    anchor: "cursor",
+  });
   talkCard.classList.add("visible");
 
   if (!followerVisible) {
@@ -368,18 +398,24 @@ function renderTurn(turn) {
   window.setTimeout(() => cursor.classList.remove("pulse"), 360);
   followerVisible = false;
   updatePointerTarget(turn.target_id);
-  const bubbleX = clamp(centerX + 28, 8, frameRect.width - 330);
-  const bubbleY = clamp(centerY - 132, 18, frameRect.height - 180);
-  talkCard.style.left = `${clamp(centerX + 42, 8, frameRect.width - 232)}px`;
-  talkCard.style.top = `${clamp(bubbleY + 96, 8, frameRect.height - 88)}px`;
+  placeFloatingElement(talkCard, centerX, centerY, {
+    fallbackWidth: 232,
+    fallbackHeight: 76,
+    gap: 14,
+    anchor: "target",
+  });
   talkCard.classList.add("visible");
   pointerSafetyLabel.textContent =
     turn.companion_state?.safety_caption || "Display only. You stay in control.";
 
-  bubble.style.left = `${bubbleX}px`;
-  bubble.style.top = `${bubbleY}px`;
   bubble.textContent = turn.assistant_response;
   bubble.classList.add("visible");
+  placeFloatingElement(bubble, centerX, centerY, {
+    fallbackWidth: 318,
+    fallbackHeight: 100,
+    gap: 22,
+    anchor: "target",
+  });
 
   fields.target.textContent = turn.target_label;
   fields.intent.textContent = formatToken(turn.intent_label);

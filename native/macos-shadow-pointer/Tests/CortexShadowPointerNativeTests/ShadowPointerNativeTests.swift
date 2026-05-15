@@ -125,17 +125,29 @@ final class ShadowPointerNativeTests: XCTestCase {
         XCTAssertEqual(config.policyRef, nativeCursorFollowPolicyRef)
         XCTAssertTrue(config.displayOnly)
         XCTAssertTrue(config.ignoresMouseEvents)
+        XCTAssertEqual(config.sampleHz, 60)
+        XCTAssertTrue(config.followsSystemWide)
+        XCTAssertEqual(config.surfaceScope, "system_wide_macos")
+        XCTAssertEqual(config.coordinateSpace, "global_display_pixels")
+        XCTAssertFalse(config.browserDependency)
+        XCTAssertLessThanOrEqual(config.maxRenderLatencyMs, 24)
+        XCTAssertLessThanOrEqual(config.maxPointerDriftPx, 18)
+        XCTAssertEqual(config.bubbleAnchorStrategy, "cursor_adjacent_edge_aware")
         XCTAssertTrue(config.allowedEffects.contains("read_global_cursor_position"))
+        XCTAssertTrue(config.allowedEffects.contains("anchor_response_bubble"))
         XCTAssertTrue(config.blockedEffects.contains("start_screen_capture"))
         XCTAssertTrue(config.blockedEffects.contains("execute_click"))
+        XCTAssertTrue(config.blockedEffects.contains("move_system_cursor"))
+        XCTAssertTrue(config.blockedEffects.contains("browser_only_tracking"))
+        XCTAssertTrue(config.blockedEffects.contains("unanchored_response_bubble"))
         XCTAssertTrue(config.blockedEffects.contains("write_memory"))
     }
 
     func testNativeCursorFollowSmokeUsesOnlyCursorSamples() throws {
         let result = try NativeCursorFollowSmokeResult.run(
             samples: [
-                NativeCursorSample(x: 10, y: 20, timestamp: Date(timeIntervalSince1970: 0)),
-                NativeCursorSample(x: 15, y: 25, timestamp: Date(timeIntervalSince1970: 0.1)),
+                NativeCursorSample(x: 120, y: 160, timestamp: Date(timeIntervalSince1970: 0)),
+                NativeCursorSample(x: 150, y: 190, timestamp: Date(timeIntervalSince1970: 0.1)),
             ],
             checkedAt: Date(timeIntervalSince1970: 0)
         )
@@ -150,6 +162,45 @@ final class ShadowPointerNativeTests: XCTestCase {
         XCTAssertFalse(result.rawRefRetained)
         XCTAssertTrue(result.externalEffects.isEmpty)
         XCTAssertTrue(result.overlaySpec.ignoresMouseEventsByDefault)
+        XCTAssertTrue(result.systemWideReady)
+        XCTAssertFalse(result.browserDependency)
+        XCTAssertLessThanOrEqual(result.sampleIntervalMs, result.config.maxRenderLatencyMs)
+        XCTAssertLessThanOrEqual(result.maxPointerDriftPxMeasured, result.config.maxPointerDriftPx)
+        XCTAssertTrue(result.bubbleAnchorReady)
+        XCTAssertEqual(Set(result.placementSamples.map(\.bubbleAnchoredTo)), Set(["system_cursor"]))
+    }
+
+    func testNativeCursorPlacementAccountsForCursorHotspotAndEdges() throws {
+        let config = try NativeCursorFollowConfig().validated()
+        let display = NativeDisplayFrame(minX: 0, minY: 0, width: 400, height: 300)
+        let overlay = NativeOverlaySize(width: 146, height: 68)
+        let bubble = NativeBubbleSize(width: 160, height: 54)
+
+        let middle = try NativeCursorPlacementEngine.place(
+            sample: NativeCursorSample(x: 120, y: 160, timestamp: Date(timeIntervalSince1970: 0)),
+            config: config,
+            displayFrame: display,
+            overlaySize: overlay,
+            bubbleSize: bubble
+        )
+        XCTAssertEqual(middle.visualCursorX, middle.desiredCursorX, accuracy: 0.001)
+        XCTAssertEqual(middle.visualCursorY, middle.desiredCursorY, accuracy: 0.001)
+        XCTAssertLessThanOrEqual(middle.pointerDriftPx, config.maxPointerDriftPx)
+        XCTAssertEqual(middle.bubbleAnchoredTo, "system_cursor")
+        XCTAssertEqual(middle.bubbleSide, "right")
+
+        let edge = try NativeCursorPlacementEngine.place(
+            sample: NativeCursorSample(x: 386, y: 280, timestamp: Date(timeIntervalSince1970: 0)),
+            config: config,
+            displayFrame: display,
+            overlaySize: overlay,
+            bubbleSize: bubble
+        )
+        XCTAssertEqual(edge.bubbleSide, "left")
+        XCTAssertGreaterThanOrEqual(edge.bubbleX, display.minX)
+        XCTAssertLessThanOrEqual(edge.bubbleX + bubble.width, display.maxX)
+        XCTAssertGreaterThanOrEqual(edge.bubbleY, display.minY)
+        XCTAssertLessThanOrEqual(edge.bubbleY + bubble.height, display.maxY)
     }
 
     func testScreenCaptureProbeDoesNotCaptureWithoutExplicitFlag() {

@@ -27,6 +27,11 @@ permission prompts.
 - Permission status can be read without `promptRequested`, `captureStarted`,
   `accessibilityObserverStarted`, `memoryWriteAllowed`, raw evidence, or
   observer side effects.
+- `cortex-shadow-clicker` follows the system cursor, not a browser cursor. Its
+  receipt uses `system_wide_macos` and `global_display_pixels`, reports
+  `browser_dependency=false`, budgets 60 Hz tracking, aligns the drawn cursor
+  hotspot to the pointer, and keeps response bubbles cursor-adjacent with
+  edge-aware flipping.
 
 ## Permission Smoke Safety
 
@@ -42,7 +47,10 @@ swift build --package-path native/macos-shadow-pointer
 swift test --package-path native/macos-shadow-pointer
 swift run --package-path native/macos-shadow-pointer cortex-shadow-pointer-smoke
 swift run --package-path native/macos-shadow-pointer cortex-permission-smoke
+swift run --package-path native/macos-shadow-pointer cortex-shadow-clicker --smoke --json
+swift run --package-path native/macos-shadow-pointer cortex-shadow-clicker --duration 30
 uv run cortex-native-permission-smoke --json
+uv run cortex-native-cursor-follow --json
 ```
 
 This package does not start screen capture, create a persistent agent, or write

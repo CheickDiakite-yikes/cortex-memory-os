@@ -32,12 +32,28 @@ def test_fixture_native_cursor_follow_is_cursor_only_and_display_only():
     assert not result.memory_write_allowed
     assert not result.raw_ref_retained
     assert not result.external_effects
+    assert result.config.sample_hz == 60
+    assert result.system_wide_ready
+    assert result.config.surface_scope == "system_wide_macos"
+    assert result.config.coordinate_space == "global_display_pixels"
+    assert result.config.browser_dependency is False
+    assert result.browser_dependency is False
+    assert result.sample_interval_ms <= result.config.max_render_latency_ms
+    assert result.max_pointer_drift_px_measured <= result.config.max_pointer_drift_px
+    assert result.bubble_anchor_ready
+    assert {placement.bubble_anchored_to for placement in result.placement_samples} == {
+        "system_cursor"
+    }
     assert "read_global_cursor_position" in result.config.allowed_effects
+    assert "anchor_response_bubble" in result.config.allowed_effects
     assert "execute_click" in result.config.blocked_effects
+    assert "move_system_cursor" in result.config.blocked_effects
+    assert "browser_only_tracking" in result.config.blocked_effects
+    assert "unanchored_response_bubble" in result.config.blocked_effects
     assert "write_memory" in result.config.blocked_effects
 
 
-def test_parse_native_cursor_follow_output_rejects_capture_or_memory_writes():
+def test_parse_native_cursor_follow_output_rejects_capture_memory_and_browser_only_tracking():
     payload = build_fixture_native_cursor_follow_smoke_result().model_dump(mode="json")
     payload["capture_started"] = True
 
@@ -47,6 +63,23 @@ def test_parse_native_cursor_follow_output_rejects_capture_or_memory_writes():
     payload = build_fixture_native_cursor_follow_smoke_result().model_dump(mode="json")
     payload["memory_write_allowed"] = True
     with pytest.raises(ValueError, match="cannot allow memory writes"):
+        parse_native_cursor_follow_output(json.dumps(payload))
+
+    payload = build_fixture_native_cursor_follow_smoke_result().model_dump(mode="json")
+    payload["config"]["browser_dependency"] = True
+    payload["browser_dependency"] = True
+    payload["system_wide_ready"] = False
+    with pytest.raises(ValueError, match="browser"):
+        parse_native_cursor_follow_output(json.dumps(payload))
+
+    payload = build_fixture_native_cursor_follow_smoke_result().model_dump(mode="json")
+    payload["placement_samples"][0]["bubble_anchored_to"] = "random_panel"
+    with pytest.raises(ValueError, match="system cursor"):
+        parse_native_cursor_follow_output(json.dumps(payload))
+
+    payload = build_fixture_native_cursor_follow_smoke_result().model_dump(mode="json")
+    payload["max_pointer_drift_px_measured"] = 30
+    with pytest.raises(ValueError, match="less than or equal to 18"):
         parse_native_cursor_follow_output(json.dumps(payload))
 
 

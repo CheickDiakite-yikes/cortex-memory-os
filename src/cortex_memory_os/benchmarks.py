@@ -548,6 +548,7 @@ from cortex_memory_os.native_overlay_stream_smoke import (
 from cortex_memory_os.native_cursor_follow import (
     NATIVE_CURSOR_FOLLOW_ID,
     NATIVE_CURSOR_FOLLOW_POLICY_REF,
+    NATIVE_CURSOR_RESPONSIVENESS_ID,
     build_fixture_native_cursor_follow_smoke_result,
 )
 from cortex_memory_os.native_screen_capture_probe import (
@@ -737,6 +738,7 @@ def run_all() -> BenchmarkRunResult:
         case_native_shadow_pointer_live_feed_contract,
         case_native_overlay_stream_smoke_contract,
         case_native_cursor_follow_contract,
+        case_native_cursor_responsiveness_contract,
         case_clicky_ux_companion_contract,
         case_shadow_pointer_native_overlay_contract,
         case_native_capture_permission_smoke_contract,
@@ -10684,6 +10686,64 @@ def case_native_cursor_follow_contract() -> BenchmarkCaseResult:
         },
         evidence={
             "policy_ref": NATIVE_CURSOR_FOLLOW_POLICY_REF,
+            "missing_doc_terms": missing_terms,
+        },
+    )
+
+
+def case_native_cursor_responsiveness_contract() -> BenchmarkCaseResult:
+    result = build_fixture_native_cursor_follow_smoke_result(
+        checked_at=datetime(2026, 5, 15, 12, 0, tzinfo=UTC)
+    )
+    docs_text = _real_capture_docs_text()
+    missing_terms = _missing_terms(
+        docs_text,
+        [
+            NATIVE_CURSOR_RESPONSIVENESS_ID,
+            "system-wide",
+            "global cursor",
+            "60 Hz",
+            "cursor-adjacent",
+            "edge-aware",
+            "browser-independent",
+        ],
+    )
+    passed = (
+        result.passed
+        and result.system_wide_ready
+        and not result.browser_dependency
+        and result.config.sample_hz >= 60
+        and result.sample_interval_ms <= result.config.max_render_latency_ms
+        and result.max_pointer_drift_px_measured <= result.config.max_pointer_drift_px
+        and result.bubble_anchor_ready
+        and all(
+            placement.bubble_anchored_to == "system_cursor"
+            for placement in result.placement_samples
+        )
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="NATIVE-CURSOR-RESPONSIVENESS-001/system_wide_low_lag_anchor",
+        suite=NATIVE_CURSOR_RESPONSIVENESS_ID,
+        passed=passed,
+        summary=(
+            "Native Shadow Clicker is budgeted as a system-wide, browser-independent "
+            "60 Hz follower with cursor-hotspot placement and cursor-adjacent "
+            "edge-aware response bubbles."
+        ),
+        metrics={
+            "sample_hz": result.config.sample_hz,
+            "sample_interval_ms": result.sample_interval_ms,
+            "max_render_latency_ms_allowed": result.max_render_latency_ms_allowed,
+            "max_pointer_drift_px_measured": result.max_pointer_drift_px_measured,
+            "placement_sample_count": len(result.placement_samples),
+            "missing_doc_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": NATIVE_CURSOR_FOLLOW_POLICY_REF,
+            "surface_scope": result.config.surface_scope,
+            "coordinate_space": result.config.coordinate_space,
+            "bubble_anchor_strategy": result.config.bubble_anchor_strategy,
             "missing_doc_terms": missing_terms,
         },
     )

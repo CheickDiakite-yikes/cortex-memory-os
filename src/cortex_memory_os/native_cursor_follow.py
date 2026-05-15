@@ -19,6 +19,7 @@ from cortex_memory_os.native_permission_smoke import NATIVE_PACKAGE_PATH
 NATIVE_CURSOR_FOLLOW_ID = "NATIVE-CURSOR-FOLLOW-001"
 NATIVE_CURSOR_FOLLOW_POLICY_REF = "policy_native_cursor_follow_v1"
 NATIVE_CURSOR_FOLLOW_COMMAND = "cortex-shadow-clicker"
+NATIVE_CURSOR_RESPONSIVENESS_ID = "NATIVE-CURSOR-RESPONSIVENESS-001"
 
 
 class RunnerCompleted(Protocol):
@@ -32,12 +33,22 @@ Runner = Callable[..., RunnerCompleted]
 
 class NativeCursorFollowConfig(StrictModel):
     policy_ref: str = NATIVE_CURSOR_FOLLOW_POLICY_REF
-    sample_hz: int = Field(ge=5, le=60)
+    sample_hz: int = Field(ge=30, le=120)
     overlay_diameter: float = Field(ge=16, le=96)
     offset_x: float
     offset_y: float
+    cursor_hotspot_x: float = Field(ge=0)
+    cursor_hotspot_y: float = Field(ge=0)
     display_only: bool
     ignores_mouse_events: bool
+    follows_system_wide: bool
+    surface_scope: str
+    coordinate_space: str
+    browser_dependency: bool
+    max_render_latency_ms: float = Field(gt=0, le=24)
+    max_pointer_drift_px: float = Field(ge=0, le=18)
+    bubble_anchor_strategy: str
+    bubble_min_clearance_px: float = Field(ge=8)
     allowed_effects: list[str] = Field(default_factory=list)
     blocked_effects: list[str] = Field(default_factory=list)
 
@@ -47,10 +58,21 @@ class NativeCursorFollowConfig(StrictModel):
             raise ValueError("native cursor follow policy mismatch")
         if not self.display_only or not self.ignores_mouse_events:
             raise ValueError("native cursor follower must be display-only and ignore mouse events")
+        if not self.follows_system_wide:
+            raise ValueError("native cursor follower must follow the system cursor")
+        if self.surface_scope != "system_wide_macos":
+            raise ValueError("native cursor follower cannot be scoped to a browser surface")
+        if self.coordinate_space != "global_display_pixels":
+            raise ValueError("native cursor follower must use global display pixels")
+        if self.browser_dependency:
+            raise ValueError("native cursor follower cannot depend on Chrome or any browser")
+        if self.bubble_anchor_strategy != "cursor_adjacent_edge_aware":
+            raise ValueError("native response bubble must be cursor-adjacent and edge-aware")
         required_allowed = {
             "read_global_cursor_position",
             "render_shadow_clicker_overlay",
             "move_overlay_window",
+            "anchor_response_bubble",
         }
         if missing := sorted(required_allowed.difference(self.allowed_effects)):
             raise ValueError(f"native cursor follower missing allowed effects: {missing}")
@@ -60,6 +82,10 @@ class NativeCursorFollowConfig(StrictModel):
             "execute_click",
             "type_text",
             "read_window_contents",
+            "move_system_cursor",
+            "steal_focus",
+            "browser_only_tracking",
+            "unanchored_response_bubble",
             "write_memory",
             "store_raw_evidence",
             "export_payload",
@@ -73,6 +99,36 @@ class NativeCursorSample(StrictModel):
     x: float
     y: float
     timestamp: datetime
+
+
+class NativeDisplayFrame(StrictModel):
+    min_x: float
+    min_y: float
+    width: float = Field(gt=0)
+    height: float = Field(gt=0)
+
+
+class NativeOverlayPlacement(StrictModel):
+    overlay_origin_x: float
+    overlay_origin_y: float
+    visual_cursor_x: float
+    visual_cursor_y: float
+    desired_cursor_x: float
+    desired_cursor_y: float
+    pointer_drift_px: float = Field(ge=0)
+    bubble_x: float
+    bubble_y: float
+    bubble_side: str = Field(min_length=1)
+    bubble_anchored_to: str
+    display_frame: NativeDisplayFrame
+
+    @model_validator(mode="after")
+    def enforce_cursor_anchored_bubble(self) -> "NativeOverlayPlacement":
+        if self.bubble_anchored_to != "system_cursor":
+            raise ValueError("native bubble must anchor to the system cursor")
+        if self.pointer_drift_px > 18:
+            raise ValueError("native overlay drift exceeds product budget")
+        return self
 
 
 class NativeOverlayWindowSpec(StrictModel):
@@ -102,6 +158,13 @@ class NativeCursorFollowSmokeResult(StrictModel):
     memory_write_allowed: bool
     raw_ref_retained: bool
     external_effects: list[str] = Field(default_factory=list)
+    placement_samples: list[NativeOverlayPlacement] = Field(min_length=1)
+    sample_interval_ms: float = Field(gt=0, le=34)
+    max_render_latency_ms_allowed: float = Field(gt=0, le=24)
+    max_pointer_drift_px_measured: float = Field(ge=0, le=18)
+    system_wide_ready: bool
+    bubble_anchor_ready: bool
+    browser_dependency: bool
     passed: bool
 
     @model_validator(mode="after")
@@ -120,6 +183,14 @@ class NativeCursorFollowSmokeResult(StrictModel):
             raise ValueError("native cursor follower cannot retain raw refs")
         if self.external_effects:
             raise ValueError("native cursor follower cannot produce external effects")
+        if not self.system_wide_ready or self.browser_dependency:
+            raise ValueError("native cursor follower must be system-wide and browser-independent")
+        if not self.bubble_anchor_ready:
+            raise ValueError("native cursor follower must anchor response bubbles to the cursor")
+        if self.sample_interval_ms > self.config.max_render_latency_ms:
+            raise ValueError("native cursor follower sample interval exceeds render latency budget")
+        if self.max_pointer_drift_px_measured > self.config.max_pointer_drift_px:
+            raise ValueError("native cursor follower drift exceeds budget")
         return self
 
 
@@ -178,16 +249,27 @@ def build_fixture_native_cursor_follow_smoke_result(
         policy_ref=NATIVE_CURSOR_FOLLOW_POLICY_REF,
         checked_at=timestamp,
         config=NativeCursorFollowConfig(
-            sample_hz=30,
+            sample_hz=60,
             overlay_diameter=34,
             offset_x=14,
             offset_y=-14,
+            cursor_hotspot_x=7,
+            cursor_hotspot_y=58,
             display_only=True,
             ignores_mouse_events=True,
+            follows_system_wide=True,
+            surface_scope="system_wide_macos",
+            coordinate_space="global_display_pixels",
+            browser_dependency=False,
+            max_render_latency_ms=24,
+            max_pointer_drift_px=18,
+            bubble_anchor_strategy="cursor_adjacent_edge_aware",
+            bubble_min_clearance_px=12,
             allowed_effects=[
                 "read_global_cursor_position",
                 "render_shadow_clicker_overlay",
                 "move_overlay_window",
+                "anchor_response_bubble",
             ],
             blocked_effects=[
                 "start_screen_capture",
@@ -195,6 +277,10 @@ def build_fixture_native_cursor_follow_smoke_result(
                 "execute_click",
                 "type_text",
                 "read_window_contents",
+                "move_system_cursor",
+                "steal_focus",
+                "browser_only_tracking",
+                "unanchored_response_bubble",
                 "write_memory",
                 "store_raw_evidence",
                 "export_payload",
@@ -210,6 +296,42 @@ def build_fixture_native_cursor_follow_smoke_result(
         memory_write_allowed=False,
         raw_ref_retained=False,
         external_effects=[],
+        placement_samples=[
+            NativeOverlayPlacement(
+                overlay_origin_x=127,
+                overlay_origin_y=168,
+                visual_cursor_x=134,
+                visual_cursor_y=226,
+                desired_cursor_x=134,
+                desired_cursor_y=226,
+                pointer_drift_px=0,
+                bubble_x=146,
+                bubble_y=190,
+                bubble_side="right",
+                bubble_anchored_to="system_cursor",
+                display_frame=NativeDisplayFrame(min_x=0, min_y=0, width=1440, height=900),
+            ),
+            NativeOverlayPlacement(
+                overlay_origin_x=187,
+                overlay_origin_y=188,
+                visual_cursor_x=194,
+                visual_cursor_y=246,
+                desired_cursor_x=194,
+                desired_cursor_y=246,
+                pointer_drift_px=0,
+                bubble_x=206,
+                bubble_y=210,
+                bubble_side="right",
+                bubble_anchored_to="system_cursor",
+                display_frame=NativeDisplayFrame(min_x=0, min_y=0, width=1440, height=900),
+            ),
+        ],
+        sample_interval_ms=1000 / 60,
+        max_render_latency_ms_allowed=24,
+        max_pointer_drift_px_measured=0,
+        system_wide_ready=True,
+        bubble_anchor_ready=True,
+        browser_dependency=False,
         passed=True,
     )
 
