@@ -139,3 +139,9 @@ This gets Cortex closer to the DeepMind UX bar without relaxing the safety
 ladder: the pointer still uses controlled DOM targets only, smoother
 `requestAnimationFrame`/`translate3d` rendering, no real cursor movement, no
 screen capture, no microphone capture, no raw refs, and no memory write.
+
+The next UX pass adds a display-only guided tour, pointer-side route/confidence
+chips, voice gesture pills, and memory proposal copy that says plainly that
+nothing has been saved yet. This is the right product feel: the pointer teaches
+and anchors the interaction first, while memory and audit remain review
+surfaces rather than noisy dashboards.

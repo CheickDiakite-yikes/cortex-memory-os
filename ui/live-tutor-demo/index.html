@@ -100,11 +100,16 @@
             <span id="pointer-status-label">Cortex sees</span>
             <strong id="pointer-target-label">this surface</strong>
             <small id="pointer-entity-label">controlled demo entity</small>
+            <div class="pointer-state-row" aria-label="Pointer safety and confidence">
+              <span id="pointer-route-chip">Show only</span>
+              <span id="pointer-confidence-chip">Confidence --</span>
+            </div>
             <div class="pointer-context-row" id="pointer-context-row" aria-label="Pointer context">
               <span id="pointer-this-chip">This: surface</span>
               <span id="pointer-that-chip">That: none</span>
               <span id="pointer-these-chip">Stack: 0</span>
             </div>
+            <span class="pointer-tour-strip" id="pointer-tour-strip">Tour off</span>
             <small id="pointer-safety-label">Display only. You stay in control.</small>
             <span class="pointer-loading" id="pointer-loading" aria-hidden="true"></span>
             <div class="cursor-action-row cursor-primary-actions" id="pointer-command-suggestions">
@@ -119,6 +124,9 @@
               <button type="button" data-pointer-voice="press_hold_text_reply" title="Ask by voice, answer as text">Hold</button>
               <button type="button" data-pointer-voice="press_hold_action_only" title="Show the next cue without voice back">Silent</button>
               <button type="button" data-pointer-ai="openai_dry_run" title="Ask the text fallback using controlled demo facts only">AI</button>
+              <button type="button" data-pointer-tour="start" title="Walk through the safe color grading flow">Tour</button>
+              <button type="button" data-pointer-tour="next" title="Show the next safe tour cue">Tour next</button>
+              <button type="button" data-pointer-tour="stop" title="Stop guided tour mode">Stop</button>
               <button type="button" data-pointer-local="pin-target">Pin</button>
               <button type="button" data-pointer-local="select-target">Select</button>
             </div>
@@ -130,9 +138,10 @@
             <div class="pinned-targets" id="pinned-targets"></div>
           </div>
           <section class="memory-proposal-card" id="memory-proposal-card" aria-label="Memory proposal">
-            <p>Memory card ready</p>
+            <p>Cortex has a memory idea</p>
             <strong id="memory-proposal-target">No target</strong>
             <span id="memory-proposal-preview">Nothing has been saved.</span>
+            <small>Review first. Save only if you want Cortex to remember it.</small>
             <div>
               <button type="button" id="review-memory-proposal">Review</button>
               <button type="button" id="dismiss-memory-proposal">Dismiss</button>
@@ -141,6 +150,11 @@
           <section class="voice-mode-panel" id="voice-mode-panel" aria-label="Voice pointer modes">
             <strong>Voice gestures</strong>
             <span id="voice-gesture-hint">Triple click for voice. Hold for text. Hold with silent mode for action-only.</span>
+            <div class="voice-gesture-pills" aria-label="Voice gesture map">
+              <span>Triple click: voice</span>
+              <span>Hold: text</span>
+              <span>Option-hold: silent</span>
+            </div>
           </section>
           <p class="instruction-bubble" id="instruction-bubble" aria-live="polite">
             Ask a question and I will point without clicking.

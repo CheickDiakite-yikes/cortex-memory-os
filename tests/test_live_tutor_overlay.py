@@ -410,9 +410,17 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "pointer-command-suggestions" in html
     assert "pointer-context-row" in html
     assert "pointer-this-chip" in html
+    assert "pointer-route-chip" in html
+    assert "pointer-confidence-chip" in html
+    assert "pointer-tour-strip" in html
     assert "pointer-receipt-toast" in html
     assert "pointer-loading" in html
     assert "cursor-more-actions" in html
+    assert 'data-pointer-tour="start"' in html
+    assert 'data-pointer-tour="next"' in html
+    assert 'data-pointer-tour="stop"' in html
+    assert "Cortex has a memory idea" in html
+    assert "Option-hold: silent" in html
     assert 'data-entity-kind="node graph"' in html
     assert "receipt-referent" in html
     assert 'data-target-id="color_page_button"' in html
@@ -455,6 +463,11 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "showReceiptToast" in js
     assert "updateContextChips" in js
     assert "setHoverHighlight" in js
+    assert "TOUR_STEPS" in js
+    assert "startGuidedTour" in js
+    assert "advanceGuidedTour" in js
+    assert "stopGuidedTour" in js
+    assert "placeCueOnTarget" in js
     assert "pointer-holding" in js
     assert "setHelperActive" in js
     assert "wakeHelper" in js
@@ -483,6 +496,10 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "will-change: transform, opacity" in css
     assert "backdrop-filter: blur(18px)" in css
     assert ".pointer-context-row" in css
+    assert ".pointer-state-row" in css
+    assert ".pointer-tour-strip" in css
+    assert ".voice-gesture-pills" in css
+    assert "body.tour-active" in css
     assert ".pointer-loading" in css
     assert ".pointer-receipt-toast.visible" in css
     assert ".target-highlight.hovering" in css

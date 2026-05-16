@@ -494,6 +494,36 @@ button {
   line-height: 1.25;
 }
 
+.pointer-state-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.pointer-state-row span,
+.pointer-tour-strip {
+  width: max-content;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 3px 7px;
+  border: 1px solid rgba(24, 33, 47, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.68);
+  color: #47566c;
+  font-size: 0.62rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+body.tour-active #pointer-route-chip,
+body.pointer-thinking #pointer-route-chip {
+  border-color: rgba(22, 99, 215, 0.24);
+  background: rgba(229, 240, 255, 0.82);
+  color: var(--blue);
+}
+
 .pointer-context-row {
   display: flex;
   flex-wrap: wrap;
@@ -655,9 +685,9 @@ body.ai-draft-mode .cursor-action-row button[data-pointer-ai],
 .memory-proposal-card {
   position: absolute;
   z-index: 9;
-  top: 112px;
-  right: 18px;
-  bottom: auto;
+  left: 18px;
+  right: auto;
+  bottom: 154px;
   display: grid;
   width: min(330px, calc(100% - 36px));
   gap: 7px;
@@ -704,6 +734,13 @@ body.ai-draft-mode .cursor-action-row button[data-pointer-ai],
   line-height: 1.38;
 }
 
+.memory-proposal-card small {
+  color: #425066;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
 .memory-proposal-card div {
   display: flex;
   gap: 8px;
@@ -744,6 +781,22 @@ body.ai-draft-mode .cursor-action-row button[data-pointer-ai],
   color: var(--muted);
   font-size: 0.74rem;
   line-height: 1.32;
+}
+
+.voice-gesture-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.voice-gesture-pills span {
+  padding: 4px 7px;
+  border: 1px solid rgba(22, 99, 215, 0.14);
+  border-radius: 999px;
+  background: rgba(229, 240, 255, 0.64);
+  color: #284163;
+  font-size: 0.66rem;
+  font-weight: 850;
 }
 
 .cursor-tag {

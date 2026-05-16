@@ -6,6 +6,9 @@ const talkCard = document.querySelector("#cursor-talk-card");
 const pointerStatusLabel = document.querySelector("#pointer-status-label");
 const pointerTargetLabel = document.querySelector("#pointer-target-label");
 const pointerEntityLabel = document.querySelector("#pointer-entity-label");
+const pointerRouteChip = document.querySelector("#pointer-route-chip");
+const pointerConfidenceChip = document.querySelector("#pointer-confidence-chip");
+const pointerTourStrip = document.querySelector("#pointer-tour-strip");
 const pointerSafetyLabel = document.querySelector("#pointer-safety-label");
 const pointerCommandSuggestions = document.querySelector("#pointer-command-suggestions");
 const pointerThisChip = document.querySelector("#pointer-this-chip");
@@ -39,6 +42,28 @@ const receiptStack = document.querySelector("#receipt-stack");
 const aiModeButtons = document.querySelectorAll("[data-ai-mode]");
 const DEMO_VIEWPORT_WIDTH = 1440;
 const DEMO_VIEWPORT_HEIGHT = 960;
+const TOUR_STEPS = [
+  {
+    targetId: "color_page_button",
+    title: "Step 1 of 4",
+    prompt: "Start color grading by opening Color yourself.",
+  },
+  {
+    targetId: "node_graph",
+    title: "Step 2 of 4",
+    prompt: "The node graph is where the grade is built.",
+  },
+  {
+    targetId: "lut_menu",
+    title: "Step 3 of 4",
+    prompt: "Preview looks from the LUT menu before applying anything.",
+  },
+  {
+    targetId: "inspector",
+    title: "Step 4 of 4",
+    prompt: "Use Inspector settings to make small, reversible adjustments.",
+  },
+];
 const fields = {
   target: document.querySelector("#receipt-target"),
   intent: document.querySelector("#receipt-intent"),
@@ -62,6 +87,8 @@ let currentTargetLabel = "this surface";
 let previousTargetId = null;
 let selectedTargetIds = [];
 let pinnedTargetIds = [];
+let tourActive = false;
+let tourIndex = 0;
 let lastPointer = { x: null, y: null };
 let pendingFollowerFrame = null;
 let pendingFollowerPlacement = null;
@@ -270,6 +297,7 @@ function setThinkingState(active) {
     : currentTargetId
       ? "Cortex sees"
       : "Cortex nearby";
+  pointerRouteChip.textContent = active ? "Thinking safely" : "Show only";
 }
 
 function showReceiptToast(text) {
@@ -327,6 +355,8 @@ function setAiMode(mode) {
     aiMode === "openai_dry_run"
       ? "AI draft: store:false, controlled facts only."
       : "Display only. You stay in control.";
+  pointerRouteChip.textContent =
+    aiMode === "openai_dry_run" ? "AI draft · show only" : "Show only";
   fields.aiMode.textContent = aiMode === "openai_dry_run" ? "AI draft" : "local";
 }
 
@@ -341,11 +371,95 @@ function updatePointerTarget(targetId) {
   pointerTargetLabel.textContent = currentTargetLabel;
   const meta = targetMeta(currentTargetId);
   pointerEntityLabel.textContent = `${meta.entityKind} · ${meta.role}`;
+  pointerConfidenceChip.textContent = currentTargetId ? "Confidence live" : "Confidence --";
   updateContextChips();
   renderCommandSuggestions();
   setHoverHighlight(currentTargetId);
   fields.target.textContent = currentTargetLabel;
   renderPinnedTargets();
+}
+
+function placeCueOnTarget(targetId, { pulse = false } = {}) {
+  const target = document.querySelector(`[data-target-id="${targetId}"]`);
+  if (!target) return null;
+  const rect = target.getBoundingClientRect();
+  const frameRect = frame.getBoundingClientRect();
+  const left = rect.left - frameRect.left;
+  const top = rect.top - frameRect.top;
+  const centerX = left + rect.width / 2;
+  const centerY = top + rect.height / 2;
+  highlight.style.left = `${left}px`;
+  highlight.style.top = `${top}px`;
+  highlight.style.width = `${rect.width}px`;
+  highlight.style.height = `${rect.height}px`;
+  highlight.classList.add("visible");
+  highlight.classList.remove("hovering");
+  setCursorPosition(centerX, centerY);
+  cursor.classList.add("visible");
+  if (pulse) {
+    cursor.classList.add("pulse");
+    window.setTimeout(() => cursor.classList.remove("pulse"), 360);
+  }
+  placeFloatingElement(talkCard, centerX, centerY, {
+    fallbackWidth: 232,
+    fallbackHeight: 76,
+    gap: 14,
+    anchor: "target",
+  });
+  talkCard.classList.add("visible");
+  return { centerX, centerY };
+}
+
+function renderTourStep() {
+  if (!tourActive) return;
+  const step = TOUR_STEPS[tourIndex];
+  const point = placeCueOnTarget(step.targetId, { pulse: true });
+  updatePointerTarget(step.targetId);
+  pointerTourStrip.textContent = `${step.title}: ${targetLabel(step.targetId)}`;
+  pointerRouteChip.textContent = "Tour · show only";
+  pointerConfidenceChip.textContent = "Confidence guided";
+  dockState.textContent = "Guided tour";
+  dockSummary.textContent = step.prompt;
+  bubble.textContent = step.prompt;
+  bubble.classList.add("visible");
+  if (point) {
+    placeFloatingElement(bubble, point.centerX, point.centerY, {
+      fallbackWidth: 318,
+      fallbackHeight: 88,
+      gap: 22,
+      anchor: "target",
+    });
+  }
+  showReceiptToast("Tour cue rendered only. Cortex did not click or save.");
+}
+
+function startGuidedTour() {
+  if (!helperActive) {
+    setHelperActive(true);
+  }
+  tourActive = true;
+  tourIndex = 0;
+  document.body.classList.add("tour-active");
+  renderTourStep();
+}
+
+function advanceGuidedTour() {
+  if (!tourActive) {
+    startGuidedTour();
+    return;
+  }
+  tourIndex = (tourIndex + 1) % TOUR_STEPS.length;
+  renderTourStep();
+}
+
+function stopGuidedTour() {
+  tourActive = false;
+  tourIndex = 0;
+  document.body.classList.remove("tour-active");
+  pointerTourStrip.textContent = "Tour off";
+  pointerRouteChip.textContent = aiMode === "openai_dry_run" ? "AI draft · show only" : "Show only";
+  dockState.textContent = "Tour stopped";
+  dockSummary.textContent = "Cortex will keep following your pointer.";
 }
 
 function targetFromEvent(event) {
@@ -523,28 +637,12 @@ function showMemoryProposal(proposal) {
 }
 
 function renderTurn(turn) {
-  const target = document.querySelector(`[data-target-id="${turn.target_id}"]`);
-  if (!target) {
+  const point = placeCueOnTarget(turn.target_id, { pulse: true });
+  if (!point) {
     renderError({ error: "target_missing" });
     return;
   }
-  const rect = target.getBoundingClientRect();
-  const frameRect = frame.getBoundingClientRect();
-  const left = rect.left - frameRect.left;
-  const top = rect.top - frameRect.top;
-  const centerX = left + rect.width / 2;
-  const centerY = top + rect.height / 2;
-
-  highlight.style.left = `${left}px`;
-  highlight.style.top = `${top}px`;
-  highlight.style.width = `${rect.width}px`;
-  highlight.style.height = `${rect.height}px`;
-  highlight.classList.add("visible");
-  highlight.classList.remove("hovering");
-
-  setCursorPosition(centerX, centerY);
-  cursor.classList.add("visible", "pulse");
-  window.setTimeout(() => cursor.classList.remove("pulse"), 360);
+  const { centerX, centerY } = point;
   followerVisible = false;
   updatePointerTarget(turn.target_id);
   highlight.classList.remove("hovering");
@@ -564,6 +662,12 @@ function renderTurn(turn) {
   talkCard.classList.add("visible");
   pointerSafetyLabel.textContent =
     turn.companion_state?.safety_caption || "Display only. You stay in control.";
+  pointerRouteChip.textContent =
+    turn.ai_assist_mode === "openai_dry_run" ? "AI draft · show only" : "Show only";
+  pointerConfidenceChip.textContent = `Confidence ${Number(turn.confidence).toFixed(2)}`;
+  if (tourActive) {
+    pointerTourStrip.textContent = "Tour paused by answer";
+  }
 
   bubble.textContent = turn.assistant_response;
   bubble.classList.add("visible");
@@ -725,6 +829,22 @@ document.querySelectorAll("[data-pointer-ai]").forEach((button) => {
   });
 });
 
+document.querySelectorAll("[data-pointer-tour]").forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const action = button.dataset.pointerTour || "start";
+    if (action === "stop") {
+      stopGuidedTour();
+      return;
+    }
+    if (action === "next" && tourActive) {
+      advanceGuidedTour();
+      return;
+    }
+    startGuidedTour();
+  });
+});
+
 document.querySelectorAll("[data-pointer-local]").forEach((button) => {
   button.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -761,6 +881,9 @@ reviewMemoryProposal.addEventListener("click", () => {
     "Memory proposal opened for review. It still has not been saved.";
   dockState.textContent = "Review memory";
   dockSummary.textContent = "Save only from the Memory Book after checking the card.";
+  pointerRouteChip.textContent = "Review only";
+  pointerConfidenceChip.textContent = "Save blocked";
+  showReceiptToast("Memory is still unsaved. Review before saving.");
 });
 
 dismissMemoryProposal.addEventListener("click", () => {
@@ -768,6 +891,8 @@ dismissMemoryProposal.addEventListener("click", () => {
   receiptSummary.textContent = "Memory proposal dismissed. Nothing was saved.";
   dockState.textContent = "Proposal dismissed";
   dockSummary.textContent = "Cortex will keep pointing without saving that memory.";
+  pointerRouteChip.textContent = "Show only";
+  showReceiptToast("Memory proposal dismissed. Nothing was saved.");
 });
 
 receiptsToggle.addEventListener("click", () => {

@@ -103,8 +103,23 @@ loop feel alive and legible:
 - show a short thinking/loading state and hold-progress feedback for voice
   gestures
 - show a tiny receipt toast after a turn instead of forcing the user into logs
+- add a guided tour that walks Color Page -> Node Graph -> LUT Menu ->
+  Inspector using display-only cues
+- show safety route and confidence in the pointer card, not only in receipts
+- make memory proposals read like "idea, not saved" instead of an engineering
+  receipt
+- keep voice gesture affordances visible as tiny, learnable pills
 - make voice gesture state visible before the user asks
 - show the current target in plain language near the cursor
 - keep receipts child-readable
 - move toward consented Realtime voice only after the controlled pointer proof
   is stable
+
+## Current UX State
+
+The pointer card now has a calm safe-mode route chip, a confidence chip, target
+history for `this`, `that`, and `these`, a tiny tour strip, loading feedback,
+receipt toasts, and a guided tour. The tour is intentionally display-only: it
+highlights controlled DOM targets, moves the secondary cursor, and writes a
+redacted local receipt toast, but it does not click, capture, speak, save
+memory, export, or call external services.
