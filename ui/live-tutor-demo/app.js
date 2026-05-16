@@ -5,7 +5,9 @@ const cursor = document.querySelector("#shadow-tutor-cursor");
 const talkCard = document.querySelector("#cursor-talk-card");
 const pointerStatusLabel = document.querySelector("#pointer-status-label");
 const pointerTargetLabel = document.querySelector("#pointer-target-label");
+const pointerEntityLabel = document.querySelector("#pointer-entity-label");
 const pointerSafetyLabel = document.querySelector("#pointer-safety-label");
+const pointerCommandSuggestions = document.querySelector("#pointer-command-suggestions");
 const bubble = document.querySelector("#instruction-bubble");
 const wakeCard = document.querySelector("#wake-card");
 const wakeHelperButton = document.querySelector("#wake-helper");
@@ -57,6 +59,8 @@ let previousTargetId = null;
 let selectedTargetIds = [];
 let pinnedTargetIds = [];
 let lastPointer = { x: null, y: null };
+let pendingFollowerFrame = null;
+let pendingFollowerPlacement = null;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -193,6 +197,52 @@ function targetLabel(targetId) {
   ).trim();
 }
 
+function targetMeta(targetId) {
+  const element = targetId ? document.querySelector(`[data-target-id="${targetId}"]`) : null;
+  return {
+    entityKind: element?.dataset?.entityKind || "controlled demo entity",
+    role: element?.dataset?.targetRole || "safe local target",
+  };
+}
+
+function setCursorPosition(x, y) {
+  cursor.style.transform = `translate3d(${Math.round(x - 8)}px, ${Math.round(
+    y - 8
+  )}px, 0)`;
+}
+
+function renderCommandSuggestions(suggestions = ["Explain this", "What next?", "Remember this"]) {
+  const labels = suggestions.slice(0, 3);
+  pointerCommandSuggestions.innerHTML = "";
+  labels.forEach((label) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.pointerCommand = label;
+    button.textContent =
+      label === "Explain this"
+        ? "Explain"
+        : label === "What next?"
+          ? "Next"
+          : label === "Remember this"
+            ? "Remember"
+            : label.replace(" memory", "");
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (!currentTargetId && /explain this|remember this/i.test(label)) {
+        dockState.textContent = "Point first";
+        dockSummary.textContent = "Move over a tool, then ask about this.";
+        bubble.textContent = "Point at something first so I know what 'this' means.";
+        bubble.classList.add("visible");
+        return;
+      }
+      setVoiceGesture("single_click_context");
+      input.value = label;
+      askTutor(label);
+    });
+    pointerCommandSuggestions.append(button);
+  });
+}
+
 function setAiMode(mode) {
   aiMode = mode === "openai_dry_run" ? "openai_dry_run" : "local";
   document.body.classList.toggle("ai-draft-mode", aiMode === "openai_dry_run");
@@ -220,6 +270,8 @@ function updatePointerTarget(targetId) {
   }
   pointerStatusLabel.textContent = currentTargetId ? "Cortex sees" : "Cortex nearby";
   pointerTargetLabel.textContent = currentTargetLabel;
+  const meta = targetMeta(currentTargetId);
+  pointerEntityLabel.textContent = `${meta.entityKind} · ${meta.role}`;
   fields.target.textContent = currentTargetLabel;
   renderPinnedTargets();
 }
@@ -265,17 +317,23 @@ function placeTutorFollower(x, y, { trace = true } = {}) {
   const followerX = clamp(x + 18, 10, frameRect.width - 84);
   const followerY = clamp(y + 18, 10, frameRect.height - 58);
 
-  cursor.style.left = `${followerX}px`;
-  cursor.style.top = `${followerY}px`;
-  cursor.classList.add("visible", "tracking");
-
-  placeFloatingElement(talkCard, followerX + 24, followerY + 20, {
-    fallbackWidth: 232,
-    fallbackHeight: 76,
-    gap: 12,
-    anchor: "cursor",
-  });
-  talkCard.classList.add("visible");
+  pendingFollowerPlacement = { followerX, followerY };
+  if (!pendingFollowerFrame) {
+    pendingFollowerFrame = window.requestAnimationFrame(() => {
+      const placement = pendingFollowerPlacement;
+      pendingFollowerFrame = null;
+      if (!placement) return;
+      setCursorPosition(placement.followerX, placement.followerY);
+      cursor.classList.add("visible", "tracking");
+      placeFloatingElement(talkCard, placement.followerX + 24, placement.followerY + 20, {
+        fallbackWidth: 232,
+        fallbackHeight: 76,
+        gap: 12,
+        anchor: "cursor",
+      });
+      talkCard.classList.add("visible");
+    });
+  }
 
   if (!followerVisible) {
     fields.effects.textContent = "tracking cursor, rendering trace, display-only";
@@ -284,7 +342,7 @@ function placeTutorFollower(x, y, { trace = true } = {}) {
 
   if (!trace) return;
   const now = Date.now();
-  if (now - lastTraceAt < 46) return;
+  if (now - lastTraceAt < 72) return;
   lastTraceAt = now;
 
   const dot = document.createElement("span");
@@ -292,7 +350,7 @@ function placeTutorFollower(x, y, { trace = true } = {}) {
   dot.style.left = `${clamp(x, 8, frameRect.width - 8)}px`;
   dot.style.top = `${clamp(y, 8, frameRect.height - 8)}px`;
   traceLayer.append(dot);
-  window.setTimeout(() => dot.remove(), 820);
+  window.setTimeout(() => dot.remove(), 620);
 }
 
 function handlePointerMove(event) {
@@ -313,12 +371,29 @@ function setHelperActive(active) {
     : "Start helper to see Cortex follow inside this safe demo.";
 }
 
-function wakeHelper() {
+function wakeHelper(event) {
   if (helperActive) return;
   setHelperActive(true);
-  bubble.textContent = "Pointer helper is awake. Move over a tool or ask a question.";
+  highlight.classList.remove("visible");
+  currentTargetId = null;
+  previousTargetId = null;
+  currentTargetLabel = "this surface";
+  updatePointerTarget(null);
+  renderCommandSuggestions();
+  const frameRect = frame.getBoundingClientRect();
+  const fallbackX = frameRect.width / 2;
+  const fallbackY = Math.min(frameRect.height / 2, 340);
+  const localX = event?.clientX ? event.clientX - frameRect.left : fallbackX;
+  const localY = event?.clientY ? event.clientY - frameRect.top : fallbackY;
+  placeTutorFollower(localX, localY, { trace: false });
+  bubble.textContent = "Pointer helper is awake. Move over any tool; I will follow you.";
   bubble.classList.add("visible");
-  askTutor(input.value.trim() || "How do I start color grading?");
+  placeFloatingElement(bubble, localX + 24, localY + 18, {
+    fallbackWidth: 300,
+    fallbackHeight: 72,
+    gap: 18,
+    anchor: "cursor",
+  });
 }
 
 function renderPinnedTargets() {
@@ -392,12 +467,17 @@ function renderTurn(turn) {
   highlight.style.height = `${rect.height}px`;
   highlight.classList.add("visible");
 
-  cursor.style.left = `${centerX}px`;
-  cursor.style.top = `${centerY}px`;
+  setCursorPosition(centerX, centerY);
   cursor.classList.add("visible", "pulse");
   window.setTimeout(() => cursor.classList.remove("pulse"), 360);
   followerVisible = false;
   updatePointerTarget(turn.target_id);
+  const entityLens = turn.entity_lens || {};
+  const flowState = turn.pointer_flow_state || {};
+  pointerEntityLabel.textContent = entityLens.entity_kind
+    ? `${formatToken(entityLens.entity_kind)} · ${entityLens.region || "safe target"}`
+    : pointerEntityLabel.textContent;
+  renderCommandSuggestions(turn.command_suggestions || flowState.command_suggestions);
   placeFloatingElement(talkCard, centerX, centerY, {
     fallbackWidth: 232,
     fallbackHeight: 76,
@@ -527,6 +607,13 @@ document.querySelectorAll("[data-pointer-command]").forEach((button) => {
   button.addEventListener("click", (event) => {
     event.stopPropagation();
     const command = button.dataset.pointerCommand || "Explain this";
+    if (!currentTargetId && /explain this|remember this/i.test(command)) {
+      dockState.textContent = "Point first";
+      dockSummary.textContent = "Move over a tool, then ask about this.";
+      bubble.textContent = "Point at something first so I know what 'this' means.";
+      bubble.classList.add("visible");
+      return;
+    }
     setVoiceGesture("single_click_context");
     input.value = command;
     askTutor(command);
@@ -609,3 +696,4 @@ receiptsToggle.addEventListener("click", () => {
 
 setAiMode("local");
 setVoiceGesture("single_click_context");
+renderCommandSuggestions();

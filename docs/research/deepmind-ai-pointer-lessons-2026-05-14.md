@@ -127,3 +127,15 @@ A passing pointer-first Cortex demo must prove all of this:
 - memory writes require a deliberate user command and use the manual Memory Book
   boundary;
 - the dashboard shows only a plain receipt, not a dense control cockpit.
+
+## 2026-05-15 Implementation Note
+
+`AI-POINTER-FLOW-STATE-001` turns this research into a stricter live-demo
+contract. Each controlled target now compiles into an `entity_lens`, the active
+turn carries a `pointer_flow_state`, and the UI renders three tiny pointer-side
+commands before hiding secondary controls behind `More`.
+
+This gets Cortex closer to the DeepMind UX bar without relaxing the safety
+ladder: the pointer still uses controlled DOM targets only, smoother
+`requestAnimationFrame`/`translate3d` rendering, no real cursor movement, no
+screen capture, no microphone capture, no raw refs, and no memory write.

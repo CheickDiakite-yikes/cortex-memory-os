@@ -193,6 +193,8 @@ from cortex_memory_os.live_clicker_demo import (
     run_live_clicker_hardening_smoke,
 )
 from cortex_memory_os.live_tutor_overlay import (
+    AI_POINTER_FLOW_POLICY_REF,
+    AI_POINTER_FLOW_STATE_ID,
     LIVE_TUTOR_BROWSER_PROOF_ID,
     LIVE_TUTOR_BROWSER_PROOF_POLICY_REF,
     LIVE_TUTOR_OVERLAY_ID,
@@ -810,6 +812,7 @@ def run_all() -> BenchmarkRunResult:
         case_live_clicker_hardening_contract,
         case_live_clicker_allowlisted_origin_contract,
         case_live_tutor_overlay_contract,
+        case_ai_pointer_flow_state_contract,
         case_live_tutor_browser_proof_contract,
         case_synthetic_capture_ladder_contract,
         case_demo_readiness_contract,
@@ -14392,6 +14395,102 @@ def case_live_tutor_overlay_contract() -> BenchmarkCaseResult:
             "blocked_effects": panel.blocked_effects,
             "missing_doc_terms": missing_doc_terms,
             "missing_ui_terms": missing_ui_terms,
+        },
+    )
+
+
+def case_ai_pointer_flow_state_contract() -> BenchmarkCaseResult:
+    surface = build_safe_creative_demo_surface(active_page="color")
+    turn = resolve_live_tutor_turn(
+        "Explain these",
+        surface=surface,
+        pointer_state=LiveTutorPointerState(
+            current_target_id="node_graph",
+            previous_target_id="lut_menu",
+            selected_target_ids=["lut_menu", "node_graph"],
+            referent_phrase="these",
+        ),
+    )
+    html = (REPO_ROOT / "ui" / "live-tutor-demo" / "index.html").read_text(
+        encoding="utf-8"
+    )
+    js = (REPO_ROOT / "ui" / "live-tutor-demo" / "app.js").read_text(
+        encoding="utf-8"
+    )
+    css = (REPO_ROOT / "ui" / "live-tutor-demo" / "styles.css").read_text(
+        encoding="utf-8"
+    )
+    docs_text = "\n".join(
+        [
+            (REPO_ROOT / "docs" / "research" / "deepmind-ai-pointer-lessons-2026-05-14.md").read_text(
+                encoding="utf-8"
+            ),
+            (REPO_ROOT / "docs" / "adr" / "0008-pointer-first-ai-interface.md").read_text(
+                encoding="utf-8"
+            ),
+            (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+                encoding="utf-8"
+            ),
+        ]
+    )
+    required_terms = [
+        AI_POINTER_FLOW_STATE_ID,
+        AI_POINTER_FLOW_POLICY_REF,
+        "entity_lens",
+        "pointer_flow_state",
+        "command_suggestions",
+        "pointer-entity-label",
+        "pointer-command-suggestions",
+        "cursor-more-actions",
+        "requestAnimationFrame",
+        "translate3d",
+        "backdrop-filter",
+        "data-entity-kind",
+        "this",
+        "that",
+        "these",
+    ]
+    combined = "\n".join([html, js, css, docs_text, turn.model_dump_json()])
+    missing_terms = _missing_terms(combined, required_terms)
+    passed = (
+        turn.entity_lens.display_only
+        and turn.entity_lens.target_id == turn.target_id
+        and turn.entity_lens.memory_scope == "manual_memory_book"
+        and turn.pointer_flow_state.flow_id == AI_POINTER_FLOW_STATE_ID
+        and turn.pointer_flow_state.current_target_id == turn.target_id
+        and turn.pointer_flow_state.referent_phrase == "these"
+        and turn.pointer_flow_state.output_anchor == "beside_pointer"
+        and turn.command_suggestions == turn.pointer_flow_state.command_suggestions
+        and {"Explain these", "What next?", "Remember this"}.issubset(
+            set(turn.command_suggestions)
+        )
+        and turn.display_only
+        and not turn.memory_write_allowed
+        and not turn.raw_ref_retained
+        and not turn.external_effect_executed
+        and not missing_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="AI-POINTER-FLOW-STATE-001/entity_lens_and_pointer_card",
+        suite=AI_POINTER_FLOW_STATE_ID,
+        passed=passed,
+        summary=(
+            "The Live Tutor now exposes a structured entity lens and pointer-side "
+            "flow state so the UI can stay beside the cursor, resolve this/that/these, "
+            "and offer tiny safe commands without gaining click or capture authority."
+        ),
+        metrics={
+            "command_count": len(turn.command_suggestions),
+            "selected_target_count": len(turn.pointer_flow_state.selected_target_ids),
+            "missing_terms": len(missing_terms),
+        },
+        evidence={
+            "policy_ref": AI_POINTER_FLOW_POLICY_REF,
+            "target_id": turn.target_id,
+            "entity_kind": turn.entity_lens.entity_kind,
+            "referent": turn.pointer_referent,
+            "commands": turn.command_suggestions,
+            "missing_terms": missing_terms,
         },
     )
 

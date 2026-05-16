@@ -34,6 +34,8 @@ LIVE_TUTOR_OVERLAY_ID = "LIVE-TUTOR-OVERLAY-001"
 LIVE_TUTOR_OVERLAY_POLICY_REF = "policy_live_tutor_overlay_v1"
 LIVE_TUTOR_BROWSER_PROOF_ID = "LIVE-TUTOR-BROWSER-PROOF-001"
 LIVE_TUTOR_BROWSER_PROOF_POLICY_REF = "policy_live_tutor_browser_proof_v1"
+AI_POINTER_FLOW_STATE_ID = "AI-POINTER-FLOW-STATE-001"
+AI_POINTER_FLOW_POLICY_REF = "policy_ai_pointer_flow_state_v1"
 DEFAULT_LIVE_TUTOR_HOST = "127.0.0.1"
 DEFAULT_LIVE_TUTOR_PORT = 8797
 LIVE_TUTOR_TOKEN_HEADER = "X-Cortex-Live-Tutor-Token"
@@ -88,16 +90,42 @@ _PROHIBITED_MARKERS = [
 
 
 class DemoTarget(StrictModel):
-    target_id: str = Field(min_length=1)
-    label: str = Field(min_length=1)
-    role: str = Field(min_length=1)
-    region: str = Field(min_length=1)
+    target_id: str = Field(min_length=1, max_length=80)
+    label: str = Field(min_length=1, max_length=80)
+    role: str = Field(min_length=1, max_length=80)
+    region: str = Field(min_length=1, max_length=80)
+    entity_kind: Literal[
+        "controlled_ui_entity",
+        "clip_asset",
+        "timeline_sequence",
+        "workspace_button",
+        "node_graph",
+        "tool_menu",
+        "settings_panel",
+    ] = "controlled_ui_entity"
     plain_description: str = Field(default="", max_length=180)
+    safe_suggested_actions: list[str] = Field(default_factory=list, min_length=1, max_length=4)
+    memory_scope: Literal["none", "manual_memory_book"] = "manual_memory_book"
     x: float = Field(ge=0)
     y: float = Field(ge=0)
     width: float = Field(gt=0)
     height: float = Field(gt=0)
     state: str = "idle"
+
+    @field_validator("target_id", "label", "role", "region", "plain_description", "state")
+    @classmethod
+    def reject_prohibited_target_text(cls, value: str) -> str:
+        if any(marker in value for marker in _PROHIBITED_MARKERS):
+            raise ValueError("demo target cannot carry secret/raw/prompt-injection markers")
+        return value
+
+    @field_validator("safe_suggested_actions")
+    @classmethod
+    def keep_suggested_actions_safe(cls, value: list[str]) -> list[str]:
+        for action in value:
+            if any(marker in action for marker in _PROHIBITED_MARKERS):
+                raise ValueError("suggested action cannot carry secret/raw markers")
+        return value
 
     @model_validator(mode="after")
     def keep_target_in_viewport(self) -> DemoTarget:
@@ -273,6 +301,133 @@ class ManualMemoryProposal(StrictModel):
         return self
 
 
+class LiveTutorEntityLens(StrictModel):
+    """The structured entity Cortex believes is under the user's pointer."""
+
+    lens_id: str = Field(min_length=1)
+    target_id: str = Field(min_length=1, max_length=80)
+    target_label: str = Field(min_length=1, max_length=80)
+    entity_kind: str = Field(min_length=1, max_length=80)
+    role: str = Field(min_length=1, max_length=80)
+    region: str = Field(min_length=1, max_length=80)
+    plain_description: str = Field(min_length=1, max_length=180)
+    safe_suggested_actions: list[str] = Field(min_length=1, max_length=4)
+    memory_scope: Literal["none", "manual_memory_book"] = "manual_memory_book"
+    actionability: Literal[
+        "explainable",
+        "next_step_guidance",
+        "review_memory_candidate",
+        "grouped_reference",
+    ] = "explainable"
+    display_only: bool = True
+    allowed_effects: list[str] = Field(default_factory=list)
+    blocked_effects: list[str] = Field(default_factory=list)
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF, AI_POINTER_FLOW_POLICY_REF]
+    )
+
+    @field_validator(
+        "lens_id",
+        "target_id",
+        "target_label",
+        "entity_kind",
+        "role",
+        "region",
+        "plain_description",
+    )
+    @classmethod
+    def reject_prohibited_lens_text(cls, value: str) -> str:
+        if any(marker in value for marker in _PROHIBITED_MARKERS):
+            raise ValueError("entity lens cannot carry secret/raw/prompt-injection markers")
+        return value
+
+    @field_validator("safe_suggested_actions")
+    @classmethod
+    def keep_lens_actions_safe(cls, value: list[str]) -> list[str]:
+        for action in value:
+            if any(marker in action for marker in _PROHIBITED_MARKERS):
+                raise ValueError("entity lens action cannot carry secret/raw markers")
+        return value
+
+    @model_validator(mode="after")
+    def keep_entity_lens_display_only(self) -> "LiveTutorEntityLens":
+        if not self.display_only:
+            raise ValueError("entity lens must stay display-only")
+        if set(self.allowed_effects) - LIVE_TUTOR_ALLOWED_EFFECTS:
+            raise ValueError("entity lens allowed effects are too broad")
+        if missing := sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS.difference(self.blocked_effects)):
+            raise ValueError(f"entity lens missing blocked effects: {missing}")
+        if LIVE_TUTOR_OVERLAY_POLICY_REF not in self.policy_refs:
+            raise ValueError("entity lens requires live tutor policy ref")
+        if AI_POINTER_FLOW_POLICY_REF not in self.policy_refs:
+            raise ValueError("entity lens requires AI pointer flow policy ref")
+        return self
+
+
+class LiveTutorPointerFlowState(StrictModel):
+    """Small pointer-side state that lets the UI stay in the user's flow."""
+
+    flow_id: str = AI_POINTER_FLOW_STATE_ID
+    status: Literal["tracking", "answering", "review_required", "blocked"] = "tracking"
+    current_target_id: str = Field(min_length=1, max_length=80)
+    current_target_label: str = Field(min_length=1, max_length=80)
+    previous_target_id: str | None = Field(default=None, max_length=80)
+    previous_target_label: str | None = Field(default=None, max_length=80)
+    selected_target_ids: list[str] = Field(default_factory=list, max_length=4)
+    selected_target_labels: list[str] = Field(default_factory=list, max_length=4)
+    referent_phrase: Literal["this", "that", "these", "none"] = "none"
+    command_suggestions: list[str] = Field(min_length=3, max_length=5)
+    pointer_card_title: str = Field(min_length=1, max_length=80)
+    pointer_card_body: str = Field(min_length=1, max_length=180)
+    pointer_card_primary_action: str = Field(min_length=1, max_length=80)
+    output_anchor: Literal["beside_pointer", "beside_target"] = "beside_pointer"
+    display_only: bool = True
+    allowed_effects: list[str] = Field(default_factory=list)
+    blocked_effects: list[str] = Field(default_factory=list)
+    policy_refs: list[str] = Field(
+        default_factory=lambda: [LIVE_TUTOR_OVERLAY_POLICY_REF, AI_POINTER_FLOW_POLICY_REF]
+    )
+
+    @field_validator(
+        "current_target_id",
+        "current_target_label",
+        "previous_target_id",
+        "previous_target_label",
+        "pointer_card_title",
+        "pointer_card_body",
+        "pointer_card_primary_action",
+    )
+    @classmethod
+    def reject_prohibited_flow_text(cls, value: str | None) -> str | None:
+        if value is not None and any(marker in value for marker in _PROHIBITED_MARKERS):
+            raise ValueError("pointer flow cannot carry secret/raw/prompt-injection markers")
+        return value
+
+    @field_validator("selected_target_ids", "selected_target_labels", "command_suggestions")
+    @classmethod
+    def keep_flow_lists_safe(cls, value: list[str]) -> list[str]:
+        for item in value:
+            if any(marker in item for marker in _PROHIBITED_MARKERS):
+                raise ValueError("pointer flow list cannot carry secret/raw markers")
+        return value
+
+    @model_validator(mode="after")
+    def keep_pointer_flow_display_only(self) -> "LiveTutorPointerFlowState":
+        if not self.display_only:
+            raise ValueError("pointer flow state must stay display-only")
+        if self.current_target_id not in self.selected_target_ids and self.referent_phrase == "these":
+            raise ValueError("pointer flow must include current target when resolving these")
+        if set(self.allowed_effects) - LIVE_TUTOR_ALLOWED_EFFECTS:
+            raise ValueError("pointer flow allowed effects are too broad")
+        if missing := sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS.difference(self.blocked_effects)):
+            raise ValueError(f"pointer flow missing blocked effects: {missing}")
+        if LIVE_TUTOR_OVERLAY_POLICY_REF not in self.policy_refs:
+            raise ValueError("pointer flow requires live tutor policy ref")
+        if AI_POINTER_FLOW_POLICY_REF not in self.policy_refs:
+            raise ValueError("pointer flow requires AI pointer flow policy ref")
+        return self
+
+
 class LiveTutorCompanionState(StrictModel):
     mode: Literal["tracking", "answering", "review_required"] = "answering"
     label: str = Field(min_length=1, max_length=80)
@@ -310,6 +465,9 @@ class LiveTutorTurn(StrictModel):
     target_label: str = Field(min_length=1)
     referenced_target_ids: list[str] = Field(default_factory=list, min_length=1, max_length=4)
     pointer_referent: Literal["this", "that", "these", "none"] = "none"
+    entity_lens: LiveTutorEntityLens
+    pointer_flow_state: LiveTutorPointerFlowState
+    command_suggestions: list[str] = Field(default_factory=list, min_length=3, max_length=5)
     target_coordinates: SpatialTutorCue
     assistant_response: str = Field(min_length=1, max_length=420)
     micro_steps: list[str] = Field(default_factory=list, min_length=1, max_length=3)
@@ -378,8 +536,14 @@ class LiveTutorTurn(StrictModel):
             raise ValueError("live tutor turn cannot start screen or voice capture")
         if self.target_coordinates.target_id != self.target_id:
             raise ValueError("live tutor turn target and cue target must match")
+        if self.entity_lens.target_id != self.target_id:
+            raise ValueError("live tutor turn target and entity lens target must match")
+        if self.pointer_flow_state.current_target_id != self.target_id:
+            raise ValueError("live tutor turn target and pointer flow target must match")
         if self.target_id not in self.referenced_target_ids:
             raise ValueError("live tutor turn must reference its primary target")
+        if self.command_suggestions != self.pointer_flow_state.command_suggestions:
+            raise ValueError("live tutor turn command suggestions must mirror pointer flow")
         if self.manual_memory_proposal and self.memory_write_allowed:
             raise ValueError("memory proposal cannot authorize a memory write")
         if self.ai_assist_mode == "openai_dry_run":
@@ -506,6 +670,9 @@ class LiveTutorDemoResult(StrictModel):
     turn_count: int = Field(ge=0)
     target_ids: list[str] = Field(default_factory=list)
     cue_count: int = Field(ge=0)
+    entity_lens_count: int = Field(default=0, ge=0)
+    pointer_flow_count: int = Field(default=0, ge=0)
+    pointer_command_count: int = Field(default=0, ge=0)
     controlled_surface: bool
     display_only: bool
     memory_write_count: int = Field(ge=0)
@@ -877,7 +1044,9 @@ def build_safe_creative_demo_surface(
             label="Media Bin",
             role="asset_library",
             region="left rail",
+            entity_kind="clip_asset",
             plain_description="Project clips, audio, and assets live here before they are added to the timeline.",
+            safe_suggested_actions=["Explain this", "What next?", "Remember this"],
             x=28,
             y=118,
             width=250,
@@ -888,7 +1057,9 @@ def build_safe_creative_demo_surface(
             label="Timeline",
             role="timeline",
             region="bottom rail",
+            entity_kind="timeline_sequence",
             plain_description="The sequence of clips and audio the editor is currently assembling.",
+            safe_suggested_actions=["Explain this", "What next?", "Remember this"],
             x=312,
             y=676,
             width=928,
@@ -899,7 +1070,9 @@ def build_safe_creative_demo_surface(
             label="Color Page",
             role="workspace_switcher",
             region="bottom navigation",
+            entity_kind="workspace_button",
             plain_description="The workspace switcher that opens color grading tools.",
+            safe_suggested_actions=["Explain this", "What next?", "Remember this"],
             x=646,
             y=902,
             width=72,
@@ -911,7 +1084,9 @@ def build_safe_creative_demo_surface(
             label="Node Graph",
             role="color_workspace",
             region="upper right",
+            entity_kind="node_graph",
             plain_description="A visual chain of color-correction nodes for the selected clip.",
+            safe_suggested_actions=["Explain this", "What next?", "Remember this"],
             x=1028,
             y=142,
             width=340,
@@ -922,7 +1097,9 @@ def build_safe_creative_demo_surface(
             label="LUT Menu",
             role="color_tool_menu",
             region="right inspector",
+            entity_kind="tool_menu",
             plain_description="A menu for previewing and applying look presets. It should be reviewed before use.",
+            safe_suggested_actions=["Explain this", "What next?", "Remember this"],
             x=1178,
             y=424,
             width=172,
@@ -933,7 +1110,9 @@ def build_safe_creative_demo_surface(
             label="Inspector",
             role="settings_panel",
             region="right rail",
+            entity_kind="settings_panel",
             plain_description="A settings panel for checking and adjusting the selected clip.",
+            safe_suggested_actions=["Explain this", "What next?", "Remember this"],
             x=1118,
             y=494,
             width=250,
@@ -1009,6 +1188,17 @@ def resolve_live_tutor_turn(
         if intent_label == "propose_manual_memory"
         else None
     )
+    entity_lens = _build_entity_lens(target, intent_label=intent_label, sequence=sequence)
+    command_suggestions = _command_suggestions_for_intent(intent_label, target=target)
+    pointer_flow_state = _build_pointer_flow_state(
+        target=target,
+        surface=surface,
+        pointer_state=pointer_state,
+        intent_label=intent_label,
+        referent=referent,
+        referenced_ids=referenced_ids,
+        command_suggestions=command_suggestions,
+    )
     cue = SpatialTutorCue(
         cue_id=f"cue_live_tutor_{sequence:03d}",
         target_id=target.target_id,
@@ -1038,6 +1228,9 @@ def resolve_live_tutor_turn(
         target_label=target.label,
         referenced_target_ids=referenced_ids,
         pointer_referent=referent,
+        entity_lens=entity_lens,
+        pointer_flow_state=pointer_flow_state,
+        command_suggestions=command_suggestions,
         target_coordinates=cue,
         assistant_response=response,
         micro_steps=_micro_steps_for_intent(intent_label, target=target, surface=surface),
@@ -1482,6 +1675,22 @@ def _result_from_turns(
             else all(turn.target_id for turn in turns)
         ),
         "pointer_referents": any(turn.pointer_referent in {"this", "that", "these"} for turn in turns),
+        "entity_lenses": all(
+            turn.entity_lens.display_only
+            and turn.entity_lens.target_id == turn.target_id
+            and "Explain this" in turn.entity_lens.safe_suggested_actions
+            for turn in turns
+        ),
+        "pointer_flow": all(
+            turn.pointer_flow_state.display_only
+            and turn.pointer_flow_state.current_target_id == turn.target_id
+            and "Explain this" in turn.pointer_flow_state.command_suggestions
+            and (
+                "Remember this" in turn.pointer_flow_state.command_suggestions
+                or "Review memory" in turn.pointer_flow_state.command_suggestions
+            )
+            for turn in turns
+        ),
         "no_memory_writes": all(not turn.memory_write_allowed for turn in turns),
         "no_raw_refs": all(not turn.raw_ref_retained for turn in turns),
         "no_external_effects": all(not turn.external_effect_executed for turn in turns),
@@ -1516,6 +1725,9 @@ def _result_from_turns(
         turn_count=len(turns),
         target_ids=[turn.target_id for turn in turns],
         cue_count=sum(int(turn.target_coordinates.display_only) for turn in turns),
+        entity_lens_count=sum(int(turn.entity_lens.display_only) for turn in turns),
+        pointer_flow_count=sum(int(turn.pointer_flow_state.display_only) for turn in turns),
+        pointer_command_count=sum(len(turn.command_suggestions) for turn in turns),
         controlled_surface=checks["controlled_surface"],
         display_only=checks["display_only"],
         memory_write_count=sum(int(turn.memory_write_allowed) for turn in turns),
@@ -1846,6 +2058,115 @@ def _build_manual_memory_proposal(
             f"Remember that {target.label} is {target.plain_description.lower()}"
         ),
     )
+
+
+def _build_entity_lens(
+    target: DemoTarget,
+    *,
+    intent_label: str,
+    sequence: int,
+) -> LiveTutorEntityLens:
+    if intent_label == "propose_manual_memory":
+        actionability: Literal[
+            "explainable",
+            "next_step_guidance",
+            "review_memory_candidate",
+            "grouped_reference",
+        ] = "review_memory_candidate"
+    elif intent_label == "multi_target_reference":
+        actionability = "grouped_reference"
+    elif intent_label.startswith("next_step") or intent_label in {"start_color_grading", "add_lut"}:
+        actionability = "next_step_guidance"
+    else:
+        actionability = "explainable"
+    return LiveTutorEntityLens(
+        lens_id=f"entity_lens_{sequence:03d}",
+        target_id=target.target_id,
+        target_label=target.label,
+        entity_kind=target.entity_kind,
+        role=target.role,
+        region=target.region,
+        plain_description=target.plain_description,
+        safe_suggested_actions=target.safe_suggested_actions,
+        memory_scope=target.memory_scope,
+        actionability=actionability,
+        allowed_effects=sorted(LIVE_TUTOR_ALLOWED_EFFECTS),
+        blocked_effects=sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS),
+    )
+
+
+def _build_pointer_flow_state(
+    *,
+    target: DemoTarget,
+    surface: SafeCreativeDemoSurface,
+    pointer_state: LiveTutorPointerState,
+    intent_label: str,
+    referent: Literal["this", "that", "these", "none"],
+    referenced_ids: list[str],
+    command_suggestions: list[str],
+) -> LiveTutorPointerFlowState:
+    selected_ids = referenced_ids if referent == "these" else pointer_state.selected_target_ids
+    selected_labels = [_safe_target_label(surface, target_id) for target_id in selected_ids]
+    previous_target_label = (
+        _safe_target_label(surface, pointer_state.previous_target_id)
+        if pointer_state.previous_target_id
+        else None
+    )
+    status: Literal["tracking", "answering", "review_required", "blocked"] = (
+        "review_required" if intent_label == "propose_manual_memory" else "answering"
+    )
+    return LiveTutorPointerFlowState(
+        status=status,
+        current_target_id=target.target_id,
+        current_target_label=target.label,
+        previous_target_id=pointer_state.previous_target_id,
+        previous_target_label=previous_target_label,
+        selected_target_ids=selected_ids,
+        selected_target_labels=selected_labels,
+        referent_phrase=referent,
+        command_suggestions=command_suggestions,
+        pointer_card_title=f"I see {target.label}",
+        pointer_card_body=target.plain_description,
+        pointer_card_primary_action=_primary_pointer_action(intent_label),
+        output_anchor=(
+            "beside_pointer"
+            if intent_label in {"explain_pointed_target", "propose_manual_memory", "multi_target_reference"}
+            else "beside_target"
+        ),
+        allowed_effects=sorted(LIVE_TUTOR_ALLOWED_EFFECTS),
+        blocked_effects=sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS),
+    )
+
+
+def _command_suggestions_for_intent(intent_label: str, *, target: DemoTarget) -> list[str]:
+    if intent_label == "propose_manual_memory":
+        return ["Review memory", "Explain this", "Dismiss"]
+    if intent_label == "multi_target_reference":
+        return ["Explain these", "What next?", "Remember this"]
+    if intent_label in {"start_color_grading", "next_step_enter_color"}:
+        return ["What next?", "Explain this", "Remember this"]
+    if intent_label in {"add_lut", "find_node_graph", "next_step_color_workspace"}:
+        return ["Explain this", "What next?", "Remember this"]
+    return target.safe_suggested_actions
+
+
+def _primary_pointer_action(intent_label: str) -> str:
+    if intent_label == "propose_manual_memory":
+        return "Review memory"
+    if intent_label == "multi_target_reference":
+        return "Explain these"
+    if intent_label.startswith("next_step"):
+        return "Show next step"
+    return "Explain this"
+
+
+def _safe_target_label(surface: SafeCreativeDemoSurface, target_id: str | None) -> str:
+    if not target_id:
+        return ""
+    try:
+        return surface.target_by_id(target_id).label
+    except KeyError:
+        return target_id.replace("_", " ")
 
 
 def _companion_state_for_intent(

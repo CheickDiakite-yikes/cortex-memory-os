@@ -377,16 +377,15 @@ button {
 .shadow-tutor-cursor {
   position: absolute;
   z-index: 6;
+  left: 0;
+  top: 0;
   width: 84px;
   height: 54px;
-  transform: translate(-8px, -8px);
+  transform: translate3d(-120px, -120px, 0);
   opacity: 0;
   pointer-events: none;
-  will-change: left, top, opacity;
-  transition:
-    left 60ms linear,
-    top 60ms linear,
-    opacity 120ms ease;
+  will-change: transform, opacity;
+  transition: opacity 80ms ease;
 }
 
 .shadow-tutor-cursor.visible {
@@ -394,7 +393,7 @@ button {
 }
 
 .shadow-tutor-cursor.tracking {
-  transition: opacity 80ms ease;
+  transition: opacity 60ms ease;
 }
 
 .shadow-tutor-cursor svg {
@@ -420,13 +419,13 @@ button {
 
 .cursor-trace-dot {
   position: absolute;
-  width: 11px;
-  height: 11px;
-  border: 2px solid rgba(22, 99, 215, 0.42);
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(22, 99, 215, 0.34);
   border-radius: 999px;
-  background: rgba(22, 99, 215, 0.14);
+  background: rgba(22, 99, 215, 0.1);
   transform: translate(-50%, -50%);
-  animation: cursor-trace-fade 820ms ease-out forwards;
+  animation: cursor-trace-fade 620ms ease-out forwards;
 }
 
 .cursor-ring {
@@ -444,13 +443,17 @@ button {
   position: absolute;
   z-index: 8;
   display: grid;
-  gap: 6px;
-  min-width: 218px;
-  padding: 8px 10px;
-  border: 1px solid rgba(22, 99, 215, 0.22);
+  gap: 5px;
+  min-width: 220px;
+  max-width: 268px;
+  padding: 9px 10px;
+  border: 1px solid rgba(22, 99, 215, 0.18);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 12px 28px rgba(21, 31, 47, 0.16);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px) saturate(1.35);
+  box-shadow:
+    0 12px 30px rgba(21, 31, 47, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
   color: var(--ink);
   opacity: 0;
   pointer-events: auto;
@@ -472,12 +475,13 @@ button {
 
 .cursor-talk-card strong {
   color: var(--blue);
-  font-size: 0.82rem;
+  font-size: 0.86rem;
+  line-height: 1.15;
 }
 
 .cursor-talk-card small {
   color: #566174;
-  font-size: 0.68rem;
+  font-size: 0.67rem;
   font-weight: 700;
   line-height: 1.25;
 }
@@ -489,12 +493,32 @@ button {
 
 .cursor-action-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 5px;
 }
 
+.cursor-more-actions {
+  margin-top: 1px;
+}
+
+.cursor-more-actions summary {
+  width: max-content;
+  list-style: none;
+  color: #5f6d80;
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.cursor-more-actions summary::-webkit-details-marker {
+  display: none;
+}
+
+.cursor-more-actions .cursor-action-row {
+  margin-top: 5px;
+}
+
 .cursor-action-row button {
-  min-height: 28px;
+  min-height: 30px;
   padding: 5px 6px;
   border: 1px solid rgba(22, 99, 215, 0.22);
   border-radius: 7px;
@@ -902,13 +926,13 @@ dd {
 
 @keyframes cursor-trace-fade {
   from {
-    opacity: 0.78;
+    opacity: 0.62;
     transform: translate(-50%, -50%) scale(0.72);
   }
 
   to {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(1.9);
+    transform: translate(-50%, -50%) scale(1.55);
   }
 }
 

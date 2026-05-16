@@ -34,7 +34,7 @@
             <span>Safe demo mode: no screen capture, no real clicks, no memory writes.</span>
           </div>
 
-          <aside class="media-bin" data-target-id="media_bin">
+          <aside class="media-bin" data-target-id="media_bin" data-entity-kind="clip asset" data-target-role="asset library">
             <h2>Media Bin</h2>
             <button type="button">Interview_A_cam_001</button>
             <button type="button">B-roll_city_evening</button>
@@ -48,7 +48,7 @@
             </div>
           </section>
 
-          <section class="node-graph" data-target-id="node_graph" aria-label="Node Graph">
+          <section class="node-graph" data-target-id="node_graph" data-entity-kind="node graph" data-target-role="color workspace" aria-label="Node Graph">
             <h2>Node Graph</h2>
             <div class="node-row">
               <span>01 Balance</span>
@@ -57,7 +57,7 @@
             </div>
           </section>
 
-          <aside class="inspector" data-target-id="inspector">
+          <aside class="inspector" data-target-id="inspector" data-entity-kind="settings panel" data-target-role="settings panel">
             <h2>Inspector</h2>
             <label>
               Temperature
@@ -67,10 +67,10 @@
               Tint
               <input type="range" min="-100" max="100" value="-4" />
             </label>
-            <button type="button" class="lut-button" data-target-id="lut_menu">LUT Menu</button>
+            <button type="button" class="lut-button" data-target-id="lut_menu" data-entity-kind="tool menu" data-target-role="color tool menu">LUT Menu</button>
           </aside>
 
-          <section class="timeline" data-target-id="timeline" aria-label="Timeline">
+          <section class="timeline" data-target-id="timeline" data-entity-kind="timeline sequence" data-target-role="timeline" aria-label="Timeline">
             <h2>Timeline</h2>
             <div class="tracks">
               <span class="clip wide">Interview_A_cam_001</span>
@@ -82,7 +82,7 @@
           <nav class="page-switcher" aria-label="Workspace switcher">
             <button type="button">Media</button>
             <button type="button">Cut</button>
-            <button type="button" id="color-page-button" data-target-id="color_page_button">Color</button>
+            <button type="button" id="color-page-button" data-target-id="color_page_button" data-entity-kind="workspace button" data-target-role="workspace switcher">Color</button>
             <button type="button">Fairlight</button>
             <button type="button">Deliver</button>
           </nav>
@@ -99,18 +99,24 @@
           <div class="cursor-talk-card" id="cursor-talk-card" role="group" aria-label="Cortex pointer actions">
             <span id="pointer-status-label">Cortex sees</span>
             <strong id="pointer-target-label">this surface</strong>
+            <small id="pointer-entity-label">controlled demo entity</small>
             <small id="pointer-safety-label">Display only. You stay in control.</small>
-            <div class="cursor-action-row">
+            <div class="cursor-action-row cursor-primary-actions" id="pointer-command-suggestions">
               <button type="button" data-pointer-command="Explain this">Explain</button>
               <button type="button" data-pointer-command="What next?">Next</button>
+              <button type="button" data-pointer-command="Remember this">Remember</button>
+            </div>
+            <details class="cursor-more-actions">
+              <summary>More</summary>
+              <div class="cursor-action-row">
               <button type="button" data-pointer-voice="triple_click_voice_dialogue" title="Triple click starts a short voice back-and-forth">Voice</button>
               <button type="button" data-pointer-voice="press_hold_text_reply" title="Ask by voice, answer as text">Hold</button>
               <button type="button" data-pointer-voice="press_hold_action_only" title="Show the next cue without voice back">Silent</button>
               <button type="button" data-pointer-ai="openai_dry_run" title="Ask the text fallback using controlled demo facts only">AI</button>
               <button type="button" data-pointer-local="pin-target">Pin</button>
               <button type="button" data-pointer-local="select-target">Select</button>
-              <button type="button" data-pointer-command="Remember this">Remember</button>
             </div>
+            </details>
           </div>
           <div class="companion-dock" id="companion-dock" aria-live="polite">
             <strong id="dock-state">Pointer off</strong>
