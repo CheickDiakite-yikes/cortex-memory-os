@@ -112,6 +112,14 @@ The dashboard remains the review surface: the product moment is the
 pointer-side card, while the dashboard answers what happened and what stayed
 blocked.
 
+The 2026-05-16 user shell reset moves the default dashboard away from an
+engineering console. The primary nav is now only `Chats`, `Memories`, `Voice`,
+and `Settings`. Conversations show recent helper sessions and memory/voice
+shortcuts; Memories is the Memory Book; Voice holds assistant style and reply
+mode; Settings explains privacy and app boundaries. Developer receipts, routing,
+benchmarks, and capture controls remain available from Settings, but they are no
+longer the main user path.
+
 The 2026-05-04 child-readable home refinement makes the Overview a plain
 control pad instead of an ops wall. The first screen uses words a new user can
 understand quickly: Cortex is ready, ask the helper, start cursor, memory book,
@@ -148,6 +156,8 @@ The generated dashboard concept established the first visual direction:
 - dense but readable operational UI, not a landing page.
 - a child-readable home that exposes plain-language actions before operational
   receipts.
+- a user shell whose primary tabs are Chats, Memories, Voice, and Settings, with
+  Developer detail reachable but not part of the default nav.
 
 ## Data Boundary
 
@@ -180,6 +190,12 @@ tokens.
 
 The static app in `ui/cortex-dashboard/` must render:
 
+- `DASHBOARD-USER-CONVERSATIONS-001`, the default user surface for past helper
+  sessions, saved-memory shortcuts, voice choices, and a simple search box;
+- `DASHBOARD-VOICE-SETTINGS-001`, a gated voice preference surface for assistant
+  style and reply mode while microphone access remains off;
+- `DASHBOARD-USER-SETTINGS-001`, a plain settings surface for memory review,
+  helper pointer behavior, screen-capture state, and developer access;
 - a simplified child-readable home for `DASHBOARD-USER-HOME-001`, with "Ask the
   helper", "Start cursor", "Memory book", "Things learned", "Safety lock", and
   plain safety lights for helper cursor, screen saving, memory, and secrets;

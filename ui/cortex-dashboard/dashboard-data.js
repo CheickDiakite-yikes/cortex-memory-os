@@ -83,7 +83,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "stop_button_label": "Stop Observation"
     },
     "ephemeral_raw_ref_policy": {
-      "auto_delete_at": "2026-05-15T17:00:37.623018Z",
+      "auto_delete_at": "2026-05-16T00:14:13.604111Z",
       "durable_storage_allowed": false,
       "memory_write_allowed_from_raw": false,
       "policy_id": "REAL-CAPTURE-EPHEMERAL-RAW-REF-001",
@@ -92,7 +92,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "storage_root": "/var/folders/vv/nxhl855j0mxb1r8c6qdtfhnw0000gn/T/cortex/raw_refs",
       "ttl_seconds": 600
     },
-    "generated_at": "2026-05-15T16:50:37.623018Z",
+    "generated_at": "2026-05-16T00:04:13.604111Z",
     "intent": {
       "accessibility_requested": true,
       "capture_scope": "session_only",
@@ -112,7 +112,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "browser_dependency": false,
       "bubble_anchor_ready": true,
       "capture_started": false,
-      "checked_at": "2026-05-15T16:50:37.623018Z",
+      "checked_at": "2026-05-16T00:04:13.604111Z",
       "config": {
         "allowed_effects": [
           "read_global_cursor_position",
@@ -154,12 +154,12 @@ window.CORTEX_DASHBOARD_DATA = {
       },
       "cursor_samples": [
         {
-          "timestamp": "2026-05-15T16:50:37.623018Z",
+          "timestamp": "2026-05-16T00:04:13.604111Z",
           "x": 120.0,
           "y": 240.0
         },
         {
-          "timestamp": "2026-05-15T16:50:37.623018Z",
+          "timestamp": "2026-05-16T00:04:13.604111Z",
           "x": 180.0,
           "y": 260.0
         }
@@ -257,7 +257,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "accessibility_ready": false,
       "can_start_cursor_overlay": true,
       "can_start_screen_capture": false,
-      "checked_at": "2026-05-15T16:50:37.623018Z",
+      "checked_at": "2026-05-16T00:04:13.604111Z",
       "durable_memory_write_allowed": false,
       "missing_permissions": [
         "screen_recording",
@@ -337,7 +337,7 @@ window.CORTEX_DASHBOARD_DATA = {
         "accessibility_ready": false,
         "can_start_cursor_overlay": true,
         "can_start_screen_capture": false,
-        "checked_at": "2026-05-15T16:50:37.623018Z",
+        "checked_at": "2026-05-16T00:04:13.604111Z",
         "durable_memory_write_allowed": false,
         "missing_permissions": [
           "screen_recording",
@@ -436,7 +436,7 @@ window.CORTEX_DASHBOARD_DATA = {
     "can_real_capture_now": false,
     "display_only": true,
     "external_effect_enabled": false,
-    "generated_at": "2026-05-15T16:50:37.623018Z",
+    "generated_at": "2026-05-16T00:04:13.604111Z",
     "ladder_id": "CAPTURE-READINESS-LADDER-001",
     "memory_write_allowed": false,
     "next_step_label": "Permission preflight",
@@ -771,7 +771,7 @@ window.CORTEX_DASHBOARD_DATA = {
     "encrypted_index_search_result_count": 1,
     "gateway_blocked_count": 27,
     "gateway_executed_count": 7,
-    "generated_at": "2026-05-15T16:50:37.623018Z",
+    "generated_at": "2026-05-16T00:04:13.604111Z",
     "local_only": true,
     "mutation_enabled": false,
     "native_receipt_count": 1,
@@ -804,7 +804,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "budget_estimated_prompt_tokens": 84,
       "content_redacted": true,
       "fusion_diagnostic_count": 1,
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "goal": "primary source research synthesis",
       "next_step_count": 3,
       "policy_refs": [
@@ -817,14 +817,14 @@ window.CORTEX_DASHBOARD_DATA = {
       "summary_id": "DASHBOARD-CONTEXT-PACK-LIVE-SUMMARY-001",
       "warning_count": 2
     },
-    "generated_at": "2026-05-15T16:50:37.623018Z",
+    "generated_at": "2026-05-16T00:04:13.604111Z",
     "ops_quality": {
       "all_passed": true,
       "artifact_name": "bench_20260501T010628Z.json",
       "artifact_payload_redacted": true,
       "content_redacted": true,
       "failed_cases": 0,
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "invalid_identifier_count": 0,
       "latest_run_id": "bench_20260501T010628Z",
       "panel_id": "DASHBOARD-OPS-QUALITY-PANEL-001",
@@ -852,7 +852,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "executed_count": 7,
       "external_effect_count": 0,
       "failed_count": 0,
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation_count": 20,
       "policy_refs": [
         "policy_dashboard_gateway_runtime_readonly_v1"
@@ -868,7 +868,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": true,
           "gateway_tool": "memory.explain",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": false,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -902,7 +902,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "memory.correct",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -932,7 +932,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "memory.forget",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -962,7 +962,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "memory.export",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": false,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -987,7 +987,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": true,
           "gateway_tool": "memory.explain",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": false,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1021,7 +1021,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "memory.correct",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1051,7 +1051,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "memory.forget",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1081,7 +1081,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "memory.export",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": false,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1106,7 +1106,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": true,
           "gateway_tool": "memory.explain",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": false,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1140,7 +1140,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "memory.correct",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1170,7 +1170,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "memory.forget",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1200,7 +1200,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "memory.export",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": false,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1225,7 +1225,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": true,
           "gateway_tool": "memory.explain",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": false,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1259,7 +1259,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "memory.correct",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1289,7 +1289,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "memory.forget",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1319,7 +1319,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "memory.export",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": false,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1344,7 +1344,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": true,
           "gateway_tool": "skill.review_candidate",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": false,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1377,7 +1377,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "skill.execute_draft",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": false,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1407,7 +1407,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "skill.approve_draft_only",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1437,7 +1437,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "skill.edit_candidate",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1466,7 +1466,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "skill.need_more_data",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1496,7 +1496,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "skill.reject_candidate",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1521,7 +1521,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": true,
           "gateway_tool": "skill.review_candidate",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": false,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1554,7 +1554,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "skill.execute_draft",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": false,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1584,7 +1584,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "skill.approve_draft_only",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1614,7 +1614,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "skill.edit_candidate",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1643,7 +1643,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "skill.need_more_data",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1673,7 +1673,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "skill.reject_candidate",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1698,7 +1698,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": true,
           "gateway_tool": "skill.review_candidate",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": false,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1731,7 +1731,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "skill.execute_draft",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": false,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1761,7 +1761,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "skill.approve_draft_only",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1791,7 +1791,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "skill.edit_candidate",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1820,7 +1820,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "skill.need_more_data",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1850,7 +1850,7 @@ window.CORTEX_DASHBOARD_DATA = {
           "external_effect": false,
           "gateway_called": false,
           "gateway_tool": "skill.reject_candidate",
-          "generated_at": "2026-05-15T16:50:37.623018Z",
+          "generated_at": "2026-05-16T00:04:13.604111Z",
           "mutation": true,
           "policy_refs": [
             "policy_dashboard_gateway_runtime_readonly_v1"
@@ -1874,7 +1874,7 @@ window.CORTEX_DASHBOARD_DATA = {
         "execution_mode": "draft_only",
         "external_effect": false,
         "failure_mode_count": 3,
-        "generated_at": "2026-05-15T16:50:37.623018Z",
+        "generated_at": "2026-05-16T00:04:13.604111Z",
         "learned_from_count": 3,
         "maturity_level": 2,
         "mutation": false,
@@ -1895,7 +1895,7 @@ window.CORTEX_DASHBOARD_DATA = {
         "execution_mode": "draft_only",
         "external_effect": false,
         "failure_mode_count": 2,
-        "generated_at": "2026-05-15T16:50:37.623018Z",
+        "generated_at": "2026-05-16T00:04:13.604111Z",
         "learned_from_count": 3,
         "maturity_level": 2,
         "mutation": false,
@@ -1916,7 +1916,7 @@ window.CORTEX_DASHBOARD_DATA = {
         "execution_mode": "draft_only",
         "external_effect": false,
         "failure_mode_count": 2,
-        "generated_at": "2026-05-15T16:50:37.623018Z",
+        "generated_at": "2026-05-16T00:04:13.604111Z",
         "learned_from_count": 3,
         "maturity_level": 2,
         "mutation": false,
@@ -2027,7 +2027,7 @@ window.CORTEX_DASHBOARD_DATA = {
     "The Overview now starts with a child-readable home instead of exposed benchmark machinery."
   ],
   "durable_synthetic_memory_receipt": {
-    "audit_event_id": "audit_durable_synthetic_memory_20260515T165037Z",
+    "audit_event_id": "audit_durable_synthetic_memory_20260516T000413Z",
     "audit_human_visible": true,
     "audit_written": true,
     "content_redacted": true,
@@ -2035,20 +2035,20 @@ window.CORTEX_DASHBOARD_DATA = {
     "durable_private_memory_written": false,
     "durable_synthetic_memory_written": true,
     "encrypted_store_used": true,
-    "generated_at": "2026-05-15T16:50:37.623018Z",
+    "generated_at": "2026-05-16T00:04:13.604111Z",
     "graph_write_receipt": {
       "content_redacted": true,
       "edge_id": "edge_durable_synthetic_receipt_debug",
       "graph_terms_redacted": true,
       "graph_token_digest_count": 4,
-      "payload_sha256": "9a420dde5bf694e8c8782d763cf01726facb36629c8c6d01caa2c7f82a3dc499",
+      "payload_sha256": "d10587934c25005a5d7803b3b413cacafd980eb0b102cb67f3deb3b4c51dc1a9",
       "policy_refs": [
         "policy_unified_encrypted_graph_index_v1"
       ],
       "related_memory_count": 1,
       "sealed_byte_count": 311,
       "source_refs_redacted": true,
-      "stored_at": "2026-05-15T16:50:37.623018Z"
+      "stored_at": "2026-05-16T00:04:13.604111Z"
     },
     "index_write_receipt": {
       "allowed_effects": [
@@ -2102,15 +2102,15 @@ window.CORTEX_DASHBOARD_DATA = {
           "status": "active"
         },
         "memory_id": "mem_durable_synthetic_receipt_debug",
-        "payload_sha256": "b027986c8bb54d29b1c9a9c2a735168619b55215b9ab46b77046ea728ccbdce3",
+        "payload_sha256": "116d8f1d16cab6e167a10c7ad4fc6b0ab03ce1014741c9af8874798e53140a5e",
         "policy_refs": [
           "policy_memory_encryption_default_v1"
         ],
         "sealed_byte_count": 795,
         "source_refs_redacted": true,
-        "stored_at": "2026-05-15T16:50:37.623018Z"
+        "stored_at": "2026-05-16T00:04:13.604111Z"
       },
-      "stored_at": "2026-05-15T16:50:37.623018Z",
+      "stored_at": "2026-05-16T00:04:13.604111Z",
       "token_digest_count": 22,
       "token_text_redacted": true
     },
@@ -2129,7 +2129,7 @@ window.CORTEX_DASHBOARD_DATA = {
     "raw_payload_included": false,
     "raw_ref_retained": false,
     "real_screen_capture_started": false,
-    "receipt_id": "durable_synthetic_receipt_20260515T165037Z",
+    "receipt_id": "durable_synthetic_receipt_20260516T000413Z",
     "search_receipt": {
       "candidate_open_count": 1,
       "considered_index_rows": 1,
@@ -2241,7 +2241,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.explain",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": false,
       "payload_preview": {
         "memory_id_or_visible_card_anchor": "mem_auth_redirect_root_cause"
@@ -2277,7 +2277,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.correct",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "corrected_content": "<redacted_user_supplied_value>",
@@ -2316,7 +2316,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.forget",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "explicit_delete_confirmation": "<required_at_confirmation>",
@@ -2355,7 +2355,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": true,
       "external_effect": false,
       "gateway_tool": "memory.export",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": false,
       "payload_preview": {
         "explicit_export_confirmation": "<required_at_confirmation>",
@@ -2389,7 +2389,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.explain",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": false,
       "payload_preview": {
         "memory_id_or_visible_card_anchor": "mem_smallest_safe_change"
@@ -2425,7 +2425,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.correct",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "corrected_content": "<redacted_user_supplied_value>",
@@ -2464,7 +2464,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.forget",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "explicit_delete_confirmation": "<required_at_confirmation>",
@@ -2503,7 +2503,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": true,
       "external_effect": false,
       "gateway_tool": "memory.export",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": false,
       "payload_preview": {
         "explicit_export_confirmation": "<required_at_confirmation>",
@@ -2537,7 +2537,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.explain",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": false,
       "payload_preview": {
         "memory_id_or_visible_card_anchor": "mem_linear_label_tracking"
@@ -2573,7 +2573,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.correct",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "corrected_content": "<redacted_user_supplied_value>",
@@ -2612,7 +2612,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.forget",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "explicit_delete_confirmation": "<required_at_confirmation>",
@@ -2651,7 +2651,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": true,
       "external_effect": false,
       "gateway_tool": "memory.export",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": false,
       "payload_preview": {
         "explicit_export_confirmation": "<required_at_confirmation>",
@@ -2685,7 +2685,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.explain",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": false,
       "payload_preview": {
         "memory_id_or_visible_card_anchor": "mem_research_depth_candidate"
@@ -2721,7 +2721,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.correct",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "corrected_content": "<redacted_user_supplied_value>",
@@ -2760,7 +2760,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "memory.forget",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "explicit_delete_confirmation": "<required_at_confirmation>",
@@ -2799,7 +2799,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": true,
       "external_effect": false,
       "gateway_tool": "memory.export",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": false,
       "payload_preview": {
         "explicit_export_confirmation": "<required_at_confirmation>",
@@ -2833,7 +2833,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.review_candidate",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": false,
       "payload_preview": {
         "skill_id": "skill_doc_doc_monthly_update_workflow_candidate_v1"
@@ -2868,7 +2868,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.execute_draft",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": false,
       "payload_preview": {
         "input_summary": "<redacted_user_supplied_value>",
@@ -2907,7 +2907,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.approve_draft_only",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -2946,7 +2946,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.edit_candidate",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -2986,7 +2986,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.need_more_data",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "reason": "<redacted_user_supplied_value>",
@@ -3025,7 +3025,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.reject_candidate",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -3059,7 +3059,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.review_candidate",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": false,
       "payload_preview": {
         "skill_id": "skill_frontend_auth_debugging_flow_v1"
@@ -3094,7 +3094,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.execute_draft",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": false,
       "payload_preview": {
         "input_summary": "<redacted_user_supplied_value>",
@@ -3133,7 +3133,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.approve_draft_only",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -3172,7 +3172,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.edit_candidate",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -3212,7 +3212,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.need_more_data",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "reason": "<redacted_user_supplied_value>",
@@ -3251,7 +3251,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.reject_candidate",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -3285,7 +3285,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.review_candidate",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": false,
       "payload_preview": {
         "skill_id": "skill_research_synthesis_blueprint_v1"
@@ -3320,7 +3320,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.execute_draft",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": false,
       "payload_preview": {
         "input_summary": "<redacted_user_supplied_value>",
@@ -3359,7 +3359,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.approve_draft_only",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -3398,7 +3398,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.edit_candidate",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -3438,7 +3438,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.need_more_data",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "reason": "<redacted_user_supplied_value>",
@@ -3477,7 +3477,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "data_egress": false,
       "external_effect": false,
       "gateway_tool": "skill.reject_candidate",
-      "generated_at": "2026-05-15T16:50:37.623018Z",
+      "generated_at": "2026-05-16T00:04:13.604111Z",
       "mutation": true,
       "payload_preview": {
         "approval_ref": "<required_at_confirmation>",
@@ -3501,7 +3501,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "target_ref": "skill_research_synthesis_blueprint_v1"
     }
   ],
-  "generated_at": "2026-05-15T16:50:37.623018Z",
+  "generated_at": "2026-05-16T00:04:13.604111Z",
   "insight_panels": [
     {
       "content_redacted": true,
@@ -3869,7 +3869,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "external_effect"
     ],
     "content_redacted": true,
-    "durable_receipt_id": "durable_synthetic_receipt_20260515T165037Z",
+    "durable_receipt_id": "durable_synthetic_receipt_20260516T000413Z",
     "encrypted_index_panel_id": "ENCRYPTED-INDEX-DASHBOARD-LIVE-001",
     "key_material_visible": false,
     "key_plan_id": "KEY-MANAGEMENT-PLAN-001",
@@ -3898,7 +3898,7 @@ window.CORTEX_DASHBOARD_DATA = {
     "encrypted_index_search_result_count": 1,
     "gateway_blocked_count": 27,
     "gateway_executed_count": 7,
-    "generated_at": "2026-05-15T16:50:37.623018Z",
+    "generated_at": "2026-05-16T00:04:13.604111Z",
     "mutation_enabled": false,
     "ops_passed_cases": 2,
     "panel_id": "LIVE-DASHBOARD-RECEIPTS-001",
@@ -4291,7 +4291,7 @@ window.CORTEX_DASHBOARD_DATA = {
       }
     ],
     "confirmation_required_count": 8,
-    "dashboard_id": "memory_palace_dashboard_20260515T165037Z",
+    "dashboard_id": "memory_palace_dashboard_20260516T000413Z",
     "export_preview": {
       "data_egress": true,
       "exportable_count": 3,
@@ -4313,7 +4313,7 @@ window.CORTEX_DASHBOARD_DATA = {
       ],
       "selection_mode": "explicit_ids"
     },
-    "generated_at": "2026-05-15T16:50:37.623018Z",
+    "generated_at": "2026-05-16T00:04:13.604111Z",
     "policy_refs": [
       "policy_memory_palace_dashboard_v1",
       "policy_memory_export_deletion_aware_v1",
@@ -4350,7 +4350,7 @@ window.CORTEX_DASHBOARD_DATA = {
     "display_only": true,
     "external_untrusted_count": 1,
     "feed_id": "NATIVE-SHADOW-POINTER-LIVE-FEED-001",
-    "generated_at": "2026-05-15T16:50:37.623018Z",
+    "generated_at": "2026-05-16T00:04:13.604111Z",
     "latest_observation_mode": "session",
     "latest_state": "observing",
     "memory_eligible_count": 0,
@@ -4369,38 +4369,26 @@ window.CORTEX_DASHBOARD_DATA = {
     {
       "active": true,
       "count": null,
-      "item_id": "overview",
-      "label": "Overview"
+      "item_id": "chats",
+      "label": "Chats"
     },
     {
       "active": false,
       "count": 4,
-      "item_id": "memory_palace",
-      "label": "Memory Palace"
-    },
-    {
-      "active": false,
-      "count": 3,
-      "item_id": "skill_forge",
-      "label": "Skill Forge"
+      "item_id": "memories",
+      "label": "Memories"
     },
     {
       "active": false,
       "count": null,
-      "item_id": "agent_gateway",
-      "label": "Agent Gateway"
-    },
-    {
-      "active": false,
-      "count": 2,
-      "item_id": "audit",
-      "label": "Audit"
+      "item_id": "voice",
+      "label": "Voice"
     },
     {
       "active": false,
       "count": null,
-      "item_id": "policies",
-      "label": "Policies"
+      "item_id": "settings",
+      "label": "Settings"
     }
   ],
   "policy_refs": [
@@ -4491,7 +4479,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "evidence_only": 1,
       "included": 1
     },
-    "generated_at": "2026-05-15T16:50:37.623018Z",
+    "generated_at": "2026-05-16T00:04:13.604111Z",
     "hostile_text_included": false,
     "policy_refs": [
       "policy_retrieval_receipts_dashboard_v1",
@@ -4513,7 +4501,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_memory_created",
       "state": "healthy",
       "target_ref": "mem_smallest_safe_change",
-      "timestamp": "2026-05-15T16:50:37.623018Z"
+      "timestamp": "2026-05-16T00:04:13.604111Z"
     },
     {
       "actor": "system",
@@ -4522,7 +4510,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_memory_export_preview",
       "state": "neutral",
       "target_ref": "export_preview_project_scope",
-      "timestamp": "2026-05-15T16:50:37.623018Z"
+      "timestamp": "2026-05-16T00:04:13.604111Z"
     },
     {
       "actor": "system",
@@ -4531,7 +4519,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_skill_candidate_created",
       "state": "healthy",
       "target_ref": "skill_frontend_auth_debugging_flow_v1",
-      "timestamp": "2026-05-15T16:50:37.623018Z"
+      "timestamp": "2026-05-16T00:04:13.604111Z"
     },
     {
       "actor": "user",
@@ -4540,7 +4528,7 @@ window.CORTEX_DASHBOARD_DATA = {
       "receipt_id": "receipt_observation_paused",
       "state": "warning",
       "target_ref": "session_20260430",
-      "timestamp": "2026-05-15T16:50:37.623018Z"
+      "timestamp": "2026-05-16T00:04:13.604111Z"
     }
   ],
   "safety_notes": [
@@ -5126,8 +5114,8 @@ window.CORTEX_DASHBOARD_DATA = {
       }
     ],
     "external_effect_action_count": 0,
-    "generated_at": "2026-05-15T16:50:37.623018Z",
-    "list_id": "skill_forge_candidate_list_20260515T165037Z",
+    "generated_at": "2026-05-16T00:04:13.604111Z",
+    "list_id": "skill_forge_candidate_list_20260516T000413Z",
     "policy_refs": [
       "policy_skill_forge_candidate_list_v1"
     ],
@@ -5249,7 +5237,7 @@ window.CORTEX_DASHBOARD_DATA = {
     ],
     "content_redacted": true,
     "dashboard_id": "SKILL-METRICS-DASHBOARD-SURFACE-001",
-    "generated_at": "2026-05-15T16:50:37.623018Z",
+    "generated_at": "2026-05-16T00:04:13.604111Z",
     "policy_refs": [
       "policy_skill_metrics_dashboard_surface_v1",
       "policy_skill_success_metrics_v1"

@@ -508,24 +508,14 @@ def build_dashboard_shell(*, now: datetime | None = None) -> CortexDashboardShel
             ),
         ],
         nav_items=[
-            DashboardNavItem(item_id="overview", label="Overview", active=True),
+            DashboardNavItem(item_id="chats", label="Chats", active=True),
             DashboardNavItem(
-                item_id="memory_palace",
-                label="Memory Palace",
+                item_id="memories",
+                label="Memories",
                 count=len(memory_dashboard.cards),
             ),
-            DashboardNavItem(
-                item_id="skill_forge",
-                label="Skill Forge",
-                count=skill_list.candidate_count,
-            ),
-            DashboardNavItem(item_id="agent_gateway", label="Agent Gateway"),
-            DashboardNavItem(
-                item_id="audit",
-                label="Audit",
-                count=len(_sample_audit_events(timestamp)),
-            ),
-            DashboardNavItem(item_id="policies", label="Policies"),
+            DashboardNavItem(item_id="voice", label="Voice"),
+            DashboardNavItem(item_id="settings", label="Settings"),
         ],
         memory_palace=memory_dashboard,
         skill_forge=skill_list,
@@ -672,7 +662,7 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
     ui_text = "\n".join(path.read_text(encoding="utf-8") for path in ui_paths if path.exists())
     required_ui_terms = [
         DASHBOARD_SHELL_ID,
-        "Save, find, fix, or forget",
+        "Saved memories",
         "MANUAL-MEMORY-BOOK-001",
         "Tell Cortex what to remember.",
         "Save memory",
@@ -711,6 +701,15 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "applyActiveView",
         "View updated locally",
         "window.CORTEX_DASHBOARD_DATA",
+        "DASHBOARD-USER-CONVERSATIONS-001",
+        "DASHBOARD-VOICE-SETTINGS-001",
+        "DASHBOARD-USER-SETTINGS-001",
+        "USER_NAV_ITEMS",
+        "Pick up where you left off.",
+        "Chats",
+        "Memories",
+        "Voice",
+        "Settings",
         "DASHBOARD-USER-HOME-001",
         "renderHomeCommandCenter",
         "Cortex is ready.",
@@ -787,6 +786,8 @@ def run_dashboard_shell_smoke() -> DashboardShellSmokeResult:
         "Agentic OS Kernel",
         AGENTIC_OS_PLANNER_ID,
         "child-readable home",
+        "user shell",
+        "Chats, Memories, Voice, and Settings",
     ]
     missing_doc_terms = _missing_terms(doc_text, required_doc_terms)
     action_plans_present = any(

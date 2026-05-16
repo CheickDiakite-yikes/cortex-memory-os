@@ -47,6 +47,27 @@ const icons = {
   check: '<path d="m5 12 4 4L19 6"/>',
   pause: '<path d="M9 5v14"/><path d="M15 5v14"/>',
   route: '<path d="M6 4h12"/><path d="M6 20h12"/><circle cx="6" cy="4" r="2"/><circle cx="18" cy="20" r="2"/><path d="M6 6c0 7 12 5 12 12"/>',
+  chats: '<path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v4A3.5 3.5 0 0 1 15.5 14H10l-5 4v-4.2A3.5 3.5 0 0 1 2 10.5v-4Z"/><path d="M8 8h8"/><path d="M8 11h5"/>',
+  memories: '<path d="M6 4h9a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V5a1 1 0 0 1 1-1Z"/><path d="M8 4v13a3 3 0 0 0 3 3"/><path d="M9 8h6"/><path d="M9 11h5"/>',
+  voice: '<path d="M12 3v18"/><path d="M7 8v8"/><path d="M17 8v8"/><path d="M4 11v2"/><path d="M20 11v2"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="M4.93 4.93 7.05 7.05"/><path d="m16.95 16.95 2.12 2.12"/><path d="M2 12h3"/><path d="M19 12h3"/><path d="m4.93 19.07 2.12-2.12"/><path d="m16.95 7.05 2.12-2.12"/>',
+  developer: '<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h10"/><path d="M17 15l3 2-3 2"/>',
+};
+
+const USER_NAV_ITEMS = [
+  { item_id: "chats", label: "Chats", count: null },
+  { item_id: "memories", label: "Memories", count: 0 },
+  { item_id: "voice", label: "Voice", count: null },
+  { item_id: "settings", label: "Settings", count: null },
+];
+
+const VIEW_ALIASES = {
+  overview: "chats",
+  memory_palace: "memories",
+  skill_forge: "developer",
+  agent_gateway: "chats",
+  audit: "developer",
+  policies: "settings",
 };
 
 let memoryFilter = "all";
@@ -57,35 +78,30 @@ const gatewayReceiptByAction = new Map(
 );
 const skillMetricById = new Map((data.skill_metrics?.cards || []).map((card) => [card.skill_id, card]));
 const viewCopy = {
-  overview: {
-    label: "Home",
-    title: "Cortex Home",
-    copy: "Pick one big button. Cortex will show what is on and what is off.",
+  chats: {
+    label: "Chats",
+    title: "Your Cortex",
+    copy: "Chats, memories, and voice settings.",
   },
-  memory_palace: {
-    label: "Book",
-    title: "Memory Book",
-    copy: "See and fix what Cortex thinks it knows.",
+  memories: {
+    label: "Memories",
+    title: "Saved memories",
+    copy: "Everything Cortex remembers, with fix and forget controls.",
   },
-  skill_forge: {
-    label: "Learn",
-    title: "Things Cortex Learned",
-    copy: "Check the workflows Cortex can draft for you.",
+  voice: {
+    label: "Voice",
+    title: "Agent voice",
+    copy: "Choose how your assistant sounds and when it speaks.",
   },
-  agent_gateway: {
-    label: "Help",
-    title: "Helper Cursor Controls",
-    copy: "Start, stop, and test the blue helper cursor.",
+  settings: {
+    label: "Settings",
+    title: "Settings",
+    copy: "Privacy, memory, and app preferences.",
   },
-  audit: {
-    label: "Log",
-    title: "What Happened",
-    copy: "A simple list of what Cortex previewed or blocked.",
-  },
-  policies: {
-    label: "Safe",
-    title: "Safety Lock",
-    copy: "See what is on, off, allowed, and blocked.",
+  developer: {
+    label: "Developer",
+    title: "Developer view",
+    copy: "Receipts, routing, benchmarks, and safety internals.",
   },
 };
 let activeView = initialView();
@@ -140,8 +156,8 @@ function ensureLiveCommandReceipt() {
   return liveReceipt;
 }
 
-async function callCaptureControl(action, payload = {}) {
-  return callCaptureControlWithConfig(action, payload, { refreshed: false });
+async function callCaptureControl(action, payload = {}, options = {}) {
+  return callCaptureControlWithConfig(action, payload, { refreshed: false, silent: options.silent });
 }
 
 async function refreshCaptureControlConfig() {
@@ -169,9 +185,9 @@ async function callCaptureControlWithConfig(action, payload = {}, options = {}) 
   }
   if (!captureControlConfig?.token) {
     if (!options.refreshed) {
-      writeReceipt("Capture bridge token unavailable. Refreshing local config once.");
+      if (!options.silent) writeReceipt("Capture bridge token unavailable. Refreshing local config once.");
       await refreshCaptureControlConfig();
-      return callCaptureControlWithConfig(action, payload, { refreshed: true });
+      return callCaptureControlWithConfig(action, payload, { refreshed: true, silent: options.silent });
     }
     throw new Error("capture control token is unavailable");
   }
@@ -206,9 +222,9 @@ async function callCaptureControlWithConfig(action, payload = {}, options = {}) 
       !options.refreshed &&
       receipt.error_code === "missing_or_invalid_capture_token"
     ) {
-      writeReceipt("Capture bridge token refreshed. Retrying local command once.");
+      if (!options.silent) writeReceipt("Capture bridge token refreshed. Retrying local command once.");
       await refreshCaptureControlConfig();
-      return callCaptureControlWithConfig(action, payload, { refreshed: true });
+      return callCaptureControlWithConfig(action, payload, { refreshed: true, silent: options.silent });
     }
     throw new Error(receipt.error_code || `capture control ${action} failed`);
   }
@@ -221,9 +237,9 @@ async function callMemoryBook(action, payload = {}, options = {}) {
   }
   if (!captureControlConfig?.token) {
     if (!options.refreshed) {
-      writeReceipt("Memory Book token unavailable. Refreshing local config once.");
+      if (!options.silent) writeReceipt("Memory Book token unavailable. Refreshing local config once.");
       await refreshCaptureControlConfig();
-      return callMemoryBook(action, payload, { refreshed: true });
+      return callMemoryBook(action, payload, { refreshed: true, silent: options.silent });
     }
     throw new Error("Memory Book token is unavailable.");
   }
@@ -258,9 +274,9 @@ async function callMemoryBook(action, payload = {}, options = {}) {
       !options.refreshed &&
       result.error_code === "missing_or_invalid_capture_token"
     ) {
-      writeReceipt("Memory Book token refreshed. Retrying once.");
+      if (!options.silent) writeReceipt("Memory Book token refreshed. Retrying once.");
       await refreshCaptureControlConfig();
-      return callMemoryBook(action, payload, { refreshed: true });
+      return callMemoryBook(action, payload, { refreshed: true, silent: options.silent });
     }
     throw new Error(result.user_message || result.error_code || `Memory Book ${action} failed.`);
   }
@@ -273,9 +289,9 @@ async function callAgenticTurnBridge(action, payload = {}, options = {}) {
   }
   if (!captureControlConfig?.token) {
     if (!options.refreshed) {
-      writeReceipt("Agentic bridge token unavailable. Refreshing local config once.");
+      if (!options.silent) writeReceipt("Agentic bridge token unavailable. Refreshing local config once.");
       await refreshCaptureControlConfig();
-      return callAgenticTurnBridge(action, payload, { refreshed: true });
+      return callAgenticTurnBridge(action, payload, { refreshed: true, silent: options.silent });
     }
     throw new Error("Agentic bridge token is unavailable.");
   }
@@ -300,9 +316,9 @@ async function callAgenticTurnBridge(action, payload = {}, options = {}) {
       !options.refreshed &&
       result.error_code === "missing_or_invalid_capture_token"
     ) {
-      writeReceipt("Agentic bridge token refreshed. Retrying local run once.");
+      if (!options.silent) writeReceipt("Agentic bridge token refreshed. Retrying local run once.");
       await refreshCaptureControlConfig();
-      return callAgenticTurnBridge(action, payload, { refreshed: true });
+      return callAgenticTurnBridge(action, payload, { refreshed: true, silent: options.silent });
     }
     throw new Error(result.user_message || result.error_code || `Agentic bridge ${action} failed.`);
   }
@@ -336,13 +352,14 @@ async function refreshAgenticRun({ silent = false } = {}) {
   renderAgenticOSPanel();
   try {
     const [latest, receipts] = await Promise.all([
-      callAgenticTurnBridge("latest"),
-      callAgenticTurnBridge("receipts"),
+      callAgenticTurnBridge("latest", {}, { silent }),
+      callAgenticTurnBridge("receipts", {}, { silent }),
     ]);
     agenticRunState.latest = latest;
     agenticRunState.receipts = receipts.receipts || [];
     agenticRunState.loading = false;
     renderAgenticOSPanel();
+    renderConversationHome();
     if (!silent) {
       writeReceipt(`Live agentic run loaded: ${latest.receipt.target_label}, ${latest.receipt.route_kind}, ${latest.receipt.gateway_tool}.`);
     }
@@ -366,6 +383,7 @@ async function triggerControlledAgenticTurn() {
     agenticRunState.receipts = receipts.receipts || [];
     agenticRunState.loading = false;
     renderAgenticOSPanel();
+    renderConversationHome();
     updateCaptureRuntime(helperStatus);
     writeReceipt(turn.receipt.user_visible_summary);
   } catch (error) {
@@ -387,10 +405,10 @@ async function refreshMemoryBook({ silent = false } = {}) {
   renderMemoryBookLive();
   try {
     const [list, audit, status, snapshot] = await Promise.all([
-      callMemoryBook("list"),
-      callMemoryBook("audit"),
-      callMemoryBook("status"),
-      callMemoryBook("snapshot"),
+      callMemoryBook("list", {}, { silent }),
+      callMemoryBook("audit", {}, { silent }),
+      callMemoryBook("status", {}, { silent }),
+      callMemoryBook("snapshot", {}, { silent }),
     ]);
     memoryBookState.cards = list.cards || [];
     memoryBookState.auditEvents = audit.events || [];
@@ -399,6 +417,7 @@ async function refreshMemoryBook({ silent = false } = {}) {
     memoryBookState.lastReceipt = list.receipt;
     memoryBookState.loading = false;
     renderNav();
+    renderConversationHome();
     renderHomeCommandCenter();
     renderMemoryBookLive();
     if (!silent) {
@@ -426,16 +445,21 @@ function formatCaptureSkipReason(reason) {
   return formatToken(reason || "none");
 }
 
+function normalizeView(view) {
+  if (viewCopy[view]) return view;
+  return VIEW_ALIASES[view] || "chats";
+}
+
 function initialView() {
   const hashView = window.location.hash.replace("#", "");
-  if (viewCopy[hashView]) return hashView;
+  if (hashView) return normalizeView(hashView);
   const queryView = new URLSearchParams(window.location.search).get("view");
-  if (queryView && viewCopy[queryView]) return queryView;
-  return "overview";
+  if (queryView) return normalizeView(queryView);
+  return "chats";
 }
 
 function updateHeaderForView() {
-  const copy = viewCopy[activeView] || viewCopy.overview;
+  const copy = viewCopy[activeView] || viewCopy.chats;
   document.querySelector("#view-label").textContent = copy.label;
   document.querySelector("#view-title").textContent = copy.title;
   document.querySelector("#view-copy").textContent = copy.copy;
@@ -453,7 +477,7 @@ function applyActiveView() {
   });
   const workspace = document.querySelector(".workspace-grid");
   if (workspace) {
-    workspace.classList.toggle("single-view", ["memory_palace", "skill_forge"].includes(activeView));
+    workspace.classList.toggle("single-view", ["memories", "developer"].includes(activeView));
   }
 }
 
@@ -500,18 +524,18 @@ function focusFromSkill(card) {
 }
 
 function ensureFocusForActiveView() {
-  if (activeView === "memory_palace" && selectedFocus?.subject_type !== "memory") {
+  if (activeView === "memories" && selectedFocus?.subject_type !== "memory") {
     const card = filteredMemories()[0] || data.memory_palace.cards[0];
     if (card) selectedFocus = focusFromMemory(card);
   }
-  if (activeView === "skill_forge" && selectedFocus?.subject_type !== "skill") {
+  if (activeView === "developer" && selectedFocus?.subject_type !== "skill") {
     const card = filteredSkills()[0] || data.skill_forge.cards[0];
     if (card) selectedFocus = focusFromSkill(card);
   }
 }
 
 function setActiveView(view) {
-  activeView = viewCopy[view] ? view : "overview";
+  activeView = normalizeView(view);
   ensureFocusForActiveView();
   renderNav();
   applyActiveView();
@@ -524,11 +548,13 @@ function setActiveView(view) {
 
 function renderNav() {
   const nav = document.querySelector("#nav-list");
-  nav.innerHTML = data.nav_items
+  nav.innerHTML = USER_NAV_ITEMS
     .map(
       (item) => {
-        const count = item.item_id === "memory_palace"
+        const count = item.item_id === "memories"
           ? memoryBookState.cards.length
+          : item.item_id === "chats"
+            ? conversationItems().length
           : item.count;
         return `
         <button class="nav-item ${item.item_id === activeView ? "active" : ""}" type="button" data-nav="${escapeHtml(item.item_id)}" title="${escapeHtml(viewCopy[item.item_id]?.label || item.label)}" aria-pressed="${item.item_id === activeView ? "true" : "false"}">
@@ -545,6 +571,279 @@ function renderNav() {
     button.addEventListener("click", () => {
       setActiveView(button.dataset.nav);
     });
+  });
+}
+
+function conversationItems() {
+  const latest = agenticRunState.latest?.receipt;
+  const memoryCount = memoryBookState.cards.length;
+  const latestTarget = latest?.target_label || "the blue helper";
+  return [
+    {
+      item_id: "helper-session",
+      eyebrow: "Live helper",
+      title: latest ? `Helper worked on ${latestTarget}` : "Start a helper session",
+      detail: latest
+        ? latest.user_visible_summary
+        : "Ask Cortex to point, explain, or help you remember something after review.",
+      meta: latest ? `Route: ${formatToken(latest.route_kind)}` : "Ready",
+      view: "chats",
+      action: latest ? "See latest" : "Start",
+      icon: "pointer",
+    },
+    {
+      item_id: "saved-memories",
+      eyebrow: "Memory",
+      title: "Saved memories",
+      detail: `${memoryCount} ${memoryCount === 1 ? "memory" : "memories"} saved locally. Fix or forget anything from one place.`,
+      meta: "Local Memory Book",
+      view: "memories",
+      action: "Open",
+      icon: "memories",
+    },
+    {
+      item_id: "voice-choice",
+      eyebrow: "Voice",
+      title: "Agent voice",
+      detail: "Choose a calm, text-only, or spoken assistant style before realtime voice is turned on.",
+      meta: "Voice settings",
+      view: "voice",
+      action: "Choose",
+      icon: "voice",
+    },
+  ];
+}
+
+function renderConversationHome() {
+  const target = document.querySelector("#conversation-home");
+  if (!target) return;
+  const helperUrl = data.live_tutor_panel?.demo_url || "http://127.0.0.1:8797/";
+  const items = conversationItems();
+  target.innerHTML = `
+    <section class="conversation-hero" aria-label="Cortex conversations">
+      <div>
+        <p class="section-label">Cortex</p>
+        <h2>Pick up where you left off.</h2>
+        <p>Your helper sessions, saved memories, and voice choices live here. Builder details stay out of the way.</p>
+      </div>
+      <div class="quick-memory-card" aria-label="Memory status">
+        <span>${svgIcon("memories")}</span>
+        <strong>${escapeHtml(memoryBookState.cards.length)} saved</strong>
+        <small>Memories only save when you ask.</small>
+      </div>
+    </section>
+    <form class="conversation-ask" id="conversation-ask-form" aria-label="Ask Cortex">
+      <label for="conversation-question">Ask Cortex</label>
+      <div>
+        <input id="conversation-question" type="search" placeholder="Search chats or memories" autocomplete="off" />
+        <button class="text-command primary-command" type="submit">Ask</button>
+      </div>
+    </form>
+    <div class="conversation-actions" aria-label="Primary Cortex actions">
+      <a class="conversation-action primary" href="${escapeHtml(helperUrl)}">
+        <span>${svgIcon("pointer")}</span>
+        <strong>Open helper</strong>
+        <small>Blue pointer demo</small>
+      </a>
+      <button class="conversation-action" type="button" data-user-view="memories">
+        <span>${svgIcon("memories")}</span>
+        <strong>Memory Book</strong>
+        <small>Save, find, fix, forget</small>
+      </button>
+      <button class="conversation-action" type="button" data-user-view="voice">
+        <span>${svgIcon("voice")}</span>
+        <strong>Voice</strong>
+        <small>Choose agent sound</small>
+      </button>
+      <button class="conversation-action" type="button" data-user-view="settings">
+        <span>${svgIcon("settings")}</span>
+        <strong>Settings</strong>
+        <small>Privacy and apps</small>
+      </button>
+    </div>
+    <section class="conversation-list" aria-label="Past chats and sessions">
+      <div class="user-section-heading">
+        <h2>Recent</h2>
+      </div>
+      ${items
+        .map(
+          (item) => `
+            <article class="conversation-card" data-conversation-id="${escapeHtml(item.item_id)}">
+              <span class="conversation-icon">${svgIcon(item.icon)}</span>
+              <div>
+                <em>${escapeHtml(item.eyebrow)}</em>
+                <strong>${escapeHtml(item.title)}</strong>
+                <p>${escapeHtml(item.detail)}</p>
+                <small>${escapeHtml(item.meta)}</small>
+              </div>
+              <button class="text-command" type="button" data-user-view="${escapeHtml(item.view)}">${escapeHtml(item.action)}</button>
+            </article>
+          `,
+        )
+        .join("")}
+    </section>
+  `;
+
+  target.querySelector("#conversation-ask-form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const query = target.querySelector("#conversation-question")?.value.trim();
+    if (!query) {
+      writeReceipt("Ask Cortex needs a few words first.");
+      return;
+    }
+    setActiveView("memories");
+    setTimeout(() => {
+      const askInput = document.querySelector("#manual-memory-question");
+      if (askInput) {
+        askInput.value = query;
+        askInput.focus();
+      }
+    }, 0);
+    writeReceipt("Cortex opened Memories so you can search your saved context.");
+  });
+  target.querySelectorAll("[data-user-view]").forEach((button) => {
+    button.addEventListener("click", () => setActiveView(button.dataset.userView));
+  });
+}
+
+const voiceChoiceState = {
+  selected: "calm_guide",
+  replyMode: "ask_first",
+};
+
+function renderVoiceSettings() {
+  const target = document.querySelector("#voice-settings");
+  if (!target) return;
+  const voices = [
+    {
+      id: "calm_guide",
+      name: "Calm guide",
+      detail: "Warm, clear, and low-pressure for everyday help.",
+    },
+    {
+      id: "bright_tutor",
+      name: "Bright tutor",
+      detail: "More energetic when Cortex is teaching you a workflow.",
+    },
+    {
+      id: "quiet_text",
+      name: "Quiet text",
+      detail: "No spoken reply unless you ask for one.",
+    },
+  ];
+  const replyModes = [
+    { id: "ask_first", name: "Ask first", detail: "Cortex chooses text unless voice clearly helps." },
+    { id: "voice_when_held", name: "Hold to talk", detail: "Speak when you click and hold." },
+    { id: "text_only", name: "Text only", detail: "Never speak back in this mode." },
+  ];
+  target.innerHTML = `
+    <section class="voice-hero" aria-label="Agent voice settings">
+      <div>
+        <p class="section-label">Voice</p>
+        <h2>Choose how Cortex sounds.</h2>
+        <p>Realtime voice is still gated. These choices shape the assistant before microphone access is enabled.</p>
+      </div>
+      <div class="voice-status-card">
+        <span>${svgIcon("shield")}</span>
+        <strong>Mic off</strong>
+        <small>Voice activation will require an explicit gesture.</small>
+      </div>
+    </section>
+    <section class="voice-choice-grid" aria-label="Voice choices">
+      ${voices
+        .map(
+          (voice) => `
+            <button class="voice-choice ${voiceChoiceState.selected === voice.id ? "active" : ""}" type="button" data-voice-choice="${escapeHtml(voice.id)}" aria-pressed="${voiceChoiceState.selected === voice.id ? "true" : "false"}">
+              <strong>${escapeHtml(voice.name)}</strong>
+              <span>${escapeHtml(voice.detail)}</span>
+            </button>
+          `,
+        )
+        .join("")}
+    </section>
+    <section class="reply-mode-list" aria-label="Reply mode">
+      <div class="user-section-heading">
+        <h2>When should Cortex talk back?</h2>
+      </div>
+      ${replyModes
+        .map(
+          (mode) => `
+            <button class="reply-mode ${voiceChoiceState.replyMode === mode.id ? "active" : ""}" type="button" data-reply-mode="${escapeHtml(mode.id)}" aria-pressed="${voiceChoiceState.replyMode === mode.id ? "true" : "false"}">
+              <span>${svgIcon(voiceChoiceState.replyMode === mode.id ? "check" : "voice")}</span>
+              <strong>${escapeHtml(mode.name)}</strong>
+              <small>${escapeHtml(mode.detail)}</small>
+            </button>
+          `,
+        )
+        .join("")}
+    </section>
+  `;
+  target.querySelectorAll("[data-voice-choice]").forEach((button) => {
+    button.addEventListener("click", () => {
+      voiceChoiceState.selected = button.dataset.voiceChoice;
+      renderVoiceSettings();
+      writeReceipt(`Voice set to ${button.textContent.trim().split(/\s{2,}|\n/)[0] || "selected voice"}.`);
+    });
+  });
+  target.querySelectorAll("[data-reply-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      voiceChoiceState.replyMode = button.dataset.replyMode;
+      renderVoiceSettings();
+      writeReceipt("Voice reply mode updated locally. Mic remains off.");
+    });
+  });
+}
+
+function renderUserSettings() {
+  const target = document.querySelector("#user-settings");
+  if (!target) return;
+  const settings = [
+    {
+      icon: "memories",
+      title: "Memory review",
+      value: "Ask before saving",
+      detail: "Cortex does not silently write private memories from the dashboard.",
+    },
+    {
+      icon: "pointer",
+      title: "Helper pointer",
+      value: "Display only",
+      detail: "The blue pointer can show targets but cannot move your real mouse here.",
+    },
+    {
+      icon: "shield",
+      title: "Screen capture",
+      value: "Off",
+      detail: "Real capture stays disabled until the consented native path is ready.",
+    },
+    {
+      icon: "developer",
+      title: "Developer details",
+      value: "Hidden by default",
+      detail: "Receipts and safety internals are still available for builders.",
+    },
+  ];
+  target.innerHTML = `
+    <section class="settings-simple-list" aria-label="Cortex settings">
+      ${settings
+        .map(
+          (item) => `
+            <article class="setting-card">
+              <span>${svgIcon(item.icon)}</span>
+              <div>
+                <em>${escapeHtml(item.title)}</em>
+                <strong>${escapeHtml(item.value)}</strong>
+                <p>${escapeHtml(item.detail)}</p>
+              </div>
+            </article>
+          `,
+        )
+        .join("")}
+    </section>
+    <button class="developer-link-button" type="button" data-user-view="developer">Open Developer view</button>
+  `;
+  target.querySelector("[data-user-view]")?.addEventListener("click", (event) => {
+    setActiveView(event.currentTarget.dataset.userView);
   });
 }
 
@@ -975,7 +1274,7 @@ function renderCaptureReadinessLadder() {
 
 async function refreshCaptureRuntimeStatus(panel) {
   try {
-    const receipt = await callCaptureControl("status");
+    const receipt = await callCaptureControl("status", {}, { silent: true });
     updateCaptureRuntime(receipt);
     window.setTimeout(() => refreshCaptureRuntimeStatus(panel), 3000);
   } catch (_error) {
@@ -2153,6 +2452,9 @@ function renderDashboard() {
   renderTabs();
   renderMemoryCards();
   renderSkillCards();
+  renderConversationHome();
+  renderVoiceSettings();
+  renderUserSettings();
   renderMemoryBookLive();
 }
 
@@ -2162,7 +2464,10 @@ if (!data) {
   bindHeaderActions();
   renderNav();
   renderStatusStrip();
+  renderConversationHome();
   renderHomeCommandCenter();
+  renderVoiceSettings();
+  renderUserSettings();
   renderShadowPointerLiveReceipt();
   renderEncryptedIndexPanel();
   renderAgenticOSPanel();

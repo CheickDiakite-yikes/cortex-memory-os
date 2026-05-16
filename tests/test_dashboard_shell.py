@@ -264,8 +264,8 @@ def test_dashboard_static_app_switches_focus_with_primary_views():
 
     assert 'aria-pressed="${item.item_id === activeView ? "true" : "false"}"' in app_js
     assert "function ensureFocusForActiveView()" in app_js
-    assert "activeView === \"memory_palace\"" in app_js
-    assert "activeView === \"skill_forge\"" in app_js
+    assert "activeView === \"memories\"" in app_js
+    assert "activeView === \"developer\"" in app_js
     assert "selectedFocus = focusFromMemory(card)" in app_js
     assert "selectedFocus = focusFromSkill(card)" in app_js
 
@@ -283,7 +283,7 @@ def test_dashboard_static_app_refreshes_stale_capture_token():
     assert "Memory Book token unavailable. Refreshing local config once." in app_js
     assert "Agentic bridge token unavailable. Refreshing local config once." in app_js
     assert "Agentic bridge token refreshed. Retrying local run once." in app_js
-    assert "callCaptureControlWithConfig(action, payload, { refreshed: true })" in app_js
+    assert "callCaptureControlWithConfig(action, payload, { refreshed: true, silent: options.silent })" in app_js
     assert "userTestPath" in app_js
     assert "agenticTurnPath" in app_js
     assert "agenticLatestPath" in app_js
@@ -356,10 +356,33 @@ def test_dashboard_static_app_renders_live_tutor_panel():
     assert ".live-tutor-targets" in css
 
 
-def test_dashboard_static_app_renders_user_focused_home():
+def test_dashboard_static_app_renders_user_focused_shell():
     app_js = Path("ui/cortex-dashboard/app.js").read_text()
     index_html = Path("ui/cortex-dashboard/index.html").read_text()
     css = Path("ui/cortex-dashboard/styles.css").read_text()
+
+    assert "DASHBOARD-USER-CONVERSATIONS-001" in index_html
+    assert "DASHBOARD-VOICE-SETTINGS-001" in index_html
+    assert "DASHBOARD-USER-SETTINGS-001" in index_html
+    assert "const USER_NAV_ITEMS" in app_js
+    assert '{ item_id: "chats", label: "Chats"' in app_js
+    assert '{ item_id: "memories", label: "Memories"' in app_js
+    assert '{ item_id: "voice", label: "Voice"' in app_js
+    assert '{ item_id: "settings", label: "Settings"' in app_js
+    assert '{ item_id: "developer", label: "Developer"' not in app_js
+    assert "Pick up where you left off." in app_js
+    assert "Your helper sessions, saved memories, and voice choices live here." in app_js
+    assert "Search chats or memories" in app_js
+    assert "Choose how Cortex sounds." in app_js
+    assert "Mic off" in app_js
+    assert "Open Developer view" in app_js
+    assert ".conversation-home" in css
+    assert ".conversation-card" in css
+    assert ".voice-choice" in css
+    assert ".settings-simple-list" in css
+    assert "grid-template-columns: repeat(4, minmax(0, 1fr));" in css
+    assert "body:not([data-active-view=\"developer\"]) .health-panel" in css
+    assert "body[data-active-view=\"chats\"] .dashboard-header" in css
 
     assert "DASHBOARD-USER-HOME-001" in index_html
     assert "home-command-center" in index_html
@@ -379,8 +402,6 @@ def test_dashboard_static_app_renders_user_focused_home():
     assert ".home-question" in css
     assert ".home-actions" in css
     assert ".home-safety-lights" in css
-    assert "body[data-active-view=\"overview\"] .health-panel" in css
-    assert "body[data-active-view=\"overview\"] .dashboard-header" in css
 
 
 def test_dashboard_static_app_renders_manual_memory_book():
@@ -432,7 +453,7 @@ def test_dashboard_static_app_renders_manual_memory_book():
     assert ".memory-book-safety-note" in css
     assert ".memory-book-safety" in css
     assert ".memory-book-log" in css
-    assert "body[data-active-view=\"memory_palace\"] #memory-list" in css
+    assert "body[data-active-view=\"memories\"] #memory-list" in css
 
 
 def test_dashboard_shell_smoke_contract_passes():

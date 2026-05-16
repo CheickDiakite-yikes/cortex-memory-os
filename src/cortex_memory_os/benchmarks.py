@@ -12742,7 +12742,12 @@ def case_dashboard_shell_contract() -> BenchmarkCaseResult:
     ]
     ui_text = "\n".join(path.read_text(encoding="utf-8") for path in ui_paths if path.exists())
     required_ui_terms = [
-        "Save, find, fix, or forget",
+        "DASHBOARD-USER-CONVERSATIONS-001",
+        "Chats",
+        "Memories",
+        "Voice",
+        "Settings",
+        "Saved memories",
         "MANUAL-MEMORY-BOOK-001",
         "Tell Cortex what to remember.",
         "Skill Forge Candidate Workflows",
