@@ -877,6 +877,64 @@ body.ai-draft-mode .cursor-action-row button[data-pointer-ai],
   padding: 22px;
 }
 
+.product-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.product-tabs button {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: #425066;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.product-tabs button.active {
+  border-color: rgba(22, 99, 215, 0.68);
+  background: var(--blue);
+  color: #fff;
+}
+
+.product-tab-panel {
+  display: none;
+  gap: 12px;
+}
+
+.product-tab-panel.active {
+  display: grid;
+}
+
+.session-summary-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.session-summary-panel div {
+  display: grid;
+  gap: 3px;
+  min-height: 58px;
+  padding: 10px;
+  border: 1px solid rgba(24, 33, 47, 0.1);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.session-summary-panel span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.session-summary-panel strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
 .section-label {
   margin: 0 0 7px;
   color: var(--blue);
@@ -1054,6 +1112,65 @@ textarea:focus {
   font-weight: 850;
 }
 
+.memory-idea-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.memory-idea-list li {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid rgba(23, 124, 84, 0.18);
+  border-radius: 8px;
+  background: #f3fbf7;
+}
+
+.memory-idea-list li.empty {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.memory-idea-list strong {
+  color: var(--ink);
+  font-size: 0.86rem;
+}
+
+.memory-idea-list p {
+  margin: 0;
+  color: #3b4658;
+  font-size: 0.78rem;
+  line-height: 1.38;
+}
+
+.memory-idea-list small {
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.memory-policy-strip,
+.safety-lock-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.memory-policy-strip span,
+.safety-lock-panel span {
+  padding: 6px 8px;
+  border: 1px solid rgba(24, 33, 47, 0.1);
+  border-radius: 999px;
+  background: #fff;
+  color: #425066;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
 .voice-choice-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1074,6 +1191,26 @@ textarea:focus {
   border-color: rgba(22, 99, 215, 0.72);
   background: var(--blue-soft);
   color: var(--blue);
+}
+
+.voice-cost-panel {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid rgba(22, 99, 215, 0.14);
+  border-radius: 8px;
+  background: var(--blue-soft);
+}
+
+.voice-cost-panel strong {
+  color: var(--blue);
+  font-size: 0.84rem;
+}
+
+.voice-cost-panel span {
+  color: #425066;
+  font-size: 0.76rem;
+  line-height: 1.35;
 }
 
 .receipt-summary {

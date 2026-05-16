@@ -423,6 +423,15 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "Option-hold: silent" in html
     assert "conversation-list" in html
     assert "conversation-status" in html
+    assert "product-tabs" in html
+    assert 'data-product-tab="chat"' in html
+    assert 'data-product-panel="memories"' in html
+    assert "session-chat-count" in html
+    assert "session-memory-count" in html
+    assert "memory-idea-list" in html
+    assert "memory-policy-strip" in html
+    assert "safety-lock-panel" in html
+    assert "Cost guard on" in html
     assert "voice-choice-chip" in html
     assert 'data-voice-choice="calm"' in html
     assert 'data-voice-choice="silent_first"' in html
@@ -475,6 +484,9 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "placeCueOnTarget" in js
     assert "appendConversationTurn" in js
     assert "setAgentVoiceChoice" in js
+    assert "setActiveProductPanel" in js
+    assert "appendMemoryIdea" in js
+    assert "updateSessionSummary" in js
     assert "pointer-holding" in js
     assert "setHelperActive" in js
     assert "wakeHelper" in js
@@ -507,8 +519,15 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert ".pointer-tour-strip" in css
     assert ".voice-gesture-pills" in css
     assert ".user-product-panel" in css
+    assert ".product-tabs" in css
+    assert ".product-tab-panel.active" in css
+    assert ".session-summary-panel" in css
     assert ".conversation-list" in css
+    assert ".memory-idea-list" in css
+    assert ".memory-policy-strip" in css
+    assert ".safety-lock-panel" in css
     assert ".voice-choice-row" in css
+    assert ".voice-cost-panel" in css
     assert "body.tour-active" in css
     assert ".pointer-loading" in css
     assert ".pointer-receipt-toast.visible" in css

@@ -39,6 +39,13 @@ const voiceChoiceChip = document.querySelector("#voice-choice-chip");
 const voiceChoiceButtons = document.querySelectorAll("[data-voice-choice]");
 const conversationStatus = document.querySelector("#conversation-status");
 const conversationList = document.querySelector("#conversation-list");
+const productTabs = document.querySelectorAll("[data-product-tab]");
+const productPanels = document.querySelectorAll("[data-product-panel]");
+const memoryIdeaStatus = document.querySelector("#memory-idea-status");
+const memoryIdeaList = document.querySelector("#memory-idea-list");
+const sessionChatCount = document.querySelector("#session-chat-count");
+const sessionMemoryCount = document.querySelector("#session-memory-count");
+const sessionSafetyState = document.querySelector("#session-safety-state");
 const turnList = document.querySelector("#turn-list");
 const receiptSummary = document.querySelector("#receipt-summary");
 const receiptsToggle = document.querySelector("#receipts-toggle");
@@ -92,6 +99,8 @@ let currentTargetLabel = "this surface";
 let previousTargetId = null;
 let selectedTargetIds = [];
 let pinnedTargetIds = [];
+let conversationCount = 0;
+let memoryIdeas = [];
 let tourActive = false;
 let tourIndex = 0;
 let lastPointer = { x: null, y: null };
@@ -198,6 +207,21 @@ function setAgentVoiceChoice(choice) {
   voiceChoiceButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.voiceChoice === agentVoiceChoice);
   });
+}
+
+function setActiveProductPanel(panelName) {
+  productTabs.forEach((button) => {
+    button.classList.toggle("active", button.dataset.productTab === panelName);
+  });
+  productPanels.forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.productPanel === panelName);
+  });
+}
+
+function updateSessionSummary() {
+  sessionChatCount.textContent = String(conversationCount);
+  sessionMemoryCount.textContent = String(memoryIdeas.length);
+  sessionSafetyState.textContent = "Locked";
 }
 
 async function askTutor(question, options = {}) {
@@ -670,9 +694,28 @@ function showMemoryProposal(proposal) {
   memoryProposalCard.classList.add("visible");
 }
 
+function appendMemoryIdea(proposal) {
+  if (!proposal) return;
+  if (memoryIdeas.some((item) => item.proposal_id === proposal.proposal_id)) return;
+  memoryIdeas = [proposal, ...memoryIdeas].slice(0, 5);
+  memoryIdeaList.querySelector(".empty")?.remove();
+  memoryIdeaStatus.textContent = "Review before saving. Nothing is durable yet.";
+  const item = document.createElement("li");
+  item.dataset.memoryIdeaId = proposal.proposal_id;
+  item.innerHTML = `
+    <span>Idea, not saved</span>
+    <strong>${escapeHtml(proposal.target_label)}</strong>
+    <p>${escapeHtml(proposal.content_preview)}</p>
+    <small>Needs your review before Cortex can remember it.</small>
+  `;
+  memoryIdeaList.prepend(item);
+  updateSessionSummary();
+}
+
 function appendConversationTurn(turn) {
   conversationList.querySelector(".empty")?.remove();
   conversationStatus.textContent = "Recent chats stay local to this safe demo.";
+  conversationCount += 1;
   const item = document.createElement("li");
   const question = turn.user_utterance || input.value || "Pointer question";
   const answer = turn.assistant_response || turn.next_user_action;
@@ -686,6 +729,7 @@ function appendConversationTurn(turn) {
   `;
   conversationList.prepend(item);
   [...conversationList.children].slice(5).forEach((child) => child.remove());
+  updateSessionSummary();
 }
 
 function renderTurn(turn) {
@@ -753,6 +797,7 @@ function renderTurn(turn) {
   dockState.textContent = turn.companion_state?.label || `Pointing at ${turn.target_label}`;
   dockSummary.textContent = turn.micro_steps?.[0] || turn.next_user_action;
   showMemoryProposal(turn.manual_memory_proposal);
+  appendMemoryIdea(turn.manual_memory_proposal);
   appendConversationTurn(turn);
 
   const item = document.createElement("li");
@@ -916,6 +961,12 @@ aiModeButtons.forEach((button) => {
   });
 });
 
+productTabs.forEach((button) => {
+  button.addEventListener("click", () => {
+    setActiveProductPanel(button.dataset.productTab || "chat");
+  });
+});
+
 voiceChoiceButtons.forEach((button) => {
   button.addEventListener("click", () => {
     setAgentVoiceChoice(button.dataset.voiceChoice || "calm");
@@ -943,6 +994,7 @@ reviewMemoryProposal.addEventListener("click", () => {
   dockSummary.textContent = "Save only from the Memory Book after checking the card.";
   pointerRouteChip.textContent = "Review only";
   pointerConfidenceChip.textContent = "Save blocked";
+  setActiveProductPanel("memories");
   showReceiptToast("Memory is still unsaved. Review before saving.");
 });
 
@@ -952,6 +1004,9 @@ dismissMemoryProposal.addEventListener("click", () => {
   dockState.textContent = "Proposal dismissed";
   dockSummary.textContent = "Cortex will keep pointing without saving that memory.";
   pointerRouteChip.textContent = "Show only";
+  memoryIdeaStatus.textContent = memoryIdeas.length
+    ? "Dismissed the floating card. Ideas remain review-only."
+    : "Memory proposal dismissed. Nothing was saved.";
   showReceiptToast("Memory proposal dismissed. Nothing was saved.");
 });
 
@@ -963,4 +1018,6 @@ receiptsToggle.addEventListener("click", () => {
 setAiMode("local");
 setVoiceGesture("single_click_context");
 setAgentVoiceChoice("calm");
+setActiveProductPanel("chat");
+updateSessionSummary();
 renderCommandSuggestions();

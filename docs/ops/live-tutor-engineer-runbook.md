@@ -120,7 +120,10 @@ loop feel alive and legible:
 The pointer card now has a calm safe-mode route chip, a confidence chip, target
 history for `this`, `that`, and `these`, a tiny tour strip, loading feedback,
 receipt toasts, and a guided tour. The review side now shows recent chats and a
-simple agent voice preference preview before exposing engineering receipts.
+simple agent voice preference preview before exposing engineering receipts. The
+right side is organized as user-facing tabs: Chats, Memories, Voice, and Safety.
+Memory ideas enter a review-only queue; the session summary counts chats and
+memory ideas without implying anything has been durably saved.
 
 The tour is intentionally display-only: it highlights controlled DOM targets,
 moves the secondary cursor, and writes a redacted local receipt toast, but it

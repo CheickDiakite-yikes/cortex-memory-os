@@ -175,6 +175,20 @@
           </p>
         </header>
 
+        <nav class="product-tabs" aria-label="Cortex product sections">
+          <button type="button" class="active" data-product-tab="chat">Chats</button>
+          <button type="button" data-product-tab="memories">Memories</button>
+          <button type="button" data-product-tab="voice">Voice</button>
+          <button type="button" data-product-tab="safety">Safety</button>
+        </nav>
+
+        <section class="session-summary-panel" aria-label="Session summary">
+          <div><span>Chats</span><strong id="session-chat-count">0</strong></div>
+          <div><span>Memory ideas</span><strong id="session-memory-count">0</strong></div>
+          <div><span>Safety</span><strong id="session-safety-state">Locked</strong></div>
+        </section>
+
+        <section class="product-tab-panel active" data-product-panel="chat">
         <form id="question-form" class="question-form">
           <label for="question-input">Ask about the thing under your pointer</label>
           <textarea id="question-input" rows="3">How do I start color grading?</textarea>
@@ -204,7 +218,26 @@
             <li class="empty">Past chats will appear here.</li>
           </ol>
         </section>
+        </section>
 
+        <section class="product-tab-panel" data-product-panel="memories">
+          <section class="user-product-panel" aria-label="Memory ideas">
+            <div>
+              <p class="section-label">Memory Ideas</p>
+              <span id="memory-idea-status">Nothing saved. Review ideas first.</span>
+            </div>
+            <ol id="memory-idea-list" class="memory-idea-list">
+              <li class="empty">Ask Cortex to remember something and it will appear here for review.</li>
+            </ol>
+          </section>
+          <section class="memory-policy-strip" aria-label="Memory safety policy">
+            <span>Default: review-only</span>
+            <span>No silent saves</span>
+            <span>Forget anytime</span>
+          </section>
+        </section>
+
+        <section class="product-tab-panel" data-product-panel="voice">
         <section class="user-product-panel voice-choice-panel" aria-label="Agent voice settings">
           <div>
             <p class="section-label">Agent Voice</p>
@@ -216,8 +249,20 @@
             <button type="button" data-voice-choice="silent_first">Silent first</button>
           </div>
         </section>
+        <section class="voice-cost-panel" aria-label="Voice cost guard">
+          <strong>Cost guard on</strong>
+          <span>Voice replies stay opt-in. Safe demo opens no microphone.</span>
+        </section>
+        </section>
 
+        <section class="product-tab-panel" data-product-panel="safety">
         <p class="receipt-summary" id="receipt-summary">No pointer receipt yet.</p>
+        <section class="safety-lock-panel" aria-label="Safety lock">
+          <span>Screen capture off</span>
+          <span>Microphone off</span>
+          <span>Memory writes off</span>
+          <span>Real clicks off</span>
+        </section>
         <button type="button" class="receipts-toggle" id="receipts-toggle">Show safety receipts</button>
         <div class="receipt-stack collapsed" id="receipt-stack">
           <section class="receipt-card" aria-label="Latest safe receipt">
@@ -238,6 +283,7 @@
             <ol id="turn-list"></ol>
           </section>
         </div>
+        </section>
       </aside>
     </main>
 
