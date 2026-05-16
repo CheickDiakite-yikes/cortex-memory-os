@@ -421,6 +421,11 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert 'data-pointer-tour="stop"' in html
     assert "Cortex has a memory idea" in html
     assert "Option-hold: silent" in html
+    assert "conversation-list" in html
+    assert "conversation-status" in html
+    assert "voice-choice-chip" in html
+    assert 'data-voice-choice="calm"' in html
+    assert 'data-voice-choice="silent_first"' in html
     assert 'data-entity-kind="node graph"' in html
     assert "receipt-referent" in html
     assert 'data-target-id="color_page_button"' in html
@@ -468,6 +473,8 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "advanceGuidedTour" in js
     assert "stopGuidedTour" in js
     assert "placeCueOnTarget" in js
+    assert "appendConversationTurn" in js
+    assert "setAgentVoiceChoice" in js
     assert "pointer-holding" in js
     assert "setHelperActive" in js
     assert "wakeHelper" in js
@@ -499,6 +506,9 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert ".pointer-state-row" in css
     assert ".pointer-tour-strip" in css
     assert ".voice-gesture-pills" in css
+    assert ".user-product-panel" in css
+    assert ".conversation-list" in css
+    assert ".voice-choice-row" in css
     assert "body.tour-active" in css
     assert ".pointer-loading" in css
     assert ".pointer-receipt-toast.visible" in css

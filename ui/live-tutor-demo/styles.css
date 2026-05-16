@@ -985,6 +985,97 @@ textarea:focus {
   outline: none;
 }
 
+.user-product-panel {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(24, 33, 47, 0.1);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.user-product-panel > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.user-product-panel .section-label {
+  margin: 0;
+}
+
+.user-product-panel span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 750;
+}
+
+.conversation-list {
+  display: grid;
+  gap: 8px;
+  max-height: 260px;
+  margin: 0;
+  overflow: auto;
+  padding: 0;
+  list-style: none;
+}
+
+.conversation-list li {
+  display: grid;
+  gap: 4px;
+  padding: 9px 10px;
+  border: 1px solid rgba(22, 99, 215, 0.12);
+  border-radius: 8px;
+  background: var(--panel-soft);
+}
+
+.conversation-list li.empty {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.conversation-list strong {
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.conversation-list p {
+  margin: 0;
+  color: #3b4658;
+  font-size: 0.78rem;
+  line-height: 1.38;
+}
+
+.conversation-list small {
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.voice-choice-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.voice-choice-row button {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.voice-choice-row button.active {
+  border-color: rgba(22, 99, 215, 0.72);
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
 .receipt-summary {
   margin: 0;
   padding: 12px 13px;

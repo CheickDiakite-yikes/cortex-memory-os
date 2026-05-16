@@ -35,6 +35,10 @@ const aiModeNote = document.querySelector("#ai-mode-note");
 const voiceStatusChip = document.querySelector("#voice-status-chip");
 const voiceOutputChip = document.querySelector("#voice-output-chip");
 const voiceGestureHint = document.querySelector("#voice-gesture-hint");
+const voiceChoiceChip = document.querySelector("#voice-choice-chip");
+const voiceChoiceButtons = document.querySelectorAll("[data-voice-choice]");
+const conversationStatus = document.querySelector("#conversation-status");
+const conversationList = document.querySelector("#conversation-list");
 const turnList = document.querySelector("#turn-list");
 const receiptSummary = document.querySelector("#receipt-summary");
 const receiptsToggle = document.querySelector("#receipts-toggle");
@@ -77,6 +81,7 @@ const fields = {
 let activePage = "edit";
 let aiMode = "local";
 let voiceGestureType = "single_click_context";
+let agentVoiceChoice = "calm";
 let lastTraceAt = 0;
 let holdTimer = null;
 let holdStartedAt = 0;
@@ -164,6 +169,35 @@ function setVoiceGesture(type) {
   voiceStatusChip.textContent = known[voiceGestureType].status;
   voiceOutputChip.textContent = known[voiceGestureType].output;
   voiceGestureHint.textContent = known[voiceGestureType].hint;
+  if (voiceGestureType === "single_click_context" && agentVoiceChoice === "silent_first") {
+    voiceGestureHint.textContent = "Silent-first preference is on. Triple click still enables voice.";
+  }
+  if (voiceGestureType === "single_click_context" && agentVoiceChoice === "bright") {
+    voiceGestureHint.textContent = "Bright guide preference is on. Cortex still answers as text first.";
+  }
+}
+
+function setAgentVoiceChoice(choice) {
+  const options = {
+    calm: {
+      label: "Calm guide · text first",
+      hint: "Cortex stays concise and steady. Voice replies remain opt-in.",
+    },
+    bright: {
+      label: "Bright guide · text first",
+      hint: "Cortex can be a little more energetic, but still answers as text by default.",
+    },
+    silent_first: {
+      label: "Silent first · cues only",
+      hint: "Cortex prefers visual cues and avoids voice output unless you ask.",
+    },
+  };
+  agentVoiceChoice = options[choice] ? choice : "calm";
+  voiceChoiceChip.textContent = options[agentVoiceChoice].label;
+  voiceGestureHint.textContent = options[agentVoiceChoice].hint;
+  voiceChoiceButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.voiceChoice === agentVoiceChoice);
+  });
 }
 
 async function askTutor(question, options = {}) {
@@ -636,6 +670,24 @@ function showMemoryProposal(proposal) {
   memoryProposalCard.classList.add("visible");
 }
 
+function appendConversationTurn(turn) {
+  conversationList.querySelector(".empty")?.remove();
+  conversationStatus.textContent = "Recent chats stay local to this safe demo.";
+  const item = document.createElement("li");
+  const question = turn.user_utterance || input.value || "Pointer question";
+  const answer = turn.assistant_response || turn.next_user_action;
+  const memoryNote = turn.manual_memory_proposal ? "Memory idea waiting for review." : "";
+  item.innerHTML = `
+    <span>You</span>
+    <strong>${escapeHtml(question)}</strong>
+    <span>Cortex</span>
+    <p>${escapeHtml(answer)}</p>
+    ${memoryNote ? `<small>${escapeHtml(memoryNote)}</small>` : ""}
+  `;
+  conversationList.prepend(item);
+  [...conversationList.children].slice(5).forEach((child) => child.remove());
+}
+
 function renderTurn(turn) {
   const point = placeCueOnTarget(turn.target_id, { pulse: true });
   if (!point) {
@@ -701,6 +753,7 @@ function renderTurn(turn) {
   dockState.textContent = turn.companion_state?.label || `Pointing at ${turn.target_label}`;
   dockSummary.textContent = turn.micro_steps?.[0] || turn.next_user_action;
   showMemoryProposal(turn.manual_memory_proposal);
+  appendConversationTurn(turn);
 
   const item = document.createElement("li");
   const proposalText = turn.manual_memory_proposal ? " · memory proposal needs review" : "";
@@ -863,6 +916,13 @@ aiModeButtons.forEach((button) => {
   });
 });
 
+voiceChoiceButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setAgentVoiceChoice(button.dataset.voiceChoice || "calm");
+    showReceiptToast("Voice preference preview updated locally. No mic opened.");
+  });
+});
+
 talkCard.addEventListener("click", (event) => {
   if (event.target?.matches?.("button")) return;
   input.value = currentTargetId ? "Explain this" : "What should I click next?";
@@ -902,4 +962,5 @@ receiptsToggle.addEventListener("click", () => {
 
 setAiMode("local");
 setVoiceGesture("single_click_context");
+setAgentVoiceChoice("calm");
 renderCommandSuggestions();

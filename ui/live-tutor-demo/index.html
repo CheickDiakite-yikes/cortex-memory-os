@@ -195,6 +195,28 @@
           <button type="button">Voice: explain this</button>
         </div>
 
+        <section class="user-product-panel" aria-label="Conversation history">
+          <div>
+            <p class="section-label">Conversation</p>
+            <span id="conversation-status">Nothing yet. Ask Cortex once.</span>
+          </div>
+          <ol id="conversation-list" class="conversation-list">
+            <li class="empty">Past chats will appear here.</li>
+          </ol>
+        </section>
+
+        <section class="user-product-panel voice-choice-panel" aria-label="Agent voice settings">
+          <div>
+            <p class="section-label">Agent Voice</p>
+            <span id="voice-choice-chip">Calm guide · text first</span>
+          </div>
+          <div class="voice-choice-row">
+            <button type="button" class="active" data-voice-choice="calm">Calm</button>
+            <button type="button" data-voice-choice="bright">Bright</button>
+            <button type="button" data-voice-choice="silent_first">Silent first</button>
+          </div>
+        </section>
+
         <p class="receipt-summary" id="receipt-summary">No pointer receipt yet.</p>
         <button type="button" class="receipts-toggle" id="receipts-toggle">Show safety receipts</button>
         <div class="receipt-stack collapsed" id="receipt-stack">
