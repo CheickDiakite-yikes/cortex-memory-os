@@ -408,6 +408,10 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "instruction-bubble" in html
     assert "pointer-entity-label" in html
     assert "pointer-command-suggestions" in html
+    assert "pointer-context-row" in html
+    assert "pointer-this-chip" in html
+    assert "pointer-receipt-toast" in html
+    assert "pointer-loading" in html
     assert "cursor-more-actions" in html
     assert 'data-entity-kind="node graph"' in html
     assert "receipt-referent" in html
@@ -447,6 +451,11 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "setCursorPosition" in js
     assert "requestAnimationFrame" in js
     assert "renderCommandSuggestions" in js
+    assert "setThinkingState" in js
+    assert "showReceiptToast" in js
+    assert "updateContextChips" in js
+    assert "setHoverHighlight" in js
+    assert "pointer-holding" in js
     assert "setHelperActive" in js
     assert "wakeHelper" in js
     assert "Pointer helper is awake. Move over any tool" in js
@@ -473,6 +482,12 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "translate3d(-120px, -120px, 0)" in css
     assert "will-change: transform, opacity" in css
     assert "backdrop-filter: blur(18px)" in css
+    assert ".pointer-context-row" in css
+    assert ".pointer-loading" in css
+    assert ".pointer-receipt-toast.visible" in css
+    assert ".target-highlight.hovering" in css
+    assert "cursor-hold-progress" in css
+    assert "pointer-loading-slide" in css
     assert ".cursor-trace-dot" in css
     assert ".cursor-talk-card.visible" in css
     assert ".cursor-action-row" in css

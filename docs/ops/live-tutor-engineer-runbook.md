@@ -95,9 +95,16 @@ The next product gap is not more dashboard detail. It is making the pointer
 loop feel alive and legible:
 
 - keep pointer tracking smooth under resize and scroll
+- keep wake-up calm: starting the helper should not auto-run a question or jump
+  the pointer to an off-screen target
+- expose `this`, `that`, and `these` as tiny target-history chips near the
+  pointer
+- show hover target affinity before the user asks a question
+- show a short thinking/loading state and hold-progress feedback for voice
+  gestures
+- show a tiny receipt toast after a turn instead of forcing the user into logs
 - make voice gesture state visible before the user asks
 - show the current target in plain language near the cursor
 - keep receipts child-readable
 - move toward consented Realtime voice only after the controlled pointer proof
   is stable
-

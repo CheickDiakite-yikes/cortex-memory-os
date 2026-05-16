@@ -100,7 +100,13 @@
             <span id="pointer-status-label">Cortex sees</span>
             <strong id="pointer-target-label">this surface</strong>
             <small id="pointer-entity-label">controlled demo entity</small>
+            <div class="pointer-context-row" id="pointer-context-row" aria-label="Pointer context">
+              <span id="pointer-this-chip">This: surface</span>
+              <span id="pointer-that-chip">That: none</span>
+              <span id="pointer-these-chip">Stack: 0</span>
+            </div>
             <small id="pointer-safety-label">Display only. You stay in control.</small>
+            <span class="pointer-loading" id="pointer-loading" aria-hidden="true"></span>
             <div class="cursor-action-row cursor-primary-actions" id="pointer-command-suggestions">
               <button type="button" data-pointer-command="Explain this">Explain</button>
               <button type="button" data-pointer-command="What next?">Next</button>
@@ -138,6 +144,9 @@
           </section>
           <p class="instruction-bubble" id="instruction-bubble" aria-live="polite">
             Ask a question and I will point without clicking.
+          </p>
+          <p class="pointer-receipt-toast" id="pointer-receipt-toast" aria-live="polite">
+            No pointer receipt yet.
           </p>
         </div>
       </section>

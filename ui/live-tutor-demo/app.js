@@ -8,7 +8,11 @@ const pointerTargetLabel = document.querySelector("#pointer-target-label");
 const pointerEntityLabel = document.querySelector("#pointer-entity-label");
 const pointerSafetyLabel = document.querySelector("#pointer-safety-label");
 const pointerCommandSuggestions = document.querySelector("#pointer-command-suggestions");
+const pointerThisChip = document.querySelector("#pointer-this-chip");
+const pointerThatChip = document.querySelector("#pointer-that-chip");
+const pointerTheseChip = document.querySelector("#pointer-these-chip");
 const bubble = document.querySelector("#instruction-bubble");
+const receiptToast = document.querySelector("#pointer-receipt-toast");
 const wakeCard = document.querySelector("#wake-card");
 const wakeHelperButton = document.querySelector("#wake-helper");
 const dockState = document.querySelector("#dock-state");
@@ -79,6 +83,11 @@ function formatToken(value) {
   return String(value || "").replaceAll("_", " ");
 }
 
+function shortLabel(value, fallback = "none") {
+  const label = String(value || fallback).trim();
+  return label.length > 22 ? `${label.slice(0, 19)}...` : label;
+}
+
 function safePointerForRequest() {
   const frameRect = frame.getBoundingClientRect();
   return {
@@ -142,33 +151,38 @@ async function askTutor(question, options = {}) {
     aiMode === "openai_dry_run"
       ? "AI draft uses controlled facts only."
       : "Display only. You stay in control.";
-  const response = await fetch("/tutor/turn", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Cortex-Live-Tutor-Token": token,
-    },
-    body: JSON.stringify({
-      user_utterance: question,
-      active_page: activePage,
-      ai_mode: aiMode,
-      voice_gesture_type: gestureForRequest,
-      pointed_target_id: currentTargetId,
-      previous_target_id: previousTargetId,
-      selected_target_ids: pinnedTargetIds.length ? pinnedTargetIds : selectedTargetIds,
-      pointer_coordinate_space: pointerForRequest.coordinateSpace,
-      pointer_x: pointerForRequest.x,
-      pointer_y: pointerForRequest.y,
-      client_surface_width: pointerForRequest.width,
-      client_surface_height: pointerForRequest.height,
-    }),
-  });
-  const payload = await response.json();
-  if (!response.ok) {
-    renderError(payload);
-    return;
+  setThinkingState(true);
+  try {
+    const response = await fetch("/tutor/turn", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Cortex-Live-Tutor-Token": token,
+      },
+      body: JSON.stringify({
+        user_utterance: question,
+        active_page: activePage,
+        ai_mode: aiMode,
+        voice_gesture_type: gestureForRequest,
+        pointed_target_id: currentTargetId,
+        previous_target_id: previousTargetId,
+        selected_target_ids: pinnedTargetIds.length ? pinnedTargetIds : selectedTargetIds,
+        pointer_coordinate_space: pointerForRequest.coordinateSpace,
+        pointer_x: pointerForRequest.x,
+        pointer_y: pointerForRequest.y,
+        client_surface_width: pointerForRequest.width,
+        client_surface_height: pointerForRequest.height,
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      renderError(payload);
+      return;
+    }
+    renderTurn(payload);
+  } finally {
+    setThinkingState(false);
   }
-  renderTurn(payload);
 }
 
 function renderError(payload) {
@@ -183,6 +197,7 @@ function renderError(payload) {
   dockState.textContent = "Blocked";
   dockSummary.textContent = "No action was taken.";
   bubble.textContent = "That request was blocked before any tutor cue.";
+  showReceiptToast("Request blocked. No action was taken.");
 }
 
 function targetLabel(targetId) {
@@ -226,6 +241,11 @@ function renderCommandSuggestions(suggestions = ["Explain this", "What next?", "
           : label === "Remember this"
             ? "Remember"
             : label.replace(" memory", "");
+    const targetRequired = /explain this|remember this/i.test(label);
+    button.disabled = targetRequired && !currentTargetId;
+    if (button.disabled) {
+      button.title = "Point at something first";
+    }
     button.addEventListener("click", (event) => {
       event.stopPropagation();
       if (!currentTargetId && /explain this|remember this/i.test(label)) {
@@ -241,6 +261,55 @@ function renderCommandSuggestions(suggestions = ["Explain this", "What next?", "
     });
     pointerCommandSuggestions.append(button);
   });
+}
+
+function setThinkingState(active) {
+  document.body.classList.toggle("pointer-thinking", active);
+  pointerStatusLabel.textContent = active
+    ? "Cortex thinking"
+    : currentTargetId
+      ? "Cortex sees"
+      : "Cortex nearby";
+}
+
+function showReceiptToast(text) {
+  receiptToast.textContent = text || "Pointer receipt updated.";
+  receiptToast.classList.add("visible");
+  window.clearTimeout(showReceiptToast.hideTimer);
+  showReceiptToast.hideTimer = window.setTimeout(() => {
+    receiptToast.classList.remove("visible");
+  }, 2800);
+}
+
+function updateContextChips(flowState = null) {
+  const currentLabel = flowState?.current_target_label || currentTargetLabel;
+  const previousLabel = flowState?.previous_target_label || targetLabel(previousTargetId);
+  const selectedLabels =
+    flowState?.selected_target_labels ||
+    (pinnedTargetIds.length ? pinnedTargetIds : selectedTargetIds).map((targetId) =>
+      targetLabel(targetId)
+    );
+  pointerThisChip.textContent = `This: ${shortLabel(currentTargetId ? currentLabel : "surface")}`;
+  pointerThatChip.textContent = `That: ${shortLabel(previousTargetId ? previousLabel : "none")}`;
+  pointerTheseChip.textContent = `Stack: ${selectedLabels.filter(Boolean).length}`;
+}
+
+function setHoverHighlight(targetId) {
+  if (!helperActive || !targetId) {
+    if (!document.body.classList.contains("pointer-thinking")) {
+      highlight.classList.remove("visible", "hovering");
+    }
+    return;
+  }
+  const target = document.querySelector(`[data-target-id="${targetId}"]`);
+  if (!target) return;
+  const rect = target.getBoundingClientRect();
+  const frameRect = frame.getBoundingClientRect();
+  highlight.style.left = `${rect.left - frameRect.left}px`;
+  highlight.style.top = `${rect.top - frameRect.top}px`;
+  highlight.style.width = `${rect.width}px`;
+  highlight.style.height = `${rect.height}px`;
+  highlight.classList.add("visible", "hovering");
 }
 
 function setAiMode(mode) {
@@ -272,6 +341,9 @@ function updatePointerTarget(targetId) {
   pointerTargetLabel.textContent = currentTargetLabel;
   const meta = targetMeta(currentTargetId);
   pointerEntityLabel.textContent = `${meta.entityKind} · ${meta.role}`;
+  updateContextChips();
+  renderCommandSuggestions();
+  setHoverHighlight(currentTargetId);
   fields.target.textContent = currentTargetLabel;
   renderPinnedTargets();
 }
@@ -420,6 +492,7 @@ function pinCurrentTarget() {
     dockSummary.textContent = `${currentTargetLabel} pinned. Ask about "these" to use the stack.`;
   }
   renderPinnedTargets();
+  updateContextChips();
 }
 
 function selectCurrentTarget() {
@@ -436,6 +509,7 @@ function selectCurrentTarget() {
   }
   setVoiceGesture(selectedTargetIds.length > 1 ? "drag_select_targets" : "single_click_context");
   renderPinnedTargets();
+  updateContextChips();
 }
 
 function showMemoryProposal(proposal) {
@@ -466,17 +540,20 @@ function renderTurn(turn) {
   highlight.style.width = `${rect.width}px`;
   highlight.style.height = `${rect.height}px`;
   highlight.classList.add("visible");
+  highlight.classList.remove("hovering");
 
   setCursorPosition(centerX, centerY);
   cursor.classList.add("visible", "pulse");
   window.setTimeout(() => cursor.classList.remove("pulse"), 360);
   followerVisible = false;
   updatePointerTarget(turn.target_id);
+  highlight.classList.remove("hovering");
   const entityLens = turn.entity_lens || {};
   const flowState = turn.pointer_flow_state || {};
   pointerEntityLabel.textContent = entityLens.entity_kind
     ? `${formatToken(entityLens.entity_kind)} · ${entityLens.region || "safe target"}`
     : pointerEntityLabel.textContent;
+  updateContextChips(flowState);
   renderCommandSuggestions(turn.command_suggestions || flowState.command_suggestions);
   placeFloatingElement(talkCard, centerX, centerY, {
     fallbackWidth: 232,
@@ -516,6 +593,7 @@ function renderTurn(turn) {
   fields.blocked.textContent = "click, type, capture, memory, export";
   receiptSummary.textContent =
     turn.user_readable_receipt || "Cortex answered safely beside the pointer.";
+  showReceiptToast(receiptSummary.textContent);
   dockState.textContent = turn.companion_state?.label || `Pointing at ${turn.target_label}`;
   dockSummary.textContent = turn.micro_steps?.[0] || turn.next_user_action;
   showMemoryProposal(turn.manual_memory_proposal);
@@ -574,6 +652,7 @@ frame.addEventListener("click", (event) => {
 
 frame.addEventListener("pointerdown", (event) => {
   if (!helperActive || event.target?.closest?.("button, input, textarea")) return;
+  document.body.classList.add("pointer-holding");
   holdStartedAt = Date.now();
   window.clearTimeout(holdTimer);
   holdTimer = window.setTimeout(() => {
@@ -588,12 +667,14 @@ frame.addEventListener("pointerdown", (event) => {
 });
 
 frame.addEventListener("pointerup", () => {
+  document.body.classList.remove("pointer-holding");
   if (Date.now() - holdStartedAt < 650) {
     window.clearTimeout(holdTimer);
   }
 });
 
 frame.addEventListener("pointercancel", () => {
+  document.body.classList.remove("pointer-holding");
   window.clearTimeout(holdTimer);
 });
 
