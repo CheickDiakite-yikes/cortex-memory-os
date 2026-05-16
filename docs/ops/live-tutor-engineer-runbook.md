@@ -2,9 +2,10 @@
 
 Last updated: 2026-05-15
 
-Benchmark: `LIVE-TUTOR-BROWSER-PROOF-001`
+Benchmarks: `LIVE-TUTOR-BROWSER-PROOF-001`, `LIVE-TUTOR-PRODUCT-UX-001`
 
-Policy reference: `policy_live_tutor_browser_proof_v1`
+Policy references: `policy_live_tutor_browser_proof_v1`,
+`policy_live_tutor_product_ux_v1`
 
 This runbook is the handoff for engineers continuing the pointer-first Cortex
 demo. The product goal is simple: Cortex should feel like a second visible
@@ -30,6 +31,17 @@ Run the replay proof:
 ```bash
 uv run cortex-live-tutor-demo --browser-replay-smoke --json
 ```
+
+Run the product UX proof:
+
+```bash
+uv run cortex-live-tutor-demo --product-ux-smoke --json
+```
+
+The product smoke verifies the right-side review surface stays understandable:
+Chats, Memories, Voice, Safety, plus the plain-language `I can / I ask before /
+I cannot` capability strip. It also checks that Screen capture off, Microphone
+off, Memory writes off, and Real clicks off remain visible.
 
 The replay smoke posts browser CSS pixels with `client_surface_css`, including
 an intentionally out-of-bounds pointer sample. The backend scales and clamps
@@ -123,7 +135,9 @@ receipt toasts, and a guided tour. The review side now shows recent chats and a
 simple agent voice preference preview before exposing engineering receipts. The
 right side is organized as user-facing tabs: Chats, Memories, Voice, and Safety.
 Memory ideas enter a review-only queue; the session summary counts chats and
-memory ideas without implying anything has been durably saved.
+memory ideas without implying anything has been durably saved. A compact
+capability strip states exactly what Cortex can do, what it asks before doing,
+and what it cannot do in the safe build.
 
 The tour is intentionally display-only: it highlights controlled DOM targets,
 moves the secondary cursor, and writes a redacted local receipt toast, but it

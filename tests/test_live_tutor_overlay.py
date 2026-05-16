@@ -7,6 +7,8 @@ from cortex_memory_os.live_tutor_overlay import (
     LIVE_TUTOR_BROWSER_PROOF_ID,
     LIVE_TUTOR_OVERLAY_ID,
     LIVE_TUTOR_OVERLAY_POLICY_REF,
+    LIVE_TUTOR_PRODUCT_UX_ID,
+    LIVE_TUTOR_PRODUCT_UX_POLICY_REF,
     LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS,
     LIVE_TUTOR_TOKEN_HEADER,
     UI_ROOT,
@@ -21,6 +23,7 @@ from cortex_memory_os.live_tutor_overlay import (
     normalize_client_pointer_to_surface,
     resolve_live_tutor_turn,
     run_live_tutor_browser_replay_smoke,
+    run_live_tutor_product_ux_smoke,
     run_live_tutor_server_smoke,
     run_live_tutor_demo_smoke,
 )
@@ -365,6 +368,23 @@ def test_live_tutor_browser_replay_smoke_returns_redacted_receipts():
     assert "The node graph is" not in serialized
 
 
+def test_live_tutor_product_ux_smoke_locks_user_facing_surface():
+    result = run_live_tutor_product_ux_smoke()
+
+    assert result.passed
+    assert result.proof_id == LIVE_TUTOR_PRODUCT_UX_ID
+    assert result.policy_ref == LIVE_TUTOR_PRODUCT_UX_POLICY_REF
+    assert result.product_tab_count == 4
+    assert result.capability_count == 3
+    assert result.safety_lock_count == 4
+    assert result.missing_terms == []
+    assert result.prohibited_marker_count == 0
+    assert result.memory_write_allowed is False
+    assert result.real_screen_capture_started is False
+    assert result.voice_capture_enabled is False
+    assert set(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS).issubset(result.blocked_effects)
+
+
 def test_live_tutor_demo_session_keeps_turns_memory_free():
     session = LiveTutorDemoSession()
     turn = session.answer(
@@ -428,6 +448,12 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert 'data-product-panel="memories"' in html
     assert "session-chat-count" in html
     assert "session-memory-count" in html
+    assert "capability-strip" in html
+    assert "I can" in html
+    assert "I ask before" in html
+    assert "I cannot" in html
+    assert "Point, explain, suggest, and queue memory ideas." in html
+    assert "Click, type, capture your screen, or listen." in html
     assert "memory-idea-list" in html
     assert "memory-policy-strip" in html
     assert "safety-lock-panel" in html
@@ -487,6 +513,7 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert "setActiveProductPanel" in js
     assert "appendMemoryIdea" in js
     assert "updateSessionSummary" in js
+    assert "updateCapabilityStrip" in js
     assert "pointer-holding" in js
     assert "setHelperActive" in js
     assert "wakeHelper" in js
@@ -522,6 +549,7 @@ def test_live_tutor_static_ui_drives_secondary_cursor_and_safe_endpoint():
     assert ".product-tabs" in css
     assert ".product-tab-panel.active" in css
     assert ".session-summary-panel" in css
+    assert ".capability-strip" in css
     assert ".conversation-list" in css
     assert ".memory-idea-list" in css
     assert ".memory-policy-strip" in css

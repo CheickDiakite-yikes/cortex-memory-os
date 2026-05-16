@@ -199,12 +199,15 @@ from cortex_memory_os.live_tutor_overlay import (
     LIVE_TUTOR_BROWSER_PROOF_POLICY_REF,
     LIVE_TUTOR_OVERLAY_ID,
     LIVE_TUTOR_OVERLAY_POLICY_REF,
+    LIVE_TUTOR_PRODUCT_UX_ID,
+    LIVE_TUTOR_PRODUCT_UX_POLICY_REF,
     build_live_tutor_dashboard_panel,
     build_safe_creative_demo_surface,
     LiveTutorPointerState,
     resolve_live_tutor_turn,
     run_live_tutor_browser_replay_smoke,
     run_live_tutor_demo_smoke,
+    run_live_tutor_product_ux_smoke,
     run_live_tutor_server_smoke,
 )
 from cortex_memory_os.agentic_os import (
@@ -813,6 +816,7 @@ def run_all() -> BenchmarkRunResult:
         case_live_clicker_allowlisted_origin_contract,
         case_live_tutor_overlay_contract,
         case_ai_pointer_flow_state_contract,
+        case_live_tutor_product_ux_contract,
         case_live_tutor_browser_proof_contract,
         case_synthetic_capture_ladder_contract,
         case_demo_readiness_contract,
@@ -14524,6 +14528,64 @@ def case_ai_pointer_flow_state_contract() -> BenchmarkCaseResult:
             "referent": turn.pointer_referent,
             "commands": turn.command_suggestions,
             "missing_terms": missing_terms,
+        },
+    )
+
+
+def case_live_tutor_product_ux_contract() -> BenchmarkCaseResult:
+    result = run_live_tutor_product_ux_smoke()
+    docs_text = "\n".join(
+        [
+            (REPO_ROOT / "docs" / "ops" / "live-tutor-engineer-runbook.md").read_text(
+                encoding="utf-8"
+            ),
+            (REPO_ROOT / "docs" / "ops" / "benchmark-registry.md").read_text(
+                encoding="utf-8"
+            ),
+        ]
+    )
+    required_doc_terms = [
+        LIVE_TUTOR_PRODUCT_UX_ID,
+        LIVE_TUTOR_PRODUCT_UX_POLICY_REF,
+        "uv run cortex-live-tutor-demo --product-ux-smoke --json",
+        "Chats, Memories, Voice, Safety",
+        "I can / I ask before / I cannot",
+        "Screen capture off",
+        "Memory writes off",
+    ]
+    missing_doc_terms = _missing_terms(docs_text, required_doc_terms)
+    passed = (
+        result.passed
+        and result.proof_id == LIVE_TUTOR_PRODUCT_UX_ID
+        and result.policy_ref == LIVE_TUTOR_PRODUCT_UX_POLICY_REF
+        and result.product_tab_count == 4
+        and result.capability_count == 3
+        and result.safety_lock_count == 4
+        and result.prohibited_marker_count == 0
+        and not result.missing_terms
+        and not missing_doc_terms
+    )
+    return BenchmarkCaseResult(
+        case_id="LIVE-TUTOR-PRODUCT-UX-001/user_facing_pointer_shell",
+        suite=LIVE_TUTOR_PRODUCT_UX_ID,
+        passed=passed,
+        summary=(
+            "The pointer-first demo keeps the visible product surface simple: "
+            "Chats, Memories, Voice, and Safety, with a child-readable capability "
+            "strip and locked capture/memory actions."
+        ),
+        metrics={
+            "product_tab_count": result.product_tab_count,
+            "capability_count": result.capability_count,
+            "safety_lock_count": result.safety_lock_count,
+            "missing_terms": len(result.missing_terms),
+            "missing_doc_terms": len(missing_doc_terms),
+        },
+        evidence={
+            "policy_ref": LIVE_TUTOR_PRODUCT_UX_POLICY_REF,
+            "blocked_effects": result.blocked_effects,
+            "missing_terms": result.missing_terms,
+            "missing_doc_terms": missing_doc_terms,
         },
     )
 

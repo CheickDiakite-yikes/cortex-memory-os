@@ -34,6 +34,8 @@ LIVE_TUTOR_OVERLAY_ID = "LIVE-TUTOR-OVERLAY-001"
 LIVE_TUTOR_OVERLAY_POLICY_REF = "policy_live_tutor_overlay_v1"
 LIVE_TUTOR_BROWSER_PROOF_ID = "LIVE-TUTOR-BROWSER-PROOF-001"
 LIVE_TUTOR_BROWSER_PROOF_POLICY_REF = "policy_live_tutor_browser_proof_v1"
+LIVE_TUTOR_PRODUCT_UX_ID = "LIVE-TUTOR-PRODUCT-UX-001"
+LIVE_TUTOR_PRODUCT_UX_POLICY_REF = "policy_live_tutor_product_ux_v1"
 AI_POINTER_FLOW_STATE_ID = "AI-POINTER-FLOW-STATE-001"
 AI_POINTER_FLOW_POLICY_REF = "policy_ai_pointer_flow_state_v1"
 DEFAULT_LIVE_TUTOR_HOST = "127.0.0.1"
@@ -659,6 +661,38 @@ class LiveTutorReceiptReport(StrictModel):
             raise ValueError("live tutor receipt report must stay redacted")
         if missing := sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS.difference(self.blocked_effects)):
             raise ValueError(f"live tutor receipt report missing blocked effects: {missing}")
+        return self
+
+
+class LiveTutorProductUxSmokeResult(StrictModel):
+    proof_id: str = LIVE_TUTOR_PRODUCT_UX_ID
+    policy_ref: str = LIVE_TUTOR_PRODUCT_UX_POLICY_REF
+    passed: bool
+    generated_at: datetime
+    product_tab_count: int = Field(ge=0)
+    user_panel_count: int = Field(ge=0)
+    capability_count: int = Field(ge=0)
+    safety_lock_count: int = Field(ge=0)
+    required_term_count: int = Field(ge=0)
+    missing_terms: list[str] = Field(default_factory=list)
+    prohibited_marker_count: int = Field(ge=0)
+    real_screen_capture_started: bool = False
+    voice_capture_enabled: bool = False
+    memory_write_allowed: bool = False
+    external_effect_enabled: bool = False
+    default_panel: Literal["chat"] = "chat"
+    blocked_effects: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def keep_product_ux_safe(self) -> LiveTutorProductUxSmokeResult:
+        if self.real_screen_capture_started or self.voice_capture_enabled:
+            raise ValueError("live tutor product UX smoke cannot enable live capture")
+        if self.memory_write_allowed or self.external_effect_enabled:
+            raise ValueError("live tutor product UX smoke cannot enable mutating effects")
+        if self.prohibited_marker_count:
+            raise ValueError("live tutor product UX smoke cannot include prohibited markers")
+        if missing := sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS.difference(self.blocked_effects)):
+            raise ValueError(f"live tutor product UX smoke missing blocked effects: {missing}")
         return self
 
 
@@ -1597,6 +1631,75 @@ def run_live_tutor_browser_replay_smoke() -> LiveTutorReceiptReport:
         demo.stop()
 
 
+def run_live_tutor_product_ux_smoke() -> LiveTutorProductUxSmokeResult:
+    html = (UI_ROOT / "index.html").read_text(encoding="utf-8")
+    js = (UI_ROOT / "app.js").read_text(encoding="utf-8")
+    css = (UI_ROOT / "styles.css").read_text(encoding="utf-8")
+    combined = "\n".join([html, js, css])
+    required_terms = [
+        "Point, Ask, Remember",
+        "product-tabs",
+        'data-product-tab="chat"',
+        'data-product-tab="memories"',
+        'data-product-tab="voice"',
+        'data-product-tab="safety"',
+        "session-summary-panel",
+        "capability-strip",
+        "I can",
+        "I ask before",
+        "I cannot",
+        "Point, explain, suggest, and queue memory ideas.",
+        "Saving memory, using voice, or preparing actions.",
+        "Click, type, capture your screen, or listen.",
+        "conversation-list",
+        "memory-idea-list",
+        "memory-policy-strip",
+        "voice-cost-panel",
+        "safety-lock-panel",
+        "Screen capture off",
+        "Microphone off",
+        "Memory writes off",
+        "Real clicks off",
+        "No silent saves",
+        "Forget anytime",
+        "updateCapabilityStrip",
+        "updateSessionSummary",
+        "appendMemoryIdea",
+        ".capability-strip",
+        ".product-tab-panel.active",
+    ]
+    missing_terms = [term for term in required_terms if term not in combined]
+    prohibited_marker_count = sum(1 for marker in _PROHIBITED_MARKERS if marker in combined)
+    capability_terms = ["I can", "I ask before", "I cannot"]
+    safety_locks = [
+        "Screen capture off",
+        "Microphone off",
+        "Memory writes off",
+        "Real clicks off",
+    ]
+    passed = (
+        not missing_terms
+        and html.count('data-product-tab="') >= 4
+        and html.count("user-product-panel") >= 3
+        and all(term in html for term in capability_terms)
+        and all(lock in html for lock in safety_locks)
+        and prohibited_marker_count == 0
+        and 'class="product-tab-panel active" data-product-panel="chat"' in html
+    )
+    return LiveTutorProductUxSmokeResult(
+        passed=passed,
+        generated_at=datetime.now(UTC),
+        product_tab_count=html.count('data-product-tab="'),
+        user_panel_count=html.count("user-product-panel"),
+        capability_count=sum(int(term in html) for term in capability_terms),
+        safety_lock_count=sum(int(lock in html) for lock in safety_locks),
+        required_term_count=len(required_terms),
+        missing_terms=missing_terms,
+        prohibited_marker_count=prohibited_marker_count,
+        blocked_effects=sorted(LIVE_TUTOR_REQUIRED_BLOCKED_EFFECTS),
+    )
+
+
 def build_live_tutor_dashboard_panel(
     result: LiveTutorDemoResult | None = None,
 ) -> LiveTutorDashboardPanel:
@@ -2308,6 +2411,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--server-smoke", action="store_true")
     parser.add_argument("--browser-replay-smoke", action="store_true")
+    parser.add_argument("--product-ux-smoke", action="store_true")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--ask", default=None)
     parser.add_argument("--host", default=DEFAULT_LIVE_TUTOR_HOST)
@@ -2350,6 +2454,19 @@ def main(argv: list[str] | None = None) -> int:
                 "live tutor browser replay "
                 f"{'passed' if result.passed else 'failed'}: "
                 f"{result.receipt_count} redacted receipts"
+            )
+        return 0 if result.passed else 1
+
+    if args.product_ux_smoke:
+        result = run_live_tutor_product_ux_smoke()
+        payload = result.model_dump(mode="json")
+        if args.json:
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            print(
+                "live tutor product UX "
+                f"{'passed' if result.passed else 'failed'}: "
+                f"{result.product_tab_count} tabs, {result.capability_count} capabilities"
             )
         return 0 if result.passed else 1
 

@@ -7,7 +7,7 @@ def test_synthetic_benchmarks_pass():
     result = run_all()
 
     assert result.passed
-    assert len(result.case_results) == 232
+    assert len(result.case_results) == 233
     assert {case.suite for case in result.case_results} >= {
         "MEM-RECALL-001",
         "RETRIEVAL-SCORE-001",
@@ -182,6 +182,7 @@ def test_synthetic_benchmarks_pass():
         "AGENTIC-POINTER-CARD-001",
         "AGENTIC-RUNTIME-TRACE-001",
         "AI-POINTER-FLOW-STATE-001",
+        "LIVE-TUTOR-PRODUCT-UX-001",
         "DASHBOARD-FOCUS-INSPECTOR-001",
         "SKILL-GATE-001",
         "SKILL-ROLLBACK-001",

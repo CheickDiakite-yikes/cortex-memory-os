@@ -46,6 +46,7 @@ const memoryIdeaList = document.querySelector("#memory-idea-list");
 const sessionChatCount = document.querySelector("#session-chat-count");
 const sessionMemoryCount = document.querySelector("#session-memory-count");
 const sessionSafetyState = document.querySelector("#session-safety-state");
+const capabilityStrip = document.querySelector("#capability-strip");
 const turnList = document.querySelector("#turn-list");
 const receiptSummary = document.querySelector("#receipt-summary");
 const receiptsToggle = document.querySelector("#receipts-toggle");
@@ -224,6 +225,10 @@ function updateSessionSummary() {
   sessionSafetyState.textContent = "Locked";
 }
 
+function updateCapabilityStrip(status = "ready") {
+  capabilityStrip.dataset.status = status;
+}
+
 async function askTutor(question, options = {}) {
   if (!helperActive) {
     setHelperActive(true);
@@ -350,6 +355,7 @@ function renderCommandSuggestions(suggestions = ["Explain this", "What next?", "
 
 function setThinkingState(active) {
   document.body.classList.toggle("pointer-thinking", active);
+  updateCapabilityStrip(active ? "thinking" : "ready");
   pointerStatusLabel.textContent = active
     ? "Cortex thinking"
     : currentTargetId

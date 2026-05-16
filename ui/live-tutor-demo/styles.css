@@ -935,6 +935,41 @@ body.ai-draft-mode .cursor-action-row button[data-pointer-ai],
   font-size: 1rem;
 }
 
+.capability-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid rgba(22, 99, 215, 0.14);
+  border-radius: 10px;
+  background: rgba(242, 247, 255, 0.92);
+}
+
+.capability-strip[data-status="thinking"] {
+  border-color: rgba(22, 99, 215, 0.32);
+  box-shadow: 0 10px 30px rgba(22, 99, 215, 0.08);
+}
+
+.capability-strip div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.capability-strip strong {
+  color: var(--ink);
+  font-size: 0.74rem;
+}
+
+.capability-strip span {
+  color: #536176;
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
 .section-label {
   margin: 0 0 7px;
   color: var(--blue);
@@ -1373,5 +1408,10 @@ dd {
     grid-column: auto;
     width: auto;
     max-width: none;
+  }
+
+  .capability-strip,
+  .session-summary-panel {
+    grid-template-columns: 1fr;
   }
 }
