@@ -827,7 +827,7 @@ final class ShadowClickerController {
         case .processing(let phase):
             companionState = .processing(pulsePhase: phase + 0.1)
         case .connectionError:
-            if isControlPressed {
+            if isControlPressed && RealtimeVoiceClient.shared.realtimeConnected {
                 if RealtimeVoiceClient.shared.startListening() {
                     companionState = .listening(pulsePhase: 0.0)
                 }

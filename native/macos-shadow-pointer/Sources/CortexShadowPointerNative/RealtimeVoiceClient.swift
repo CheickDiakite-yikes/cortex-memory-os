@@ -302,8 +302,9 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
                 "output": outputString
             ]
         ]
-        send(json: itemCreateMsg)
-        send(json: Self.responseCreateMessage())
+        if send(json: itemCreateMsg) {
+            send(json: Self.responseCreateMessage())
+        }
     }
 
     public static func responseCreateMessage() -> [String: Any] {

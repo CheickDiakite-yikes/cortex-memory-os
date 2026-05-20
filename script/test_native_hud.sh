@@ -162,6 +162,11 @@ status() {
 
   if pgrep -x "$APP_NAME" >/dev/null 2>&1; then
     echo "native HUD: running"
+    if pgrep -lf "$APP_NAME" | grep -q -- "--allow-native-input-effects"; then
+      echo "native input effects: enabled"
+    else
+      echo "native input effects: disabled"
+    fi
   else
     echo "native HUD: stopped"
   fi
