@@ -6,7 +6,7 @@ APP_NAME="cortex-shadow-clicker"
 BUNDLE_NAME="CortexShadowClicker"
 BUNDLE_ID="com.cortexmemoryos.shadowclicker"
 MIN_SYSTEM_VERSION="13.0"
-APP_DURATION_SECONDS="${CORTEX_SHADOW_CLICKER_DURATION:-28800}"
+APP_DURATION_SECONDS="${CORTEX_SHADOW_CLICKER_DURATION:-900}"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE_DIR="$ROOT_DIR/native/macos-shadow-pointer"

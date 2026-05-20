@@ -213,7 +213,7 @@ MESSAGE
   stop_backend
   start_backend
 
-  export CORTEX_SHADOW_CLICKER_DURATION="${CORTEX_SHADOW_CLICKER_DURATION:-28800}"
+  export CORTEX_SHADOW_CLICKER_DURATION="${CORTEX_SHADOW_CLICKER_DURATION:-900}"
   mkdir -p "$(dirname "$APP_LOG")"
   : >"$APP_LOG"
   "$ROOT_DIR/script/build_and_run.sh" >"$APP_LOG" 2>&1
@@ -227,8 +227,9 @@ MESSAGE
   echo "  3. Release Control to send the turn."
   echo "  4. Hold Option to ask Cortex to pay attention to the thing under your pointer."
   echo "  5. Hold Shift + Option to pin the current pointer spot before asking."
-  echo "  6. The app stays on for 8 hours by default, or until you stop it."
+  echo "  6. The app stays on for 15 minutes by default, or until you stop it."
   echo "  7. Press Control + Option + Command + Q to turn off the desktop app."
+  echo "  8. For longer manual tests, explicitly set CORTEX_SHADOW_CLICKER_DURATION seconds."
   echo
   echo "Safe first phrases:"
   echo "  - \"What can you do here?\""
