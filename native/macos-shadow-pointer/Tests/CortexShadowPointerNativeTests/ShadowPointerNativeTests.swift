@@ -365,6 +365,146 @@ final class ShadowPointerNativeTests: XCTestCase {
         XCTAssertFalse(json.contains("response.modalities"))
     }
 
+    func testRealtimeTextParserHandlesCurrentOutputTextEvents() throws {
+        guard #available(macOS 13.0, *) else {
+            throw XCTSkip("RealtimeVoiceClient requires macOS 13")
+        }
+
+        XCTAssertEqual(
+            RealtimeVoiceClient.textDelta(from: [
+                "type": "response.output_text.delta",
+                "delta": "Hey "
+            ]),
+            "Hey "
+        )
+        XCTAssertEqual(
+            RealtimeVoiceClient.textDone(from: [
+                "type": "response.output_text.done",
+                "text": "I am here with you."
+            ]),
+            "I am here with you."
+        )
+        XCTAssertEqual(
+            RealtimeVoiceClient.textDelta(from: [
+                "type": "response.output_audio_transcript.delta",
+                "delta": "Sure"
+            ]),
+            "Sure"
+        )
+        XCTAssertEqual(
+            RealtimeVoiceClient.textDone(from: [
+                "type": "response.output_audio_transcript.done",
+                "transcript": "I can help from the pointer."
+            ]),
+            "I can help from the pointer."
+        )
+    }
+
+    func testRealtimeTextParserHandlesResponseDoneMessages() throws {
+        guard #available(macOS 13.0, *) else {
+            throw XCTSkip("RealtimeVoiceClient requires macOS 13")
+        }
+
+        let event: [String: Any] = [
+            "type": "response.done",
+            "response": [
+                "output": [
+                    [
+                        "type": "message",
+                        "content": [
+                            [
+                                "type": "output_text",
+                                "text": "Hover here and ask me what to do next."
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+
+        XCTAssertEqual(
+            RealtimeVoiceClient.textDone(from: event),
+            "Hover here and ask me what to do next."
+        )
+    }
+
+    func testRealtimeToolParserHandlesCurrentFunctionCallEvents() throws {
+        guard #available(macOS 13.0, *) else {
+            throw XCTSkip("RealtimeVoiceClient requires macOS 13")
+        }
+
+        let call = RealtimeVoiceClient.toolCall(from: [
+            "type": "response.function_call_arguments.done",
+            "name": "move_mouse",
+            "call_id": "call_123",
+            "arguments": #"{"x":120,"y":240}"#
+        ])
+
+        XCTAssertEqual(call?.name, "move_mouse")
+        XCTAssertEqual(call?.callId, "call_123")
+        XCTAssertEqual(call?.arguments["x"], "120")
+        XCTAssertEqual(call?.arguments["y"], "240")
+    }
+
+    func testPointerContextMessageIsTextOnlyAndBounded() throws {
+        guard #available(macOS 13.0, *) else {
+            throw XCTSkip("RealtimeVoiceClient requires macOS 13")
+        }
+
+        let message = RealtimeVoiceClient.pointerContextMessage(
+            String(repeating: "Pointer context. ", count: 40)
+        )
+        let data = try JSONSerialization.data(withJSONObject: message)
+        let json = String(decoding: data, as: UTF8.self)
+
+        XCTAssertTrue(json.contains("conversation.item.create"))
+        XCTAssertTrue(json.contains("Safe pointer context"))
+        XCTAssertFalse(json.contains("modalities"))
+        XCTAssertLessThan(json.count, 700)
+    }
+
+    func testPointerInsightSnapshotIsSafeHoverContextOnly() throws {
+        let display = NativeDisplayFrame(minX: 0, minY: 0, width: 500, height: 400)
+        let insight = try NativePointerInsightSnapshot(
+            mode: "hover",
+            frontmostApp: "Finder",
+            cursorX: 120,
+            cursorY: 180
+        ).validated(displayFrame: display)
+
+        XCTAssertEqual(insight.benchmarkID, nativePointerInsightBenchmarkID)
+        XCTAssertEqual(insight.policyRef, nativePointerInsightPolicyRef)
+        XCTAssertEqual(insight.mode, "hover")
+        XCTAssertTrue(insight.displayOnly)
+        XCTAssertFalse(insight.captureStarted)
+        XCTAssertFalse(insight.accessibilityReadStarted)
+        XCTAssertFalse(insight.memoryWriteAllowed)
+        XCTAssertFalse(insight.rawRefRetained)
+        XCTAssertTrue(insight.allowedEffects.contains("read_frontmost_app_name"))
+        XCTAssertTrue(insight.blockedEffects.contains("start_screen_capture"))
+        XCTAssertTrue(insight.blockedEffects.contains("read_window_contents"))
+        XCTAssertTrue(insight.chipText.contains("Finder"))
+        XCTAssertTrue(insight.contextText.contains("No screen capture"))
+    }
+
+    func testPointerInsightRejectsOutOfBoundsAndUnsafeEffects() {
+        let display = NativeDisplayFrame(minX: 0, minY: 0, width: 500, height: 400)
+
+        XCTAssertThrowsError(
+            try NativePointerInsightSnapshot(
+                cursorX: 600,
+                cursorY: 180
+            ).validated(displayFrame: display)
+        )
+        XCTAssertThrowsError(
+            try NativePointerInsightSnapshot(
+                cursorX: 120,
+                cursorY: 180,
+                captureStarted: true
+            ).validated(displayFrame: display)
+        )
+    }
+
     func testNativeChipPlacementClampsToVisibleFrameEdges() {
         let visible = NativeDisplayFrame(minX: 0, minY: 24, width: 400, height: 260)
         let topLeft = NativeChipPlacementEngine.place(

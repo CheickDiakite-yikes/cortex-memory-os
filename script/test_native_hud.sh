@@ -153,6 +153,19 @@ stop_app() {
   "$ROOT_DIR/script/build_and_run.sh" --stop >/dev/null 2>&1 || true
 }
 
+confirm_stopped() {
+  local failed=0
+  if backend_alive; then
+    echo "backend: still running at $BACKEND_URL" >&2
+    failed=1
+  fi
+  if pgrep -x "$APP_NAME" >/dev/null 2>&1; then
+    echo "native HUD: still running" >&2
+    failed=1
+  fi
+  return "$failed"
+}
+
 status() {
   if backend_alive; then
     echo "backend: running at $BACKEND_URL"
@@ -212,7 +225,9 @@ MESSAGE
   echo "  1. A blue helper cursor/ring follows your system pointer."
   echo "  2. Hold Control to talk. The blue ring should react to your voice."
   echo "  3. Release Control to send the turn."
-  echo "  4. Press Control + Option + Command + Q to turn off the desktop app."
+  echo "  4. Hold Option to ask Cortex to pay attention to the thing under your pointer."
+  echo "  5. Hold Shift + Option to pin the current pointer spot before asking."
+  echo "  6. Press Control + Option + Command + Q to turn off the desktop app."
   echo
   echo "Safe first phrases:"
   echo "  - \"What can you do here?\""
@@ -238,7 +253,13 @@ case "$MODE" in
   stop)
     stop_app
     stop_backend
-    echo "Stopped Cortex native HUD test stack."
+    if confirm_stopped; then
+      osascript -e 'display notification "Cortex native HUD stopped" with title "Cortex"' >/dev/null 2>&1 || true
+      echo "Stopped and confirmed Cortex native HUD test stack."
+    else
+      echo "Stop requested, but something is still alive. Run ./script/test_native_hud.sh status." >&2
+      exit 1
+    fi
     ;;
   status)
     status

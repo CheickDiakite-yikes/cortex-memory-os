@@ -23,6 +23,15 @@ usage() {
 
 stop_app() {
   pkill -x "$APP_NAME" >/dev/null 2>&1 || true
+  pkill -f "$APP_BINARY" >/dev/null 2>&1 || true
+  local deadline=$((SECONDS + 5))
+  while pgrep -x "$APP_NAME" >/dev/null 2>&1; do
+    if (( SECONDS >= deadline )); then
+      pkill -9 -x "$APP_NAME" >/dev/null 2>&1 || true
+      break
+    fi
+    sleep 0.2
+  done
 }
 
 build_bundle() {

@@ -25,6 +25,8 @@ public let nativeCompanionHUDPhase2PolicyRef = "policy_native_companion_hud_phas
 public let nativeScreenCaptureProbeBenchmarkID = "NATIVE-SCREEN-CAPTURE-PROBE-001"
 public let nativeScreenCaptureProbePolicyRef = "policy_native_screen_capture_probe_v1"
 public let nativeInputEffectPolicyRef = "policy_native_input_effects_v1"
+public let nativePointerInsightBenchmarkID = "NATIVE-POINTER-INSIGHT-001"
+public let nativePointerInsightPolicyRef = "policy_native_pointer_insight_v1"
 
 public enum ShadowPointerNativeState: String, Codable, CaseIterable, Sendable {
     case off
@@ -928,6 +930,119 @@ public struct NativeAgenticPointerCard: Codable, Equatable, Sendable {
             "password",
             "secret",
         ].contains { haystack.contains($0) }
+    }
+}
+
+public struct NativePointerInsightSnapshot: Codable, Equatable, Sendable {
+    public var benchmarkID: String
+    public var policyRef: String
+    public var mode: String
+    public var frontmostApp: String
+    public var cursorX: Double
+    public var cursorY: Double
+    public var displayOnly: Bool
+    public var captureStarted: Bool
+    public var accessibilityReadStarted: Bool
+    public var memoryWriteAllowed: Bool
+    public var rawRefRetained: Bool
+    public var allowedEffects: [String]
+    public var blockedEffects: [String]
+
+    public init(
+        benchmarkID: String = nativePointerInsightBenchmarkID,
+        policyRef: String = nativePointerInsightPolicyRef,
+        mode: String = "hover",
+        frontmostApp: String = "current app",
+        cursorX: Double,
+        cursorY: Double,
+        displayOnly: Bool = true,
+        captureStarted: Bool = false,
+        accessibilityReadStarted: Bool = false,
+        memoryWriteAllowed: Bool = false,
+        rawRefRetained: Bool = false,
+        allowedEffects: [String] = [
+            "read_global_cursor_position",
+            "read_frontmost_app_name",
+            "render_pointer_insight_chip",
+        ],
+        blockedEffects: [String] = [
+            "start_screen_capture",
+            "read_window_contents",
+            "start_accessibility_observer",
+            "execute_click",
+            "type_text",
+            "write_memory",
+            "store_raw_evidence",
+            "export_payload",
+        ]
+    ) {
+        self.benchmarkID = benchmarkID
+        self.policyRef = policyRef
+        self.mode = mode
+        self.frontmostApp = frontmostApp
+        self.cursorX = cursorX
+        self.cursorY = cursorY
+        self.displayOnly = displayOnly
+        self.captureStarted = captureStarted
+        self.accessibilityReadStarted = accessibilityReadStarted
+        self.memoryWriteAllowed = memoryWriteAllowed
+        self.rawRefRetained = rawRefRetained
+        self.allowedEffects = allowedEffects
+        self.blockedEffects = blockedEffects
+    }
+
+    public func validated(displayFrame: NativeDisplayFrame = .defaultMain) throws -> NativePointerInsightSnapshot {
+        guard benchmarkID == nativePointerInsightBenchmarkID,
+              policyRef == nativePointerInsightPolicyRef else {
+            throw ShadowPointerNativeError.invalidControl("native pointer insight policy mismatch")
+        }
+        guard ["hover", "selection"].contains(mode) else {
+            throw ShadowPointerNativeError.invalidControl("native pointer insight mode is unsupported")
+        }
+        guard cursorX >= displayFrame.minX,
+              cursorX <= displayFrame.maxX,
+              cursorY >= displayFrame.minY,
+              cursorY <= displayFrame.maxY else {
+            throw ShadowPointerNativeError.invalidControl("native pointer insight cursor outside display bounds")
+        }
+        guard displayOnly,
+              !captureStarted,
+              !accessibilityReadStarted,
+              !memoryWriteAllowed,
+              !rawRefRetained else {
+            throw ShadowPointerNativeError.invalidControl("native pointer insight must stay display-only")
+        }
+        let requiredBlocked = Set([
+            "start_screen_capture",
+            "read_window_contents",
+            "start_accessibility_observer",
+            "execute_click",
+            "type_text",
+            "write_memory",
+            "store_raw_evidence",
+            "export_payload",
+        ])
+        guard requiredBlocked.isSubset(of: Set(blockedEffects)) else {
+            throw ShadowPointerNativeError.invalidControl("native pointer insight missing blocked effects")
+        }
+        return self
+    }
+
+    public var chipText: String {
+        let safeApp = frontmostApp.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "this app"
+            : frontmostApp
+        if mode == "selection" {
+            return "Pinned this spot in \(safeApp). Hold Control and ask what to do next."
+        }
+        return "Looking at \(safeApp) near your pointer. Hold Control and ask about this."
+    }
+
+    public var contextText: String {
+        let safeApp = frontmostApp.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "current app"
+            : frontmostApp
+        return "Frontmost app \(safeApp). Pointer at x \(Int(cursorX)), y \(Int(cursorY)). No screen capture, raw pixels, or window text were read."
     }
 }
 

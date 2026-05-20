@@ -687,6 +687,10 @@ final class ShadowClickerController {
     private let cloakHotspot = NSPoint(x: 104, y: 100)
     private let inputEffectPolicy: NativeInputEffectPolicy
     private var isFinishing = false
+    private var latestPointerInsight: NativePointerInsightSnapshot?
+    private var insightSignature: String?
+    private var insightAppearedAt = Date()
+    private var lastInsightUpdate: Date?
 
     init(
         app: NSApplication,
@@ -715,19 +719,23 @@ final class ShadowClickerController {
 
         setupNotificationObservers()
         setupRealtimeVoiceCallbacks()
+        RealtimeVoiceClient.shared.pointerContextProvider = { [weak self] in
+            guard let self else { return nil }
+            return self.currentPointerContext()
+        }
     }
 
     private func setupNotificationObservers() {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleTextDeltaNotification(_:)),
-            name: Notification.Name("RealtimeTextDeltaReceived"),
+            name: .realtimeTextDeltaReceived,
             object: nil
         )
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleTextDoneNotification(_:)),
-            name: Notification.Name("RealtimeTextDoneReceived"),
+            name: .realtimeTextDoneReceived,
             object: nil
         )
         NotificationCenter.default.addObserver(
@@ -797,6 +805,17 @@ final class ShadowClickerController {
             return
         }
         let isControlPressed = modifierFlags.contains(.control)
+        let isOptionPressed = modifierFlags.contains(.option)
+        let isCommandPressed = modifierFlags.contains(.command)
+        let isShiftPressed = modifierFlags.contains(.shift)
+        let wantsPointerInsight = isOptionPressed && !isControlPressed && !isCommandPressed
+
+        if wantsPointerInsight {
+            updatePointerInsight(sample: sample, mode: isShiftPressed ? "selection" : "hover")
+        } else {
+            lastInsightUpdate = nil
+            insightSignature = nil
+        }
 
         switch companionState {
         case .idle, .showingChip:
@@ -818,7 +837,7 @@ final class ShadowClickerController {
                     companionState = .processing(pulsePhase: 0.0)
                 } else {
                     companionState = .showingChip(
-                        text: "No audio captured. Hold Control and speak again.",
+                        text: "I did not hear enough audio. Hold Control, speak, then release.",
                         expiration: Date().addingTimeInterval(3.0),
                         appearedAt: Date()
                     )
@@ -855,6 +874,56 @@ final class ShadowClickerController {
         let requiredModifiers: NSEvent.ModifierFlags = [.control, .option, .command]
         let hasRequiredModifiers = modifierFlags.intersection(requiredModifiers) == requiredModifiers
         return hasRequiredModifiers && CGEventSource.keyState(.combinedSessionState, key: 12)
+    }
+
+    private func updatePointerInsight(sample: NativeCursorSample, mode: String) {
+        let now = Date()
+        if let lastInsightUpdate, now.timeIntervalSince(lastInsightUpdate) < 0.18 {
+            return
+        }
+        lastInsightUpdate = now
+
+        let displayFrame = NativeDisplayFrame.containing(sample)
+        let frontmostApp = NSWorkspace.shared.frontmostApplication?.localizedName ?? "this app"
+        let snapshot = NativePointerInsightSnapshot(
+            mode: mode,
+            frontmostApp: frontmostApp,
+            cursorX: sample.x,
+            cursorY: sample.y
+        )
+        guard let validated = try? snapshot.validated(displayFrame: displayFrame) else {
+            return
+        }
+        latestPointerInsight = validated
+
+        let signature = "\(validated.mode):\(validated.frontmostApp)"
+        if signature != insightSignature {
+            insightSignature = signature
+            insightAppearedAt = now
+            NativeHUDLog.write("pointer_insight mode=\(validated.mode) app=\"\(validated.frontmostApp)\"")
+        }
+        companionState = .showingChip(
+            text: validated.chipText,
+            expiration: now.addingTimeInterval(0.8),
+            appearedAt: insightAppearedAt
+        )
+    }
+
+    private func currentPointerContext() -> String? {
+        if let latestPointerInsight {
+            return latestPointerInsight.contextText
+        }
+        let sample = NativeCursorProbe.sampleNow()
+        let frontmostApp = NSWorkspace.shared.frontmostApplication?.localizedName ?? "current app"
+        let snapshot = NativePointerInsightSnapshot(
+            mode: "hover",
+            frontmostApp: frontmostApp,
+            cursorX: sample.x,
+            cursorY: sample.y
+        )
+        return try? snapshot
+            .validated(displayFrame: NativeDisplayFrame.containing(sample))
+            .contextText
     }
 
     private func refreshAgenticCardIfNeeded() {
@@ -895,6 +964,7 @@ final class ShadowClickerController {
         displayLinkDriver?.stop()
         stopTimer?.invalidate()
         RealtimeVoiceClient.shared.disconnect()
+        RealtimeVoiceClient.shared.pointerContextProvider = nil
         let smokeSamples = samples.isEmpty ? [NativeCursorProbe.sampleNow()] : Array(samples.suffix(5))
         let result = try? NativeCursorFollowSmokeResult.run(samples: smokeSamples)
         panel.orderOut(nil)

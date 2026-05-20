@@ -5,6 +5,20 @@ public extension Notification.Name {
     static let realtimeAudioAmplitudeUpdated = Notification.Name("RealtimeAudioAmplitudeUpdated")
     static let realtimeConnectionError = Notification.Name("RealtimeConnectionError")
     static let realtimeConnectionRestored = Notification.Name("RealtimeConnectionRestored")
+    static let realtimeTextDeltaReceived = Notification.Name("RealtimeTextDeltaReceived")
+    static let realtimeTextDoneReceived = Notification.Name("RealtimeTextDoneReceived")
+}
+
+public struct RealtimeToolCall: Equatable, Sendable {
+    public var name: String
+    public var callId: String
+    public var arguments: [String: String]
+
+    public init(name: String, callId: String, arguments: [String: String]) {
+        self.name = name
+        self.callId = callId
+        self.arguments = arguments
+    }
 }
 
 public struct RealtimeReconnectPolicy: Equatable, Sendable {
@@ -61,6 +75,7 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
     public var onMessageReceived: (([String: Any]) -> Void)?
     public var onToolCallReceived: ((String, String, [String: Any]) -> Void)?
     public var onAudioPlayback: ((Data) -> Void)?
+    public var pointerContextProvider: (() -> String?)?
 
     public override init() {
         super.init()
@@ -195,8 +210,12 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
             "session": [
                 "type": "realtime",
                 "instructions": (
-                    "You are Cortex Pointer. Prefer native pointer tools for simple, safe, "
-                    + "user-requested mouse guidance. Keep replies brief and text-only."
+                    "You are Cortex, a warm desktop AI companion with a blue helper pointer. "
+                    + "For casual questions like greetings, answer naturally in one short sentence. "
+                    + "For hover or pointer questions, use the provided pointer context and explain what you can infer. "
+                    + "Only call mouse tools when the user explicitly asks for a pointer move, click, drag, or scroll. "
+                    + "If native input effects are blocked, accept the tool result and explain the preview-only state. "
+                    + "Keep responses concise enough to fit in a small pointer-side chip."
                 ),
                 "tools": Self.realtimeToolDefinitions(),
                 "tool_choice": "auto"
@@ -242,15 +261,10 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
 
         guard let type = json["type"] as? String else { return }
 
-        if type == "response.function_call_arguments.done" {
-            if let name = json["name"] as? String,
-               let callId = json["call_id"] as? String,
-               let argsString = json["arguments"] as? String,
-               let argsData = argsString.data(using: .utf8),
-               let args = try? JSONSerialization.jsonObject(with: argsData) as? [String: Any] {
-                DispatchQueue.main.async {
-                    self.onToolCallReceived?(name, callId, args)
-                }
+        if let toolCall = Self.toolCall(from: json),
+           let args = Self.anyArguments(from: toolCall.arguments) {
+            DispatchQueue.main.async {
+                self.onToolCallReceived?(toolCall.name, toolCall.callId, args)
             }
         } else if type == "error" {
             let errorPayload = json["error"] as? [String: Any]
@@ -267,27 +281,144 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
                     userInfo: ["message": message]
                 )
             }
-        } else if type == "response.text.delta" {
-            if let delta = json["delta"] as? String {
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(
-                        name: Notification.Name("RealtimeTextDeltaReceived"),
-                        object: nil,
-                        userInfo: ["delta": delta]
-                    )
-                }
+        } else if let delta = Self.textDelta(from: json) {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: .realtimeTextDeltaReceived,
+                    object: nil,
+                    userInfo: ["delta": delta]
+                )
             }
-        } else if type == "response.text.done" {
-            if let textVal = json["text"] as? String {
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(
-                        name: Notification.Name("RealtimeTextDoneReceived"),
-                        object: nil,
-                        userInfo: ["text": textVal]
-                    )
+        } else if let textVal = Self.textDone(from: json) {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: .realtimeTextDoneReceived,
+                    object: nil,
+                    userInfo: ["text": textVal]
+                )
+            }
+        }
+    }
+
+    public static func textDelta(from event: [String: Any]) -> String? {
+        guard let type = event["type"] as? String else { return nil }
+        switch type {
+        case "response.output_text.delta", "response.text.delta", "response.output_audio_transcript.delta":
+            return event["delta"] as? String
+        default:
+            return nil
+        }
+    }
+
+    public static func textDone(from event: [String: Any]) -> String? {
+        guard let type = event["type"] as? String else { return nil }
+        switch type {
+        case "response.output_text.done", "response.text.done":
+            return cleanText(event["text"] as? String)
+        case "response.output_audio_transcript.done":
+            return cleanText(event["transcript"] as? String)
+        case "response.done":
+            return textFromDoneResponse(event)
+        default:
+            return nil
+        }
+    }
+
+    public static func toolCall(from event: [String: Any]) -> RealtimeToolCall? {
+        guard let type = event["type"] as? String else { return nil }
+        if type == "response.function_call_arguments.done" {
+            return toolCall(
+                name: event["name"] as? String,
+                callId: event["call_id"] as? String,
+                arguments: event["arguments"] as? String
+            )
+        }
+        if type == "response.output_item.done",
+           let item = event["item"] as? [String: Any],
+           item["type"] as? String == "function_call" {
+            return toolCall(
+                name: item["name"] as? String,
+                callId: item["call_id"] as? String,
+                arguments: item["arguments"] as? String
+            )
+        }
+        if type == "response.done",
+           let response = event["response"] as? [String: Any],
+           let output = response["output"] as? [[String: Any]] {
+            for item in output where item["type"] as? String == "function_call" {
+                if let call = toolCall(
+                    name: item["name"] as? String,
+                    callId: item["call_id"] as? String,
+                    arguments: item["arguments"] as? String
+                ) {
+                    return call
                 }
             }
         }
+        return nil
+    }
+
+    private static func toolCall(name: String?, callId: String?, arguments: String?) -> RealtimeToolCall? {
+        guard let name,
+              let callId,
+              let arguments,
+              let argsData = arguments.data(using: .utf8),
+              let parsed = try? JSONSerialization.jsonObject(with: argsData) as? [String: Any]
+        else {
+            return nil
+        }
+        return RealtimeToolCall(name: name, callId: callId, arguments: stringArguments(from: parsed))
+    }
+
+    private static func stringArguments(from args: [String: Any]) -> [String: String] {
+        var cleaned: [String: String] = [:]
+        for (key, value) in args {
+            if let stringValue = value as? String {
+                cleaned[key] = stringValue
+            } else if let numberValue = value as? NSNumber {
+                cleaned[key] = numberValue.stringValue
+            }
+        }
+        return cleaned
+    }
+
+    private static func anyArguments(from args: [String: String]) -> [String: Any]? {
+        var converted: [String: Any] = [:]
+        for (key, value) in args {
+            if let doubleValue = Double(value) {
+                converted[key] = doubleValue
+            } else {
+                converted[key] = value
+            }
+        }
+        return converted
+    }
+
+    private static func textFromDoneResponse(_ event: [String: Any]) -> String? {
+        guard let response = event["response"] as? [String: Any] else { return nil }
+        if let outputText = cleanText(response["output_text"] as? String) {
+            return outputText
+        }
+        guard let output = response["output"] as? [[String: Any]] else { return nil }
+        for item in output where item["type"] as? String == "message" {
+            guard let content = item["content"] as? [[String: Any]] else { continue }
+            for part in content {
+                if let text = cleanText(part["text"] as? String) {
+                    return text
+                }
+                if let transcript = cleanText(part["transcript"] as? String) {
+                    return transcript
+                }
+            }
+        }
+        return nil
+    }
+
+    private static func cleanText(_ text: String?) -> String? {
+        guard let cleaned = text?.trimmingCharacters(in: .whitespacesAndNewlines), !cleaned.isEmpty else {
+            return nil
+        }
+        return cleaned
     }
 
     public func sendToolOutput(callId: String, output: [String: Any]) {
@@ -309,6 +440,25 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
 
     public static func responseCreateMessage() -> [String: Any] {
         ["type": "response.create"]
+    }
+
+    public static func pointerContextMessage(_ context: String) -> [String: Any] {
+        let safeContext = context
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return [
+            "type": "conversation.item.create",
+            "item": [
+                "type": "message",
+                "role": "user",
+                "content": [
+                    [
+                        "type": "input_text",
+                        "text": "Safe pointer context: \(String(safeContext.prefix(360)))"
+                    ]
+                ]
+            ]
+        ]
     }
 
     @discardableResult
@@ -406,6 +556,11 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
         }
 
         // Send a message indicating audio input is complete to trigger a response
+        if let context = pointerContextProvider?(),
+           !context.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            send(json: Self.pointerContextMessage(context))
+        }
+
         let commitMsg: [String: Any] = [
             "type": "input_audio_buffer.commit"
         ]
