@@ -6,11 +6,11 @@ import AppKit
 #endif
 
 struct ShadowClickerArgs {
-    private static let maximumInteractiveDuration: TimeInterval = 1800
+    private static let maximumInteractiveDuration: TimeInterval = 43_200
 
     var smoke = false
     var json = false
-    var duration: TimeInterval = 15
+    var duration: TimeInterval = 28_800
     var agenticTitle = "Draft the next steps"
     var agenticMessage = "I see Color Page. I can draft the next safe steps."
     var agenticStatus = "draft only | display-only | no write"
@@ -768,6 +768,7 @@ final class ShadowClickerController {
 
     func start(duration: TimeInterval) {
         NativeHUDLog.write("controller_start duration=\(Int(duration))")
+        showChip(text: "Cortex is on. Hold Option to inspect. Hold Control to talk.")
         let driver = DisplayLinkDriver { [weak self] in
             self?.tick()
         }
