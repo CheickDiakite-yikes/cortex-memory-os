@@ -15,11 +15,14 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Literal
+import urllib.error
+import urllib.request
 from urllib.parse import urlparse
 
 from pydantic import Field, ValidationError, field_validator, model_validator
 
 from cortex_memory_os.contracts import StrictModel
+from cortex_memory_os.live_openai_smoke import load_env_file
 from cortex_memory_os.realtime_voice_pointer import (
     DEFAULT_REALTIME_MODEL,
     REALTIME_COST_GUARD_ID,
@@ -27,6 +30,7 @@ from cortex_memory_os.realtime_voice_pointer import (
     VoiceGestureType,
     VoiceOutputMode,
     build_pointer_gesture,
+    build_realtime_client_secret_plan,
     route_voice_output,
 )
 
@@ -58,6 +62,20 @@ LIVE_TUTOR_SECURITY_HEADERS = {
         "frame-ancestors 'none'"
     ),
 }
+
+
+def resolve_realtime_token_model(
+    session_data: Mapping[str, Any],
+    env_vals: Mapping[str, str],
+    environ: Mapping[str, str],
+) -> str:
+    return str(
+        environ.get("CORTEX_REALTIME_MODEL")
+        or env_vals.get("CORTEX_REALTIME_MODEL")
+        or session_data.get("model")
+        or DEFAULT_REALTIME_MODEL
+    )
+
 
 LIVE_TUTOR_ALLOWED_EFFECTS = {
     "read_controlled_demo_state",
@@ -906,7 +924,11 @@ class LiveTutorDemoHandler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_POST(self) -> None:  # noqa: N802
-        if urlparse(self.path).path != "/tutor/turn":
+        path = urlparse(self.path).path
+        if path == "/realtime-token":
+            self._handle_realtime_token()
+            return
+        if path != "/tutor/turn":
             self.send_error(HTTPStatus.NOT_FOUND, "not found")
             return
         error = self._turn_request_error()
@@ -934,6 +956,56 @@ class LiveTutorDemoHandler(BaseHTTPRequestHandler):
             self._write_error("invalid_tutor_turn", HTTPStatus.UNPROCESSABLE_ENTITY, str(error))
             return
         self._write_json(turn.model_dump(mode="json"))
+
+    def _handle_realtime_token(self) -> None:
+        try:
+            import os
+            env_vals: dict[str, str] = {}
+            api_key = os.environ.get("OPENAI_API_KEY")
+            if not api_key:
+                env_vals = load_env_file(REPO_ROOT / ".env.local")
+                api_key = env_vals.get("OPENAI_API_KEY")
+            if not api_key:
+                self._write_error("missing_api_key", HTTPStatus.INTERNAL_SERVER_ERROR, "OPENAI_API_KEY missing")
+                return
+
+            plan = build_realtime_client_secret_plan()
+
+            # Map the Cortex contract payload to the actual OpenAI API spec
+            session_data = plan.session_payload.get("session", {})
+            if not env_vals:
+                env_vals = load_env_file(REPO_ROOT / ".env.local")
+            realtime_model = resolve_realtime_token_model(
+                session_data=session_data,
+                env_vals=env_vals,
+                environ=os.environ,
+            )
+            openai_payload = {
+                "session": {
+                    "type": "realtime",
+                    "model": realtime_model,
+                    "instructions": session_data.get("instructions", ""),
+                }
+            }
+
+            data = json.dumps(openai_payload).encode("utf-8")
+
+            request = urllib.request.Request(
+                plan.endpoint,
+                data=data,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=10) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                self._write_json(result)
+        except urllib.error.HTTPError as exc:
+            self._write_error("openai_error", exc.code, exc.read().decode("utf-8", errors="replace"))
+        except Exception as exc:
+            self._write_error("internal_error", HTTPStatus.INTERNAL_SERVER_ERROR, str(exc))
 
     def log_message(self, _format: str, *_args: Any) -> None:
         return

@@ -7,9 +7,12 @@ cd "$ROOT_DIR"
 LOG_DIR="${TMPDIR:-/tmp}/cortex-native-hud-test"
 BACKEND_PID_FILE="$LOG_DIR/live-tutor.pid"
 BACKEND_LOG="$LOG_DIR/live-tutor.log"
-APP_LOG="$LOG_DIR/native-hud.log"
+APP_LOG="$HOME/Library/Logs/CortexShadowClicker/native-hud.log"
 BACKEND_URL="http://127.0.0.1:8797/"
 APP_NAME="cortex-shadow-clicker"
+PYTHON_BIN="${CORTEX_NATIVE_HUD_PYTHON:-$ROOT_DIR/.venv/bin/python3}"
+LAUNCH_LABEL="com.cortexmemoryos.live-tutor"
+LAUNCH_AGENT_PLIST="$HOME/Library/LaunchAgents/$LAUNCH_LABEL.plist"
 
 usage() {
   cat >&2 <<USAGE
@@ -80,24 +83,70 @@ start_backend() {
     return
   fi
 
-  nohup uv run cortex-live-tutor-demo --host 127.0.0.1 --port 8797 \
-    >"$BACKEND_LOG" 2>&1 &
-  echo "$!" >"$BACKEND_PID_FILE"
+  if [[ ! -x "$PYTHON_BIN" ]]; then
+    PYTHON_BIN="$(uv run python -c 'import sys; print(sys.executable)')"
+  fi
+
+  mkdir -p "$(dirname "$LAUNCH_AGENT_PLIST")"
+  cat >"$LAUNCH_AGENT_PLIST" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>$LAUNCH_LABEL</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>$PYTHON_BIN</string>
+    <string>-m</string>
+    <string>cortex_memory_os.live_tutor_overlay</string>
+    <string>--host</string>
+    <string>127.0.0.1</string>
+    <string>--port</string>
+    <string>8797</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>$ROOT_DIR</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PYTHONPATH</key>
+    <string>$ROOT_DIR/src</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>$BACKEND_LOG</string>
+  <key>StandardErrorPath</key>
+  <string>$BACKEND_LOG</string>
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>
+PLIST
+  launchctl bootout "gui/$UID" "$LAUNCH_AGENT_PLIST" >/dev/null 2>&1 || true
+  launchctl bootstrap "gui/$UID" "$LAUNCH_AGENT_PLIST"
+  launchctl kickstart -k "gui/$UID/$LAUNCH_LABEL" >/dev/null 2>&1 || true
+  echo "launchd" >"$BACKEND_PID_FILE"
   wait_for_backend
   echo "Backend ready at $BACKEND_URL"
 }
 
 stop_backend() {
+  launchctl bootout "gui/$UID" "$LAUNCH_AGENT_PLIST" >/dev/null 2>&1 || true
   if [[ -f "$BACKEND_PID_FILE" ]]; then
     local pid
     pid="$(cat "$BACKEND_PID_FILE")"
-    if [[ -n "$pid" ]] && kill -0 "$pid" >/dev/null 2>&1; then
+    if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" >/dev/null 2>&1; then
       kill "$pid" >/dev/null 2>&1 || true
       sleep 0.5
       kill -9 "$pid" >/dev/null 2>&1 || true
     fi
     rm -f "$BACKEND_PID_FILE"
   fi
+  while IFS= read -r pid; do
+    [[ -z "$pid" ]] && continue
+    kill "$pid" >/dev/null 2>&1 || true
+    sleep 0.2
+    kill -9 "$pid" >/dev/null 2>&1 || true
+  done < <(lsof -tiTCP:8797 -sTCP:LISTEN 2>/dev/null || true)
 }
 
 stop_app() {
@@ -117,7 +166,13 @@ status() {
     echo "native HUD: stopped"
   fi
 
-  echo "logs: $LOG_DIR"
+  echo "backend log: $BACKEND_LOG"
+  echo "app log: $APP_LOG"
+  local latest_connection=""
+  latest_connection="$(grep -E 'connection_|realtime_connect' "$APP_LOG" 2>/dev/null | tail -1 || true)"
+  if [[ -n "$latest_connection" ]]; then
+    echo "latest connection: $latest_connection"
+  fi
 }
 
 open_permissions() {
@@ -137,9 +192,12 @@ MESSAGE
     exit 1
   fi
 
+  stop_backend
   start_backend
 
   export CORTEX_SHADOW_CLICKER_DURATION="${CORTEX_SHADOW_CLICKER_DURATION:-900}"
+  mkdir -p "$(dirname "$APP_LOG")"
+  : >"$APP_LOG"
   "$ROOT_DIR/script/build_and_run.sh" >"$APP_LOG" 2>&1
 
   echo

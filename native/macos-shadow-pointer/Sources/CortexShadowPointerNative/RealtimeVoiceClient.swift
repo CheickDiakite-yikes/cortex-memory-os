@@ -45,6 +45,7 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
     private var manuallyDisconnected = false
     private var reconnectAttempt = 0
     private var connectCompletion: ((Bool, String?) -> Void)?
+    private var suppressReconnectForCurrentSocket = false
     public var reconnectPolicy = RealtimeReconnectPolicy()
 
     private let audioEngine = AVAudioEngine()
@@ -105,25 +106,35 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
                 return
             }
 
-            self.connectWebSocket(token: validToken)
-            self.connectCompletion?(true, nil)
-            self.connectCompletion = nil
+            let model = Self.realtimeModel(from: json)
+            self.connectWebSocket(token: validToken, model: model)
         }
         task.resume()
     }
 
     // MARK: - WebSocket Connection
 
-    private func connectWebSocket(token: String) {
-        let urlString = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17"
+    private func connectWebSocket(token: String, model: String) {
+        guard let encodedModel = model.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            reportConnectionFailure("Invalid realtime model name", retry: false)
+            return
+        }
+        let urlString = "wss://api.openai.com/v1/realtime?model=\(encodedModel)"
         guard let url = URL(string: urlString) else { return }
 
         var request = URLRequest(url: url)
         request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.addValue("realtime=v1", forHTTPHeaderField: "OpenAI-Beta")
 
+        suppressReconnectForCurrentSocket = false
         webSocket = session.webSocketTask(with: request)
         webSocket?.resume()
+    }
+
+    public func urlSession(
+        _ session: URLSession,
+        webSocketTask: URLSessionWebSocketTask,
+        didOpenWithProtocol protocol: String?
+    ) {
         isConnected = true
         reconnectAttempt = 0
         DispatchQueue.main.async {
@@ -134,6 +145,34 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
 
         // Define initial session state (e.g. tool registration)
         sendSessionUpdate()
+        connectCompletion?(true, nil)
+        connectCompletion = nil
+    }
+
+    public func urlSession(
+        _ session: URLSession,
+        webSocketTask: URLSessionWebSocketTask,
+        didCloseWith closeCode: URLSessionWebSocketTask.CloseCode,
+        reason: Data?
+    ) {
+        isConnected = false
+        guard !manuallyDisconnected else { return }
+        let shouldRetry = closeCode.rawValue != 4000
+        suppressReconnectForCurrentSocket = !shouldRetry
+        reportConnectionFailure("Realtime WebSocket closed: \(closeCode.rawValue)", retry: shouldRetry)
+    }
+
+    public static func realtimeModel(from tokenResponse: [String: Any]) -> String {
+        if let session = tokenResponse["session"] as? [String: Any],
+           let model = session["model"] as? String,
+           !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return model
+        }
+        if let model = tokenResponse["model"] as? String,
+           !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return model
+        }
+        return "gpt-realtime-2"
     }
 
     public func disconnect() {
@@ -147,10 +186,13 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
         let sessionUpdate: [String: Any] = [
             "type": "session.update",
             "session": [
+                "type": "realtime",
+                "instructions": (
+                    "You are Cortex Pointer. Prefer native pointer tools for simple, safe, "
+                    + "user-requested mouse guidance. Keep replies brief and text-only."
+                ),
                 "tools": Self.realtimeToolDefinitions(),
-                "tool_choice": "auto",
-                // Disable automatic audio response output - we rely on function calls!
-                "turn_detection": nil
+                "tool_choice": "auto"
             ]
         ]
         send(json: sessionUpdate)
@@ -177,7 +219,10 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
             case .failure(let error):
                 print("WebSocket receive error: \(error)")
                 self.isConnected = false
-                self.reportConnectionFailure(error.localizedDescription, retry: true)
+                self.reportConnectionFailure(
+                    error.localizedDescription,
+                    retry: !self.suppressReconnectForCurrentSocket
+                )
             }
         }
     }
@@ -199,6 +244,21 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
                 DispatchQueue.main.async {
                     self.onToolCallReceived?(name, callId, args)
                 }
+            }
+        } else if type == "error" {
+            let errorPayload = json["error"] as? [String: Any]
+            let message = errorPayload?["message"] as? String
+                ?? json["message"] as? String
+                ?? "Realtime API returned an error"
+            if message.localizedCaseInsensitiveContains("no longer supported") {
+                suppressReconnectForCurrentSocket = true
+            }
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: .realtimeConnectionError,
+                    object: nil,
+                    userInfo: ["message": message]
+                )
             }
         } else if type == "response.text.delta" {
             if let delta = json["delta"] as? String {

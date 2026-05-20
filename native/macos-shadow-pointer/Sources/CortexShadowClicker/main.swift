@@ -6,6 +6,8 @@ import AppKit
 #endif
 
 struct ShadowClickerArgs {
+    private static let maximumInteractiveDuration: TimeInterval = 1800
+
     var smoke = false
     var json = false
     var duration: TimeInterval = 15
@@ -26,7 +28,7 @@ struct ShadowClickerArgs {
                 guard let value = iterator.next(), let parsed = TimeInterval(value), parsed > 0 else {
                     throw ShadowPointerNativeError.invalidControl("--duration requires a positive number")
                 }
-                duration = min(parsed, 300)
+                duration = min(parsed, Self.maximumInteractiveDuration)
             case "--agentic-title":
                 guard let value = iterator.next(), !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                     throw ShadowPointerNativeError.invalidControl("--agentic-title requires text")
@@ -113,6 +115,43 @@ public enum CompanionState: Sendable, Equatable {
     case connectionError(message: String)
 }
 
+enum NativeHUDLog {
+    private static let queue = DispatchQueue(label: "com.cortexmemoryos.shadowclicker.log")
+
+    static let logURL: URL = {
+        let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)
+            .first ?? URL(fileURLWithPath: NSTemporaryDirectory())
+        return library
+            .appendingPathComponent("Logs", isDirectory: true)
+            .appendingPathComponent("CortexShadowClicker", isDirectory: true)
+            .appendingPathComponent("native-hud.log")
+    }()
+
+    static func write(_ message: String) {
+        queue.async {
+            do {
+                let directory = logURL.deletingLastPathComponent()
+                try FileManager.default.createDirectory(
+                    at: directory,
+                    withIntermediateDirectories: true
+                )
+                let line = "\(ISO8601DateFormatter().string(from: Date())) \(message)\n"
+                let data = Data(line.utf8)
+                if FileManager.default.fileExists(atPath: logURL.path) {
+                    let handle = try FileHandle(forWritingTo: logURL)
+                    try handle.seekToEnd()
+                    try handle.write(contentsOf: data)
+                    try handle.close()
+                } else {
+                    try data.write(to: logURL)
+                }
+            } catch {
+                return
+            }
+        }
+    }
+}
+
 @available(macOS 13.0, *)
 @MainActor
 final class ShadowClickerView: NSView {
@@ -147,17 +186,63 @@ final class ShadowClickerView: NSView {
 
         switch companionState {
         case .idle:
-            break
+            drawGuideCursor(at: cursorLocation, active: false)
         case .listening(let phase):
             drawListeningRing(at: cursorLocation, phase: phase, amplitude: audioAmplitude)
+            drawGuideCursor(at: cursorLocation, active: true)
         case .processing(let phase):
             drawProcessingRing(at: cursorLocation, phase: phase)
+            drawGuideCursor(at: cursorLocation, active: true)
         case .showingChip(let text, let expiration, let appearedAt):
+            drawGuideCursor(at: cursorLocation, active: true)
             let progress = chipTransitionProgress(appearedAt: appearedAt, expiration: expiration)
             drawChip(text: text, at: cursorLocation, progress: progress, accent: .blue)
         case .connectionError(let message):
             drawConnectionError(at: cursorLocation, message: message)
+            drawGuideCursor(at: cursorLocation, active: true)
         }
+    }
+
+    private func drawGuideCursor(at tip: NSPoint, active: Bool) {
+        let cursor = NSBezierPath()
+        cursor.move(to: tip)
+        cursor.line(to: NSPoint(x: tip.x, y: tip.y - 25))
+        cursor.line(to: NSPoint(x: tip.x + 13, y: tip.y - 14))
+        cursor.line(to: NSPoint(x: tip.x + 19, y: tip.y - 28))
+        cursor.line(to: NSPoint(x: tip.x + 27, y: tip.y - 24))
+        cursor.line(to: NSPoint(x: tip.x + 21, y: tip.y - 11))
+        cursor.line(to: NSPoint(x: tip.x + 38, y: tip.y - 9))
+        cursor.close()
+
+        let shadow = NSShadow()
+        shadow.shadowBlurRadius = active ? 18 : 12
+        shadow.shadowOffset = NSSize(width: 0, height: -5)
+        shadow.shadowColor = NSColor.black.withAlphaComponent(active ? 0.36 : 0.24)
+
+        NSGraphicsContext.saveGraphicsState()
+        shadow.set()
+        NSColor.white.withAlphaComponent(active ? 0.98 : 0.92).setFill()
+        cursor.fill()
+        NSGraphicsContext.restoreGraphicsState()
+
+        NSColor.systemBlue.withAlphaComponent(active ? 0.98 : 0.78).setStroke()
+        cursor.lineWidth = active ? 2.6 : 2.2
+        cursor.lineJoinStyle = .round
+        cursor.stroke()
+
+        let accent = NSBezierPath()
+        accent.move(to: NSPoint(x: tip.x + 13.5, y: tip.y - 14.0))
+        accent.line(to: NSPoint(x: tip.x + 18.6, y: tip.y - 25.2))
+        accent.line(to: NSPoint(x: tip.x + 21.8, y: tip.y - 23.8))
+        accent.line(to: NSPoint(x: tip.x + 16.3, y: tip.y - 12.8))
+        accent.close()
+        NSColor.systemGreen.withAlphaComponent(active ? 0.96 : 0.82).setFill()
+        accent.fill()
+
+        let glowRect = NSRect(x: tip.x - 6, y: tip.y - 6, width: 12, height: 12)
+        let glow = NSBezierPath(ovalIn: glowRect)
+        NSColor.systemBlue.withAlphaComponent(active ? 0.36 : 0.18).setFill()
+        glow.fill()
     }
 
     private func drawListeningRing(at center: NSPoint, phase: Double, amplitude: CGFloat) {
@@ -633,6 +718,7 @@ final class ShadowClickerController {
     }
 
     func start(duration: TimeInterval) {
+        NativeHUDLog.write("controller_start duration=\(Int(duration))")
         let driver = DisplayLinkDriver { [weak self] in
             self?.tick()
         }
@@ -698,10 +784,10 @@ final class ShadowClickerController {
             }
         }
 
-        // Pass cursor location and companion state to view
-        let currentMouse = NSEvent.mouseLocation
-        let cursorX = currentMouse.x - panel.frame.origin.x
-        let cursorY = currentMouse.y - panel.frame.origin.y
+        // Draw the secondary helper at the placement engine's visual cursor,
+        // not the raw mouse location, so it stays inside the overlay panel.
+        let cursorX = (placement?.visualCursorX ?? sample.x) - nextOrigin.x
+        let cursorY = (placement?.visualCursorY ?? sample.y) - nextOrigin.y
 
         if let view = panel.contentView as? ShadowClickerView {
             view.cursorLocation = NSPoint(x: cursorX, y: cursorY)
@@ -744,6 +830,7 @@ final class ShadowClickerController {
     }
 
     private func finish() {
+        NativeHUDLog.write("controller_finish samples=\(samples.count)")
         displayLinkDriver?.stop()
         stopTimer?.invalidate()
         let smokeSamples = samples.isEmpty ? [NativeCursorProbe.sampleNow()] : Array(samples.suffix(5))
@@ -789,6 +876,7 @@ final class ShadowClickerController {
 
     @objc private func handleConnectionErrorNotification(_ notification: Notification) {
         let message = notification.userInfo?["message"] as? String ?? "Realtime connection unavailable"
+        NativeHUDLog.write("connection_error message=\"\(message)\"")
         companionState = .connectionError(message: "Connection issue: \(message)")
         if let view = panel.contentView as? ShadowClickerView {
             view.companionState = companionState
@@ -796,6 +884,7 @@ final class ShadowClickerController {
     }
 
     @objc private func handleConnectionRestoredNotification(_ notification: Notification) {
+        NativeHUDLog.write("connection_restored")
         if case .connectionError = companionState {
             companionState = .idle
         }
@@ -1048,8 +1137,10 @@ enum ShadowClickerApp {
 
         RealtimeVoiceClient.shared.fetchTokenAndConnect { success, error in
             if success {
+                NativeHUDLog.write("realtime_connect_success")
                 print("Connected to RealtimeVoiceClient!")
             } else {
+                NativeHUDLog.write("realtime_connect_failed message=\"\(error ?? "Unknown")\"")
                 print("Failed to connect: \(error ?? "Unknown")")
             }
         }

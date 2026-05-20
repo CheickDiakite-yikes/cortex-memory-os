@@ -312,6 +312,25 @@ final class ShadowPointerNativeTests: XCTestCase {
         XCTAssertEqual(policy.delay(forAttempt: 4), 2.0, accuracy: 0.001)
     }
 
+    func testRealtimeModelIsReadFromEphemeralTokenResponse() throws {
+        guard #available(macOS 13.0, *) else {
+            throw XCTSkip("RealtimeVoiceClient requires macOS 13")
+        }
+
+        XCTAssertEqual(
+            RealtimeVoiceClient.realtimeModel(from: ["session": ["model": "gpt-realtime-2"]]),
+            "gpt-realtime-2"
+        )
+        XCTAssertEqual(
+            RealtimeVoiceClient.realtimeModel(from: ["model": "gpt-realtime-mini"]),
+            "gpt-realtime-mini"
+        )
+        XCTAssertEqual(
+            RealtimeVoiceClient.realtimeModel(from: [:]),
+            "gpt-realtime-2"
+        )
+    }
+
     func testNativeChipPlacementClampsToVisibleFrameEdges() {
         let visible = NativeDisplayFrame(minX: 0, minY: 24, width: 400, height: 260)
         let topLeft = NativeChipPlacementEngine.place(

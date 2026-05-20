@@ -26,6 +26,7 @@ from cortex_memory_os.live_tutor_overlay import (
     run_live_tutor_product_ux_smoke,
     run_live_tutor_server_smoke,
     run_live_tutor_demo_smoke,
+    resolve_realtime_token_model,
 )
 
 
@@ -314,6 +315,33 @@ def test_live_tutor_server_smoke_answers_with_safe_receipts():
     assert result.spoken_output_turn_count == 1
     assert result.text_only_voice_turn_count == 1
     assert result.action_only_voice_turn_count == 1
+
+
+def test_live_tutor_realtime_token_model_prefers_safe_config_layers():
+    assert (
+        resolve_realtime_token_model(
+            session_data={"model": "gpt-realtime-2"},
+            env_vals={},
+            environ={},
+        )
+        == "gpt-realtime-2"
+    )
+    assert (
+        resolve_realtime_token_model(
+            session_data={"model": "gpt-realtime-2"},
+            env_vals={"CORTEX_REALTIME_MODEL": "gpt-realtime-mini"},
+            environ={},
+        )
+        == "gpt-realtime-mini"
+    )
+    assert (
+        resolve_realtime_token_model(
+            session_data={"model": "gpt-realtime-2"},
+            env_vals={"CORTEX_REALTIME_MODEL": "gpt-realtime-mini"},
+            environ={"CORTEX_REALTIME_MODEL": "gpt-realtime-2"},
+        )
+        == "gpt-realtime-2"
+    )
 
 
 def test_live_tutor_normalizes_browser_client_coordinates():
