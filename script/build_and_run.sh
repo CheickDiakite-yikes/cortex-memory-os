@@ -6,6 +6,7 @@ APP_NAME="cortex-shadow-clicker"
 BUNDLE_NAME="CortexShadowClicker"
 BUNDLE_ID="com.cortexmemoryos.shadowclicker"
 MIN_SYSTEM_VERSION="13.0"
+APP_DURATION_SECONDS="${CORTEX_SHADOW_CLICKER_DURATION:-900}"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE_DIR="$ROOT_DIR/native/macos-shadow-pointer"
@@ -61,7 +62,7 @@ PLIST
 }
 
 open_app() {
-  /usr/bin/open -n "$APP_BUNDLE"
+  /usr/bin/open -n "$APP_BUNDLE" --args --duration "$APP_DURATION_SECONDS"
 }
 
 case "$MODE" in
@@ -76,7 +77,7 @@ case "$MODE" in
   --debug|debug)
     stop_app
     build_bundle
-    lldb -- "$APP_BINARY"
+    lldb -- "$APP_BINARY" --duration "$APP_DURATION_SECONDS"
     ;;
   --logs|logs)
     stop_app

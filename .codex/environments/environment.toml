@@ -9,3 +9,13 @@ script = ""
 name = "Run"
 icon = "run"
 command = "./script/build_and_run.sh"
+
+[[actions]]
+name = "Run Native HUD Test"
+icon = "run"
+command = "./script/test_native_hud.sh start"
+
+[[actions]]
+name = "Stop Native HUD Test"
+icon = "stop"
+command = "./script/test_native_hud.sh stop"
