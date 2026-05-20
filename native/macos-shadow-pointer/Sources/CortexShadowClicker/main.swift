@@ -186,135 +186,165 @@ final class ShadowClickerView: NSView {
 
         switch companionState {
         case .idle:
-            drawGuideCursor(at: cursorLocation, active: false)
+            drawMouseCloak(at: cursorLocation, phase: Date().timeIntervalSinceReferenceDate * 1.8)
         case .listening(let phase):
-            drawListeningRing(at: cursorLocation, phase: phase, amplitude: audioAmplitude)
-            drawGuideCursor(at: cursorLocation, active: true)
+            drawMouseCloak(at: cursorLocation, phase: phase, active: true, amplitude: audioAmplitude)
         case .processing(let phase):
-            drawProcessingRing(at: cursorLocation, phase: phase)
-            drawGuideCursor(at: cursorLocation, active: true)
+            drawMouseCloak(at: cursorLocation, phase: phase, active: true, amplitude: 0.32)
         case .showingChip(let text, let expiration, let appearedAt):
-            drawGuideCursor(at: cursorLocation, active: true)
+            drawMouseCloak(at: cursorLocation, phase: Date().timeIntervalSinceReferenceDate * 1.8, active: true, amplitude: 0.18)
             let progress = chipTransitionProgress(appearedAt: appearedAt, expiration: expiration)
             drawChip(text: text, at: cursorLocation, progress: progress, accent: .blue)
         case .connectionError(let message):
-            drawConnectionError(at: cursorLocation, message: message)
-            drawGuideCursor(at: cursorLocation, active: true)
+            drawMouseCloak(at: cursorLocation, phase: Date().timeIntervalSinceReferenceDate * 2.0, active: true, amplitude: 0.28, isError: true)
+            drawChip(text: message, at: cursorLocation, progress: 1, accent: .amber)
         }
     }
 
-    private func drawGuideCursor(at tip: NSPoint, active: Bool) {
-        let cursor = NSBezierPath()
-        cursor.move(to: tip)
-        cursor.line(to: NSPoint(x: tip.x, y: tip.y - 25))
-        cursor.line(to: NSPoint(x: tip.x + 13, y: tip.y - 14))
-        cursor.line(to: NSPoint(x: tip.x + 19, y: tip.y - 28))
-        cursor.line(to: NSPoint(x: tip.x + 27, y: tip.y - 24))
-        cursor.line(to: NSPoint(x: tip.x + 21, y: tip.y - 11))
-        cursor.line(to: NSPoint(x: tip.x + 38, y: tip.y - 9))
-        cursor.close()
+    private func drawMouseCloak(
+        at center: NSPoint,
+        phase: Double,
+        active: Bool = false,
+        amplitude: CGFloat = 0,
+        isError: Bool = false
+    ) {
+        let boundedAmplitude = min(max(amplitude, 0), 1)
+        let baseRadius: CGFloat = active ? 18 : 13
+        let radius = baseRadius + CGFloat(sin(phase * 1.4)) * 1.5 + boundedAmplitude * 16
+        let outerRadius = radius + 7 + boundedAmplitude * 7
+        let blue = NSColor(calibratedRed: 0.05, green: 0.47, blue: 1.0, alpha: 1.0)
+        let accent = isError ? NSColor.systemOrange : blue
+
+        let outerPath = NSBezierPath(ovalIn: NSRect(
+            x: center.x - outerRadius,
+            y: center.y - outerRadius,
+            width: outerRadius * 2,
+            height: outerRadius * 2
+        ))
+        let outerAlpha = isError ? 0.16 : (active ? 0.18 : 0.10)
+        accent.withAlphaComponent(outerAlpha + boundedAmplitude * 0.14).setFill()
+        outerPath.fill()
 
         let shadow = NSShadow()
-        shadow.shadowBlurRadius = active ? 18 : 12
-        shadow.shadowOffset = NSSize(width: 0, height: -5)
-        shadow.shadowColor = NSColor.black.withAlphaComponent(active ? 0.36 : 0.24)
+        shadow.shadowBlurRadius = active ? 18 + boundedAmplitude * 18 : 14
+        shadow.shadowOffset = .zero
+        shadow.shadowColor = accent.withAlphaComponent(active ? 0.50 : 0.30)
 
         NSGraphicsContext.saveGraphicsState()
         shadow.set()
-        NSColor.white.withAlphaComponent(active ? 0.98 : 0.92).setFill()
-        cursor.fill()
+        let ringPath = NSBezierPath(ovalIn: NSRect(
+            x: center.x - radius,
+            y: center.y - radius,
+            width: radius * 2,
+            height: radius * 2
+        ))
+        ringPath.lineWidth = active ? 2.4 + boundedAmplitude * 2.8 : 1.8
+        accent.withAlphaComponent(active ? 0.92 : 0.64).setStroke()
+        ringPath.stroke()
         NSGraphicsContext.restoreGraphicsState()
 
-        NSColor.systemBlue.withAlphaComponent(active ? 0.98 : 0.78).setStroke()
-        cursor.lineWidth = active ? 2.6 : 2.2
-        cursor.lineJoinStyle = .round
-        cursor.stroke()
+        let innerRadius: CGFloat = active ? 4.0 + boundedAmplitude * 2.8 : 3.2
+        let dotPath = NSBezierPath(ovalIn: NSRect(
+            x: center.x - innerRadius,
+            y: center.y - innerRadius,
+            width: innerRadius * 2,
+            height: innerRadius * 2
+        ))
+        NSColor.white.withAlphaComponent(active ? 0.92 : 0.72).setFill()
+        dotPath.fill()
+    }
 
-        let accent = NSBezierPath()
-        accent.move(to: NSPoint(x: tip.x + 13.5, y: tip.y - 14.0))
-        accent.line(to: NSPoint(x: tip.x + 18.6, y: tip.y - 25.2))
-        accent.line(to: NSPoint(x: tip.x + 21.8, y: tip.y - 23.8))
-        accent.line(to: NSPoint(x: tip.x + 16.3, y: tip.y - 12.8))
-        accent.close()
-        NSColor.systemGreen.withAlphaComponent(active ? 0.96 : 0.82).setFill()
-        accent.fill()
+    private func drawMulticolorAura(at center: NSPoint, radius: CGFloat, lineWidth: CGFloat, phase: Double, opacityMultiplier: CGFloat) {
+        guard let context = NSGraphicsContext.current?.cgContext else { return }
 
-        let glowRect = NSRect(x: tip.x - 6, y: tip.y - 6, width: 12, height: 12)
-        let glow = NSBezierPath(ovalIn: glowRect)
-        NSColor.systemBlue.withAlphaComponent(active ? 0.36 : 0.18).setFill()
-        glow.fill()
+        context.saveGState()
+        context.translateBy(x: center.x, y: center.y)
+        context.rotate(by: CGFloat(phase))
+        context.setLineWidth(lineWidth)
+        context.setLineCap(.round)
+
+        let colors = [
+            NSColor(calibratedRed: 0.10, green: 0.45, blue: 0.91, alpha: 1.0), // Electric Blue
+            NSColor(calibratedRed: 0.67, green: 0.28, blue: 0.74, alpha: 1.0), // Neon Magenta
+            NSColor(calibratedRed: 1.0, green: 0.57, blue: 0.0, alpha: 1.0),  // Futuristic Amber
+            NSColor(calibratedRed: 0.0, green: 0.90, blue: 0.46, alpha: 1.0)  // Mint Green
+        ]
+
+        let segmentAngle = CGFloat.pi / 2.0
+        for i in 0..<4 {
+            let startAngle = CGFloat(i) * segmentAngle
+            let endAngle = startAngle + segmentAngle
+
+            context.beginPath()
+            context.addArc(center: .zero, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: false)
+
+            let color = colors[i].withAlphaComponent(opacityMultiplier)
+            context.setStrokeColor(color.cgColor)
+
+            // Add a premium outer glow matching the segment color
+            context.setShadow(offset: .zero, blur: lineWidth * 1.5, color: color.cgColor)
+
+            context.strokePath()
+        }
+
+        context.restoreGState()
     }
 
     private func drawListeningRing(at center: NSPoint, phase: Double, amplitude: CGFloat) {
         let reactiveAmplitude = min(max(amplitude, 0), 1)
-        let outerRadius: CGFloat = 12.0 + 3.0 * CGFloat(sin(phase)) + 16.0 * reactiveAmplitude
-        let innerRadius: CGFloat = 6.0
-        let ringWidth: CGFloat = 1.4 + 3.2 * reactiveAmplitude
 
-        let outerRect = NSRect(
-            x: center.x - outerRadius,
-            y: center.y - outerRadius,
-            width: outerRadius * 2,
-            height: outerRadius * 2
-        )
-        let outerPath = NSBezierPath(ovalIn: outerRect)
-        NSColor(calibratedRed: 0.0, green: 0.6, blue: 1.0, alpha: 0.18 + 0.20 * reactiveAmplitude).setFill()
-        NSColor(calibratedRed: 0.0, green: 0.6, blue: 1.0, alpha: 0.72 + 0.24 * reactiveAmplitude).setStroke()
-        outerPath.lineWidth = ringWidth
-        outerPath.fill()
-        outerPath.stroke()
+        // Outer concentric ring spinning in one direction with audio expansion
+        let outerRadius = 14.0 + 3.0 * CGFloat(sin(phase)) + 16.0 * reactiveAmplitude
+        let outerLineWidth = 1.6 + 3.2 * reactiveAmplitude
+        let outerOpacity = 0.85 + 0.15 * reactiveAmplitude
+        drawMulticolorAura(at: center, radius: outerRadius, lineWidth: outerLineWidth, phase: phase, opacityMultiplier: outerOpacity)
 
-        let innerRect = NSRect(
-            x: center.x - innerRadius,
-            y: center.y - innerRadius,
-            width: innerRadius * 2,
-            height: innerRadius * 2
-        )
-        let innerPath = NSBezierPath(ovalIn: innerRect)
-        NSColor(calibratedRed: 0.0, green: 0.7, blue: 1.0, alpha: 0.95).setFill()
-        innerPath.fill()
+        // Inner concentric ring spinning in the opposite direction
+        let innerRadius = 8.0 + 1.5 * CGFloat(cos(phase * 1.2)) + 6.0 * reactiveAmplitude
+        let innerLineWidth = 1.2 + 1.5 * reactiveAmplitude
+        let innerOpacity = 0.65 + 0.25 * reactiveAmplitude
+        drawMulticolorAura(at: center, radius: innerRadius, lineWidth: innerLineWidth, phase: -phase * 1.3, opacityMultiplier: innerOpacity)
+
+        // Translucent white depth indicator dot at the absolute center
+        let dotRadius: CGFloat = 3.5
+        let dotRect = NSRect(x: center.x - dotRadius, y: center.y - dotRadius, width: dotRadius * 2, height: dotRadius * 2)
+        let dotPath = NSBezierPath(ovalIn: dotRect)
+        NSColor.white.withAlphaComponent(0.95).setFill()
+        dotPath.fill()
     }
 
     private func drawProcessingRing(at center: NSPoint, phase: Double) {
-        let outerRadius: CGFloat = 11.0
-        let innerRadius: CGFloat = 5.0
+        // Double fast counter-rotating premium processing rings
+        let outerRadius = 13.0 + 2.0 * CGFloat(sin(phase * 2.0))
+        let outerOpacity = 0.7 + 0.3 * CGFloat(cos(phase * 3.0))
+        drawMulticolorAura(at: center, radius: outerRadius, lineWidth: 2.0, phase: phase * 3.0, opacityMultiplier: outerOpacity)
 
-        let outerRect = NSRect(
-            x: center.x - outerRadius,
-            y: center.y - outerRadius,
-            width: outerRadius * 2,
-            height: outerRadius * 2
-        )
-        let outerPath = NSBezierPath(ovalIn: outerRect)
+        let innerRadius = 9.0 + 1.0 * CGFloat(cos(phase * 1.5))
+        let innerOpacity = 0.6 + 0.2 * CGFloat(sin(phase * 2.0))
+        drawMulticolorAura(at: center, radius: innerRadius, lineWidth: 1.5, phase: -phase * 2.0, opacityMultiplier: innerOpacity)
 
-        let pulseOpacity = 0.4 + 0.3 * CGFloat(sin(phase * 1.5))
-        NSColor(calibratedRed: 0.6, green: 0.2, blue: 0.9, alpha: pulseOpacity).setFill()
-        NSColor(calibratedRed: 0.6, green: 0.2, blue: 0.9, alpha: 0.8).setStroke()
-        outerPath.lineWidth = 1.5
-        outerPath.fill()
-        outerPath.stroke()
-
-        let innerRect = NSRect(
-            x: center.x - innerRadius,
-            y: center.y - innerRadius,
-            width: innerRadius * 2,
-            height: innerRadius * 2
-        )
-        let innerPath = NSBezierPath(ovalIn: innerRect)
-        NSColor(calibratedRed: 0.7, green: 0.3, blue: 1.0, alpha: 0.95).setFill()
-        innerPath.fill()
+        // Translucent white depth indicator dot at the absolute center
+        let dotRadius: CGFloat = 3.5
+        let dotRect = NSRect(x: center.x - dotRadius, y: center.y - dotRadius, width: dotRadius * 2, height: dotRadius * 2)
+        let dotPath = NSBezierPath(ovalIn: dotRect)
+        NSColor.white.withAlphaComponent(0.95).setFill()
+        dotPath.fill()
     }
 
     private func drawConnectionError(at origin: NSPoint, message: String) {
         let pulse = 0.55 + 0.18 * CGFloat(sin(Date().timeIntervalSinceReferenceDate * 5))
-        let radius: CGFloat = 13
-        let rect = NSRect(x: origin.x - radius, y: origin.y - radius, width: radius * 2, height: radius * 2)
-        let path = NSBezierPath(ovalIn: rect)
-        NSColor.systemOrange.withAlphaComponent(0.18 + pulse * 0.12).setFill()
-        NSColor.systemOrange.withAlphaComponent(0.72).setStroke()
-        path.lineWidth = 2
-        path.fill()
-        path.stroke()
+        let errorPhase = Date().timeIntervalSinceReferenceDate * 2.0
+
+        // Sweeping warning multicolor aura
+        drawMulticolorAura(at: origin, radius: 13.0, lineWidth: 2.2, phase: errorPhase, opacityMultiplier: 0.18 + pulse * 0.12)
+
+        // Soft translucent white dot at absolute center
+        let dotRadius: CGFloat = 3.5
+        let dotRect = NSRect(x: origin.x - dotRadius, y: origin.y - dotRadius, width: dotRadius * 2, height: dotRadius * 2)
+        let dotPath = NSBezierPath(ovalIn: dotRect)
+        NSColor.white.withAlphaComponent(0.95).setFill()
+        dotPath.fill()
+
         drawChip(text: message, at: origin, progress: 1, accent: .amber)
     }
 
@@ -650,6 +680,7 @@ final class ShadowClickerController {
     private var companionState: CompanionState = .idle
     private var streamedText: String = ""
     private var audioAmplitude: CGFloat = 0
+    private let cloakHotspot = NSPoint(x: 104, y: 100)
 
     init(
         app: NSApplication,
@@ -739,25 +770,23 @@ final class ShadowClickerController {
         let sample = NativeCursorProbe.sampleNow()
         samples.append(sample)
         let displayFrame = NativeDisplayFrame.containing(sample)
-        let overlaySize = NativeOverlaySize(width: panel.frame.width, height: panel.frame.height)
-        let bubbleSize = NativeBubbleSize(width: bubblePanel.frame.width, height: bubblePanel.frame.height)
 
-        let placement = try? NativeCursorPlacementEngine.place(
-            sample: sample,
-            config: config,
-            displayFrame: displayFrame,
-            overlaySize: overlaySize,
-            bubbleSize: bubbleSize
-        )
-
+        let rawOriginX = sample.x - cloakHotspot.x
+        let rawOriginY = sample.y - cloakHotspot.y
         let nextOrigin = NSPoint(
-            x: placement?.overlayOriginX ?? sample.x,
-            y: placement?.overlayOriginY ?? sample.y
+            x: clamp(rawOriginX, lower: displayFrame.minX, upper: displayFrame.maxX - panel.frame.width),
+            y: clamp(rawOriginY, lower: displayFrame.minY, upper: displayFrame.maxY - panel.frame.height)
         )
         panel.setFrameOrigin(nextOrigin)
 
         // Update dynamic companion state from PTT (modifier key polling)
-        let isControlPressed = NSEvent.modifierFlags.contains(.control)
+        let modifierFlags = NSEvent.modifierFlags
+        if shouldShutdownFromKeyboard(modifierFlags: modifierFlags) {
+            NativeHUDLog.write("keyboard_shutdown shortcut=control_option_command_q")
+            finish()
+            return
+        }
+        let isControlPressed = modifierFlags.contains(.control)
 
         switch companionState {
         case .idle, .showingChip:
@@ -784,10 +813,9 @@ final class ShadowClickerController {
             }
         }
 
-        // Draw the secondary helper at the placement engine's visual cursor,
-        // not the raw mouse location, so it stays inside the overlay panel.
-        let cursorX = (placement?.visualCursorX ?? sample.x) - nextOrigin.x
-        let cursorY = (placement?.visualCursorY ?? sample.y) - nextOrigin.y
+        // Draw the blue cloak around the actual system mouse coordinate.
+        let cursorX = sample.x - nextOrigin.x
+        let cursorY = sample.y - nextOrigin.y
 
         if let view = panel.contentView as? ShadowClickerView {
             view.cursorLocation = NSPoint(x: cursorX, y: cursorY)
@@ -796,6 +824,16 @@ final class ShadowClickerController {
         }
 
         panel.contentView?.needsDisplay = true
+    }
+
+    private func clamp(_ value: Double, lower: Double, upper: Double) -> Double {
+        min(max(value, lower), upper)
+    }
+
+    private func shouldShutdownFromKeyboard(modifierFlags: NSEvent.ModifierFlags) -> Bool {
+        let requiredModifiers: NSEvent.ModifierFlags = [.control, .option, .command]
+        let hasRequiredModifiers = modifierFlags.intersection(requiredModifiers) == requiredModifiers
+        return hasRequiredModifiers && CGEventSource.keyState(.combinedSessionState, key: 12)
     }
 
     private func refreshAgenticCardIfNeeded() {
@@ -1134,6 +1172,7 @@ enum ShadowClickerApp {
             card: card
         )
         bubblePanel.contentView = bubbleView
+        bubblePanel.orderOut(nil)
 
         RealtimeVoiceClient.shared.fetchTokenAndConnect { success, error in
             if success {

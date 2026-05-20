@@ -897,9 +897,9 @@ public struct NativeOverlayVisualSpec: Codable, Equatable, Sendable {
         material: String = "hud_window_vibrant_material",
         vibrancyEnabled: Bool = true,
         tintSemanticOnly: Bool = true,
-        cursorShape: String = "secondary_arrow",
+        cursorShape: String = "system_mouse_cloak",
         cursorStrokeColor: String = "system_blue",
-        cursorFillColor: String = "vibrant_white",
+        cursorFillColor: String = "translucent_blue_cloak",
         cursorHotspotVisible: Bool = true,
         bubbleCornerRadius: Double = 18,
         bubbleShadowRadius: Double = 24,
@@ -968,7 +968,7 @@ public struct NativeOverlayVisualSpec: Codable, Equatable, Sendable {
         guard tintSemanticOnly && avoidsOpaqueScrim && glassElementsGrouped else {
             throw ShadowPointerNativeError.invalidControl("native overlay glass treatment is too custom or heavy")
         }
-        guard cursorShape == "secondary_arrow" && cursorHotspotVisible else {
+        guard cursorShape == "system_mouse_cloak" && cursorHotspotVisible else {
             throw ShadowPointerNativeError.invalidControl("native overlay cursor affordance is unclear")
         }
         guard bubbleCornerRadius >= 14 && bubbleCornerRadius <= 24 else {

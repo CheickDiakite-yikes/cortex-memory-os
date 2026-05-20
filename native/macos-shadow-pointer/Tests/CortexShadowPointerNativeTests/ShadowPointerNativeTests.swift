@@ -153,7 +153,8 @@ final class ShadowPointerNativeTests: XCTestCase {
         XCTAssertEqual(visual.material, "hud_window_vibrant_material")
         XCTAssertTrue(visual.vibrancyEnabled)
         XCTAssertTrue(visual.tintSemanticOnly)
-        XCTAssertEqual(visual.cursorShape, "secondary_arrow")
+        XCTAssertEqual(visual.cursorShape, "system_mouse_cloak")
+        XCTAssertEqual(visual.cursorFillColor, "translucent_blue_cloak")
         XCTAssertTrue(visual.cursorHotspotVisible)
         XCTAssertEqual(visual.loadingAnimation, "three_dot_breathing")
         XCTAssertEqual(visual.loadingDotCount, 3)
@@ -329,6 +330,21 @@ final class ShadowPointerNativeTests: XCTestCase {
             RealtimeVoiceClient.realtimeModel(from: [:]),
             "gpt-realtime-2"
         )
+    }
+
+    func testRealtimeResponseCreateOmitsDeprecatedModalitiesParameter() throws {
+        guard #available(macOS 13.0, *) else {
+            throw XCTSkip("RealtimeVoiceClient requires macOS 13")
+        }
+
+        let message = RealtimeVoiceClient.responseCreateMessage()
+        XCTAssertEqual(message["type"] as? String, "response.create")
+        XCTAssertNil(message["response"])
+
+        let data = try JSONSerialization.data(withJSONObject: message)
+        let json = String(decoding: data, as: UTF8.self)
+        XCTAssertFalse(json.contains("modalities"))
+        XCTAssertFalse(json.contains("response.modalities"))
     }
 
     func testNativeChipPlacementClampsToVisibleFrameEdges() {

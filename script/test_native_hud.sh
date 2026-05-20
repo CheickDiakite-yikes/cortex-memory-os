@@ -207,6 +207,7 @@ MESSAGE
   echo "  1. A blue helper cursor/ring follows your system pointer."
   echo "  2. Hold Control to talk. The blue ring should react to your voice."
   echo "  3. Release Control to send the turn."
+  echo "  4. Press Control + Option + Command + Q to turn off the desktop app."
   echo
   echo "Safe first phrases:"
   echo "  - \"Move the mouse to the center of the screen.\""
@@ -215,6 +216,7 @@ MESSAGE
   echo
   echo "Stop everything:"
   echo "  ./script/test_native_hud.sh stop"
+  echo "  or press Control + Option + Command + Q"
   echo
   echo "Logs:"
   echo "  tail -f $BACKEND_LOG $APP_LOG"

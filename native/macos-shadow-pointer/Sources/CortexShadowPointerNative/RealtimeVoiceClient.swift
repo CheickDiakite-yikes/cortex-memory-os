@@ -296,14 +296,11 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
             ]
         ]
         send(json: itemCreateMsg)
+        send(json: Self.responseCreateMessage())
+    }
 
-        let responseCreateMsg: [String: Any] = [
-            "type": "response.create",
-            "response": [
-                "modalities": ["text"]
-            ]
-        ]
-        send(json: responseCreateMsg)
+    public static func responseCreateMessage() -> [String: Any] {
+        ["type": "response.create"]
     }
 
     private func send(json: [String: Any]) {
@@ -355,13 +352,7 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
         ]
         send(json: commitMsg)
 
-        let responseMsg: [String: Any] = [
-            "type": "response.create",
-            "response": [
-                "modalities": ["text"] // force text/tools only
-            ]
-        ]
-        send(json: responseMsg)
+        send(json: Self.responseCreateMessage())
     }
 
     private func processAudioBuffer(buffer: AVAudioPCMBuffer) {
