@@ -20,6 +20,8 @@ public let nativeOverlayVisualPolishBenchmarkID = "NATIVE-OVERLAY-VISUAL-POLISH-
 public let nativeOverlayVisualPolishPolicyRef = "policy_native_overlay_visual_polish_v1"
 public let nativeAgenticPointerCardBenchmarkID = "NATIVE-AGENTIC-POINTER-CARD-001"
 public let nativeAgenticPointerCardPolicyRef = "policy_native_agentic_pointer_card_v1"
+public let nativeCompanionHUDPhase2BenchmarkID = "NATIVE-COMPANION-HUD-PHASE2-001"
+public let nativeCompanionHUDPhase2PolicyRef = "policy_native_companion_hud_phase2_v1"
 public let nativeScreenCaptureProbeBenchmarkID = "NATIVE-SCREEN-CAPTURE-PROBE-001"
 public let nativeScreenCaptureProbePolicyRef = "policy_native_screen_capture_probe_v1"
 
@@ -1016,6 +1018,97 @@ public struct NativeOverlayPlacement: Codable, Equatable, Sendable {
     public var bubbleSide: String
     public var bubbleAnchoredTo: String
     public var displayFrame: NativeDisplayFrame
+}
+
+public struct NativeChipPlacement: Codable, Equatable, Sendable {
+    public var x: Double
+    public var y: Double
+    public var width: Double
+    public var height: Double
+    public var side: String
+
+    public var maxX: Double { x + width }
+    public var maxY: Double { y + height }
+}
+
+public enum NativeChipPlacementEngine {
+    public static func place(
+        cursorX: Double,
+        cursorY: Double,
+        chipWidth: Double,
+        chipHeight: Double,
+        visibleFrame: NativeDisplayFrame,
+        gap: Double = 20,
+        margin: Double = 10
+    ) -> NativeChipPlacement {
+        let safeGap = max(8, gap)
+        let safeMargin = max(0, margin)
+        let safeWidth = min(max(1, chipWidth), max(1, visibleFrame.width - safeMargin * 2))
+        let safeHeight = min(max(1, chipHeight), max(1, visibleFrame.height - safeMargin * 2))
+        let fitsRight = cursorX + safeGap + safeWidth <= visibleFrame.maxX - safeMargin
+        let rawX = fitsRight ? cursorX + safeGap : cursorX - safeGap - safeWidth
+        let rawY = cursorY - safeHeight / 2
+        return NativeChipPlacement(
+            x: clamp(rawX, visibleFrame.minX + safeMargin, visibleFrame.maxX - safeWidth - safeMargin),
+            y: clamp(rawY, visibleFrame.minY + safeMargin, visibleFrame.maxY - safeHeight - safeMargin),
+            width: safeWidth,
+            height: safeHeight,
+            side: fitsRight ? "right" : "left"
+        )
+    }
+
+    private static func clamp(_ value: Double, _ lower: Double, _ upper: Double) -> Double {
+        min(max(value, lower), upper)
+    }
+}
+
+public struct NativeAnimationTimingSpec: Codable, Equatable, Sendable {
+    public var benchmarkID: String
+    public var policyRef: String
+    public var displayDriver: String
+    public var targetRefreshHz: Int
+    public var easingCurve: String
+    public var transitionDurationMs: Int
+    public var amplitudeReactiveRing: Bool
+    public var connectionErrorIndicator: String
+
+    public init(
+        benchmarkID: String = nativeCompanionHUDPhase2BenchmarkID,
+        policyRef: String = nativeCompanionHUDPhase2PolicyRef,
+        displayDriver: String = "CVDisplayLink",
+        targetRefreshHz: Int = 120,
+        easingCurve: String = "cubic_ease_in_out",
+        transitionDurationMs: Int = 220,
+        amplitudeReactiveRing: Bool = true,
+        connectionErrorIndicator: String = "warm_amber_glass_chip"
+    ) {
+        self.benchmarkID = benchmarkID
+        self.policyRef = policyRef
+        self.displayDriver = displayDriver
+        self.targetRefreshHz = targetRefreshHz
+        self.easingCurve = easingCurve
+        self.transitionDurationMs = transitionDurationMs
+        self.amplitudeReactiveRing = amplitudeReactiveRing
+        self.connectionErrorIndicator = connectionErrorIndicator
+    }
+
+    public func validated() throws -> NativeAnimationTimingSpec {
+        guard benchmarkID == nativeCompanionHUDPhase2BenchmarkID,
+              policyRef == nativeCompanionHUDPhase2PolicyRef
+        else {
+            throw ShadowPointerNativeError.invalidControl("native companion HUD phase 2 policy mismatch")
+        }
+        guard displayDriver == "CVDisplayLink" && targetRefreshHz >= 60 && targetRefreshHz <= 120 else {
+            throw ShadowPointerNativeError.invalidControl("native companion HUD requires display-synced refresh")
+        }
+        guard easingCurve == "cubic_ease_in_out" && transitionDurationMs >= 120 && transitionDurationMs <= 320 else {
+            throw ShadowPointerNativeError.invalidControl("native companion HUD transition curve mismatch")
+        }
+        guard amplitudeReactiveRing && connectionErrorIndicator == "warm_amber_glass_chip" else {
+            throw ShadowPointerNativeError.invalidControl("native companion HUD missing phase 2 visual affordances")
+        }
+        return self
+    }
 }
 
 public enum NativeCursorPlacementEngine {

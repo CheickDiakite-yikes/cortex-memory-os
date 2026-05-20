@@ -102,15 +102,38 @@ do {
 }
 
 #if canImport(AppKit)
+import AppKit
+import CoreVideo
+
+public enum CompanionState: Sendable, Equatable {
+    case idle
+    case listening(pulsePhase: Double)
+    case processing(pulsePhase: Double)
+    case showingChip(text: String, expiration: Date, appearedAt: Date)
+    case connectionError(message: String)
+}
+
 @available(macOS 13.0, *)
 @MainActor
 final class ShadowClickerView: NSView {
-    private let title = "Cortex"
     private let diameter: CGFloat
+
+    var companionState: CompanionState = .idle {
+        didSet { needsDisplay = true }
+    }
+
+    var cursorLocation: NSPoint = NSPoint(x: 7, y: 58) {
+        didSet { needsDisplay = true }
+    }
+
+    var audioAmplitude: CGFloat = 0 {
+        didSet { needsDisplay = true }
+    }
 
     init(diameter: CGFloat) {
         self.diameter = diameter
-        super.init(frame: NSRect(x: 0, y: 0, width: diameter + 104, height: diameter + 30))
+        // Make the view frame large enough to support the glowing circles and text chips without clipping.
+        super.init(frame: NSRect(x: 0, y: 0, width: 600, height: 200))
         wantsLayer = true
     }
 
@@ -122,61 +145,221 @@ final class ShadowClickerView: NSView {
         NSColor.clear.setFill()
         dirtyRect.fill()
 
-        let ringRect = NSRect(x: -1, y: diameter + 4, width: 24, height: 24)
-        let ring = NSBezierPath(ovalIn: ringRect)
-        NSColor(calibratedRed: 0.10, green: 0.38, blue: 0.82, alpha: 0.48).setStroke()
-        ring.lineWidth = 2
-        ring.stroke()
-        NSColor(calibratedRed: 0.10, green: 0.38, blue: 0.82, alpha: 0.10).setFill()
-        ring.fill()
+        switch companionState {
+        case .idle:
+            break
+        case .listening(let phase):
+            drawListeningRing(at: cursorLocation, phase: phase, amplitude: audioAmplitude)
+        case .processing(let phase):
+            drawProcessingRing(at: cursorLocation, phase: phase)
+        case .showingChip(let text, let expiration, let appearedAt):
+            let progress = chipTransitionProgress(appearedAt: appearedAt, expiration: expiration)
+            drawChip(text: text, at: cursorLocation, progress: progress, accent: .blue)
+        case .connectionError(let message):
+            drawConnectionError(at: cursorLocation, message: message)
+        }
+    }
 
-        let cursor = NSBezierPath()
-        cursor.move(to: NSPoint(x: 7, y: diameter + 24))
-        cursor.line(to: NSPoint(x: 7, y: 6))
-        cursor.line(to: NSPoint(x: 22, y: 18))
-        cursor.line(to: NSPoint(x: 28, y: 5))
-        cursor.line(to: NSPoint(x: 35, y: 8))
-        cursor.line(to: NSPoint(x: 29, y: 21))
-        cursor.line(to: NSPoint(x: 43, y: 23))
-        cursor.close()
+    private func drawListeningRing(at center: NSPoint, phase: Double, amplitude: CGFloat) {
+        let reactiveAmplitude = min(max(amplitude, 0), 1)
+        let outerRadius: CGFloat = 12.0 + 3.0 * CGFloat(sin(phase)) + 16.0 * reactiveAmplitude
+        let innerRadius: CGFloat = 6.0
+        let ringWidth: CGFloat = 1.4 + 3.2 * reactiveAmplitude
 
-        let shadow = NSShadow()
-        shadow.shadowBlurRadius = 12
-        shadow.shadowOffset = NSSize(width: 0, height: -7)
-        shadow.shadowColor = NSColor(calibratedWhite: 0.05, alpha: 0.28)
-        NSGraphicsContext.saveGraphicsState()
-        shadow.set()
-        NSColor.white.setFill()
-        cursor.fill()
-        NSGraphicsContext.restoreGraphicsState()
+        let outerRect = NSRect(
+            x: center.x - outerRadius,
+            y: center.y - outerRadius,
+            width: outerRadius * 2,
+            height: outerRadius * 2
+        )
+        let outerPath = NSBezierPath(ovalIn: outerRect)
+        NSColor(calibratedRed: 0.0, green: 0.6, blue: 1.0, alpha: 0.18 + 0.20 * reactiveAmplitude).setFill()
+        NSColor(calibratedRed: 0.0, green: 0.6, blue: 1.0, alpha: 0.72 + 0.24 * reactiveAmplitude).setStroke()
+        outerPath.lineWidth = ringWidth
+        outerPath.fill()
+        outerPath.stroke()
 
-        NSColor(calibratedRed: 0.10, green: 0.38, blue: 0.82, alpha: 1.0).setStroke()
-        cursor.lineWidth = 2.4
-        cursor.lineJoinStyle = .round
-        cursor.stroke()
+        let innerRect = NSRect(
+            x: center.x - innerRadius,
+            y: center.y - innerRadius,
+            width: innerRadius * 2,
+            height: innerRadius * 2
+        )
+        let innerPath = NSBezierPath(ovalIn: innerRect)
+        NSColor(calibratedRed: 0.0, green: 0.7, blue: 1.0, alpha: 0.95).setFill()
+        innerPath.fill()
+    }
 
-        let accent = NSBezierPath()
-        accent.move(to: NSPoint(x: 22.2, y: 16.2))
-        accent.line(to: NSPoint(x: 26.4, y: 7.2))
-        accent.line(to: NSPoint(x: 28.8, y: 8.0))
-        accent.line(to: NSPoint(x: 24.5, y: 17.1))
-        accent.close()
-        NSColor(calibratedRed: 0.08, green: 0.62, blue: 0.29, alpha: 0.96).setFill()
-        accent.fill()
+    private func drawProcessingRing(at center: NSPoint, phase: Double) {
+        let outerRadius: CGFloat = 11.0
+        let innerRadius: CGFloat = 5.0
 
-        let chipRect = NSRect(x: 42, y: 18, width: 54, height: 22)
-        let chip = NSBezierPath(roundedRect: chipRect, xRadius: 11, yRadius: 11)
-        NSColor(calibratedWhite: 1.0, alpha: 0.94).setFill()
-        chip.fill()
-        NSColor(calibratedWhite: 0.08, alpha: 0.14).setStroke()
-        chip.lineWidth = 1
-        chip.stroke()
+        let outerRect = NSRect(
+            x: center.x - outerRadius,
+            y: center.y - outerRadius,
+            width: outerRadius * 2,
+            height: outerRadius * 2
+        )
+        let outerPath = NSBezierPath(ovalIn: outerRect)
+
+        let pulseOpacity = 0.4 + 0.3 * CGFloat(sin(phase * 1.5))
+        NSColor(calibratedRed: 0.6, green: 0.2, blue: 0.9, alpha: pulseOpacity).setFill()
+        NSColor(calibratedRed: 0.6, green: 0.2, blue: 0.9, alpha: 0.8).setStroke()
+        outerPath.lineWidth = 1.5
+        outerPath.fill()
+        outerPath.stroke()
+
+        let innerRect = NSRect(
+            x: center.x - innerRadius,
+            y: center.y - innerRadius,
+            width: innerRadius * 2,
+            height: innerRadius * 2
+        )
+        let innerPath = NSBezierPath(ovalIn: innerRect)
+        NSColor(calibratedRed: 0.7, green: 0.3, blue: 1.0, alpha: 0.95).setFill()
+        innerPath.fill()
+    }
+
+    private func drawConnectionError(at origin: NSPoint, message: String) {
+        let pulse = 0.55 + 0.18 * CGFloat(sin(Date().timeIntervalSinceReferenceDate * 5))
+        let radius: CGFloat = 13
+        let rect = NSRect(x: origin.x - radius, y: origin.y - radius, width: radius * 2, height: radius * 2)
+        let path = NSBezierPath(ovalIn: rect)
+        NSColor.systemOrange.withAlphaComponent(0.18 + pulse * 0.12).setFill()
+        NSColor.systemOrange.withAlphaComponent(0.72).setStroke()
+        path.lineWidth = 2
+        path.fill()
+        path.stroke()
+        drawChip(text: message, at: origin, progress: 1, accent: .amber)
+    }
+
+    private enum ChipAccent {
+        case blue
+        case amber
+    }
+
+    private func chipTransitionProgress(appearedAt: Date, expiration: Date) -> CGFloat {
+        let age = Date().timeIntervalSince(appearedAt)
+        let intro = min(max(age / 0.22, 0), 1)
+        let outro = min(max(expiration.timeIntervalSinceNow / 0.28, 0), 1)
+        return cubicEaseInOut(CGFloat(min(intro, outro)))
+    }
+
+    private func cubicEaseInOut(_ progress: CGFloat) -> CGFloat {
+        let clamped = min(max(progress, 0), 1)
+        if clamped < 0.5 {
+            return 4 * clamped * clamped * clamped
+        }
+        let t = -2 * clamped + 2
+        return 1 - (t * t * t) / 2
+    }
+
+    private func drawChip(text: String, at origin: NSPoint, progress: CGFloat, accent: ChipAccent) {
+        let maxTextWidth: CGFloat = 360.0
+        let paddingX: CGFloat = 16.0
+        let paddingY: CGFloat = 10.0
+        let font = NSFont.systemFont(ofSize: 13, weight: .medium)
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineBreakMode = .byWordWrapping
 
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
-            .foregroundColor: NSColor(calibratedWhite: 0.10, alpha: 0.84),
+            .font: font,
+            .foregroundColor: NSColor.white,
+            .paragraphStyle: paragraphStyle
         ]
-        title.draw(at: NSPoint(x: 51, y: 22), withAttributes: attrs)
+
+        let constraintRect = CGSize(width: maxTextWidth, height: .greatestFiniteMagnitude)
+        let boundingBox = text.boundingRect(
+            with: constraintRect,
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: attrs,
+            context: nil
+        )
+
+        let textWidth = ceil(boundingBox.width)
+        let textHeight = ceil(boundingBox.height)
+
+        let bubbleWidth = textWidth + paddingX * 2
+        let bubbleHeight = textHeight + paddingY * 2
+
+        let rect = clampedChipRect(
+            origin: origin,
+            bubbleWidth: bubbleWidth,
+            bubbleHeight: bubbleHeight
+        )
+
+        let scale = 0.94 + 0.06 * progress
+        let scaledRect = rect.insetBy(
+            dx: rect.width * (1 - scale) / 2,
+            dy: rect.height * (1 - scale) / 2
+        )
+        let path = NSBezierPath(roundedRect: scaledRect, xRadius: 12, yRadius: 12)
+        let fillColor = accent == .amber
+            ? NSColor(calibratedRed: 0.16, green: 0.10, blue: 0.04, alpha: 0.88 * progress)
+            : NSColor(calibratedWhite: 0.07, alpha: 0.88 * progress)
+        fillColor.setFill()
+
+        let shadow = NSShadow()
+        shadow.shadowBlurRadius = 16
+        shadow.shadowOffset = NSSize(width: 0, height: -6)
+        shadow.shadowColor = NSColor.black.withAlphaComponent(0.4)
+
+        NSGraphicsContext.saveGraphicsState()
+        shadow.set()
+        path.fill()
+        NSGraphicsContext.restoreGraphicsState()
+
+        let strokeColor = accent == .amber
+            ? NSColor.systemOrange.withAlphaComponent(0.46 * progress)
+            : NSColor(calibratedWhite: 1.0, alpha: 0.22 * progress)
+        strokeColor.setStroke()
+        path.lineWidth = 1.0
+        path.stroke()
+
+        let textRect = NSRect(
+            x: rect.origin.x + paddingX,
+            y: rect.origin.y + paddingY,
+            width: textWidth,
+            height: textHeight
+        )
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current?.cgContext.setAlpha(progress)
+        text.draw(in: textRect, withAttributes: attrs)
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    private func clampedChipRect(origin: NSPoint, bubbleWidth: CGFloat, bubbleHeight: CGFloat) -> NSRect {
+        let windowOrigin = window?.frame.origin ?? .zero
+        let visibleFrame = window?.screen?.visibleFrame ?? NSScreen.main?.visibleFrame
+        guard let visibleFrame else {
+            let fitsRight = (origin.x + 20 + bubbleWidth) <= bounds.width
+            let rawX = fitsRight ? (origin.x + 20) : (origin.x - 20 - bubbleWidth)
+            return NSRect(
+                x: min(max(rawX, 8), max(8, bounds.width - bubbleWidth - 8)),
+                y: min(max(origin.y - bubbleHeight / 2, 8), max(8, bounds.height - bubbleHeight - 8)),
+                width: bubbleWidth,
+                height: bubbleHeight
+            )
+        }
+
+        let globalPlacement = NativeChipPlacementEngine.place(
+            cursorX: Double(windowOrigin.x + origin.x),
+            cursorY: Double(windowOrigin.y + origin.y),
+            chipWidth: Double(bubbleWidth),
+            chipHeight: Double(bubbleHeight),
+            visibleFrame: NativeDisplayFrame(
+                minX: visibleFrame.minX,
+                minY: visibleFrame.minY,
+                width: visibleFrame.width,
+                height: visibleFrame.height
+            )
+        )
+        return NSRect(
+            x: CGFloat(globalPlacement.x) - windowOrigin.x,
+            y: CGFloat(globalPlacement.y) - windowOrigin.y,
+            width: CGFloat(globalPlacement.width),
+            height: CGFloat(globalPlacement.height)
+        )
     }
 }
 
@@ -318,6 +501,51 @@ struct AgenticCardFilePayload: Decodable {
 
 @available(macOS 13.0, *)
 @MainActor
+final class DisplayLinkDriver {
+    private var displayLink: CVDisplayLink?
+    private let onFrame: @MainActor () -> Void
+
+    init(onFrame: @escaping @MainActor () -> Void) {
+        self.onFrame = onFrame
+    }
+
+    func start() {
+        guard displayLink == nil else { return }
+        var link: CVDisplayLink?
+        guard CVDisplayLinkCreateWithActiveCGDisplays(&link) == kCVReturnSuccess,
+              let link
+        else {
+            return
+        }
+        let callback: CVDisplayLinkOutputCallback = { _, _, _, _, _, context in
+            guard let context else {
+                return kCVReturnSuccess
+            }
+            let driver = Unmanaged<DisplayLinkDriver>.fromOpaque(context).takeUnretainedValue()
+            Task { @MainActor in
+                driver.onFrame()
+            }
+            return kCVReturnSuccess
+        }
+        CVDisplayLinkSetOutputCallback(
+            link,
+            callback,
+            Unmanaged.passUnretained(self).toOpaque()
+        )
+        CVDisplayLinkStart(link)
+        displayLink = link
+    }
+
+    func stop() {
+        guard let displayLink else { return }
+        CVDisplayLinkStop(displayLink)
+        self.displayLink = nil
+    }
+
+}
+
+@available(macOS 13.0, *)
+@MainActor
 final class ShadowClickerController {
     private let app: NSApplication
     private let panel: ShadowPointerOverlayPanel
@@ -329,11 +557,14 @@ final class ShadowClickerController {
     private let emitJSON: Bool
     private let cardFileURL: URL?
     private var samples: [NativeCursorSample] = []
-    private var followTimer: Timer?
+    private var displayLinkDriver: DisplayLinkDriver?
     private var stopTimer: Timer?
-    private var animationPhase: Double = 0
     private var lastCardPoll: Date?
     private var lastCardFileModificationDate: Date?
+
+    private var companionState: CompanionState = .idle
+    private var streamedText: String = ""
+    private var audioAmplitude: CGFloat = 0
 
     init(
         app: NSApplication,
@@ -355,17 +586,58 @@ final class ShadowClickerController {
         self.encoder = encoder
         self.emitJSON = emitJSON
         self.cardFileURL = cardFileURL
+
+        setupNotificationObservers()
+        setupRealtimeVoiceCallbacks()
+    }
+
+    private func setupNotificationObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleTextDeltaNotification(_:)),
+            name: Notification.Name("RealtimeTextDeltaReceived"),
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleTextDoneNotification(_:)),
+            name: Notification.Name("RealtimeTextDoneReceived"),
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAudioAmplitudeNotification(_:)),
+            name: .realtimeAudioAmplitudeUpdated,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleConnectionErrorNotification(_:)),
+            name: .realtimeConnectionError,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleConnectionRestoredNotification(_:)),
+            name: .realtimeConnectionRestored,
+            object: nil
+        )
+    }
+
+    private func setupRealtimeVoiceCallbacks() {
+        RealtimeVoiceClient.shared.onToolCallReceived = { [weak self] name, callId, args in
+            Task { @MainActor in
+                self?.handleToolCall(name: name, callId: callId, arguments: args)
+            }
+        }
     }
 
     func start(duration: TimeInterval) {
-        let interval = 1.0 / Double(config.sampleHz)
-        let follow = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.tick()
-            }
+        let driver = DisplayLinkDriver { [weak self] in
+            self?.tick()
         }
-        followTimer = follow
-        RunLoop.main.add(follow, forMode: .common)
+        displayLinkDriver = driver
+        driver.start()
 
         let stop = Timer(timeInterval: duration, repeats: false) { [weak self] _ in
             Task { @MainActor in
@@ -383,6 +655,7 @@ final class ShadowClickerController {
         let displayFrame = NativeDisplayFrame.containing(sample)
         let overlaySize = NativeOverlaySize(width: panel.frame.width, height: panel.frame.height)
         let bubbleSize = NativeBubbleSize(width: bubblePanel.frame.width, height: bubblePanel.frame.height)
+
         let placement = try? NativeCursorPlacementEngine.place(
             sample: sample,
             config: config,
@@ -390,21 +663,53 @@ final class ShadowClickerController {
             overlaySize: overlaySize,
             bubbleSize: bubbleSize
         )
+
         let nextOrigin = NSPoint(
             x: placement?.overlayOriginX ?? sample.x,
             y: placement?.overlayOriginY ?? sample.y
         )
         panel.setFrameOrigin(nextOrigin)
-        if let placement {
-            bubblePanel.setFrameOrigin(NSPoint(x: placement.bubbleX, y: placement.bubbleY))
-            let phaseStep = (2.0 * Double.pi) / Double(visualSpec.loadingFrameRateHz)
-            animationPhase += NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-                ? 0
-                : phaseStep
-            bubbleView.update(phase: animationPhase, bubbleSide: placement.bubbleSide)
+
+        // Update dynamic companion state from PTT (modifier key polling)
+        let isControlPressed = NSEvent.modifierFlags.contains(.control)
+
+        switch companionState {
+        case .idle, .showingChip:
+            if isControlPressed {
+                streamedText = ""
+                companionState = .listening(pulsePhase: 0.0)
+                RealtimeVoiceClient.shared.startListening()
+            } else if case .showingChip(_, let expiration, _) = companionState, Date() > expiration {
+                companionState = .idle
+            }
+        case .listening(let phase):
+            if isControlPressed {
+                companionState = .listening(pulsePhase: phase + 0.1)
+            } else {
+                RealtimeVoiceClient.shared.stopListening()
+                companionState = .processing(pulsePhase: 0.0)
+            }
+        case .processing(let phase):
+            companionState = .processing(pulsePhase: phase + 0.1)
+        case .connectionError:
+            if isControlPressed {
+                companionState = .listening(pulsePhase: 0.0)
+                RealtimeVoiceClient.shared.startListening()
+            }
         }
+
+        // Pass cursor location and companion state to view
+        let currentMouse = NSEvent.mouseLocation
+        let cursorX = currentMouse.x - panel.frame.origin.x
+        let cursorY = currentMouse.y - panel.frame.origin.y
+
+        if let view = panel.contentView as? ShadowClickerView {
+            view.cursorLocation = NSPoint(x: cursorX, y: cursorY)
+            view.audioAmplitude = audioAmplitude
+            view.companionState = companionState
+        }
+
         panel.contentView?.needsDisplay = true
-        bubblePanel.contentView?.needsLayout = true
     }
 
     private func refreshAgenticCardIfNeeded() {
@@ -439,7 +744,7 @@ final class ShadowClickerController {
     }
 
     private func finish() {
-        followTimer?.invalidate()
+        displayLinkDriver?.stop()
         stopTimer?.invalidate()
         let smokeSamples = samples.isEmpty ? [NativeCursorProbe.sampleNow()] : Array(samples.suffix(5))
         let result = try? NativeCursorFollowSmokeResult.run(samples: smokeSamples)
@@ -449,6 +754,261 @@ final class ShadowClickerController {
             print(String(decoding: data, as: UTF8.self))
         }
         app.terminate(nil)
+    }
+
+    @objc private func handleTextDeltaNotification(_ notification: Notification) {
+        guard let userInfo = notification.userInfo, let delta = userInfo["delta"] as? String else { return }
+        streamedText += delta
+        showChip(text: streamedText)
+    }
+
+    @objc private func handleTextDoneNotification(_ notification: Notification) {
+        guard let userInfo = notification.userInfo, let text = userInfo["text"] as? String else { return }
+        streamedText = text
+        showChip(text: text)
+    }
+
+    private func showChip(text: String) {
+        companionState = .showingChip(
+            text: text,
+            expiration: Date().addingTimeInterval(4.0),
+            appearedAt: Date()
+        )
+        if let view = panel.contentView as? ShadowClickerView {
+            view.companionState = companionState
+        }
+    }
+
+    @objc private func handleAudioAmplitudeNotification(_ notification: Notification) {
+        guard let amplitude = notification.userInfo?["amplitude"] as? Float else { return }
+        audioAmplitude = CGFloat(min(max(amplitude * 3.2, 0), 1))
+        if let view = panel.contentView as? ShadowClickerView {
+            view.audioAmplitude = audioAmplitude
+        }
+    }
+
+    @objc private func handleConnectionErrorNotification(_ notification: Notification) {
+        let message = notification.userInfo?["message"] as? String ?? "Realtime connection unavailable"
+        companionState = .connectionError(message: "Connection issue: \(message)")
+        if let view = panel.contentView as? ShadowClickerView {
+            view.companionState = companionState
+        }
+    }
+
+    @objc private func handleConnectionRestoredNotification(_ notification: Notification) {
+        if case .connectionError = companionState {
+            companionState = .idle
+        }
+        if let view = panel.contentView as? ShadowClickerView {
+            view.companionState = companionState
+        }
+    }
+
+    private func handleToolCall(name: String, callId: String, arguments: [String: Any]) {
+        if name == "explain_target" {
+            let targetId = arguments["target_id"] as? String ?? "unknown"
+            showChip(text: "Explaining target: \(targetId)")
+            RealtimeVoiceClient.shared.sendToolOutput(
+                callId: callId,
+                output: ["status": "success", "message": "Target \(targetId) explained successfully."]
+            )
+        } else if name == "move_mouse" {
+            guard let x = arguments["x"] as? Double, let y = arguments["y"] as? Double else {
+                RealtimeVoiceClient.shared.sendToolOutput(
+                    callId: callId,
+                    output: ["status": "error", "message": "Missing coordinates (x, y)"]
+                )
+                return
+            }
+            showChip(text: "Moving pointer natively to (\(Int(x)), \(Int(y)))")
+            executeMoveMouse(x: x, y: y)
+            RealtimeVoiceClient.shared.sendToolOutput(
+                callId: callId,
+                output: ["status": "success", "x": x, "y": y]
+            )
+        } else if name == "click_mouse" {
+            let x = arguments["x"] as? Double
+            let y = arguments["y"] as? Double
+            if let x = x, let y = y {
+                showChip(text: "Clicking natively at (\(Int(x)), \(Int(y)))")
+            } else {
+                showChip(text: "Clicking natively")
+            }
+            executeClickMouse(x: x, y: y)
+            RealtimeVoiceClient.shared.sendToolOutput(
+                callId: callId,
+                output: ["status": "success"]
+            )
+        } else if name == "right_click_mouse" {
+            guard let x = arguments["x"] as? Double, let y = arguments["y"] as? Double else {
+                sendToolArgumentError(callId: callId, message: "Missing coordinates (x, y)")
+                return
+            }
+            showChip(text: "Right-clicking at (\(Int(x)), \(Int(y)))")
+            executeMouseClick(x: x, y: y, button: .right, clickCount: 1)
+            RealtimeVoiceClient.shared.sendToolOutput(callId: callId, output: ["status": "success"])
+        } else if name == "double_click_mouse" {
+            guard let x = arguments["x"] as? Double, let y = arguments["y"] as? Double else {
+                sendToolArgumentError(callId: callId, message: "Missing coordinates (x, y)")
+                return
+            }
+            showChip(text: "Double-clicking at (\(Int(x)), \(Int(y)))")
+            executeMouseClick(x: x, y: y, button: .left, clickCount: 2)
+            RealtimeVoiceClient.shared.sendToolOutput(callId: callId, output: ["status": "success"])
+        } else if name == "drag_mouse" {
+            guard let fromX = arguments["fromX"] as? Double,
+                  let fromY = arguments["fromY"] as? Double,
+                  let toX = arguments["toX"] as? Double,
+                  let toY = arguments["toY"] as? Double
+            else {
+                sendToolArgumentError(callId: callId, message: "Missing drag coordinates")
+                return
+            }
+            showChip(text: "Dragging from (\(Int(fromX)), \(Int(fromY))) to (\(Int(toX)), \(Int(toY)))")
+            executeDragMouse(fromX: fromX, fromY: fromY, toX: toX, toY: toY)
+            RealtimeVoiceClient.shared.sendToolOutput(callId: callId, output: ["status": "success"])
+        } else if name == "scroll_mouse" {
+            guard let dx = arguments["dx"] as? Double, let dy = arguments["dy"] as? Double else {
+                sendToolArgumentError(callId: callId, message: "Missing scroll deltas")
+                return
+            }
+            showChip(text: "Scrolling")
+            executeScrollMouse(dx: dx, dy: dy)
+            RealtimeVoiceClient.shared.sendToolOutput(callId: callId, output: ["status": "success"])
+        }
+    }
+
+    private func sendToolArgumentError(callId: String, message: String) {
+        RealtimeVoiceClient.shared.sendToolOutput(
+            callId: callId,
+            output: ["status": "error", "message": message]
+        )
+    }
+
+    private func convertToCGSpace(x: Double, y: Double) -> CGPoint {
+        let screenHeight = Double(NSScreen.screens.first?.frame.height ?? 1080.0)
+        let visible = NSScreen.screens.first?.visibleFrame
+        let minX = Double(visible?.minX ?? 0)
+        let maxX = Double(visible?.maxX ?? CGFloat.greatestFiniteMagnitude)
+        let minY = Double(visible?.minY ?? 0)
+        let maxY = Double(visible?.maxY ?? CGFloat(screenHeight))
+        let clampedX = min(max(x, minX), maxX)
+        let clampedY = min(max(y, minY), maxY)
+        return CGPoint(x: clampedX, y: screenHeight - clampedY)
+    }
+
+    private func executeMoveMouse(x: Double, y: Double) {
+        let cgPoint = convertToCGSpace(x: x, y: y)
+        CGWarpMouseCursorPosition(cgPoint)
+        if let source = CGEventSource(stateID: .combinedSessionState),
+           let moveEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: cgPoint, mouseButton: .left) {
+            moveEvent.post(tap: .cghidEventTap)
+        }
+    }
+
+    private func executeClickMouse(x: Double?, y: Double?) {
+        let cgPoint: CGPoint
+        if let x = x, let y = y {
+            cgPoint = convertToCGSpace(x: x, y: y)
+        } else {
+            let currentAppKit = NSEvent.mouseLocation
+            cgPoint = convertToCGSpace(x: currentAppKit.x, y: currentAppKit.y)
+        }
+        postMouseClick(at: cgPoint, button: .left, clickCount: 1)
+    }
+
+    private func executeMouseClick(x: Double, y: Double, button: CGMouseButton, clickCount: Int) {
+        let cgPoint = convertToCGSpace(x: x, y: y)
+        postMouseClick(at: cgPoint, button: button, clickCount: clickCount)
+    }
+
+    private func postMouseClick(at point: CGPoint, button: CGMouseButton, clickCount: Int) {
+        CGWarpMouseCursorPosition(point)
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let downType: CGEventType = button == .right ? .rightMouseDown : .leftMouseDown
+        let upType: CGEventType = button == .right ? .rightMouseUp : .leftMouseUp
+        let taps = max(1, clickCount)
+        for tapIndex in 1...taps {
+            guard let down = CGEvent(
+                mouseEventSource: source,
+                mouseType: downType,
+                mouseCursorPosition: point,
+                mouseButton: button
+            ),
+            let up = CGEvent(
+                mouseEventSource: source,
+                mouseType: upType,
+                mouseCursorPosition: point,
+                mouseButton: button
+            ) else {
+                print("Failed to create mouse click event")
+                return
+            }
+            down.setIntegerValueField(.mouseEventClickState, value: Int64(min(tapIndex, 2)))
+            up.setIntegerValueField(.mouseEventClickState, value: Int64(min(tapIndex, 2)))
+            down.post(tap: .cghidEventTap)
+            usleep(35_000)
+            up.post(tap: .cghidEventTap)
+            usleep(55_000)
+        }
+    }
+
+    private func executeDragMouse(fromX: Double, fromY: Double, toX: Double, toY: Double) {
+        let start = convertToCGSpace(x: fromX, y: fromY)
+        let end = convertToCGSpace(x: toX, y: toY)
+        CGWarpMouseCursorPosition(start)
+        let source = CGEventSource(stateID: .combinedSessionState)
+        guard let down = CGEvent(
+            mouseEventSource: source,
+            mouseType: .leftMouseDown,
+            mouseCursorPosition: start,
+            mouseButton: .left
+        ) else {
+            return
+        }
+        down.post(tap: .cghidEventTap)
+        let steps = 18
+        for step in 1...steps {
+            let progress = CGFloat(step) / CGFloat(steps)
+            let point = CGPoint(
+                x: start.x + (end.x - start.x) * progress,
+                y: start.y + (end.y - start.y) * progress
+            )
+            CGWarpMouseCursorPosition(point)
+            if let dragged = CGEvent(
+                mouseEventSource: source,
+                mouseType: .leftMouseDragged,
+                mouseCursorPosition: point,
+                mouseButton: .left
+            ) {
+                dragged.post(tap: .cghidEventTap)
+            }
+            usleep(10_000)
+        }
+        if let up = CGEvent(
+            mouseEventSource: source,
+            mouseType: .leftMouseUp,
+            mouseCursorPosition: end,
+            mouseButton: .left
+        ) {
+            up.post(tap: .cghidEventTap)
+        }
+    }
+
+    private func executeScrollMouse(dx: Double, dy: Double) {
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let scrollX = Int32(min(max(dx, Double(Int32.min)), Double(Int32.max)))
+        let scrollY = Int32(min(max(dy, Double(Int32.min)), Double(Int32.max)))
+        if let event = CGEvent(
+            scrollWheelEvent2Source: source,
+            units: .pixel,
+            wheelCount: 2,
+            wheel1: scrollY,
+            wheel2: scrollX,
+            wheel3: 0
+        ) {
+            event.post(tap: CGEventTapLocation.cghidEventTap)
+        }
     }
 }
 
@@ -469,13 +1029,15 @@ enum ShadowClickerApp {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
 
-        let width = CGFloat(config.overlayDiameter + 112)
-        let height = CGFloat(config.overlayDiameter + 34)
+        // Make overlay panel dimension large (600x200) to host our beautiful dynamic text chips.
+        let width = CGFloat(600)
+        let height = CGFloat(200)
         let panel = ShadowPointerOverlayPanel(contentRect: NSRect(x: 0, y: 0, width: width, height: height))
         panel.contentView = ShadowClickerView(diameter: CGFloat(config.overlayDiameter))
         panel.orderFrontRegardless()
 
-        let bubbleFrame = NSRect(x: 0, y: 0, width: CGFloat(visualSpec.bubbleMaxWidth), height: 86)
+        // Setup hidden secondary bubble panel as backup/legacy requirement
+        let bubbleFrame = NSRect.zero
         let bubblePanel = ShadowPointerOverlayPanel(contentRect: bubbleFrame)
         let bubbleView = ShadowClickerBubbleView(
             frame: bubbleFrame,
@@ -483,7 +1045,14 @@ enum ShadowClickerApp {
             card: card
         )
         bubblePanel.contentView = bubbleView
-        bubblePanel.orderFrontRegardless()
+
+        RealtimeVoiceClient.shared.fetchTokenAndConnect { success, error in
+            if success {
+                print("Connected to RealtimeVoiceClient!")
+            } else {
+                print("Failed to connect: \(error ?? "Unknown")")
+            }
+        }
 
         controller = ShadowClickerController(
             app: app,

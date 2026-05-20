@@ -1,4 +1,5 @@
 import XCTest
+import AVFoundation
 @testable import CortexShadowPointerNative
 
 final class ShadowPointerNativeTests: XCTestCase {
@@ -260,6 +261,92 @@ final class ShadowPointerNativeTests: XCTestCase {
         XCTAssertLessThanOrEqual(edge.bubbleX + bubble.width, display.maxX)
         XCTAssertGreaterThanOrEqual(edge.bubbleY, display.minY)
         XCTAssertLessThanOrEqual(edge.bubbleY + bubble.height, display.maxY)
+    }
+
+    func testRealtimeVoiceClientRegistersFullNativePointerTools() throws {
+        guard #available(macOS 13.0, *) else {
+            throw XCTSkip("RealtimeVoiceClient requires macOS 13")
+        }
+
+        let tools = RealtimeVoiceClient.realtimeToolDefinitions()
+        let names = Set(tools.compactMap { $0["name"] as? String })
+
+        XCTAssertTrue(Set(RealtimeVoiceClient.nativeMouseToolNames).isSubset(of: names))
+        XCTAssertTrue(names.contains("explain_target"))
+        XCTAssertTrue(names.contains("right_click_mouse"))
+        XCTAssertTrue(names.contains("double_click_mouse"))
+        XCTAssertTrue(names.contains("drag_mouse"))
+        XCTAssertTrue(names.contains("scroll_mouse"))
+    }
+
+    func testRealtimeAudioAmplitudeUsesRMSPower() throws {
+        guard #available(macOS 13.0, *) else {
+            throw XCTSkip("RealtimeVoiceClient requires macOS 13")
+        }
+        let format = AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: 48_000,
+            channels: 1,
+            interleaved: false
+        )
+        let buffer = AVAudioPCMBuffer(pcmFormat: try XCTUnwrap(format), frameCapacity: 4)
+        let pcmBuffer = try XCTUnwrap(buffer)
+        pcmBuffer.frameLength = 4
+        let samples = try XCTUnwrap(pcmBuffer.floatChannelData?[0])
+        samples[0] = 0
+        samples[1] = 0.5
+        samples[2] = -0.5
+        samples[3] = 1
+
+        let amplitude = RealtimeVoiceClient.normalizedRMSAmplitude(from: pcmBuffer)
+
+        XCTAssertEqual(amplitude, sqrt(1.5 / 4), accuracy: 0.001)
+    }
+
+    func testRealtimeReconnectPolicyUsesBoundedExponentialBackoff() {
+        let policy = RealtimeReconnectPolicy(maxAttempts: 5, initialDelay: 0.5, maxDelay: 2)
+
+        XCTAssertEqual(policy.delay(forAttempt: 1), 0.5, accuracy: 0.001)
+        XCTAssertEqual(policy.delay(forAttempt: 2), 1.0, accuracy: 0.001)
+        XCTAssertEqual(policy.delay(forAttempt: 3), 2.0, accuracy: 0.001)
+        XCTAssertEqual(policy.delay(forAttempt: 4), 2.0, accuracy: 0.001)
+    }
+
+    func testNativeChipPlacementClampsToVisibleFrameEdges() {
+        let visible = NativeDisplayFrame(minX: 0, minY: 24, width: 400, height: 260)
+        let topLeft = NativeChipPlacementEngine.place(
+            cursorX: 2,
+            cursorY: 278,
+            chipWidth: 180,
+            chipHeight: 70,
+            visibleFrame: visible
+        )
+        let bottomRight = NativeChipPlacementEngine.place(
+            cursorX: 398,
+            cursorY: 26,
+            chipWidth: 180,
+            chipHeight: 70,
+            visibleFrame: visible
+        )
+
+        XCTAssertGreaterThanOrEqual(topLeft.x, visible.minX + 10)
+        XCTAssertLessThanOrEqual(topLeft.maxY, visible.maxY - 10)
+        XCTAssertEqual(topLeft.side, "right")
+        XCTAssertLessThanOrEqual(bottomRight.maxX, visible.maxX - 10)
+        XCTAssertGreaterThanOrEqual(bottomRight.y, visible.minY + 10)
+        XCTAssertEqual(bottomRight.side, "left")
+    }
+
+    func testNativeAnimationTimingSpecUsesDisplayLinkAndCubicEasing() throws {
+        let spec = try NativeAnimationTimingSpec().validated()
+
+        XCTAssertEqual(spec.benchmarkID, nativeCompanionHUDPhase2BenchmarkID)
+        XCTAssertEqual(spec.policyRef, nativeCompanionHUDPhase2PolicyRef)
+        XCTAssertEqual(spec.displayDriver, "CVDisplayLink")
+        XCTAssertGreaterThanOrEqual(spec.targetRefreshHz, 60)
+        XCTAssertEqual(spec.easingCurve, "cubic_ease_in_out")
+        XCTAssertTrue(spec.amplitudeReactiveRing)
+        XCTAssertEqual(spec.connectionErrorIndicator, "warm_amber_glass_chip")
     }
 
     func testScreenCaptureProbeDoesNotCaptureWithoutExplicitFlag() {
