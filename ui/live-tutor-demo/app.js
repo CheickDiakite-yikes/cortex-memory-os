@@ -2,6 +2,9 @@ const frame = document.querySelector("#studio-frame");
 const highlight = document.querySelector("#target-highlight");
 const traceLayer = document.querySelector("#cursor-trace-layer");
 const cursor = document.querySelector("#shadow-tutor-cursor");
+const voiceWaveform = document.querySelector("#voice-waveform");
+const cursorAura = document.querySelector("#cursor-aura");
+const spatialLasso = document.querySelector("#spatial-lasso");
 const talkCard = document.querySelector("#cursor-talk-card");
 const pointerStatusLabel = document.querySelector("#pointer-status-label");
 const pointerTargetLabel = document.querySelector("#pointer-target-label");
@@ -107,6 +110,17 @@ let tourIndex = 0;
 let lastPointer = { x: null, y: null };
 let pendingFollowerFrame = null;
 let pendingFollowerPlacement = null;
+
+let physicsFrame = null;
+let cursorPos = { x: -100, y: -100 };
+let cursorVel = { x: 0, y: 0 };
+let cursorTarget = { x: -100, y: -100 };
+const SPRING_STIFFNESS = 0.15;
+const SPRING_DAMPING = 0.70;
+
+let lassoActive = false;
+let lassoStart = { x: 0, y: 0 };
+let currentLassoRect = null;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -242,6 +256,7 @@ async function askTutor(question, options = {}) {
       ? "AI draft uses controlled facts only."
       : "Display only. You stay in control.";
   setThinkingState(true);
+  talkCard.classList.remove("pill-mode");
   try {
     const response = await fetch("/tutor/turn", {
       method: "POST",
@@ -425,11 +440,19 @@ function setAiMode(mode) {
 }
 
 function updatePointerTarget(targetId) {
-  if (targetId && targetId !== currentTargetId) {
+  if (targetId !== currentTargetId) {
+    if (currentTargetId) {
+      document.querySelector(`[data-target-id="${currentTargetId}"]`)?.classList.remove("target-elevated");
+    }
     previousTargetId = currentTargetId;
     currentTargetId = targetId;
-    currentTargetLabel = targetLabel(targetId);
-    selectedTargetIds = [previousTargetId, currentTargetId].filter(Boolean).slice(-4);
+    if (currentTargetId) {
+      document.querySelector(`[data-target-id="${currentTargetId}"]`)?.classList.add("target-elevated");
+      currentTargetLabel = targetLabel(targetId);
+      selectedTargetIds = [previousTargetId, currentTargetId].filter(Boolean).slice(-4);
+    } else {
+      currentTargetLabel = "this surface";
+    }
   }
   pointerStatusLabel.textContent = currentTargetId ? "Cortex sees" : "Cortex nearby";
   pointerTargetLabel.textContent = currentTargetLabel;
@@ -551,10 +574,65 @@ function placeFloatingElement(element, anchorX, anchorY, options = {}) {
   const fitsRight = anchorX + gap + size.width <= frameRect.width - margin;
   const x = fitsRight ? anchorX + gap : anchorX - gap - size.width;
   const y = clamp(anchorY - size.height / 2, margin, frameRect.height - size.height - margin);
-  element.style.left = `${clamp(x, margin, frameRect.width - size.width - margin)}px`;
-  element.style.top = `${y}px`;
+  const finalX = clamp(x, margin, frameRect.width - size.width - margin);
+  element.style.transform = `translate3d(${Math.round(finalX)}px, ${Math.round(y)}px, 0)`;
   element.dataset.anchorSide = fitsRight ? "right" : "left";
   element.dataset.anchor = options.anchor || "cursor";
+}
+
+function startPhysicsLoop() {
+  if (physicsFrame) return;
+
+  function loop() {
+    if (!helperActive) {
+      physicsFrame = null;
+      return;
+    }
+
+    let targetX = cursorTarget.x;
+    let targetY = cursorTarget.y;
+
+    if (currentTargetId) {
+      const el = document.getElementById(currentTargetId);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const frameRect = frame.getBoundingClientRect();
+        const centerX = rect.left - frameRect.left + rect.width / 2;
+        const centerY = rect.top - frameRect.top + rect.height / 2;
+
+        const dx = centerX - cursorPos.x;
+        const dy = centerY - cursorPos.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 100) {
+          targetX = centerX;
+          targetY = centerY;
+        }
+      }
+    }
+
+    const ax = (targetX - cursorPos.x) * SPRING_STIFFNESS;
+    const ay = (targetY - cursorPos.y) * SPRING_STIFFNESS;
+
+    cursorVel.x = (cursorVel.x + ax) * SPRING_DAMPING;
+    cursorVel.y = (cursorVel.y + ay) * SPRING_DAMPING;
+
+    cursorPos.x += cursorVel.x;
+    cursorPos.y += cursorVel.y;
+
+    setCursorPosition(cursorPos.x, cursorPos.y);
+    cursor.classList.add("visible", "tracking");
+    placeFloatingElement(talkCard, cursorPos.x + 24, cursorPos.y + 20, {
+      fallbackWidth: 232,
+      fallbackHeight: 76,
+      gap: 12,
+      anchor: "cursor",
+    });
+
+    physicsFrame = window.requestAnimationFrame(loop);
+  }
+
+  physicsFrame = window.requestAnimationFrame(loop);
 }
 
 function placeTutorFollower(x, y, { trace = true } = {}) {
@@ -564,26 +642,16 @@ function placeTutorFollower(x, y, { trace = true } = {}) {
     x: Math.round(clamp(x, 0, frameRect.width)),
     y: Math.round(clamp(y, 0, frameRect.height)),
   };
-  const followerX = clamp(x + 18, 10, frameRect.width - 84);
-  const followerY = clamp(y + 18, 10, frameRect.height - 58);
 
-  pendingFollowerPlacement = { followerX, followerY };
-  if (!pendingFollowerFrame) {
-    pendingFollowerFrame = window.requestAnimationFrame(() => {
-      const placement = pendingFollowerPlacement;
-      pendingFollowerFrame = null;
-      if (!placement) return;
-      setCursorPosition(placement.followerX, placement.followerY);
-      cursor.classList.add("visible", "tracking");
-      placeFloatingElement(talkCard, placement.followerX + 24, placement.followerY + 20, {
-        fallbackWidth: 232,
-        fallbackHeight: 76,
-        gap: 12,
-        anchor: "cursor",
-      });
-      talkCard.classList.add("visible");
-    });
+  if (cursorPos.x === -100) {
+    cursorPos.x = lastPointer.x;
+    cursorPos.y = lastPointer.y;
   }
+
+  cursorTarget.x = clamp(x + 18, 10, frameRect.width - 84);
+  cursorTarget.y = clamp(y + 18, 10, frameRect.height - 58);
+
+  startPhysicsLoop();
 
   if (!followerVisible) {
     fields.effects.textContent = "tracking cursor, rendering trace, display-only";
@@ -606,15 +674,39 @@ function placeTutorFollower(x, y, { trace = true } = {}) {
 function handlePointerMove(event) {
   if (!helperActive) return;
   const frameRect = frame.getBoundingClientRect();
-  updatePointerTarget(targetFromEvent(event));
-  placeTutorFollower(event.clientX - frameRect.left, event.clientY - frameRect.top);
+  const mouseX = event.clientX - frameRect.left;
+  const mouseY = event.clientY - frameRect.top;
+
+  // Aura Spotlight
+  cursorAura.style.setProperty("--mouse-x", `${mouseX}px`);
+  cursorAura.style.setProperty("--mouse-y", `${mouseY}px`);
+
+  if (lassoActive) {
+    const minX = Math.min(mouseX, lassoStart.x);
+    const minY = Math.min(mouseY, lassoStart.y);
+    const width = Math.abs(mouseX - lassoStart.x);
+    const height = Math.abs(mouseY - lassoStart.y);
+
+    if (width > 5 || height > 5) {
+      spatialLasso.classList.add("active");
+      spatialLasso.style.left = `${minX}px`;
+      spatialLasso.style.top = `${minY}px`;
+      spatialLasso.style.width = `${width}px`;
+      spatialLasso.style.height = `${height}px`;
+      updatePointerTarget(null);
+    }
+  } else {
+    updatePointerTarget(targetFromEvent(event));
+  }
+
+  placeTutorFollower(mouseX, mouseY);
 }
 
 function setHelperActive(active) {
   helperActive = active;
   document.body.classList.toggle("helper-active", active);
   wakeCard.classList.toggle("hidden", active);
-  talkCard.classList.toggle("visible", active);
+  if (active) talkCard.classList.add("pill-mode");
   dockState.textContent = active ? "Pointer awake" : "Pointer off";
   dockSummary.textContent = active
     ? "Move over the studio. Cortex will stay beside your pointer."
@@ -761,6 +853,7 @@ function renderTurn(turn) {
     gap: 14,
     anchor: "target",
   });
+  talkCard.classList.remove("pill-mode");
   talkCard.classList.add("visible");
   pointerSafetyLabel.textContent =
     turn.companion_state?.safety_caption || "Display only. You stay in control.";
@@ -860,7 +953,16 @@ frame.addEventListener("click", (event) => {
 
 frame.addEventListener("pointerdown", (event) => {
   if (!helperActive || event.target?.closest?.("button, input, textarea")) return;
+
+  const frameRect = frame.getBoundingClientRect();
+  lassoActive = true;
+  lassoStart = {
+    x: event.clientX - frameRect.left,
+    y: event.clientY - frameRect.top
+  };
+
   document.body.classList.add("pointer-holding");
+  voiceWaveform?.classList.add("listening");
   holdStartedAt = Date.now();
   window.clearTimeout(holdTimer);
   holdTimer = window.setTimeout(() => {
@@ -876,6 +978,17 @@ frame.addEventListener("pointerdown", (event) => {
 
 frame.addEventListener("pointerup", () => {
   document.body.classList.remove("pointer-holding");
+  voiceWaveform?.classList.remove("listening");
+
+  if (lassoActive && spatialLasso.classList.contains("active")) {
+    spatialLasso.classList.remove("active");
+    setVoiceGesture("lasso_selection");
+    input.value = "Voice: explain this selected area";
+    askTutor(input.value, { voiceGestureType: "lasso_selection" });
+  }
+
+  lassoActive = false;
+
   if (Date.now() - holdStartedAt < 650) {
     window.clearTimeout(holdTimer);
   }
@@ -883,6 +996,9 @@ frame.addEventListener("pointerup", () => {
 
 frame.addEventListener("pointercancel", () => {
   document.body.classList.remove("pointer-holding");
+  voiceWaveform?.classList.remove("listening");
+  spatialLasso.classList.remove("active");
+  lassoActive = false;
   window.clearTimeout(holdTimer);
 });
 
@@ -989,6 +1105,16 @@ talkCard.addEventListener("click", (event) => {
     ? `I understand ${currentTargetLabel}. Use the tiny actions beside the pointer.`
     : "I am tracking beside your cursor. Point at something and ask.";
   bubble.classList.add("visible");
+});
+
+talkCard.addEventListener("mouseenter", () => {
+  talkCard.classList.remove("pill-mode");
+});
+
+talkCard.addEventListener("mouseleave", () => {
+  if (!document.body.classList.contains("pointer-thinking") && !bubble.classList.contains("visible")) {
+    talkCard.classList.add("pill-mode");
+  }
 });
 
 wakeHelperButton.addEventListener("click", wakeHelper);

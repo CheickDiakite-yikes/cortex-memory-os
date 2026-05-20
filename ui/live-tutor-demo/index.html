@@ -87,16 +87,25 @@
             <button type="button">Deliver</button>
           </nav>
 
+          <div class="cursor-aura" id="cursor-aura" aria-hidden="true"></div>
+          <div class="spatial-lasso" id="spatial-lasso" aria-hidden="true"></div>
           <div class="target-highlight" id="target-highlight" aria-hidden="true"></div>
           <div class="cursor-trace-layer" id="cursor-trace-layer" aria-hidden="true"></div>
           <div class="shadow-tutor-cursor" id="shadow-tutor-cursor" aria-hidden="true">
+            <div class="voice-waveform" id="voice-waveform">
+              <span class="voice-waveform-bar"></span>
+              <span class="voice-waveform-bar"></span>
+              <span class="voice-waveform-bar"></span>
+              <span class="voice-waveform-bar"></span>
+              <span class="voice-waveform-bar"></span>
+            </div>
             <span class="cursor-ring"></span>
             <svg viewBox="0 0 36 44" focusable="false">
               <path d="M5 3.5 31 26.5 19.2 28.1 24.8 40.2 17.4 43 11.9 30.7 4.5 38.1 5 3.5Z" />
             </svg>
             <span class="cursor-tag">Cortex</span>
           </div>
-          <div class="cursor-talk-card" id="cursor-talk-card" role="group" aria-label="Cortex pointer actions">
+          <div class="cursor-talk-card pill-mode" id="cursor-talk-card" role="group" aria-label="Cortex pointer actions">
             <span id="pointer-status-label">Cortex sees</span>
             <strong id="pointer-target-label">this surface</strong>
             <small id="pointer-entity-label">controlled demo entity</small>
