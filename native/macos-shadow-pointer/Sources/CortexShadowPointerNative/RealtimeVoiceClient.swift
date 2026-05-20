@@ -54,6 +54,7 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
     private let audioEngine = AVAudioEngine()
     private var audioFormat: AVAudioFormat?
     private var converter: AVAudioConverter?
+    private var audioEnginePrepared = false
 
     private var pendingItems: [[String: Any]] = []
 
@@ -63,7 +64,6 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
 
     public override init() {
         super.init()
-        setupAudioEngine()
     }
 
     // MARK: - Token Fetching
@@ -326,7 +326,10 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
 
     // MARK: - Audio Capture (Push-To-Talk)
 
-    private func setupAudioEngine() {
+    private func setupAudioEngine() -> Bool {
+        if audioEnginePrepared {
+            return true
+        }
         let inputNode = audioEngine.inputNode
         let inputFormat = inputNode.inputFormat(forBus: 0)
 
@@ -336,13 +339,15 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
                                     channels: 1,
                                     interleaved: false)
 
-        guard let audioFormat = audioFormat else { return }
+        guard let audioFormat = audioFormat else { return false }
 
         converter = AVAudioConverter(from: inputFormat, to: audioFormat)
 
         inputNode.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { [weak self] buffer, time in
             self?.processAudioBuffer(buffer: buffer)
         }
+        audioEnginePrepared = true
+        return true
     }
 
     @discardableResult
@@ -359,6 +364,16 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
         }
         if isListening {
             return true
+        }
+        guard setupAudioEngine() else {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: .realtimeConnectionError,
+                    object: nil,
+                    userInfo: ["message": "Microphone could not prepare"]
+                )
+            }
+            return false
         }
         appendedAudioChunkCount = 0
         do {
