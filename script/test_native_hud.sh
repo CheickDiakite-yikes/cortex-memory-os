@@ -210,9 +210,13 @@ MESSAGE
   echo "  4. Press Control + Option + Command + Q to turn off the desktop app."
   echo
   echo "Safe first phrases:"
-  echo "  - \"Move the mouse to the center of the screen.\""
-  echo "  - \"Scroll down a little.\""
-  echo "  - \"Right click here.\""
+  echo "  - \"What can you do here?\""
+  echo "  - \"Show me where you would move.\""
+  echo "  - \"Explain what you see near my pointer.\""
+  echo
+  echo "Native click/move/drag effects are off by default."
+  echo "To explicitly allow them for a local test:"
+  echo "  CORTEX_ENABLE_NATIVE_INPUT_EFFECTS=1 ./script/test_native_hud.sh start"
   echo
   echo "Stop everything:"
   echo "  ./script/test_native_hud.sh stop"

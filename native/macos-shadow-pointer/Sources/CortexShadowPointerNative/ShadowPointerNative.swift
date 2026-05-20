@@ -24,6 +24,7 @@ public let nativeCompanionHUDPhase2BenchmarkID = "NATIVE-COMPANION-HUD-PHASE2-00
 public let nativeCompanionHUDPhase2PolicyRef = "policy_native_companion_hud_phase2_v1"
 public let nativeScreenCaptureProbeBenchmarkID = "NATIVE-SCREEN-CAPTURE-PROBE-001"
 public let nativeScreenCaptureProbePolicyRef = "policy_native_screen_capture_probe_v1"
+public let nativeInputEffectPolicyRef = "policy_native_input_effects_v1"
 
 public enum ShadowPointerNativeState: String, Codable, CaseIterable, Sendable {
     case off
@@ -69,6 +70,72 @@ public struct NativeOverlayWindowSpec: Codable, Equatable, Sendable {
         hasShadow: false,
         accessibilityLabel: "Cortex Shadow Pointer"
     )
+}
+
+public struct NativeInputEffectPolicy: Codable, Equatable, Sendable {
+    public var policyRef: String
+    public var nativeInputEffectsEnabled: Bool
+    public var requiredLaunchFlag: String
+    public var allowedEffectsWhenEnabled: [String]
+    public var blockedEffectsWhenDisabled: [String]
+    public var requiresExplicitOptIn: Bool
+
+    public init(
+        policyRef: String = nativeInputEffectPolicyRef,
+        nativeInputEffectsEnabled: Bool = false,
+        requiredLaunchFlag: String = "--allow-native-input-effects",
+        allowedEffectsWhenEnabled: [String] = [
+            "move_system_cursor",
+            "click_mouse",
+            "right_click_mouse",
+            "double_click_mouse",
+            "drag_mouse",
+            "scroll_mouse",
+        ],
+        blockedEffectsWhenDisabled: [String] = [
+            "move_system_cursor",
+            "click_mouse",
+            "right_click_mouse",
+            "double_click_mouse",
+            "drag_mouse",
+            "scroll_mouse",
+        ],
+        requiresExplicitOptIn: Bool = true
+    ) {
+        self.policyRef = policyRef
+        self.nativeInputEffectsEnabled = nativeInputEffectsEnabled
+        self.requiredLaunchFlag = requiredLaunchFlag
+        self.allowedEffectsWhenEnabled = allowedEffectsWhenEnabled
+        self.blockedEffectsWhenDisabled = blockedEffectsWhenDisabled
+        self.requiresExplicitOptIn = requiresExplicitOptIn
+    }
+
+    public func validated() throws -> NativeInputEffectPolicy {
+        guard policyRef == nativeInputEffectPolicyRef else {
+            throw ShadowPointerNativeError.invalidControl("native input effect policy mismatch")
+        }
+        guard requiresExplicitOptIn && requiredLaunchFlag == "--allow-native-input-effects" else {
+            throw ShadowPointerNativeError.invalidControl("native input effects must require explicit opt-in")
+        }
+        let requiredEffects = Set([
+            "move_system_cursor",
+            "click_mouse",
+            "right_click_mouse",
+            "double_click_mouse",
+            "drag_mouse",
+            "scroll_mouse",
+        ])
+        if nativeInputEffectsEnabled {
+            guard requiredEffects.isSubset(of: Set(allowedEffectsWhenEnabled)) else {
+                throw ShadowPointerNativeError.invalidControl("enabled native input policy is missing allowed effects")
+            }
+        } else {
+            guard requiredEffects.isSubset(of: Set(blockedEffectsWhenDisabled)) else {
+                throw ShadowPointerNativeError.invalidControl("disabled native input policy is missing blocked effects")
+            }
+        }
+        return self
+    }
 }
 
 public struct ShadowPointerNativeSnapshot: Codable, Equatable, Sendable {

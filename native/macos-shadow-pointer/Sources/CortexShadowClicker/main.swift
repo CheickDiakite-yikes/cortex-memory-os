@@ -15,6 +15,7 @@ struct ShadowClickerArgs {
     var agenticMessage = "I see Color Page. I can draft the next safe steps."
     var agenticStatus = "draft only | display-only | no write"
     var agenticCardFile: String?
+    var allowNativeInputEffects = false
 
     init(_ arguments: [String]) throws {
         var iterator = arguments.dropFirst().makeIterator()
@@ -49,6 +50,8 @@ struct ShadowClickerArgs {
                     throw ShadowPointerNativeError.invalidControl("--agentic-card-file requires a path")
                 }
                 agenticCardFile = value
+            case "--allow-native-input-effects":
+                allowNativeInputEffects = true
             default:
                 throw ShadowPointerNativeError.invalidControl("unknown argument \(argument)")
             }
@@ -89,7 +92,8 @@ do {
                 encoder: encoder,
                 emitJSON: args.json,
                 card: card,
-                cardFileURL: args.agenticCardFile.map { URL(fileURLWithPath: $0) }
+                cardFileURL: args.agenticCardFile.map { URL(fileURLWithPath: $0) },
+                allowNativeInputEffects: args.allowNativeInputEffects
             )
         }
     } else {
@@ -681,6 +685,8 @@ final class ShadowClickerController {
     private var streamedText: String = ""
     private var audioAmplitude: CGFloat = 0
     private let cloakHotspot = NSPoint(x: 104, y: 100)
+    private let inputEffectPolicy: NativeInputEffectPolicy
+    private var isFinishing = false
 
     init(
         app: NSApplication,
@@ -691,7 +697,8 @@ final class ShadowClickerController {
         visualSpec: NativeOverlayVisualSpec,
         encoder: JSONEncoder,
         emitJSON: Bool,
-        cardFileURL: URL?
+        cardFileURL: URL?,
+        allowNativeInputEffects: Bool
     ) {
         self.app = app
         self.panel = panel
@@ -702,6 +709,9 @@ final class ShadowClickerController {
         self.encoder = encoder
         self.emitJSON = emitJSON
         self.cardFileURL = cardFileURL
+        self.inputEffectPolicy = (try? NativeInputEffectPolicy(
+            nativeInputEffectsEnabled: allowNativeInputEffects
+        ).validated()) ?? NativeInputEffectPolicy()
 
         setupNotificationObservers()
         setupRealtimeVoiceCallbacks()
@@ -792,8 +802,11 @@ final class ShadowClickerController {
         case .idle, .showingChip:
             if isControlPressed {
                 streamedText = ""
-                companionState = .listening(pulsePhase: 0.0)
-                RealtimeVoiceClient.shared.startListening()
+                if RealtimeVoiceClient.shared.startListening() {
+                    companionState = .listening(pulsePhase: 0.0)
+                } else {
+                    companionState = .connectionError(message: "Connection issue: Realtime is not ready")
+                }
             } else if case .showingChip(_, let expiration, _) = companionState, Date() > expiration {
                 companionState = .idle
             }
@@ -801,15 +814,23 @@ final class ShadowClickerController {
             if isControlPressed {
                 companionState = .listening(pulsePhase: phase + 0.1)
             } else {
-                RealtimeVoiceClient.shared.stopListening()
-                companionState = .processing(pulsePhase: 0.0)
+                if RealtimeVoiceClient.shared.stopListening() {
+                    companionState = .processing(pulsePhase: 0.0)
+                } else {
+                    companionState = .showingChip(
+                        text: "No audio captured. Hold Control and speak again.",
+                        expiration: Date().addingTimeInterval(3.0),
+                        appearedAt: Date()
+                    )
+                }
             }
         case .processing(let phase):
             companionState = .processing(pulsePhase: phase + 0.1)
         case .connectionError:
             if isControlPressed {
-                companionState = .listening(pulsePhase: 0.0)
-                RealtimeVoiceClient.shared.startListening()
+                if RealtimeVoiceClient.shared.startListening() {
+                    companionState = .listening(pulsePhase: 0.0)
+                }
             }
         }
 
@@ -868,9 +889,12 @@ final class ShadowClickerController {
     }
 
     private func finish() {
+        guard !isFinishing else { return }
+        isFinishing = true
         NativeHUDLog.write("controller_finish samples=\(samples.count)")
         displayLinkDriver?.stop()
         stopTimer?.invalidate()
+        RealtimeVoiceClient.shared.disconnect()
         let smokeSamples = samples.isEmpty ? [NativeCursorProbe.sampleNow()] : Array(samples.suffix(5))
         let result = try? NativeCursorFollowSmokeResult.run(samples: smokeSamples)
         panel.orderOut(nil)
@@ -947,6 +971,7 @@ final class ShadowClickerController {
                 )
                 return
             }
+            guard nativeInputEffectsAllowed(callId: callId, effectName: name) else { return }
             showChip(text: "Moving pointer natively to (\(Int(x)), \(Int(y)))")
             executeMoveMouse(x: x, y: y)
             RealtimeVoiceClient.shared.sendToolOutput(
@@ -956,6 +981,7 @@ final class ShadowClickerController {
         } else if name == "click_mouse" {
             let x = arguments["x"] as? Double
             let y = arguments["y"] as? Double
+            guard nativeInputEffectsAllowed(callId: callId, effectName: name) else { return }
             if let x = x, let y = y {
                 showChip(text: "Clicking natively at (\(Int(x)), \(Int(y)))")
             } else {
@@ -971,6 +997,7 @@ final class ShadowClickerController {
                 sendToolArgumentError(callId: callId, message: "Missing coordinates (x, y)")
                 return
             }
+            guard nativeInputEffectsAllowed(callId: callId, effectName: name) else { return }
             showChip(text: "Right-clicking at (\(Int(x)), \(Int(y)))")
             executeMouseClick(x: x, y: y, button: .right, clickCount: 1)
             RealtimeVoiceClient.shared.sendToolOutput(callId: callId, output: ["status": "success"])
@@ -979,6 +1006,7 @@ final class ShadowClickerController {
                 sendToolArgumentError(callId: callId, message: "Missing coordinates (x, y)")
                 return
             }
+            guard nativeInputEffectsAllowed(callId: callId, effectName: name) else { return }
             showChip(text: "Double-clicking at (\(Int(x)), \(Int(y)))")
             executeMouseClick(x: x, y: y, button: .left, clickCount: 2)
             RealtimeVoiceClient.shared.sendToolOutput(callId: callId, output: ["status": "success"])
@@ -991,6 +1019,7 @@ final class ShadowClickerController {
                 sendToolArgumentError(callId: callId, message: "Missing drag coordinates")
                 return
             }
+            guard nativeInputEffectsAllowed(callId: callId, effectName: name) else { return }
             showChip(text: "Dragging from (\(Int(fromX)), \(Int(fromY))) to (\(Int(toX)), \(Int(toY)))")
             executeDragMouse(fromX: fromX, fromY: fromY, toX: toX, toY: toY)
             RealtimeVoiceClient.shared.sendToolOutput(callId: callId, output: ["status": "success"])
@@ -999,10 +1028,29 @@ final class ShadowClickerController {
                 sendToolArgumentError(callId: callId, message: "Missing scroll deltas")
                 return
             }
+            guard nativeInputEffectsAllowed(callId: callId, effectName: name) else { return }
             showChip(text: "Scrolling")
             executeScrollMouse(dx: dx, dy: dy)
             RealtimeVoiceClient.shared.sendToolOutput(callId: callId, output: ["status": "success"])
         }
+    }
+
+    private func nativeInputEffectsAllowed(callId: String, effectName: String) -> Bool {
+        guard inputEffectPolicy.nativeInputEffectsEnabled else {
+            NativeHUDLog.write("native_input_effect_blocked effect=\(effectName)")
+            showChip(text: "Preview only. Native input effects are off.")
+            RealtimeVoiceClient.shared.sendToolOutput(
+                callId: callId,
+                output: [
+                    "status": "blocked",
+                    "effect": effectName,
+                    "reason": "native_input_effects_disabled",
+                    "required_launch_flag": inputEffectPolicy.requiredLaunchFlag,
+                ]
+            )
+            return false
+        }
+        return true
     }
 
     private func sendToolArgumentError(callId: String, message: String) {
@@ -1149,7 +1197,8 @@ enum ShadowClickerApp {
         encoder: JSONEncoder,
         emitJSON: Bool,
         card: NativeAgenticPointerCard,
-        cardFileURL: URL?
+        cardFileURL: URL?,
+        allowNativeInputEffects: Bool
     ) throws {
         let config = try NativeCursorFollowConfig().validated()
         let visualSpec = try NativeOverlayVisualSpec().validated()
@@ -1193,7 +1242,8 @@ enum ShadowClickerApp {
             visualSpec: visualSpec,
             encoder: encoder,
             emitJSON: emitJSON,
-            cardFileURL: cardFileURL
+            cardFileURL: cardFileURL,
+            allowNativeInputEffects: allowNativeInputEffects
         )
         controller?.start(duration: duration)
         app.run()

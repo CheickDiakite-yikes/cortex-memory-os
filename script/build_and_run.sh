@@ -62,7 +62,11 @@ PLIST
 }
 
 open_app() {
-  /usr/bin/open -n "$APP_BUNDLE" --args --duration "$APP_DURATION_SECONDS"
+  local app_args=(--duration "$APP_DURATION_SECONDS")
+  if [[ "${CORTEX_ENABLE_NATIVE_INPUT_EFFECTS:-0}" == "1" ]]; then
+    app_args+=(--allow-native-input-effects)
+  fi
+  /usr/bin/open -n "$APP_BUNDLE" --args "${app_args[@]}"
 }
 
 case "$MODE" in

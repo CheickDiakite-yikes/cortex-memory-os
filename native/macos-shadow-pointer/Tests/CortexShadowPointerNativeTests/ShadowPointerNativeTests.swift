@@ -169,6 +169,24 @@ final class ShadowPointerNativeTests: XCTestCase {
         XCTAssertTrue(visual.blockedEffects.contains("start_screen_capture"))
     }
 
+    func testNativeInputEffectsAreExplicitOptIn() throws {
+        let disabled = try NativeInputEffectPolicy().validated()
+        XCTAssertFalse(disabled.nativeInputEffectsEnabled)
+        XCTAssertTrue(disabled.requiresExplicitOptIn)
+        XCTAssertEqual(disabled.requiredLaunchFlag, "--allow-native-input-effects")
+        XCTAssertTrue(disabled.blockedEffectsWhenDisabled.contains("move_system_cursor"))
+        XCTAssertTrue(disabled.blockedEffectsWhenDisabled.contains("click_mouse"))
+        XCTAssertTrue(disabled.blockedEffectsWhenDisabled.contains("drag_mouse"))
+        XCTAssertTrue(disabled.blockedEffectsWhenDisabled.contains("scroll_mouse"))
+
+        let enabled = try NativeInputEffectPolicy(nativeInputEffectsEnabled: true).validated()
+        XCTAssertTrue(enabled.nativeInputEffectsEnabled)
+        XCTAssertTrue(enabled.allowedEffectsWhenEnabled.contains("move_system_cursor"))
+        XCTAssertTrue(enabled.allowedEffectsWhenEnabled.contains("click_mouse"))
+        XCTAssertTrue(enabled.allowedEffectsWhenEnabled.contains("drag_mouse"))
+        XCTAssertTrue(enabled.allowedEffectsWhenEnabled.contains("scroll_mouse"))
+    }
+
     func testNativeAgenticPointerCardIsSafeAndBounded() throws {
         let card = try NativeAgenticPointerCard().validated()
 

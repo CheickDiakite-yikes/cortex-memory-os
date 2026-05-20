@@ -46,7 +46,10 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
     private var reconnectAttempt = 0
     private var connectCompletion: ((Bool, String?) -> Void)?
     private var suppressReconnectForCurrentSocket = false
+    private var isListening = false
+    private var appendedAudioChunkCount = 0
     public var reconnectPolicy = RealtimeReconnectPolicy()
+    public var realtimeConnected: Bool { isConnected }
 
     private let audioEngine = AVAudioEngine()
     private var audioFormat: AVAudioFormat?
@@ -179,7 +182,11 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
         manuallyDisconnected = true
         webSocket?.cancel(with: .goingAway, reason: nil)
         isConnected = false
-        stopListening()
+        if audioEngine.isRunning {
+            audioEngine.stop()
+        }
+        isListening = false
+        appendedAudioChunkCount = 0
     }
 
     private func sendSessionUpdate() {
@@ -303,15 +310,17 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
         ["type": "response.create"]
     }
 
-    private func send(json: [String: Any]) {
+    @discardableResult
+    private func send(json: [String: Any]) -> Bool {
         guard isConnected, let data = try? JSONSerialization.data(withJSONObject: json),
-              let string = String(data: data, encoding: .utf8) else { return }
+              let string = String(data: data, encoding: .utf8) else { return false }
         webSocket?.send(.string(string)) { error in
             if let error = error {
                 print("WebSocket send error: \(error)")
                 self.reportConnectionFailure(error.localizedDescription, retry: true)
             }
         }
+        return true
     }
 
     // MARK: - Audio Capture (Push-To-Talk)
@@ -335,24 +344,60 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
         }
     }
 
-    public func startListening() {
+    @discardableResult
+    public func startListening() -> Bool {
+        guard isConnected else {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: .realtimeConnectionError,
+                    object: nil,
+                    userInfo: ["message": "Realtime is not connected yet"]
+                )
+            }
+            return false
+        }
+        if isListening {
+            return true
+        }
+        appendedAudioChunkCount = 0
         do {
             try audioEngine.start()
+            isListening = true
+            return true
         } catch {
             print("Audio engine start failed: \(error)")
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: .realtimeConnectionError,
+                    object: nil,
+                    userInfo: ["message": "Microphone could not start"]
+                )
+            }
+            return false
         }
     }
 
-    public func stopListening() {
+    @discardableResult
+    public func stopListening() -> Bool {
+        guard isListening else {
+            return false
+        }
+        isListening = false
         audioEngine.stop()
+
+        guard appendedAudioChunkCount > 0 else {
+            return false
+        }
 
         // Send a message indicating audio input is complete to trigger a response
         let commitMsg: [String: Any] = [
             "type": "input_audio_buffer.commit"
         ]
-        send(json: commitMsg)
+        guard send(json: commitMsg) else {
+            return false
+        }
 
-        send(json: Self.responseCreateMessage())
+        return send(json: Self.responseCreateMessage())
     }
 
     private func processAudioBuffer(buffer: AVAudioPCMBuffer) {
@@ -386,7 +431,9 @@ public final class RealtimeVoiceClient: NSObject, URLSessionWebSocketDelegate, @
                 "type": "input_audio_buffer.append",
                 "audio": base64String
             ]
-            send(json: msg)
+            if send(json: msg) {
+                appendedAudioChunkCount += 1
+            }
         }
     }
 
